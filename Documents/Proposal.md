@@ -237,7 +237,7 @@ Dưới đây là bảng ánh xạ chi tiết giữa các User Story (Yêu cầu
 
 ### 3.2 Hardware
 
-    Written by: 23120182 Nguyễn Duy Trường
+    Written by: 23120169 Nguyễn Phú Thọ
     Edited by: null
     Reviewed by: 23120123 Trần Gia Hiển
 
@@ -282,9 +282,63 @@ Dưới đây là bảng ánh xạ chi tiết giữa các User Story (Yêu cầu
 
 ### 4.5 Deployment and Maintainance
 
-    Written by:
-    Edited by:
-    Reviewed by:
+    Written by: 23120169 Nguyễn Phú Thọ
+    Edited by: null
+    Reviewed by: 23120123 Trần Gia Hiển
+
+**4.5.1 Deployment Plan:**
+
+_**Môi trường hệ thống:**_
+
+- _**Frontend:**_ Sử dụng Next.js để tối ưu hóa SEO (Server-Side Rendering) cho các tác phẩm văn học và cung cấp trải nghiệm SPA (Single Page Application) mượt mà. Triển khai trên Firebase Hosting để tăng tốc độ tải trang toàn cầu nhờ hệ thống CDN (Content Delivery Network) của Google (nếu định hướng phát triển web theo quy mô toàn cầu).
+- _**Backend:**_ Chạy trên môi trường Dockerize với FastAPI, triển khai trên Google Cloud Run — dịch vụ serverless container của GCP (Google Cloud Platform) giúp đồng nhất môi trường từ lúc phát triển đến khi triển khai thực tế, đồng thời tự động scale theo lưu lượng truy cập.
+- _**Web Server:**_ Sử dụng Apache làm Reverse Proxy để điều phối lưu lượng và quản lý chứng chỉ bảo mật SSL/TLS, kết hợp với Google Cloud Load Balancing để phân phối tải hiệu quả.
+- _**Database**_ Sử dụng Google Cloud Firestore để lưu trữ toàn bộ dữ liệu của nền tảng bao gồm tài khoản người dùng, gói membership, nội dung truyện, chương, bình luận và dữ liệu tương tác của độc giả. Nhờ cấu trúc NoSQL linh hoạt và khả năng real-time sync tích hợp sẵn, Cloud Firestore dễ dàng mở rộng khi số lượng tác phẩm và người dùng tăng nhanh. Ảnh bìa truyện và các tài nguyên tĩnh được lưu trữ trên Google Cloud Storage. Hệ thống thực hiện backup tự động hàng ngày với chính sách lưu giữ 30 ngày.
+
+_**Tích hợp AI và Real time:**_
+
+- Sử dụng WebSockets (thông qua FastAPI) để đồng bộ hóa bản thảo thời gian thực giữa tác giả và server, đảm bảo không thất thoát dữ liệu.
+- Kết nối Google Gemini API thông qua một layer trung gian để kiểm soát quota, ghi log yêu cầu và tối ưu hóa thời gian phản hồi (latency). Việc cả hạ tầng lẫn AI đều nằm trong hệ sinh thái Google giúp giảm độ trễ đáng kể so với việc gọi API từ nền tảng bên ngoài.
+
+_**Chiến lược mở rộng (Sclaing Strategy):**_ Hệ thống tận dụng khả năng Auto-scaling của Google Cloud Run, tự động tăng số lượng container khi số lượng kết nối WebSocket vượt ngưỡng 1.000 kết nối đồng thời hoặc tỷ lệ sử dụng CPU backend vượt 70%. Ngược lại, hệ thống tự động thu hẹp tài nguyên trong giờ thấp điểm để tối ưu chi phí vận hành.
+
+_**Kế hoạch dự phòng và Rollback:**_ Áp dụng chiến lược Blue-Green Deployment trên Google Cloud Run, duy trì đồng thời hai phiên bản (revision) production. Khi phát hành phiên bản mới, lưu lượng được chuyển dần sang phiên bản mới thông qua tính năng Traffic Splitting của Cloud Run. Nếu phát hiện lỗi, hệ thống có thể rollback về phiên bản trước trong vòng dưới 5 phút mà không gây gián đoạn trải nghiệm người dùng.
+
+**4.5.2 Bảo mật và quản lý dữ liệu:**
+
+- _**Mã hóa dữ liệu:**_ Sử dụng chuẩn AES-256 để mã hóa các thông tin người dùng như mật khẩu, thông tin cá nhân và lịch sử thanh toán của người dùng. RSA được áp dụng cho các thông tin định danh. Toàn bộ dữ liệu truyền tải giữa client và server được bảo vệ bởi HTTPS/TLS. Các khóa mã hóa được quản lý tập trung qua Google Cloud Key Management Service (KMS).
+
+- _**Bảo mật nội dung truyện:**_ Cloud Firestore Security Rules để kiểm soát quyền truy cập theo từng vai trò như chương trả phí chỉ cho phép người dùng có gói membership đọc và tác giả chỉ có thể chỉnh sửa tác phẩm của chính mình.
+
+- _**Xác thực và Phân quyền:**_ Triển khai Google Cloud Identity Platform kết hợp JWT (JSON Web Tokens) để quản lý phiên đăng nhập, đảm bảo mọi hành động tương tác (đọc truyện, thanh toán membership, đăng tải tác phẩm) đều được định danh rõ ràng và phân quyền chính xác theo từng vai trò (tác giả, độc giả, quản trị viên).
+
+- _**Kiểm duyệt AI:**_ Tích hợp quy trình kiểm duyệt tự động sử dụng Google Gemini API ngay tại cổng upload để ngăn chặn nội dung vi phạm chính sách (độ tuổi, lịch sử, chính trị, văn hóa) trước khi dữ liệu được ghi vào Cloud Firestore.
+
+- _**Áp dụng API Versioning:**_ Sử dụng các phiên bản API hợp lý để đảm bảo các lần cập nhật backend không gây breaking change, bảo vệ tính ổn định cho các client đang hoạt động
+
+**4.5.3 Maintainance Plan:**
+
+_**Bảo trì định kỳ:**_
+
+- Cập nhật các công nghệ bảo mật của Python và Next.js thường xuyên cho hệ thống.
+- Tối ưu hóa cấu trúc truy vấn Cloud Firestore định kỳ (index, query optimization) để đảm bảo tốc độ tìm kiếm tác phẩm và các tính năng AI không bị suy giảm khi lượng dữ liệu tăng theo thời gian.
+- Kiểm tra và làm mới (rotate) các khóa mã hóa trên Google Cloud KMS và chứng chỉ SSL theo chu kỳ 6 tháng.
+- Rà soát định kỳ dung lượng Google Cloud Storage để tối ưu chi phí lưu trữ ảnh bìa và tài nguyên tĩnh.
+
+_**Giám sát hệ thống:**_
+
+- Sử dụng Google Cloud Monitoring kết hợp Google Cloud Logging để theo dõi các chỉ số đặc thù của nền tảng: số lượng kết nối WebSocket đồng thời, latency phản hồi từ Google Gemini API, tỷ lệ lỗi thanh toán membership, lượt đọc/ghi trên Cloud Firestore và lưu lượng truy cập theo thời gian thực.
+- Thiết lập cảnh báo tự động (Alerting) khi các dịch vụ vượt ngưỡng quy định.
+
+_**Cập nhật tính năng và phản hồi:**_
+
+- Dựa trên số liệu về lượt đánh giá, nhận xét và hành vi đọc của độc giả được thu thập qua Cloud Firestore, nhóm điều chỉnh thuật toán gợi ý tác phẩm mỗi 4 tuần một lần theo mô hình Agile.
+- Hỗ trợ kỹ thuật thường xuyên để xử lý các vấn đề về đăng nhập, quyền truy cập và gói Membership của người dùng.
+
+_**Phục hồi dữ liệu khi gặp sự cố:**_
+
+- Định nghĩa hai chỉ số phục hồi phù hợp với quy mô nền tảng: RTO (Recovery Time Objective) — thời gian tối đa để khôi phục hệ thống sau sự cố và RPO (Recovery Point Objective) — lượng dữ liệu tối đa có thể mất. Các giá trị cụ thể sẽ được xác định dựa trên kết quả kiểm thử tải và yêu cầu thực tế trong giai đoạn vận hành thử nghiệm.
+- Thực hiện rèn luyện khôi phục từ backup (Disaster Recovery Drill) ít nhất một lần trong năm đầu vận hành, sau đó nâng lên định kỳ mỗi quý khi hệ thống đã ổn định.
 
 ## 5. Human Resources & Costing Plan
 

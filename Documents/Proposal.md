@@ -13,9 +13,18 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS_CQ/25_26._
   - [3.2 Hardware](#32-hardware)
 - [4. Development Plan](#4-development-plan)
   - [4.1 Requirements Analysis](#41-requirements-analysis)
+    - [a. Bối cảnh hệ thống](#a-bối-cảnh-hệ-thống)
+    - [b. Stakeholders](#b-stakeholders)
+    - [c. Phương pháp thu thập yêu cầu](#c-phương-pháp-thu-thập-yêu-cầu)
+    - [d. Yêu cầu chức năng (Functional Requirements)](#d-yêu-cầu-chức-năng-functional-requirements)
+    - [e. Yêu cầu phi chức năng (Non-functional Requirements)](#e-yêu-cầu-phi-chức-năng-non-functional-requirements)
+    - [f. Thời gian thực hiện dự kiến:](#f-thời-gian-thực-hiện-dự-kiến)
   - [4.2 Software Design](#42-software-design)
   - [4.3 Implementation](#43-implementation)
   - [4.4 Testing](#44-testing)
+    - [4.4.1 Kế hoạch kiểm thử](#441-kế-hoạch-kiểm-thử)
+    - [4.4.2 Kiểm thử Non-Function](#442-kiểm-thử-non-function)
+    - [4.4.4 Tiêu chí đánh giá](#444-tiêu-chí-đánh-giá)
   - [4.5 Deployment and Maintainance](#45-deployment-and-maintainance)
 - [5. Human Resources \& Costing Plan](#5-human-resources--costing-plan)
 - [6. Tools setup](#6-tools-setup)
@@ -241,7 +250,7 @@ Dưới đây là bảng ánh xạ chi tiết giữa các User Story (Yêu cầu
     Edited by: null
     Reviewed by: 23120123 Trần Gia Hiển
 
-    Hạ tầng máy chủ (Server):
+Hạ tầng máy chủ (Server):
 
 **Bộ vi xử lý (CPU):** Tối thiểu 8 cores / 16 threads (ưu tiên các dòng chip hiện đại như Intel Core i7, AMD EPYC, …) nhằm đảm bảo khả năng xử lý đa luồng hiệu quả. Điều này giúp hệ thống vận hành ổn định khi có nhiều người dùng truy cập đồng thời, đặc biệt trong các tác vụ như đọc truyện, bình luận thời gian thực và gọi API.
 
@@ -260,59 +269,54 @@ Dưới đây là bảng ánh xạ chi tiết giữa các User Story (Yêu cầu
 
 **Written by:** Hương Trà  
 **Edited by:**  
-**Reviewed by:**  
-
+**Reviewed by:**
 
 #### a. Bối cảnh hệ thống
 
 Hệ thống là một nền tảng web hỗ trợ viết và đọc truyện trực tuyến, hướng đến cộng đồng người dùng yêu thích truyện chữ. Nền tảng không chỉ cung cấp môi trường đăng tải và đọc truyện mà còn tích hợp các yếu tố mạng xã hội nhằm tăng cường tương tác giữa tác giả và độc giả.
 
-
 #### b. Stakeholders
 
-| Bên liên quan | Mô tả |
-|--------------|------|
-| Tác giả | Tạo, chỉnh sửa, đăng tải và quản lý truyện |
-| Độc giả | Tìm kiếm, đọc, đánh giá và tương tác với truyện |
-| Quản trị viên | Quản lý người dùng, kiểm duyệt nội dung, giám sát hệ thống |
-| Nhóm phát triển | Phân tích, thiết kế, xây dựng và bảo trì hệ thống |
+| Bên liên quan   | Mô tả                                                      |
+| --------------- | ---------------------------------------------------------- |
+| Tác giả         | Tạo, chỉnh sửa, đăng tải và quản lý truyện                 |
+| Độc giả         | Tìm kiếm, đọc, đánh giá và tương tác với truyện            |
+| Quản trị viên   | Quản lý người dùng, kiểm duyệt nội dung, giám sát hệ thống |
+| Nhóm phát triển | Phân tích, thiết kế, xây dựng và bảo trì hệ thống          |
 
 #### c. Phương pháp thu thập yêu cầu
 
 Nhóm sử dụng các phương pháp sau để thu thập và làm rõ yêu cầu hệ thống:
 
-- **User Story Mapping:** Xác định nhu cầu người dùng theo từng vai trò (tác giả, độc giả, quản trị viên) và chuyển đổi thành các chức năng hệ thống  
-- **Brainstorming:** Thảo luận nội bộ nhằm đề xuất và hoàn thiện các tính năng của hệ thống  
-- **Phân tích đối thủ:** Nghiên cứu các nền tảng đọc/viết truyện hiện có để tham khảo tính năng và cải tiến  
-- **Xác nhận yêu cầu:** Rà soát và thống nhất yêu cầu trong nhóm để đảm bảo tính khả thi và nhất quán  
+- **User Story Mapping:** Xác định nhu cầu người dùng theo từng vai trò (tác giả, độc giả, quản trị viên) và chuyển đổi thành các chức năng hệ thống
+- **Brainstorming:** Thảo luận nội bộ nhằm đề xuất và hoàn thiện các tính năng của hệ thống
+- **Phân tích đối thủ:** Nghiên cứu các nền tảng đọc/viết truyện hiện có để tham khảo tính năng và cải tiến
+- **Xác nhận yêu cầu:** Rà soát và thống nhất yêu cầu trong nhóm để đảm bảo tính khả thi và nhất quán
 
 #### d. Yêu cầu chức năng (Functional Requirements)
 
 Hệ thống bao gồm các chức năng chính sau:
 
-- Quản lý người dùng (đăng ký, đăng nhập, quên mật khẩu)  
-- Quản lý truyện (tạo, chỉnh sửa, lưu trữ và đăng tải nội dung)  
-- Hỗ trợ AI (gợi ý ý tưởng, kiểm tra và cải thiện nội dung)  
-- Tìm kiếm và đề xuất truyện theo nhiều tiêu chí  
-- Tương tác cộng đồng (bình luận, đánh giá, thảo luận)  
-- Hệ thống membership (nội dung trả phí, quyền truy cập đặc biệt)  
-- Thống kê và báo cáo cho tác giả và quản trị viên  
-
+- Quản lý người dùng (đăng ký, đăng nhập, quên mật khẩu)
+- Quản lý truyện (tạo, chỉnh sửa, lưu trữ và đăng tải nội dung)
+- Hỗ trợ AI (gợi ý ý tưởng, kiểm tra và cải thiện nội dung)
+- Tìm kiếm và đề xuất truyện theo nhiều tiêu chí
+- Tương tác cộng đồng (bình luận, đánh giá, thảo luận)
+- Hệ thống membership (nội dung trả phí, quyền truy cập đặc biệt)
+- Thống kê và báo cáo cho tác giả và quản trị viên
 
 #### e. Yêu cầu phi chức năng (Non-functional Requirements)
 
-- **Hiệu năng:** Các chức năng AI và xử lý nội dung phải phản hồi trong thời gian hợp lý  
-- **Bảo mật:** Dữ liệu người dùng và nội dung phải được mã hóa và bảo vệ an toàn  
-- **Dễ sử dụng:** Giao diện trực quan, thân thiện với người dùng  
-- **Tương thích:** Hệ thống hoạt động trên các trình duyệt hiện đại hỗ trợ HTML5  
-- **Khả mở rộng:** Có khả năng mở rộng khi số lượng người dùng tăng  
-- **Độ ổn định:** Hệ thống cần đảm bảo hoạt động ổn định và hạn chế lỗi  
-
+- **Hiệu năng:** Các chức năng AI và xử lý nội dung phải phản hồi trong thời gian hợp lý
+- **Bảo mật:** Dữ liệu người dùng và nội dung phải được mã hóa và bảo vệ an toàn
+- **Dễ sử dụng:** Giao diện trực quan, thân thiện với người dùng
+- **Tương thích:** Hệ thống hoạt động trên các trình duyệt hiện đại hỗ trợ HTML5
+- **Khả mở rộng:** Có khả năng mở rộng khi số lượng người dùng tăng
+- **Độ ổn định:** Hệ thống cần đảm bảo hoạt động ổn định và hạn chế lỗi
 
 #### f. Thời gian thực hiện dự kiến:
 
 - Dự kiến sản phẩm sẽ được hoàn thành trong thời gian 1 tháng (từ 30/4/2026 đến 30/5/2026)
-
 
 ### 4.2 Software Design
 
@@ -328,9 +332,59 @@ Hệ thống bao gồm các chức năng chính sau:
 
 ### 4.4 Testing
 
-    Written by:
+    Written by: 23120123 Trần Gia Hiển
     Edited by:
     Reviewed by:
+
+Kế hoạch kiểm thử nhằm mục đích đảm bảo hệ thống vận hành ổn định, bảo mật tuyệt đối nội dung tác phẩm và tối ưu hóa trải nghiệm người dùng đối với các tính năng AI.
+
+#### 4.4.1 Kế hoạch kiểm thử
+
+- **Unit Testing**
+
+  Mục tiêu: Kiểm tra các hàm logic nhỏ nhất (hàm băm mật khẩu, logic tính toán doanh thu membership, các module xử lý văn bản).
+
+  Công cụ: **Pytest** cho Backend và **Jest/React Testing Library** cho Frontend.
+
+- **Integration Testing**
+
+  Mục tiêu: Kiểm tra sự tương tác giữa các dịch vụ. Đặc biệt là luồng dữ liệu hệ thống đảm bảo bản thảo được đưa vào hàng đợi và xử lý bởi AI mà không bị mất mát dữ liệu.
+
+- **System Testing**
+
+  Mục tiêu: Kiểm thử toàn diện luồng nghiệp vụ.
+
+  Kịch bản: Tác giả đăng ký -> Viết truyện với hỗ trợ AI -> Gửi kiểm duyệt -> Độc giả tìm kiếm bằng AI Search -> Đăng ký Membership để đọc chương khóa.
+
+#### 4.4.2 Kiểm thử Non-Function
+
+Performance & Load Testing:
+
+- Sử dụng công cụ k6 hoặc JMeter để giả lập 1.000 kết nối WebSockets đồng thời.
+
+- Kiểm tra thời gian phản hồi của AI Moderator (đảm bảo < 5 phút theo yêu cầu phi chức năng).
+
+- Đánh giá khả năng Auto-scaling của Google Cloud Run khi lưu lượng truy cập tăng đột biến.
+
+Security Testing:
+
+- Kiểm tra khả năng chống SQL Injection, XSS và ngăn chặn Brute-force tại cổng đăng nhập.
+
+- Bảo vệ bản quyền: Kiểm thử việc vô hiệu hóa chuột phải, F12 và sao chép trên các trình duyệt khác nhau (Chrome, Safari, Edge).
+
+AI Model Evaluation:
+
+- Đánh giá độ chính xác của AI Moderator trong việc phát hiện nội dung vi phạm văn hóa, chính trị (giảm thiểu tỷ lệ False Positive - xóa nhầm truyện).
+
+#### 4.4.4 Tiêu chí đánh giá
+
+Hệ thống được coi là đạt yêu cầu khi:
+
+- 100% các Unit Test quan trọng (về bảo mật, thanh toán) vượt qua thành công.
+
+- Không còn lỗi ở mức độ Blocker hoặc Critical trong môi trường Production.
+
+- Thời gian uptime hệ thống đạt tối thiểu 90% trong giai đoạn thử nghiệm.
 
 ### 4.5 Deployment and Maintainance
 

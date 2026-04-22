@@ -326,9 +326,82 @@ Hệ thống bao gồm các chức năng chính sau:
 
 ### 4.3 Implementation
 
-    Written by:
-    Edited by:
-    Reviewed by:
+    Written by: 23120151 Huỳnh Yến Nhi
+    Edited by: null
+    Reviewed by: 23120123 Trần Gia Hiển
+
+#### 4.3.1 Công nghệ sử dụng
+
+Hệ thống được xây dựng dựa trên kiến trúc client–server, sử dụng các công nghệ hiện đại nhằm đảm bảo khả năng mở rộng, hiệu năng và tích hợp AI:
+
+- Frontend: Next.js (TypeScript), HTML5, CSS, JavaScript
+- Backend: Node.js với Express framework để xây dựng RESTful API và xử lý nghiệp vụ
+- Database & Storage: Google Cloud Firestore (NoSQL) và Google Cloud Storage
+- Realtime Communication: WebSocket phục vụ các chức năng tương tác thời gian thực
+- AI Integration: Google Gemini API cho các chức năng gợi ý nội dung, tìm kiếm thông minh và kiểm duyệt
+- Development Tools: Git/GitHub (quản lý phiên bản), Docker (môi trường triển khai), Visual Studio Code (IDE)
+
+#### 4.3.2 Implementation Objectives
+
+Mục tiêu của giai đoạn hiện thực là chuyển hóa các yêu cầu đã phân tích và thiết kế thành một hệ thống phần mềm hoàn chỉnh, hoạt động ổn định và có khả năng mở rộng. Cụ thể:
+
+- Hiện thực hóa các chức năng cốt lõi của hệ thống bao gồm xác thực người dùng, quản lý nội dung truyện, tìm kiếm và tương tác cộng đồng.
+- Xây dựng hệ thống theo mô hình client–server, đảm bảo frontend và backend giao tiếp hiệu quả thông qua API.
+- Tích hợp các dịch vụ AI nhằm nâng cao trải nghiệm người dùng, bao gồm gợi ý nội dung, tìm kiếm thông minh và kiểm duyệt.
+- Đảm bảo các module trong hệ thống có tính độc lập tương đối, dễ bảo trì và dễ mở rộng.
+- Thiết lập môi trường phát triển, quy trình làm việc và tài liệu hỗ trợ nhằm đảm bảo tiến độ và chất lượng dự án.
+
+#### 4.3.3 Implementation Activities
+
+##### Development Activities (Work Breakdown Structure – WBS)
+
+Nhóm phân rã giai đoạn hiện thực thành các đầu việc chính sau:
+
+- **Thiết lập nền tảng dự án:** Tạo cấu trúc source code, khởi tạo repository Git, cấu hình frontend, backend, database và các biến môi trường.
+- **Xây dựng chức năng xác thực:** Phát triển các màn hình và API cho đăng ký, đăng nhập, quên mật khẩu, phân quyền người dùng.
+- **Phát triển chức năng truyện:** Hiện thực tạo truyện, chỉnh sửa, lưu nháp, đăng chương, quản lý thư viện tác phẩm.
+- **Phát triển chức năng đọc và tìm kiếm:** Xây dựng trang đọc truyện, tìm kiếm theo tên truyện, thể loại, tác giả và truy vấn thông minh.
+- **Phát triển cộng đồng và membership:** Làm bình luận, đánh giá, theo dõi truyện, gói membership và kiểm tra quyền đọc nội dung.
+- **Tích hợp AI:** Thêm gợi ý ý tưởng, kiểm duyệt nội dung, AI search và các cơ chế gọi API AI phù hợp.
+- **Kiểm thử và sửa lỗi:** Kiểm tra từng chức năng riêng lẻ và kiểm thử tích hợp giữa các module.
+- **Hoàn thiện tài liệu và bàn giao:** Viết hướng dẫn sử dụng, tài liệu kỹ thuật và tổng hợp kết quả triển khai.
+
+##### Task Scheduling và mốc tiến độ
+
+Trong thời gian 1 tháng, nhóm chia tiến độ thành 4 tuần với các mốc chính như sau:
+
+| Tuần   | Nội dung thực hiện                                                                          | Mục tiêu đầu ra                                  |
+| ------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Tuần 1 | Thiết lập môi trường, tạo repository, dựng khung frontend/backend, cấu hình Git và database | Dự án có thể chạy ở môi trường dev               |
+| Tuần 2 | Hiện thực đăng ký, đăng nhập, quên mật khẩu, quản lý truyện và chương cơ bản                | Người dùng có thể tạo và quản lý nội dung truyện |
+| Tuần 3 | Hoàn thiện đọc truyện, tìm kiếm, bình luận, membership và phân quyền                        | Có luồng đọc và tương tác cơ bản                 |
+| Tuần 4 | Tích hợp AI, kiểm thử tổng hợp, sửa lỗi, hoàn thiện tài liệu và demo                        | Có bản demo ổn định để trình bày                 |
+
+Các công việc có quan hệ phụ thuộc được triển khai theo thứ tự: thiết lập nền tảng trước, sau đó mới phát triển các tính năng nghiệp vụ, cuối cùng mới tích hợp AI và tối ưu hệ thống.
+
+##### Supporting Activities
+
+**Environment Configuration**
+
+Thiết lập repository Git, đồng thời cấu hình môi trường phát triển, kiểm thử và tích hợp với các công cụ cần thiết như IDE, build tools, database và Docker.
+
+**Documentation**
+
+Viết tài liệu kỹ thuật, comment trong mã nguồn và hướng dẫn người dùng để mô tả cách hệ thống hoạt động và cách sử dụng.
+
+**Risk Management**
+
+Xác định các rủi ro khi triển khai như chậm tiến độ, lỗi tích hợp hoặc không tương thích công nghệ, đồng thời đề xuất các biện pháp giảm thiểu đơn giản.
+
+#### 4.3.4 Deliverables
+
+Các sản phẩm đầu ra của giai đoạn Implementation bao gồm:
+
+- **Project Schedule (Gantt Chart):** Lịch triển khai tổng quát thể hiện tiến độ và các mốc chính của dự án.
+- **Work Breakdown Structure (WBS):** Danh sách phân rã các công việc cần thực hiện theo từng hạng mục.
+- **Configuration Management Plan:** Kế hoạch quản lý cấu hình, bao gồm chiến lược nhánh Git và quy trình build.
+- **Documentation Plan:** Kế hoạch viết tài liệu kỹ thuật và tài liệu hướng dẫn người dùng.
+- **Bản triển khai thử nghiệm:** Phiên bản có thể chuyển sang giai đoạn kiểm thử tại mục 4.4.
 
 ### 4.4 Testing
 

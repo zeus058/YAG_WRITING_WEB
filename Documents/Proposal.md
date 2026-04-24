@@ -32,8 +32,7 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
     - [4.3.3 Implementation Activities](#433-implementation-activities)
       - [Development Activities (Work Breakdown Structure – WBS)](#development-activities-work-breakdown-structure--wbs)
       - [Task Scheduling](#task-scheduling)
-  - [LỘ TRÌNH PHÁT TRIỂN DỰ ÁN (PROJECT TIMELINE - 4 WEEKS)](#lộ-trình-phát-triển-dự-án-project-timeline---4-weeks)
-    - [Supporting Activities](#supporting-activities)
+      - [Supporting Activities](#supporting-activities)
     - [4.3.4 Deliverables](#434-deliverables)
   - [4.4 Testing](#44-testing)
     - [4.4.1 Testing Elicitation](#441-testing-elicitation)
@@ -558,8 +557,6 @@ Nhóm phân rã giai đoạn hiện thực thành các đầu việc chính sau:
 ##### Task Scheduling
 
 Trong thời gian 1 tháng, nhóm chia tiến độ thành 4 tuần với các mốc chính như sau:
-
-### LỘ TRÌNH PHÁT TRIỂN DỰ ÁN (PROJECT TIMELINE - 4 WEEKS)
 
 | Tuần       | Giai đoạn & Nội dung thực hiện                                                                                                                                                                | Mục tiêu đầu ra (Deliverables)                                                          |
 | :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------- |

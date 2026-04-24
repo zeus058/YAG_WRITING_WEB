@@ -30,9 +30,6 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
     - [4.3.1 Technical](#431-technical)
     - [4.3.2 Implementation Objectives](#432-implementation-objectives)
     - [4.3.3 Implementation Activities](#433-implementation-activities)
-      - [Development Activities (Work Breakdown Structure – WBS)](#development-activities-work-breakdown-structure--wbs)
-      - [Task Scheduling](#task-scheduling)
-      - [Supporting Activities](#supporting-activities)
     - [4.3.4 Deliverables](#434-deliverables)
   - [4.4 Testing](#44-testing)
     - [4.4.1 Testing Elicitation](#441-testing-elicitation)
@@ -541,7 +538,7 @@ Sử dụng các công nghệ hiện đại nhằm đảm bảo khả năng mở
 
 #### 4.3.3 Implementation Activities
 
-##### Development Activities (Work Breakdown Structure – WBS)
+**Development Activities (Work Breakdown Structure – WBS)**
 
 Nhóm phân rã giai đoạn hiện thực thành các đầu việc chính sau:
 
@@ -554,7 +551,7 @@ Nhóm phân rã giai đoạn hiện thực thành các đầu việc chính sau:
 - **Kiểm thử và sửa lỗi:** Kiểm tra từng chức năng riêng lẻ và kiểm thử tích hợp giữa các module.
 - **Hoàn thiện tài liệu và bàn giao:** Viết hướng dẫn sử dụng, tài liệu kỹ thuật và tổng hợp kết quả triển khai.
 
-##### Task Scheduling
+**Task Scheduling**
 
 Trong thời gian 1 tháng, nhóm chia tiến độ thành 4 tuần với các mốc chính như sau:
 
@@ -567,7 +564,7 @@ Trong thời gian 1 tháng, nhóm chia tiến độ thành 4 tuần với các m
 
 Các công việc có quan hệ phụ thuộc được triển khai theo thứ tự: thiết lập nền tảng trước, sau đó mới phát triển các tính năng nghiệp vụ, cuối cùng mới tích hợp AI và tối ưu hệ thống.
 
-##### Supporting Activities
+**Supporting Activities**
 
 **Environment Configuration**
 

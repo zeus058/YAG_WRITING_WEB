@@ -838,16 +838,20 @@ Trong quá trình thực hiện đồ án và xây dựng bản Proposal này, n
   - Lỗ hổng về AI Quota & Costing (Chi phí và giới hạn AI):
 
     Hệ thống gọi Gemini API cho mọi bản thảo mới (AI Moderator) và mọi truy vấn tìm kiếm (Embedding).
+
     Lỗi thiếu sót: Các API LLM đều có Rate Limit (Giới hạn request/phút) và chi phí theo Token. Một chương truyện 3000 chữ đưa vào AI Moderator sẽ ngốn lượng token khổng lồ. Nếu 100 tác giả đăng bài cùng lúc, hệ thống sẽ sập do hit Rate Limit của Google.
+
     👉 Hướng xử lý: Cần thiết kế cơ chế Chunking (chia nhỏ text) khi nhúng vào Vector DB, và có cơ chế Fallback (trả về lỗi hoặc cho vào hàng đợi delay) khi API LLM báo hết Quota.
 
   - Lỗi tư duy bảo mật (Anti-piracy):
 
     Phần 4.2.2 UI Design đề xuất chặn chuột phải, vô hiệu hóa F12 và Ctrl+C để chống sao chép.
+
     Lỗi thiếu sót: Dưới góc độ an toàn thông tin, chặn UI ở Frontend chỉ là "trò trẻ con", dễ dàng bị bypass bằng cách tắt JavaScript hoặc dùng cURL. Kẻ cắp truyện (crawler) không dùng trình duyệt.
+
     👉 Hướng xử lý: Bạn đã đề cập đến Rate Limiting ở API Gateway, đó mới là cách đúng. Cần nhấn mạnh việc giới hạn số lượng chương truyện được fetch trên 1 IP trong 1 phút, kết hợp Cloudflare Bot Management.
 
-- **Nội dung sinh viên tự làm và cách chỉnh sửa:** Toàn bộ ý tưởng hệ thống, tính năng, và các biểu đồ UML (Use case, ERD, Sequence, UI Flow) là do nhóm tự phân tích và thiết kế.
+- **Nội dung sinh viên tự làm và cách chỉnh sửa:** Xem xét nội dung do AI đề xuất và tìm hiểu thêm về khả năng của RateLimit, cũng như sự không ăn toàn của việc chỉ vô hiệu hóa chuột phải. Từ đó, nhóm lựa chọn sử dụng RateLimit làm nền tảng công nghệ chính, tuy nhiên để tăng khả năng chống các hành động sao chép nội dung cơ bản thì việc áp dụng vô hiệu hóa chuột phải, Ctrl+C vẫn được cấu hình. Ngoài ra, xem xét và áp dụng cơ chế Fallback trong vận hành Web trong tương lai.
 
 ![AI](images/AI.png)
 ![AI](images/AI2.png)

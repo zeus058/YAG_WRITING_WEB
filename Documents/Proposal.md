@@ -41,14 +41,13 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
   - [5.2 Costing Plan](#52-costing-plan)
 - [6. Tools setup](#6-tools-setup)
   - [6.1 Prerequisites](#61-prerequisites)
-  - [6.2 Repository](#62-repository)
-  - [6.3 Backend Setup (FastAPI)](#63-backend-setup-fastapi)
-  - [6.4 Frontend Setup (Next.js)](#64-frontend-setup-nextjs)
-  - [6.5 Docker](#65-docker)
-  - [6.6 Environment Variables](#66-environment-variables)
+  - [6.2 Repository Structure](#62-repository-structure)
 - [7. AI Usage Declaration](#7-ai-usage-declaration)
 - [8. Presentation](#8-presentation)
 - [9. Reflective Report](#9-reflective-report)
+  - [9.1 Most helpful sections](#91-most-helpful-sections)
+  - [9.2 Unnecessary/Tedious sections](#92-unnecessarytedious-sections)
+  - [9.3 Tổng kết](#93-tổng-kết)
 
 ## 1. Member Contribution Assessment
 
@@ -64,6 +63,8 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
 | _**Review Hardware**_                      | Đánh giá đề xuất các yêu cầu về thiết bị đầu cuối và hạ tầng máy chủ cần thiết để triển khai hệ thống                                               |
 | _**Review Implementation**_                | Đánh giá đề xuất cho quá trình hiện thực hóa mã nguồn, đảm bảo đề xuất có trình bày các quy tắc cần tuân thủ khi viết code và chức năng đã thiết kế |
 
+![Nhiệm vụ của Gia Hiển](images/task_hien.png)
+
 - **23120151 - Huỳnh Yến Nhi - 15%**
 
 | Nhiệm vụ                                   | Mô tả                                                                                                                           |
@@ -71,6 +72,8 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
 | _**Write Implementation**_                 | Mô tả chi tiết các công nghệ sử dụng (ngôn ngữ lập trình, framework) và cách thức chuyển đổi từ thiết kế thành mã nguồn thực tế |
 | _**Review Preliminary Problem Statement**_ | Đánh giá tính logic và mức độ thuyết phục của phần đặt vấn đề, đảm bảo bám sát nhu cầu thị trường và khả năng thực hiện         |
 | _**Review Software Design**_               | Đánh giá đề xuất về giao diện (UI) và trải nghiệm người dùng (UX) để đảm bảo tính thẩm mỹ và dễ sử dụng                         |
+
+![Nhiệm vụ của Yến Nhi](images/task_nhi.png)
 
 - **23120169 - Nguyễn Phú Thọ - 20%**
 
@@ -81,6 +84,8 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
 | _**Review Testing**_                        | Đánh giá kế hoạch và phương pháp kiểm thử đảm bảo các chức năng thực hiện chính xác, đảm bảo các lỗi tiềm tàng đều được bao phủ trong kế hoạch |
 | _**Review Human Resources & Costing Plan**_ | Đánh giá đề xuất bảng tính chi phí và phân bổ nhân sự để đảm bảo tính thực tế và tối ưu ngân sách                                              |
 
+![Nhiệm vụ của Phú Thọ](images/task_tho.png)
+
 - **23120177 - Phạm Hương Trà - 15%**
 
 | Nhiệm vụ                                 | Mô tả                                                                                                                       |
@@ -89,6 +94,8 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
 | _**Review Software Features**_           | Đánh giá tính khả thi của các tính năng đã đề xuất, loại bỏ hoặc bổ sung các tính năng cần thiết                            |
 | _**Review Deployment and Maintainance**_ | Đánh giá đề xuất các phương án triển khai để đảm bảo tính an toàn và giảm thiểu thời gian gián đoạn của hệ thống (downtime) |
 
+![Nhiệm vụ của Hương Trà](images/task_tra.png)
+
 - **23120182 - Nguyễn Duy Trường - 15%**
 
 | Nhiệm vụ                           | Mô tả                                                                                                    |
@@ -96,6 +103,8 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
 | _**Write Software Architecture**_  | Thiết kế cấu trúc tổng thể về phần mềm hệ thống, bao gồm sơ đồ khối, luồng dữ liệu giữa Client và Server |
 | _**Write Software Design**_        | Đưa ra đề xuất về một bản thiết kế chi tiết từ UI đến Database, cũng như thực hiện các yêu cầu kiểm thử  |
 | _**Review Requirements Analysis**_ | Đánh giá đề xuất về tính đầy đủ của các yêu cầu đã phân tích, tránh bỏ sót nhu cầu của người dùng        |
+
+![Nhiệm vụ của Duy Trường](images/task_truong.png)
 
 ## 2. Preliminary Problem Statement
 
@@ -743,76 +752,28 @@ Dự án được thực hiện bởi nhóm 5 thành viên được phân bổ n
 
 ### 6.1 Prerequisites
 
+**Moodle:** Được sử dụng để cập nhật thông tin môn học và nộp các sản phẩm của dự án theo đúng thời hạn.
+**Zalo:** Là kênh trao đổi chính giữa các thành viên. Nhóm sử dụng kênh này để thảo luận kỹ thuật, cập nhật tiến độ và nhận thông báo.
+**JIRA:** Sử dụng để quản lý các đầu việc theo mô hình Scrum. Mọi nhiệm vụ đều được tổ chức vào các Sprint, có người phụ trách (Assignee), trạng thái thực hiện và thời hạn cụ thể.
+**GitHub:** Hệ thống quản lý phiên bản được sử dụng để lưu trữ tập trung toàn bộ mã nguồn và tài liệu của dự án.
+
 Các thành viên cần cài đặt sẵn các công cụ nền tảng sau trước khi tiến hành cấu hình dự án:
 
-- Node.js (v18.x trở lên): Để chạy môi trường phát triển Next.js.
+- **Prerequisites:** Cài đặt Node.js (v18.x trở lên), Python (v3.10 trở lên), Docker Desktop và Git.
+- **Backend:** Khởi tạo môi trường ảo Python và cài đặt các thư viện từ `requirements.txt`.
+- **Frontend:** Cài đặt các gói phụ thuộc qua lệnh `npm install`.
+- **Dockerize:** Sử dụng `docker-compose up -d` để khởi chạy các dịch vụ bổ trợ bao gồm PostgreSQL (Database), Redis (Cache) và RabbitMQ (Message Broker).
+- **Environment Variables:** Cấu hình file `.env` cho cả Backend và Frontend với các thông số bắt buộc như `DATABASE_URL`, `GEMINI_API_KEY`, `VNPAY_CONFIG` và `JWT_SECRET`.
 
-- Python (v3.10 trở lên): Để vận hành Backend FastAPI.
+### 6.2 Repository Structure
 
-- Docker & Docker Compose: Công cụ bắt buộc để đóng gói và chạy các dịch vụ bổ trợ (PostgreSQL, Redis, RabbitMQ) trong container.
-
-- Git: Quản lý phiên bản mã nguồn trên GitHub.
-
-- Visual Studio Code (IDE): Trình soạn thảo mã nguồn khuyến nghị, cài đặt kèm các extension như Pylance (Python), ESLint (Next.js) và Docker.
-
-### 6.2 Repository
-
-Nhóm sử dụng GitHub làm nơi lưu trữ tập trung. Quy trình khởi tạo như sau:
-
-Clone Repository:
-
-    git clone https://github.com/zeus058/SE_Writing_Web.git
-    cd SE_Writing_Web
-
-Chiến lược nhánh:
-
-    main: Nhánh chứa mã nguồn ổn định nhất để triển khai.
-    develop: Nhánh chính để tích hợp các tính năng mới.
-    feature/feature-name: Các nhánh riêng biệt để phát triển từng tính năng cụ thể.
-
-### 6.3 Backend Setup (FastAPI)
-
-Tạo môi trường ảo (Virtual Environment):
-
-    cd backend
-    python -m venv venv
-    venv\Scripts\activate
-
-Cài đặt thư viện:
-
-    pip install -r requirements.txt
-
-### 6.4 Frontend Setup (Next.js)
-
-Cài đặt Dependencies:
-
-    cd frontend
-    npm install
-
-Chạy môi trường phát triển:
-
-    npm run dev
-
-### 6.5 Docker
-
-Sử dụng Docker Compose để khởi chạy cơ sở dữ liệu và các middleware nhằm đảm bảo môi trường local giống hệt môi trường Production:
-
-    docker-compose up -d
-
-Dịch vụ bao gồm:
-
-- PostgreSQL: Cơ sở dữ liệu quan hệ chính (Port 5432).
-- Redis: Bộ nhớ đệm và quản lý hàng đợi cho AI (Port 6379).
-- RabbitMQ: Broker điều phối các tác vụ kiểm duyệt bất đồng bộ (Port 5672).
-
-### 6.6 Environment Variables
-
-Tạo file .env tại thư mục gốc của Backend và Frontend với các thông số bắt buộc:
-
-    DATABASE_URL: Đường dẫn kết nối PostgreSQL.
-    GEMINI_API_KEY: Mã định danh để gọi Google Gemini API.
-    VNPAY_TMN_CODE & VNPAY_HASH_SECRET: Cấu hình thanh toán Sandbox.
-    JWT_SECRET: Khóa bí mật để mã hóa token đăng nhập người dùng.
+- **/src:** Thư mục lưu trữ toàn bộ mã nguồn của dự án.
+- **/docs:** Lưu trữ tất cả các tài liệu liên quan đến dự án, bao gồm các thư mục con:
+  - **management:** Chứa các tài liệu lập kế hoạch, báo cáo hàng tuần và báo cáo trạng thái dự án.
+  - **requirements:** Chứa tài liệu đặc tả yêu cầu, tài liệu tầm nhìn (Vision) và các Use cases.
+  - **analysis and design:** Chứa tài liệu kiến trúc phần mềm, các biểu đồ UML và bản thiết kế giao diện (UI Design).
+  - **test:** Chứa kế hoạch kiểm thử (Test plans), kịch bản kiểm thử (Test cases) và các báo cáo kết quả kiểm thử.
+- **/pa:** Bao gồm các thư mục con để lưu trữ từng đợt nộp bài (PA submission) theo yêu cầu của môn học.
 
 ## 7. AI Usage Declaration
 
@@ -861,3 +822,23 @@ Trong quá trình thực hiện đồ án và xây dựng bản Proposal này, n
 Video thuyết trình: https://www.youtube.com/watch?v=Kvm_CrbhuEI
 
 ## 9. Reflective Report
+
+### 9.1 Most helpful sections
+
+Trong quá trình xây dựng bản đề xuất và chuẩn bị cho giai đoạn lập trình, nhóm nhận thấy các mục sau đây mang lại giá trị thực tiễn cao nhất:
+
+- **Mục 3.1.2 (Software Architecture) & 4.2 (Software Design):** Đây là phần quan trọng nhất giúp nhóm định hình luồng xử lý của hệ thống. Việc phải vẽ chi tiết các biểu đồ trình tự (Sequence Diagram) đã giúp nhóm phát hiện ra các rủi ro về hiệu năng.
+  - _Ví dụ cụ thể:_ Khi thiết kế luồng "Đăng truyện và Kiểm duyệt AI", nhóm nhận thấy việc gọi API LLM trực tiếp sẽ gây nghẽn hệ thống. Nhờ đó, nhóm đã quyết định đưa thêm **RabbitMQ** và kiến trúc xử lý bất đồng bộ vào thiết kế để đảm bảo trải nghiệm người dùng không bị gián đoạn.
+- **Mục 4.2.3 (Database Design):** Việc bắt buộc mô tả cấu trúc lưu trữ giúp nhóm xác định rõ giải pháp cho tính năng đổi mới nhất của dự án.
+  - _Ví dụ cụ thể:_ Nhóm đã quyết định sử dụng mô hình Hybrid (**PostgreSQL** kết hợp **pgvector**). Nếu không có bước thiết kế này, nhóm có thể đã đi sai hướng khi chỉ sử dụng tìm kiếm từ khóa thông thường, làm mất đi tính đột phá của tính năng AI Semantic Search.
+- **Mục 7 (AI Usage Declaration):** Mục này thúc đẩy tư duy phản biện thay vì phụ thuộc hoàn toàn vào công cụ.
+  - _Ví dụ cụ thể:_ Khi AI gợi ý các biện pháp chống sao chép ở Frontend (chặn chuột phải), nhóm đã phản biện và nhận ra lỗ hổng của nó, từ đó bổ sung giải pháp **Rate Limiting** ở tầng API Gateway để bảo vệ tác quyền thực tế hơn.
+
+### 9.2 Unnecessary/Tedious sections
+
+- **Mục 5.2 (Costing Plan):** Do đặc thù là dự án sinh viên, nhóm ưu tiên sử dụng các gói miễn phí (Free Tier) hoặc Credit hỗ trợ từ các nhà cung cấp (GCP, Supabase, Vercel). Vì vậy, việc lập bảng tính chi phí chi tiết đôi khi mang tính giả định và không ảnh hưởng nhiều đến các quyết định kỹ thuật cốt lõi.
+- **Mục 6.1 (Prerequisites):** Các công cụ như Node.js, Python hay Git là những nền tảng cơ bản mà sinh viên ngành Công nghệ phần mềm đều đã nắm vững và cài đặt sẵn. Việc liệt kê chi tiết các công cụ này mang ý nghĩa tiêu chuẩn hóa tài liệu hành chính nhiều hơn là hỗ trợ kỹ thuật trực tiếp.
+
+### 9.3 Tổng kết
+
+Mẫu template này giúp nhóm thực hành quy trình của một kỹ sư phần mềm chuyên nghiệp: tập trung vào việc thiết kế và đánh giá tính khả thi trước khi thực hiện. Điều này giúp giảm thiểu đáng kể các lỗi logic và sai sót kiến trúc trong giai đoạn phát triển (Implementation) sắp tới.

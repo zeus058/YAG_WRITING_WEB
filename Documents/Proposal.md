@@ -858,4 +858,6 @@ Trong quá trình thực hiện đồ án và xây dựng bản Proposal này, n
 
 ## 8. Presentation
 
+Video thuyết trình: https://www.youtube.com/watch?v=Kvm_CrbhuEI
+
 ## 9. Reflective Report

@@ -759,6 +759,8 @@ Dự án được thực hiện bởi nhóm 5 thành viên được phân bổ n
 
 **GitHub:** Hệ thống quản lý phiên bản được sử dụng để lưu trữ tập trung toàn bộ mã nguồn và tài liệu của dự án.
 
+https://github.com/zeus058/SE_Writing_Web
+
 Các thành viên cần cài đặt sẵn các công cụ nền tảng sau trước khi tiến hành cấu hình dự án:
 
 - **Prerequisites:** Cài đặt Node.js (v18.x trở lên), Python (v3.10 trở lên), Docker Desktop và Git.

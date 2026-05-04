@@ -308,13 +308,12 @@ flowchart LR
 ## 5. AI Usage Declaration   
 Chưa cần viết các mục này.
 
-## 8. Presentation
+## 6. Presentation
 Chưa cần viết các mục này.
 Video thuyết trình:
 
-## 9. Reflective Report
-
-### 9.1 Most helpful sections
+## 7. Reflective Report
+### 7.1 Most helpful sections
 Chưa cần viết các mục này.
-### 9.2 Unnecessary/Tedious sections
+### 7.2 Unnecessary/Tedious sections
 Chưa cần viết các mục này.

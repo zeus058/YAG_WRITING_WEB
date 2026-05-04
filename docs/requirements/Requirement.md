@@ -303,7 +303,17 @@ flowchart LR
     Edited by: 
     Reviewed by: 23120151 Huỳnh Yến Nhi
 
-
+| Mục | Nội dung |
+| :--- | :--- |
+| **Use case ID** | U012 |
+| **Use Case** | Giám sát cam kết lộ trình (Schedule Commitment Monitoring) |
+| **Brief Description** | Hệ thống tự động theo dõi và nhắc nhở tác giả đăng chương mới đúng lịch, đồng thời cảnh báo khi tác giả có nguy cơ vi phạm cam kết "không bỏ dở tác phẩm (drop)". |
+| **Actor** | System (Scheduler), Author, Admin |
+| **Pre-Condition** | Tác giả đã đăng ký lịch đăng chương định kỳ (theo tuần, theo tháng,…) và cam kết không drop tác phẩm khi xuất bản truyện. |
+| **Result** | Hệ thống ghi nhận trạng thái tuân thủ lịch đăng của tác giả; tác giả được nhắc nhở hoặc bị cảnh báo vi phạm cam kết nếu trễ hạn. |
+| **Main Scenario** | 1. Hệ thống Scheduler định kỳ kiểm tra danh sách các tác phẩm đang trong lịch đăng chương, chưa hoàn thành.<br>2. Hệ thống so sánh thời điểm hiện tại với lịch đăng đã cam kết của từng tác phẩm.<br>3. Nếu tác giả đăng chương đúng hạn, hệ thống cập nhật trạng thái `On Schedule` và ghi log.<br>4. Hệ thống cập nhật thống kê tỷ lệ tuân thủ cam kết (độ uy tín) lên hồ sơ tác giả. |
+| **Alternative Scenarios** | - Tác giả sắp trễ hạn (còn ≤ 24 giờ): Hệ thống gửi thông báo nhắc nhở tác giả đăng chương đúng hạn.<br>- Tác giả trễ hạn: Hệ thống cập nhật trạng thái `Overdue`, gửi cảnh báo vi phạm đến tác giả và gắn cờ tác phẩm để Admin xem xét.<br>- Tác giả vi phạm nhiều lần: Admin nhận thông báo tổng hợp và có thể áp dụng biện pháp xử lý (hạ xếp hạng tác giả, tác phẩm; khóa tài khoản tạm thời). |
+| **Non-Functional Constraints** | - Scheduler chạy tự động mỗi giờ, không yêu cầu thao tác thủ công.<br>- Thông báo nhắc nhở phải được gửi đến tác giả trong vòng 5-10 phút kể từ khi phát hiện vi phạm.<br>- Toàn bộ log giám sát phải được lưu trữ để phục vụ thống kê và kiểm tra khi cần. |
 
 ## 5. AI Usage Declaration   
 Chưa cần viết các mục này.

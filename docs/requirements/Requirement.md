@@ -67,11 +67,28 @@
     Edited by: 
     Reviewed by: 23120123 Trần Gia Hiển
 ### 2.1. Business Description
-    
+
+Trong bối cảnh văn học mạng phát triển mạnh mẽ, nhu cầu xây dựng một nền tảng viết truyện hiện đại, thông minh và an toàn ngày càng cấp thiết. Các nền tảng hiện tại thường thiếu các tính năng hỗ trợ tác giả sáng tác hiệu quả (gợi ý ý tưởng, kiểm duyệt AI, quản lý tiến độ), đồng thời chưa tạo được môi trường tương tác cộng đồng mạnh mẽ giữa tác giả và độc giả. Độc giả gặp khó khăn khi tìm kiếm truyện phù hợp với sở thích, còn tác giả thiếu công cụ để tiếp cận, giữ chân độc giả và bảo vệ quyền sở hữu trí tuệ. Hệ thống YAG hướng đến giải quyết các vấn đề này bằng cách tích hợp AI hỗ trợ sáng tác, kiểm duyệt nội dung, tìm kiếm thông minh, đồng thời xây dựng một không gian mạng xã hội chuyên biệt cho cộng đồng mê truyện.
 
 ### 2.2. Operating Environment
+- Hệ thống được triển khai dưới dạng Web Application, truy cập qua các trình duyệt hiện đại hỗ trợ HTML5 và WebSockets (Google Chrome, Microsoft Edge, Firefox).
+- Backend sử dụng Python (FastAPI) để tích hợp AI, xử lý dữ liệu lớn và cung cấp API.
+- Frontend phát triển với Next.js, xây dựng giao diện SPA tối ưu trải nghiệm người dùng.
+- Dữ liệu lưu trữ trên PostgreSQL, hỗ trợ backup định kỳ lên Google Cloud Storage.
+- Hệ thống sử dụng Apache làm máy chủ phân phối nội dung, tích hợp các dịch vụ AI/LLM từ Google hoặc đối tác tương đương.
+- Các dịch vụ phụ trợ như Redis, RabbitMQ phục vụ cache, xử lý bất đồng bộ và đồng bộ hóa bản thảo thời gian thực.
+- Thanh toán thực hiện qua cổng VNPAY, đảm bảo an toàn và xác thực giao dịch.
 
 ### 2.3. Design & Implementation Constraints
+
+- Hệ thống phải đảm bảo bảo mật thông tin người dùng, mã hóa mật khẩu (Bcrypt), JWT authentication, bảo vệ dữ liệu thanh toán qua HTTPS/TLS 1.2+.
+- Tất cả người dùng đều phải đăng ký, đăng nhập để sử dụng dịch vụ.
+- Tính năng AI phải xử lý bất đồng bộ, không gây treo giao diện người dùng, có giới hạn số request và fallback khi fail.
+- Giao diện phải tương thích đa nền tảng, hỗ trợ các chế độ bảo vệ mắt (Dark mode).
+- Thiết kế theo hướng Modular Monolith, sẵn sàng tách module AI thành Microservice khi cần mở rộng.
+- Hệ thống phải hỗ trợ đồng bộ hóa bản thảo thời gian thực với độ trễ thấp (<200ms).
+- Đảm bảo uptime tối thiểu 99.5%, dữ liệu phải được backup định kỳ.
+- Tuân thủ các quy định về kiểm duyệt nội dung, bảo vệ quyền sở hữu trí tuệ và quyền riêng tư người dùng.
 
 ## 3. Requirements Overview
     Written by: 23120177 Phạm Hương Trà

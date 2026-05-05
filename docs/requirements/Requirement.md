@@ -96,17 +96,14 @@ Trong bối cảnh văn học mạng phát triển mạnh mẽ, nhu cầu xây d
     Reviewed by: 23120151 Huỳnh Yến Nhi
 
 ### 3.1. Stakeholders
-Bảng dưới đây định nghĩa các tác nhân tương tác trực tiếp và gián tiếp, giúp xác định ranh giới và trách nhiệm của hệ thống YAG.
 
 | STT | Stakeholder | Mô tả vai trò |
 | :--- | :--- | :--- |
-| 1 | **Tác giả (Author)** | Người sáng tạo nội dung. Sử dụng Studio để soạn thảo, quản lý tác phẩm, nhận gợi ý từ AI và theo dõi thống kê/doanh thu. |
-| 2 | **Độc giả (Reader)** | Người sử dụng dịch vụ. Tìm kiếm truyện bằng AI, tham gia cộng đồng tương tác và thực hiện thanh toán Membership. |
+| 1 | **Tác giả (Author)** | Người sáng tạo nội dung. Sử dụng Studio để soạn thảo, quản lý tác phẩm, nhận gợi ý từ AI và theo dõi thống kê,doanh thu. |
+| 2 | **Độc giả (Reader)** | Người sử dụng dịch vụ. Tìm kiếm truyện bằng AI, tham gia cộng đồng tương tác và thực hiện thanh toán Membership nếu có nhu cầu. |
 | 3 | **Quản trị viên (Admin)** | Nhân viên vận hành. Kiểm duyệt các nội dung bị gắn cờ, quản lý người dùng và giám sát các cam kết lộ trình của tác giả. |
 | 4 | **Hệ thống AI (AI Engine)** | Tác nhân hệ thống (Gemini API). Cung cấp khả năng xử lý ngôn ngữ tự nhiên: gợi ý tình tiết, tìm kiếm ngữ nghĩa và quét nội dung vi phạm. |
-| 5 | **Đối tác thanh toán (VNPAY)** | Bên thứ ba xử lý giao dịch. Đảm bảo tính an toàn và xác thực các khoản thanh toán cho gói hội viên. |
-| 6 | **Project Sponsor** | Giảng viên hướng dẫn môn Nhập môn Công nghệ phần mềm (HCMUS) – người thẩm định tính đúng đắn và khả thi của sản phẩm. |
-
+| 5 | **Đối tác thanh toán (VNPAY/MOMO)** | Bên thứ ba xử lý giao dịch. Đảm bảo tính an toàn và xác thực các khoản thanh toán cho gói hội viên. |
 ---
 ### 3.2. Requirements
 #### 3.2.1. Functional Requirements Specification

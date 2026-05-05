@@ -79,18 +79,71 @@
     Reviewed by: 23120151 Huỳnh Yến Nhi
 
 ### 3.1. Stakeholders
+Bảng dưới đây định nghĩa các tác nhân tương tác trực tiếp và gián tiếp, giúp xác định ranh giới và trách nhiệm của hệ thống YAG.
 
+| STT | Stakeholder | Mô tả vai trò |
+| :--- | :--- | :--- |
+| 1 | **Tác giả (Author)** | Người sáng tạo nội dung. Sử dụng Studio để soạn thảo, quản lý tác phẩm, nhận gợi ý từ AI và theo dõi thống kê/doanh thu. |
+| 2 | **Độc giả (Reader)** | Người sử dụng dịch vụ. Tìm kiếm truyện bằng AI, tham gia cộng đồng tương tác và thực hiện thanh toán Membership. |
+| 3 | **Quản trị viên (Admin)** | Nhân viên vận hành. Kiểm duyệt các nội dung bị gắn cờ, quản lý người dùng và giám sát các cam kết lộ trình của tác giả. |
+| 4 | **Hệ thống AI (AI Engine)** | Tác nhân hệ thống (Gemini API). Cung cấp khả năng xử lý ngôn ngữ tự nhiên: gợi ý tình tiết, tìm kiếm ngữ nghĩa và quét nội dung vi phạm. |
+| 5 | **Đối tác thanh toán (VNPAY)** | Bên thứ ba xử lý giao dịch. Đảm bảo tính an toàn và xác thực các khoản thanh toán cho gói hội viên. |
+| 6 | **Project Sponsor** | Giảng viên hướng dẫn môn Nhập môn Công nghệ phần mềm (HCMUS) – người thẩm định tính đúng đắn và khả thi của sản phẩm. |
+
+---
 ### 3.2. Requirements
 #### 3.2.1. Functional Requirements Specification
     Written by: 23120177 Phạm Hương Trà
     Edited by: 
     Reviewed by: 23120182 Nguyễn Duy Trường
 
+Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cốt lõi đã đề xuất trong kiến trúc hệ thống:
+
+**Nhóm 1: Quản lý Tài khoản & Phân quyền (Auth & RBAC)**
+*   **FR-01:** Hệ thống phải cho phép người dùng đăng ký, đăng nhập và đặt lại mật khẩu qua Email.
+*   **FR-02:** Hệ thống phải thực hiện phân quyền người dùng (Role-Based Access Control) để kiểm soát quyền đọc truyện VIP và quyền truy cập Admin Dashboard.
+
+**Nhóm 2: Hỗ trợ Sáng tác & Quản lý nội dung (Author Studio)**
+*   **FR-03:** Cung cấp trình soạn thảo hỗ trợ lưu bản thảo tự động thời gian thực (WebSockets).
+*   **FR-04:** Tích hợp AI gợi ý phát triển tình tiết (AI Story Suggestion) dựa trên ngữ cảnh bản thảo hiện tại.
+*   **FR-05:** Cho phép tác giả thiết lập lịch đăng và thực hiện cam kết lộ trình (Schedule Commitment).
+
+**Nhóm 3: Khám phá thông minh (Search & Recommendation)**
+*   **FR-06:** Cho phép tìm kiếm truyện qua tên, tác giả hoặc mô tả cốt truyện bằng ngôn ngữ tự nhiên (AI Semantic Search).
+*   **FR-07:** Tự động đề xuất danh sách truyện phù hợp với sở thích của từng độc giả dựa trên lịch sử tương tác.
+
+**Nhóm 4: Tương tác & Doanh thu (Community & Payment)**
+*   **FR-08:** Cho phép người dùng tham gia bình luận, đánh giá (Rating) và thảo luận trong Diễn đàn (Forum).
+*   **FR-09:** Xử lý thanh toán mua gói Membership qua cổng VNPAY để mở khóa các chương truyện độc quyền/đọc sớm.
+
+**Nhóm 5: Kiểm duyệt & Giám sát (Moderation & Monitoring)**
+*   **FR-10:** AI tự động quét và phân loại nội dung vi phạm chính sách (Moderation) ngay khi tác giả gửi yêu cầu xuất bản.
+*   **FR-11:** Hệ thống Scheduler tự động gửi thông báo nhắc nhở và cảnh báo nếu tác giả trễ lịch cập nhật chương theo cam kết.
+
 #### 3.2.2. Non-Functional Requirements Specification
     Written by: 23120177 Phạm Hương Trà
     Edited by: 
     Reviewed by: 23120182 Nguyễn Duy Trường
 
+**1. Hiệu năng (Performance)**
+*   Thời gian phản hồi của tính năng Tìm kiếm thông minh AI phải dưới **1.5 giây**.
+*   Các tác vụ nặng (Kiểm duyệt AI) phải được xử lý bất đồng bộ qua hàng đợi (RabbitMQ), không gây treo giao diện người dùng.
+*   Hệ thống hỗ trợ đồng bộ hóa bản thảo thời gian thực với độ trễ (latency) dưới **200ms**.
+
+**2. Bảo mật (Security)**
+*   Mật khẩu phải được mã hóa bằng thuật toán **Bcrypt** trước khi lưu trữ.
+*   Áp dụng **Rate Limiting** tại API Gateway để ngăn chặn bot tự động cào nội dung truyện (Anti-crawling).
+*   Dữ liệu thanh toán phải được bảo vệ qua giao thức HTTPS/TLS 1.2 trở lên.
+
+**3. Độ tin cậy & Sẵn sàng (Reliability & Availability)**
+*   Hệ thống duy trì trạng thái sẵn sàng (Uptime) tối thiểu **99.5%**.
+*   Dữ liệu PostgreSQL phải được sao lưu định kỳ (Daily backup) lên Google Cloud Storage.
+
+**4. Khả năng mở rộng (Scalability)**
+*   Thiết kế theo **Modular Monolith** để dễ dàng tách module AI Smart Engine thành Microservice độc lập khi lượng truy cập tăng cao.
+
+**5. Tính khả dụng (Usability)**
+*   Giao diện đọc truyện phải tương thích với mọi trình duyệt hiện đại và hỗ trợ các chế độ bảo vệ mắt (Dark mode, Sepia).
 
 ## 4. Requirements Analysis 
 ### 4.1. Use Case model
@@ -263,6 +316,17 @@ flowchart LR
     Edited by: 
     Reviewed by: 23120123 Trần Gia Hiển
 
+| Mục | Nội dung |
+| :--- | :--- |
+| **Use case ID** | U008 |
+| **Use Case** | Bình luận & Đánh giá (Interact: Comment & Rate) |
+| **Brief Description** | Độc giả để lại ý kiến cá nhân và mức điểm đánh giá cho tác phẩm hoặc chương truyện cụ thể nhằm tăng tương tác cộng đồng. |
+| **Actor** | Reader |
+| **Pre-Condition** | Độc giả đã đăng nhập vào hệ thống và đang ở trang chi tiết truyện hoặc trang đọc chương. |
+| **Result** | Bình luận/Đánh giá được lưu vào hệ thống và hiển thị công khai cho người dùng khác. |
+| **Main Scenario** | 1. Độc giả nhập nội dung bình luận vào khung soạn thảo hoặc chọn số sao đánh giá (1-5 sao).<br>2. Độc giả nhấn nút "Gửi".<br>3. Hệ thống kiểm tra tính hợp lệ của nội dung (không trống, không vi phạm từ cấm cơ bản).<br>4. Hệ thống lưu dữ liệu vào cơ sở dữ liệu và cập nhật điểm trung bình (Rating) của truyện.<br>5. Hệ thống hiển thị bình luận mới lên giao diện (Real-time qua WebSockets). |
+| **Alternative Scenarios** | - **Vi phạm từ cấm:** Hệ thống hiển thị cảnh báo nội dung không phù hợp và yêu cầu chỉnh sửa.<br>- **Lỗi kết nối:** Hệ thống báo lỗi "Không thể gửi bình luận lúc này" và gợi ý thử lại. |
+| **Non-Functional Constraints** | - Thời gian hiển thị bình luận sau khi nhấn gửi < 1 giây.<br>- Dữ liệu đánh giá phải được đồng bộ chính xác để không làm sai lệch điểm số của tác phẩm. |
 
 
 #### 4.2.9. U009: Đăng ký Membership
@@ -270,13 +334,34 @@ flowchart LR
     Edited by: 
     Reviewed by: 23120123 Trần Gia Hiển
 
-
+| Mục | Nội dung |
+| :--- | :--- |
+| **Use case ID** | U009 |
+| **Use Case** | Đăng ký Membership |
+| **Brief Description** | Độc giả lựa chọn và đăng ký gói hội viên để hưởng các đặc quyền: đọc chương khóa, đọc sớm hoặc không quảng cáo. |
+| **Actor** | Reader |
+| **Pre-Condition** | Độc giả đã đăng nhập và chưa có gói Membership hoặc gói hiện tại sắp hết hạn. |
+| **Result** | Yêu cầu đăng ký được tạo và chuyển sang bước thanh toán. |
+| **Main Scenario** | 1. Độc giả truy cập trang "Membership".<br>2. Độc giả xem danh sách các gói (Tháng/Quý/Năm) và các quyền lợi đi kèm.<br>3. Độc giả chọn gói phù hợp và nhấn "Đăng ký ngay".<br>4. Hệ thống xác nhận thông tin gói và tổng số tiền.<br>5. Hệ thống chuyển hướng người dùng sang giao diện thanh toán (U010). |
+| **Alternative Scenarios** | - **Đã có gói:** Hệ thống hiển thị thông báo "Bạn đang trong gói Membership" và hiển thị ngày hết hạn thay vì nút đăng ký mới. |
+| **Non-Functional Constraints** | - Giao diện hiển thị gói cước phải trực quan, dễ so sánh quyền lợi. |
 
 #### 4.2.10. U010: Thanh toán VNPAY
     Written by: 23120177 Phạm Hương Trà
     Edited by: 
     Reviewed by: 23120123 Trần Gia Hiển
 
+| Mục | Nội dung |
+| :--- | :--- |
+| **Use case ID** | U010 |
+| **Use Case** | Thanh toán VNPAY (Payment) |
+| **Brief Description** | Độc giả thực hiện thanh toán phí Membership thông qua cổng thanh toán VNPAY. |
+| **Actor** | Reader, VNPAY System |
+| **Pre-Condition** | Độc giả đã thực hiện bước Đăng ký Membership (U009). |
+| **Result** | Giao dịch hoàn tất, tài khoản độc giả được nâng cấp lên hạng Membership. |
+| **Main Scenario** | 1. Hệ thống tạo mã giao dịch duy nhất và gọi API VNPAY để lấy URL thanh toán.<br>2. Hệ thống chuyển hướng người dùng sang trang thanh toán của VNPAY.<br>3. Độc giả thực hiện xác thực và thanh toán trên giao diện VNPAY (App ngân hàng hoặc ví điện tử).<br>4. VNPAY gửi kết quả giao dịch về URL phản hồi (IPN/Return URL) của hệ thống.<br>5. Hệ thống kiểm tra chữ ký số (Checksum) để đảm bảo an toàn.<br>6. Nếu thành công, hệ thống cập nhật trạng thái tài khoản người dùng và thông báo kết quả. |
+| **Alternative Scenarios** | - **Hủy thanh toán:** Người dùng nhấn nút "Quay lại" trên trang VNPAY. Hệ thống hủy giao dịch và đưa người dùng về trang chọn gói.<br>- **Thanh toán thất bại:** Do lỗi số dư hoặc lỗi kỹ thuật từ ngân hàng. Hệ thống thông báo lỗi và cho phép thực hiện lại. |
+| **Non-Functional Constraints** | - Bảo mật tuyệt đối: Không lưu thông tin thẻ/tài khoản ngân hàng của người dùng trên hệ thống YAG.<br>- Thời gian xử lý cập nhật quyền hạn ngay sau khi nhận được phản hồi từ VNPAY < 2 giây. |
 
 
 #### 4.2.11. U011: Kiểm duyệt nội dung AI

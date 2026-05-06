@@ -164,90 +164,9 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
     Written by: 23120182 Nguyễn Duy Trường
     Edited by: 
     Reviewed by: 23120169 Nguyễn Phú Thọ
- 
 
-```mermaid
-%%{init: {'theme': 'default', 'look': 'handDrawn'}}%%
-flowchart LR
-    %% --- ĐỊNH NGHĨA STYLE MÀU NỔI BẬT TRÊN NỀN TRẮNG ---
-    classDef actor fill:#ffffff,stroke:#FF00FF,stroke-width:3px,color:#000000,font-weight:bold;
-    classDef admin fill:#ffffff,stroke:#FF4500,stroke-width:3px,color:#000000,font-weight:bold;
-    classDef ai fill:#ffffff,stroke:#00A8FF,stroke-width:3px,color:#000000,font-weight:bold;
-    classDef usecase fill:#ffffff,stroke:#00D81A,stroke-width:2px,color:#000000;
-    classDef payment fill:#ffffff,stroke:#FF9100,stroke-width:2px,color:#000000;
-    
-    %% --- ACTORS BÊN TRÁI ---
-    Author(("Tác giả")):::actor
-    Reader(("Độc giả")):::actor
-    Admin(("Quản trị viên")):::admin
+![Use Case Model](images/usecaseDiagram.png)
 
-    %% Cố định 3 actor thẳng hàng dọc bên trái
-    Author ~~~ Reader ~~~ Admin
-
-    %% --- HỆ THỐNG YAG ---
-    subgraph YAG ["Hệ thống YAG Writing Web"]
-        direction TB
-        
-        subgraph Account ["Tài khoản"]
-            UC_Auth("Đăng ký / Đăng nhập"):::usecase
-            UC_Profile("Quản lý hồ sơ"):::usecase
-        end
-        
-        subgraph Studio ["Studio Sáng tác"]
-            UC_Write("Soạn thảo chương"):::usecase
-            UC_Publish("Xuất bản truyện"):::usecase
-            UC_AIAssist("Gợi ý tình tiết"):::usecase
-        end
-
-        subgraph Explore ["Khám phá"]
-            UC_AISearch("Tìm kiếm thông minh"):::usecase
-            UC_Recommend("Đề xuất truyện"):::usecase
-        end
-
-        subgraph Community ["Cộng đồng & Thanh toán"]
-            UC_Interact("Bình luận / Đánh giá"):::usecase
-            UC_Member("Đăng ký Membership"):::usecase
-            UC_Payment("Thanh toán VNPAY"):::payment
-        end
-
-        subgraph Management ["Quản trị"]
-            UC_Moderate("Kiểm duyệt nội dung"):::usecase
-            UC_Monitor("Giám sát lộ trình"):::usecase
-        end
-    end
-
-    %% --- ACTOR BÊN PHẢI (Backend) ---
-    AI_Engine{{"Hệ thống AI"}}:::ai
-
-    %% --- FLOW TƯƠNG TÁC ---
-    %% Tác giả
-    Author --->|Truy cập| UC_Auth
-    Author --->|Sáng tác| UC_Write
-    Author --->|Phát hành| UC_Publish
-    Author --->|Sử dụng| UC_AIAssist
-
-    %% Độc giả
-    Reader --->|Truy cập| UC_Auth
-    Reader --->|Tìm & Đọc| UC_AISearch
-    Reader --->|Nâng cấp| UC_Member
-    Reader --->|Tham gia| UC_Interact
-
-    %% Admin
-    Admin --->|Quản lý| UC_Auth
-    Admin --->|Kiểm duyệt| UC_Moderate
-    Admin --->|Theo dõi| UC_Monitor
-
-    %% --- FLOW DEPENDENCIES BÊN TRONG ---
-    UC_Write -.->|Chờ duyệt| UC_Moderate
-    UC_Publish -.->|Phê duyệt| UC_Moderate
-    UC_Member --->|Chuyển hướng API| UC_Payment
-
-    %% --- FLOW AI ---
-    UC_AISearch -. "Xử lý NLP" .-> AI_Engine
-    UC_AIAssist -. "Sinh văn bản" .-> AI_Engine
-    UC_Moderate -. "Quét vi phạm" .-> AI_Engine
-    UC_Recommend -. "Mô hình gợi ý" .-> AI_Engine
-```
 ### 4.2. Use Case Specification
 #### 4.2.1. U001: Đăng ký / Đăng nhập
     Written by: 23120182 Nguyễn Duy Trường
@@ -285,7 +204,7 @@ flowchart LR
 | **Main Scenario** | 1. Người dùng truy cập trang "Hồ sơ cá nhân".<br>2. Hệ thống hiển thị thông tin cơ bản và lịch sử hoạt động (truyện, forum).<br>3. Người dùng thay đổi thông tin (Ảnh đại diện, tên hiển thị).<br>4. Hệ thống tải ảnh lên Cloudinary/Firebase và lấy URL.<br>5. Cập nhật dữ liệu vào PostgreSQL và hiển thị thông báo thành công. |
 | **Alternative Scenarios** | - Đổi mật khẩu: Xác thực mật khẩu cũ bằng Bcrypt trước khi lưu mật khẩu mới.<br>- Lỗi tải ảnh: Báo lỗi nếu ảnh sai định dạng hoặc quá dung lượng.<br>- Xem hồ sơ public: Ẩn các nút chức năng bảo mật nếu xem hồ sơ người khác. |
 | **Non-Functional Constraints** | - Bảo mật quyền riêng tư khi hiển thị thông tin Public.<br>- Tối ưu hóa dung lượng lưu trữ ảnh thông qua CDN. |
-
+ad
 
 #### 4.2.3. U003: Soạn thảo chương truyện
     Written by: 23120182 Nguyễn Duy Trường

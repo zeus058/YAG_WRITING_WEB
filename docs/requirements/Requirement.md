@@ -254,7 +254,17 @@ flowchart LR
     Edited by: 
     Reviewed by: 23120177 Phạm Hương Trà
 
-
+| Mục | Nội dung |
+| :--- | :--- |
+| **Use case ID** | U001 |
+| **Use Case** | Đăng ký / Đăng nhập |
+| **Brief Description** | Cho phép người dùng tạo tài khoản mới hoặc truy cập vào hệ thống để nhận các phân quyền tương ứng. |
+| **Actor** | Người dùng (User) |
+| **Pre-Condition** | Người dùng truy cập vào trang Đăng ký/Đăng nhập trên trình duyệt web. |
+| **Result** | Thông tin được lưu trữ an toàn (Đăng ký) hoặc người dùng đăng nhập thành công, được cấp JWT và chuyển hướng giao diện. |
+| **Main Scenario** | 1. Người dùng chọn Đăng ký hoặc Đăng nhập.<br>2. Người dùng nhập thông tin (email/username, mật khẩu).<br>3. Hệ thống kiểm tra tính hợp lệ của dữ liệu.<br>4. (Đăng ký) Hệ thống mã hóa mật khẩu bằng Bcrypt và lưu vào Database PostgreSQL.<br>5. (Đăng nhập) Hệ thống đối chiếu mật khẩu đã băm, cấp JWT và chuyển hướng. |
+| **Alternative Scenarios** | - Email đã tồn tại (Đăng ký): Hiển thị lỗi và yêu cầu sử dụng email khác.<br>- Sai thông tin (Đăng nhập): Hiển thị thông báo tài khoản hoặc mật khẩu không đúng.<br>- Quên mật khẩu: Kích hoạt gửi link khôi phục qua Email. |
+| **Non-Functional Constraints** | - Mật khẩu bắt buộc phải băm bằng Bcrypt.<br>- Sử dụng Rate Limiting ở API Gateway để chống Brute-force. |
 
 
 #### 4.2.2. U002: Quản lý hồ sơ

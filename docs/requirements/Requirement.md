@@ -254,6 +254,7 @@ flowchart LR
     Edited by: 
     Reviewed by: 23120177 Phạm Hương Trà
 
+
 | Mục | Nội dung |
 | :--- | :--- |
 | **Use case ID** | U001 |
@@ -273,6 +274,17 @@ flowchart LR
     Reviewed by: 23120177 Phạm Hương Trà
 
 
+| Mục | Nội dung |
+| :--- | :--- |
+| **Use case ID** | U002 |
+| **Use Case** | Quản lý hồ sơ |
+| **Brief Description** | Người dùng xem, cập nhật thông tin cá nhân và quản lý lịch sử hoạt động trên hệ thống. |
+| **Actor** | Người dùng (User) |
+| **Pre-Condition** | Người dùng đã đăng nhập thành công vào hệ thống (JWT còn hiệu lực). |
+| **Result** | Thông tin cá nhân được cập nhật vào PostgreSQL; ảnh đại diện lưu trên Cloudinary/Firebase. |
+| **Main Scenario** | 1. Người dùng truy cập trang "Hồ sơ cá nhân".<br>2. Hệ thống hiển thị thông tin cơ bản và lịch sử hoạt động (truyện, forum).<br>3. Người dùng thay đổi thông tin (Ảnh đại diện, tên hiển thị).<br>4. Hệ thống tải ảnh lên Cloudinary/Firebase và lấy URL.<br>5. Cập nhật dữ liệu vào PostgreSQL và hiển thị thông báo thành công. |
+| **Alternative Scenarios** | - Đổi mật khẩu: Xác thực mật khẩu cũ bằng Bcrypt trước khi lưu mật khẩu mới.<br>- Lỗi tải ảnh: Báo lỗi nếu ảnh sai định dạng hoặc quá dung lượng.<br>- Xem hồ sơ public: Ẩn các nút chức năng bảo mật nếu xem hồ sơ người khác. |
+| **Non-Functional Constraints** | - Bảo mật quyền riêng tư khi hiển thị thông tin Public.<br>- Tối ưu hóa dung lượng lưu trữ ảnh thông qua CDN. |
 
 
 #### 4.2.3. U003: Soạn thảo chương truyện
@@ -281,6 +293,17 @@ flowchart LR
     Reviewed by: 23120177 Phạm Hương Trà
 
 
+| Mục | Nội dung |
+| :--- | :--- |
+| **Use case ID** | U003 |
+| **Use Case** | Soạn thảo chương truyện |
+| **Brief Description** | Tác giả nhập văn bản, nhận gợi ý từ AI trong không gian Studio và lưu bản nháp. |
+| **Actor** | Tác giả (Author), Hệ thống AI (AI Smart Engine) |
+| **Pre-Condition** | Tác giả đã đăng nhập, vào Studio và chọn thêm chương truyện mới. |
+| **Result** | Nội dung được lưu an toàn vào Database dưới trạng thái Bản nháp (Draft). |
+| **Main Scenario** | 1. Tác giả nhập tiêu đề và nội dung vào khung soạn thảo.<br>2. Tác giả yêu cầu AI hỗ trợ ý tưởng thông qua Sidebar bên phải.<br>3. AI Smart Engine phân tích ngữ cảnh, gọi Gemini API sinh văn bản gợi ý.<br>4. Tác giả tham khảo ý tưởng và hoàn thiện nội dung.<br>5. Tác giả nhấn "Lưu nháp", hệ thống lưu vào bảng Chapters trong PostgreSQL. |
+| **Alternative Scenarios** | - AI hết Quota/Lỗi: Xử lý Fallback, báo lỗi AI bận nhưng không làm treo trang web.<br>- Mất kết nối mạng: Tự động lưu tạm (Auto-save) xuống LocalStorage. |
+| **Non-Functional Constraints** | - Giao diện chia đôi màn hình (Split View 70/30) giúp không gián đoạn trải nghiệm. |
 
 
 #### 4.2.4. U004: Xuất bản truyện
@@ -289,6 +312,17 @@ flowchart LR
     Reviewed by: 23120177 Phạm Hương Trà
 
 
+| Mục | Nội dung |
+| :--- | :--- |
+| **Use case ID** | U004 |
+| **Use Case** | Xuất bản truyện |
+| **Brief Description** | Tác giả gửi yêu cầu xuất bản, hệ thống tiếp nhận và tự động kiểm duyệt ngầm nội dung bằng AI. |
+| **Actor** | Tác giả (Author), Hệ thống AI (AI Smart Engine) |
+| **Pre-Condition** | Tác giả hoàn tất soạn thảo và đang ở giao diện Studio. |
+| **Result** | Trạng thái chương truyện được cập nhật thành APPROVED (Hiển thị) hoặc REJECTED (Bị từ chối). |
+| **Main Scenario** | 1. Tác giả nhấn nút "Đăng xuất bản".<br>2. Hệ thống lưu Database (trạng thái PENDING) và đẩy Task vào hàng đợi RabbitMQ.<br>3. Trả về mã HTTP 202, thông báo đang kiểm duyệt để tác giả có thể đóng tab.<br>4. AI Moderator lấy Task từ RabbitMQ, gọi LLM API quét nội dung nhạy cảm.<br>5. Cập nhật trạng thái APPROVED, gửi thông báo thành công qua WebSocket. |
+| **Alternative Scenarios** | - Nội dung vi phạm: AI cập nhật thành REJECTED, gửi WebSocket báo lý do từ chối.<br>- AI quá tải (Rate Limit): Task được giữ an toàn trong RabbitMQ để Retry ngầm, không làm thất thoát bản thảo hay treo máy tác giả. |
+| **Non-Functional Constraints** | - Quá trình kiểm duyệt bất đồng bộ phải hoàn thành dưới 5 phút.<br>- Không dùng màn hình loading (Spinner) gây gián đoạn công việc của tác giả. |
 
 
 #### 4.2.5. U005: Gợi ý tình tiết AI

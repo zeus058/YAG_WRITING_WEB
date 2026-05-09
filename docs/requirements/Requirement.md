@@ -480,4 +480,4 @@ Video thuyết trình: https://youtu.be/2hARxf5t9Cc
 *   **Đặc tả Use Case (Section 4.2):** Giúp các thành viên hiểu sâu về luồng xử lý của hệ thống, đặc biệt là các kịch bản lỗi (Alternative Scenarios). Điều này cực kỳ hữu ích cho đội ngũ Code để thiết kế Database và API chính xác ngay từ đầu.
 
 ### 7.2 Unnecessary/Tedious sections
-*   **Định dạng Markdown cho bảng biểu:** Việc kẻ bảng và căn chỉnh nội dung trong file Markdown khá tốn thời gian và dễ xảy ra lỗi định dạng khi số lượng Use Case tăng lên (hơn 10 Use Cases).
+Không có.

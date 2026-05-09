@@ -29,7 +29,7 @@
 ### 23120123 - Trần Gia Hiển (20%)
 | Loại | Nhiệm vụ | Mô tả chi tiết |
 | :--- | :--- | :--- |
-| **[Doc]** | Đặc tả Use Case AI | Hoàn thành đặc tả chi tiết nhóm Use Case thông minh: AI Search (U008), AI Suggest (U006), AI Recommend (U009), AI Moderate (U013). |
+| **[Doc]** | Đặc tả Use Case AI | Hoàn thành đặc tả chi tiết nhóm Use Case:Đọc truyện (U007), AI Search (U008), AI Suggest (U006), AI Recommend (U009), AI Moderate (U013). |
 | **[Doc]** | Hoàn thiện tài liệu | Viết nội dung Mục 5 (AI Usage Declaration) và Mục 7 (Reflective Report). |
 | **[Code]** | Cấu hình AI Engine | Thiết lập môi trường và cấu hình plugin `pgvector` cho tìm kiếm ngữ nghĩa. |
 
@@ -58,7 +58,7 @@
 | Loại | Nhiệm vụ | Mô tả chi tiết |
 | :--- | :--- | :--- |
 | **[Doc]** | Phân tích yêu cầu | Hoàn thành Mục 3 (Requirements Overview) bao gồm Stakeholders, FR và NFR. |
-| **[Doc]** | Đặc tả Use Case Độc giả | Hoàn thành đặc tả nhóm Use Case: Đọc truyện (U007), Interact (U010), Membership (U011), Payment (U012). |
+| **[Doc]** | Đặc tả Use Case Độc giả | Hoàn thành đặc tả nhóm Use Case: Interact (U010), Membership (U011), Payment (U012). |
 | **[Code]** | Frontend Reader | Hiện thực giao diện đăng ký, đăng nhập và màn hình đọc truyện. |
 
 ![Task Tra](images/task_tra.png)
@@ -294,14 +294,14 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
 
 
 #### 4.2.7. U007: Đọc truyện
-    Written by: 23120177 Phạm Hương Trà
+    Written by: 23120123 Trần Gia Hiển
     Edited by: 
-    Reviewed by: 23120123 Trần Gia Hiển
+    Reviewed by:  23120177 Phạm Hương Trà
 
 | Mục | Nội dung |
 | :--- | :--- |
 | **Use case ID** | U007 |
-| **Use Case** | Đọc truyện (Read Novel) |
+| **Use Case** | Đọc truyện |
 | **Brief Description** | Độc giả truy cập vào một bộ truyện, xem danh sách chương, đọc nội dung và lưu lịch sử. |
 | **Actor** | Độc giả (Reader) |
 | **Pre-Condition** | Độc giả truy cập vào nền tảng. Có thể đăng nhập (lưu lịch sử cloud) hoặc khách (lưu local). |
@@ -354,7 +354,7 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
 | Mục | Nội dung |
 | :--- | :--- |
 | **Use case ID** | U010 |
-| **Use Case** | Bình luận & Đánh giá (Interact: Comment & Rate) |
+| **Use Case** | Bình luận & Đánh giá |
 | **Brief Description** | Độc giả để lại ý kiến cá nhân và mức điểm đánh giá cho tác phẩm hoặc chương truyện cụ thể nhằm tăng tương tác cộng đồng. |
 | **Actor** | Reader |
 | **Pre-Condition** | Độc giả đã đăng nhập vào hệ thống và đang ở trang chi tiết truyện hoặc trang đọc chương. |

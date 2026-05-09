@@ -27,48 +27,49 @@
 ## 1. Member Contribution Assessment
 
 ### 23120123 - Trần Gia Hiển (20%)
-| Loại | Nhiệm vụ | Mô tả chi tiết |
-| :--- | :--- | :--- |
-| **[Doc]** | Đặc tả Use Case AI | Hoàn thành đặc tả chi tiết nhóm Use Case:Đọc truyện (U007), AI Search (U008), AI Suggest (U006), AI Recommend (U009), AI Moderate (U013). |
-| **[Doc]** | Hoàn thiện tài liệu | Viết nội dung Mục 5 (AI Usage Declaration) và Mục 7 (Reflective Report). |
-| **[Code]** | Cấu hình AI Engine | Thiết lập môi trường và cấu hình plugin `pgvector` cho tìm kiếm ngữ nghĩa. |
+| Nhiệm vụ | Mô tả chi tiết |
+| :--- | :--- |
+| Mô tả Use Case | Viết xong Use Case Specification cho các tính năng AI: AI Search (U008), AI Suggest (U006), AI Recommend (U009), AI Moderate (U013). |
+| Rà soát Use Case | Rà soát lại toàn bộ đặc tả Use Case của các thành viên khác, bổ sung luồng ngoại lệ.|
+| Hoàn thiện tài liệu | Hoàn thiện Mục 5 (AI Usage Declaration) và Mục 7 (Reflective Report). |
+| Cấu hình AI Engine | Cấu hình thành công môi trường local cho plugin pgvector. |
 
 ![Task Hien](images/task_hien.png)
 
 ### 23120151 - Huỳnh Yến Nhi (20%)
-| Loại | Nhiệm vụ | Mô tả chi tiết |
-| :--- | :--- | :--- |
-| **[Doc]** | Phân tích bài toán | Hoàn thành Mục 2 (Problem Statement) làm rõ bối cảnh và các ràng buộc thiết kế. |
-| **[Doc]** | Prototype & UI | Chịu trách nhiệm phần Prototype/Mockup và thiết kế giao diện Studio, Forum. |
-| **[Code]** | Frontend Studio | Hiện thực giao diện màn hình Author Studio với trình soạn thảo Distraction-free. |
+| Nhiệm vụ | Mô tả chi tiết |
+ | :--- | :--- |
+| Phân tích bài toán | Viết hoàn chỉnh Mục 2 (Problem Statement), làm rõ bối cảnh và ràng buộc thiết kế. |
+| Cấu hình môi trường Frontend | Khởi tạo xong project Next.js, cài đặt TailwindCSS và đẩy code lên GitHub. |
+| Cấu hình Frontend Studio | Hoàn thiện UI màn hình Author Studio (Split-view) và luồng Diễn đàn (Forum). |
 
 ![Task Nhi](images/task_nhi.png)
 
 ### 23120169 - Nguyễn Phú Thọ (20%)
-| Loại | Nhiệm vụ | Mô tả chi tiết |
-| :--- | :--- | :--- |
-| **[Doc]** | Review kỹ thuật | Đánh giá tính khả thi kỹ thuật của luồng xử lý bất đồng bộ (RabbitMQ) trong kiểm duyệt. |
-| **[Doc]** | Đặc tả Giám sát | Hoàn thành đặc tả Use Case U014 (Giám sát cam kết lộ trình) và U015 (Quản trị hệ thống). |
-| **[Code]** | Hạ tầng & CI/CD | Thiết lập Docker Compose (Postgres, Redis, RabbitMQ) và Git Flow cho nhóm. |
-| **[Code]** | Hướng dẫn dự án | Viết file README chi tiết hướng dẫn cài đặt và vận hành hệ thống. |
+| Nhiệm vụ | Mô tả chi tiết |
+ | :--- | :--- |
+| Review kỹ thuật | Đánh giá tính khả thi kỹ thuật của luồng xử lý bất đồng bộ (RabbitMQ) trong kiểm duyệt. |
+| Mô tả Giám sát | Hoàn thành đặc tả Use Case U014 (Giám sát cam kết lộ trình) và U015 (Quản trị hệ thống). |
+| Hạ tầng & CI/CD | Cung cấp file docker-compose.yml hoàn chỉnh (PostgreSQL, Redis, RabbitMQ) và Thiết lập Git Flow, cấu hình CI cơ bản (Linter) trên GitHub. |
+| Hướng dẫn dự án | Viết file README chi tiết hướng dẫn cài đặt và vận hành hệ thống. |
 
 ![Task Thọ](images/task_tho.png)
 
 ### 23120177 - Phạm Hương Trà (20%)
-| Loại | Nhiệm vụ | Mô tả chi tiết |
-| :--- | :--- | :--- |
-| **[Doc]** | Phân tích yêu cầu | Hoàn thành Mục 3 (Requirements Overview) bao gồm Stakeholders, FR và NFR. |
-| **[Doc]** | Đặc tả Use Case Độc giả | Hoàn thành đặc tả nhóm Use Case: Interact (U010), Membership (U011), Payment (U012). |
-| **[Code]** | Frontend Reader | Hiện thực giao diện đăng ký, đăng nhập và màn hình đọc truyện. |
+| Nhiệm vụ | Mô tả chi tiết |
+ | :--- | :--- |
+| Phân tích yêu cầu | Hoàn thành Mục 3 (Requirements Overview) bao gồm Stakeholders, FR và NFR. |
+| Mô tả Use Case Độc giả | Hoàn thành đặc tả nhóm Use Case: Interact (U010), Membership (U011), Payment (U012). |
+| Frontend Reader | Hoàn thiện UI màn hình Xác thực (Login/Register) và giao diện Đọc truyện. |
 
 ![Task Tra](images/task_tra.png)
 
 ### 23120182 - Nguyễn Duy Trường (20%)
-| Loại | Nhiệm vụ | Mô tả chi tiết |
-| :--- | :--- | :--- |
-| **[Doc]** | Thiết kế Use Case | Phác thảo Use Case Diagram (Mục 4.1) và chốt danh sách Actor. |
-| **[Doc]** | Đặc tả Use Case Tác giả | Hoàn thành đặc tả nhóm Use Case: Auth (U001), Profile (U002), Quản lý Tác phẩm (U003), Write (U004), Publish (U005). |
-| **[Code]** | Database & Migration | Thiết kế Database Schema, viết file SQL Migrations và tạo Seed data mẫu. |
+| Nhiệm vụ | Mô tả chi tiết |
+ | :--- | :--- |
+| Phân tích Use Case | Chốt danh sách Actor và phác thảo xong Use Case Diagram (StarUML/Visio). |
+| Mô tả Use Case Tác giả | Hoàn thành đặc tả nhóm Use Case: Auth (U001), Profile (U002), Quản lý Tác phẩm (U003), Write (U004), Publish (U005). |
+| Database & Migration | Viết xong file SQL Migrations để tạo bảng, khóa ngoại dựa trên bản vẽ ERD. |
 
 ![Task Truong](images/task_truong.png)
 
@@ -123,30 +124,30 @@ Trong bối cảnh văn học mạng phát triển mạnh mẽ, nhu cầu xây d
 
 Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cốt lõi đã đề xuất trong kiến trúc hệ thống:
 
-**Nhóm 1: Quản lý Tài khoản & Phân quyền (Auth & RBAC)**
+**Nhóm 1: Quản lý Tài khoản & Phân quyền**
 *   **FR-01:** Hệ thống phải cho phép người dùng đăng ký, đăng nhập và đặt lại mật khẩu qua Email.
-*   **FR-02:** Hệ thống phải thực hiện phân quyền người dùng (Role-Based Access Control) để kiểm soát quyền đọc truyện VIP và quyền truy cập Admin Dashboard.
+*   **FR-02:** Hệ thống phải thực hiện phân quyền người dùng để kiểm soát quyền đọc truyện và quyền truy cập Admin Dashboard.
 *   **FR-03:** Hệ thống cho phép người dùng xem, cập nhật hồ sơ cá nhân và quản lý lịch sử hoạt động.
 
-**Nhóm 2: Hỗ trợ Sáng tác & Quản lý nội dung (Author Studio)**
+**Nhóm 2: Hỗ trợ Sáng tác & Quản lý nội dung**
 *   **FR-04:** Cho phép tác giả tạo mới và cập nhật thông tin tổng quan của tác phẩm (tên truyện, ảnh bìa, thể loại, tóm tắt).
 *   **FR-05:** Cung cấp trình soạn thảo hỗ trợ lưu bản thảo tự động thời gian thực (WebSockets).
-*   **FR-06:** Tích hợp AI gợi ý phát triển tình tiết (AI Story Suggestion) dựa trên ngữ cảnh bản thảo hiện tại.
-*   **FR-07:** Cho phép tác giả thiết lập lịch đăng và thực hiện cam kết lộ trình (Schedule Commitment).
+*   **FR-06:** Tích hợp AI gợi ý phát triển tình tiết dựa trên ngữ cảnh bản thảo hiện tại.
+*   **FR-07:** Cho phép tác giả thiết lập lịch đăng và thực hiện cam kết lộ trình.
 
-**Nhóm 3: Khám phá & Trải nghiệm Đọc (Search & Reading)**
+**Nhóm 3: Tìm kiếm & Trải nghiệm Đọc**
 *   **FR-08:** Cho phép độc giả truy cập danh sách chương, đọc nội dung truyện và lưu lịch sử đọc cá nhân.
-*   **FR-09:** Cho phép tìm kiếm truyện qua tên, tác giả hoặc mô tả cốt truyện bằng ngôn ngữ tự nhiên (AI Semantic Search).
+*   **FR-09:** Cho phép tìm kiếm truyện qua tên, tác giả hoặc mô tả cốt truyện bằng ngôn ngữ tự nhiên.
 *   **FR-10:** Tự động đề xuất danh sách truyện phù hợp với sở thích của từng độc giả dựa trên lịch sử tương tác.
 
-**Nhóm 4: Tương tác & Doanh thu (Community & Payment)**
+**Nhóm 4: Tương tác & Doanh thu**
 *   **FR-11:** Cho phép người dùng tham gia bình luận, đánh giá (Rating) trên từng chương truyện/tác phẩm.
 *   **FR-12:** Xử lý thanh toán mua gói Membership qua cổng VNPAY để mở khóa các chương truyện độc quyền/đọc sớm.
 
-**Nhóm 5: Kiểm duyệt & Giám sát (Moderation & Monitoring)**
-*   **FR-13:** AI tự động quét và phân loại nội dung vi phạm chính sách (Moderation) ngay khi tác giả gửi yêu cầu xuất bản.
+**Nhóm 5: Kiểm duyệt & Giám sát**
+*   **FR-13:** AI tự động quét và phân loại nội dung vi phạm chính sách ngay khi tác giả gửi yêu cầu xuất bản.
 *   **FR-14:** Hệ thống Scheduler tự động gửi thông báo nhắc nhở và cảnh báo nếu tác giả trễ lịch cập nhật chương theo cam kết.
-*   **FR-15:** Cung cấp Bảng điều khiển (Admin Dashboard) để Quản trị viên theo dõi số liệu, xử lý truyện vi phạm và quản lý người dùng.
+*   **FR-15:** Cung cấp Bảng điều khiển để Quản trị viên theo dõi số liệu, xử lý truyện vi phạm và quản lý người dùng.
 
 #### 3.2.2. Non-Functional Requirements Specification
     Written by: 23120177 Phạm Hương Trà
@@ -214,8 +215,8 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
 | **Brief Description** | Người dùng xem, cập nhật thông tin cá nhân và quản lý lịch sử hoạt động trên hệ thống. |
 | **Actor** | Người dùng (User) |
 | **Pre-Condition** | Người dùng đã đăng nhập thành công vào hệ thống (JWT còn hiệu lực). |
-| **Result** | Thông tin cá nhân được cập nhật vào PostgreSQL; ảnh đại diện lưu trên Cloudinary/Firebase. |
-| **Main Scenario** | 1. Người dùng truy cập trang "Hồ sơ cá nhân".<br>2. Hệ thống hiển thị thông tin cơ bản và lịch sử hoạt động (truyện, forum).<br>3. Người dùng thay đổi thông tin (Ảnh đại diện, tên hiển thị).<br>4. Hệ thống tải ảnh lên Cloudinary/Firebase và lấy URL.<br>5. Cập nhật dữ liệu vào PostgreSQL và hiển thị thông báo thành công. |
+| **Result** | Thông tin cá nhân được cập nhật vào PostgreSQL; ảnh đại diện lưu trên Cloudinary. |
+| **Main Scenario** | 1. Người dùng truy cập trang "Hồ sơ cá nhân".<br>2. Hệ thống hiển thị thông tin cơ bản và lịch sử hoạt động (truyện, forum).<br>3. Người dùng thay đổi thông tin (Ảnh đại diện, tên hiển thị).<br>4. Hệ thống tải ảnh lên Cloudinary và lấy URL.<br>5. Cập nhật dữ liệu vào PostgreSQL và hiển thị thông báo thành công. |
 | **Alternative Scenarios** | - Đổi mật khẩu: Xác thực mật khẩu cũ bằng Bcrypt trước khi lưu mật khẩu mới.<br>- Lỗi tải ảnh: Báo lỗi nếu ảnh sai định dạng hoặc quá dung lượng.<br>- Xem hồ sơ public: Ẩn các nút chức năng bảo mật nếu xem hồ sơ người khác. |
 | **Non-Functional Constraints** | - Bảo mật quyền riêng tư khi hiển thị thông tin Public.<br>- Tối ưu hóa dung lượng lưu trữ ảnh thông qua CDN. |
 
@@ -227,7 +228,7 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
 | Mục | Nội dung |
 | :--- | :--- |
 | **Use case ID** | U003 |
-| **Use Case** | Tạo & Quản lý Tác phẩm (Create & Manage Novel) |
+| **Use Case** | Tạo & Quản lý Tác phẩm |
 | **Brief Description** | Tác giả khởi tạo một bộ truyện mới, cập nhật thông tin chung (ảnh bìa, mô tả) trước khi bắt đầu viết các chương chi tiết. |
 | **Actor** | Tác giả (Author) |
 | **Pre-Condition** | Tác giả đang ở trong giao diện Author Studio. |
@@ -269,9 +270,9 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
 | **Actor** | Tác giả (Author), Hệ thống AI (AI Smart Engine) |
 | **Pre-Condition** | Tác giả hoàn tất soạn thảo và đang ở giao diện Studio. |
 | **Result** | Trạng thái chương truyện được cập nhật thành APPROVED (Hiển thị) hoặc REJECTED (Bị từ chối). |
-| **Main Scenario** | 1. Tác giả thiết lập lịch đăng chương định kỳ (nếu có) và nhấn nút "Đăng xuất bản".<br>2. Hệ thống lưu thông tin vào Database với trạng thái `PENDING` (chờ duyệt).<br>3. Hệ thống đẩy Task xuất bản vào hàng đợi RabbitMQ để kích hoạt tiến trình Kiểm duyệt AI (U013).<br>4. Trả về mã HTTP 202 (Accepted), thông báo chương đang chờ duyệt để tác giả có thể đóng tab và làm việc khác. |
+| **Main Scenario** | 1. Tác giả thiết lập lịch đăng chương định kỳ (nếu có) và nhấn nút "Xuất bản".<br>2. Hệ thống lưu thông tin vào Database với trạng thái `PENDING` (chờ duyệt).<br>3. Hệ thống đẩy Task xuất bản vào hàng đợi RabbitMQ để kích hoạt tiến trình Kiểm duyệt AI (U013).<br>4. Trả về mã HTTP 202 (Accepted), thông báo chương đang chờ duyệt để tác giả có thể đóng tab và làm việc khác. |
 | **Alternative Scenarios** | - Mất kết nối RabbitMQ: Hệ thống lưu trạng thái lỗi cục bộ và tự động Retry đẩy Task khi kết nối phục hồi, không làm mất lệnh xuất bản của tác giả. |
-| **Non-Functional Constraints** | - Độ trễ phản hồi khi nhấn nút Xuất bản phải < 500ms (Không bắt tác giả chờ quá trình kiểm duyệt).<br>- Không dùng màn hình loading (Spinner) gây gián đoạn công việc của tác giả. |
+| **Non-Functional Constraints** | - Độ trễ phản hồi khi nhấn nút Xuất bản phải < 500ms (Không bắt tác giả chờ quá trình kiểm duyệt).<br>- Không dùng màn hình loading gây gián đoạn công việc của tác giả. |
 
 
 #### 4.2.6. U006: Gợi ý tình tiết AI
@@ -283,7 +284,7 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
 | Mục | Nội dung |
 | :--- | :--- |
 | **Use case ID** | U006 |
-| **Use Case** | Gợi ý tình tiết AI (AI Story Suggestion) |
+| **Use Case** | Gợi ý tình tiết AI |
 | **Brief Description** | Hỗ trợ tác giả phát triển ý tưởng truyện dựa trên văn cảnh hiện tại khi gặp tình trạng bí ý tưởng. |
 | **Actor** | Author, AI Engine (Gemini) |
 | **Pre-Condition** | Tác giả đang trong giao diện soạn thảo và đã có nội dung bản thảo (ít nhất 100 từ) để làm ngữ cảnh. |
@@ -304,10 +305,10 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
 | **Use Case** | Đọc truyện |
 | **Brief Description** | Độc giả truy cập vào một bộ truyện, xem danh sách chương, đọc nội dung và lưu lịch sử. |
 | **Actor** | Độc giả (Reader) |
-| **Pre-Condition** | Độc giả truy cập vào nền tảng. Có thể đăng nhập (lưu lịch sử cloud) hoặc khách (lưu local). |
+| **Pre-Condition** | Độc giả truy cập vào nền tảng|
 | **Result** | Nội dung chương truyện được hiển thị, lịch sử đọc được ghi nhận. |
 | **Main Scenario** | 1. Độc giả nhấn vào một truyện từ danh sách tìm kiếm hoặc đề xuất.<br>2. Hệ thống hiển thị Trang chi tiết truyện (Tên, Ảnh bìa, Tóm tắt, Danh sách chương).<br>3. Độc giả nhấn vào một chương cụ thể (hoặc nhấn "Đọc tiếp").<br>4. Hệ thống ưu tiên lấy dữ liệu chương từ Redis Cache (nếu có), nếu Miss Cache thì truy vấn từ PostgreSQL và cập nhật lại Cache.<br>5. Hệ thống render nội dung lên màn hình và lưu "Chương đang đọc" vào Lịch sử người dùng.<br>6. Độc giả sử dụng các nút "Chương trước", "Chương sau" để tiếp tục đọc. |
-| **Alternative Scenarios** | - Chương bị khóa (VIP): Nếu độc giả chưa có Membership (U011), hệ thống hiển thị thông báo yêu cầu nâng cấp gói cước.<br>- Đổi giao diện đọc: Độc giả tùy chỉnh cỡ chữ, màu nền (Dark mode).<br>- Báo cáo vi phạm (Report): Độc giả phát hiện nội dung độc hại/bản quyền, nhấn nút "Báo cáo", hệ thống gửi yêu cầu về Admin Dashboard (U015). |
+| **Alternative Scenarios** | - Chương bị khóa: Nếu độc giả chưa có Membership (U011), hệ thống hiển thị thông báo yêu cầu nâng cấp gói cước.<br>- Đổi giao diện đọc: Độc giả tùy chỉnh cỡ chữ, màu nền (Dark mode).<br>- Báo cáo vi phạm (Report): Độc giả phát hiện nội dung độc hại/bản quyền, nhấn nút "Báo cáo", hệ thống gửi yêu cầu về Admin Dashboard (U015). |
 | **Non-Functional Constraints** | - Thời gian tải nội dung chương < 0.5s để đảm bảo trải nghiệm đọc liền mạch.<br>- Hỗ trợ SSR (Next.js) để tối ưu SEO cho trang đọc truyện. |
 
 #### 4.2.8. U008: Tìm kiếm thông minh AI
@@ -319,7 +320,7 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
 | Mục | Nội dung |
 | :--- | :--- |
 | **Use case ID** | U008 |
-| **Use Case** | Tìm kiếm thông minh AI (AI Semantic Search) |
+| **Use Case** | Tìm kiếm thông minh AI |
 | **Brief Description** | Tìm truyện bằng cách mô tả cốt truyện thông qua ngôn ngữ tự nhiên. |
 | **Actor** | Reader, AI Engine |
 | **Pre-Condition** | Độc giả truy cập thanh tìm kiếm thông minh. |
@@ -337,14 +338,14 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
 | Mục | Nội dung |
 | :--- | :--- |
 | **Use case ID** | U009 |
-| **Use Case** | Đề xuất truyện (AI Recommendation) |
+| **Use Case** | Đề xuất truyện |
 | **Brief Description** | Hệ thống tự động gợi ý danh sách truyện phù hợp cho độc giả dựa trên lịch sử xem, đọc và tương tác cá nhân. |
 | **Actor** | Reader, AI Engine |
 | **Pre-Condition** | Độc giả truy cập hệ thống; có dữ liệu lịch sử tương tác hoặc sở thích đã đăng ký. |
 | **Result** | Danh sách truyện đề xuất cá nhân hóa được hiển thị trên giao diện. |
 | **Main Scenario** | 1. Độc giả truy cập vào Trang chủ hoặc mục "Gợi ý cho bạn".<br>2. Hệ thống truy xuất lịch sử tương tác (truyện đã đọc, thể loại, điểm đánh giá) của độc giả.<br>3. AI Engine thực hiện so khớp Vector sở thích người dùng với kho dữ liệu truyện trong `pgvector`.<br>4. Hệ thống chọn lọc và xếp hạng các tác phẩm có độ tương đồng cao nhất.<br>5. Hiển thị danh sách truyện đề xuất lên màn hình của độc giả. |
 | **Alternative Scenarios** | - **Người dùng mới (Cold Start):** Hệ thống đề xuất dựa trên các thể loại được chọn khi đăng ký hoặc các truyện đang Trending.<br>- **Lỗi hệ thống AI:** Chuyển sang đề xuất các truyện có lượt xem cao nhất (Top Views) để đảm bảo trải nghiệm không bị gián đoạn. |
-| **Non-Functional Constraints** | - Thời gian sinh danh sách đề xuất < 1.5 giây.<br>- Đảm bảo tính đa dạng của kết quả để tránh hiện tượng "phòng vang" (filter bubble). |
+| **Non-Functional Constraints** | - Thời gian sinh danh sách đề xuất < 1.5 giây.<br>|
 
 #### 4.2.10. U010: Bình luận & Đánh giá
     Written by: 23120177 Phạm Hương Trà
@@ -409,7 +410,7 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
 | Mục | Nội dung |
 | :--- | :--- |
 | **Use case ID** | U013 |
-| **Use Case** | Kiểm duyệt nội dung AI (Moderation) |
+| **Use Case** | Kiểm duyệt nội dung AI |
 | **Brief Description** | Tự động quét nội dung vi phạm chính sách bằng AI. |
 | **Actor** | AI Engine, Admin |
 | **Pre-Condition** | Có Task xuất bản chương mới nằm trong hàng đợi RabbitMQ (từ U005). |

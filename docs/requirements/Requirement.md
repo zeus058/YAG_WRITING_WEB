@@ -472,7 +472,7 @@ Trong quá trình hoàn thiện tài liệu, nhóm có sử dụng công cụ AI
 
 ![AI Usage](images/AI2.png)
 ## 6. Presentation
-Video thuyết trình:
+Video thuyết trình: https://youtu.be/2hARxf5t9Cc
 
 ## 7. Reflective Report
 ### 7.1 Most helpful sections

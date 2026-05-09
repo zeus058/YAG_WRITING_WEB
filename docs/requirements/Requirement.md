@@ -476,8 +476,8 @@ Video thuyết trình: https://youtu.be/2hARxf5t9Cc
 
 ## 7. Reflective Report
 ### 7.1 Most helpful sections
-*   **Phân tích yêu cầu (Section 3):** Đây là phần quan trọng nhất giúp nhóm thống nhất được phạm vi dự án (Scope). Việc xác định rõ các Stakeholders và yêu cầu chức năng (FR) giúp nhóm tránh được việc phát triển lan man và tập trung vào các tính năng cốt lõi như AI Smart Engine.
-*   **Đặc tả Use Case (Section 4.2):** Giúp các thành viên hiểu sâu về luồng xử lý của hệ thống, đặc biệt là các kịch bản lỗi (Alternative Scenarios). Điều này cực kỳ hữu ích cho đội ngũ Code để thiết kế Database và API chính xác ngay từ đầu.
+*   **Requirements Overview (Section 3):** Đây là phần quan trọng nhất giúp nhóm thống nhất được phạm vi dự án. Việc xác định rõ các Stakeholders và yêu cầu chức năng giúp nhóm tránh được việc phát triển lan man và tập trung vào các tính năng cốt lõi như AI Smart Engine.
+*   **Use Case Specification (Section 4.2):** Giúp các thành viên hiểu sâu về luồng xử lý của hệ thống, đặc biệt là các kịch bản lỗi (Alternative Scenarios). Điều này cực kỳ hữu ích cho việc thiết kế Database và API chính xác ngay từ đầu.
 
 ### 7.2 Unnecessary/Tedious sections
 Không có.

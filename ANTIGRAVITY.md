@@ -1,0 +1,7 @@
+Khi tệp tài liệu này vận hành trong môi trường Agent-first như Google Antigravity, AI Agent cần tuân thủ cơ chế tự động hóa đa bề mặt sau để tối ưu hóa năng suất:
+
+Chế độ Hoạch định (Planning Mode): Trước khi can thiệp tạo mới hoặc sửa đổi cấu trúc mã nguồn của một cụm chức năng lớn (như cấu hình plugin pgvector, dựng luồng mã hóa bảo mật hay thiết lập cổng thanh toán VNPAY), Agent bắt buộc phải tạo ra một bản thiết kế dạng Artifact tổng quan, phân tích rõ danh sách file sẽ tác động và giải pháp kỹ thuật để người dùng phê duyệt trước khi sinh mã hàng loạt.
+
+Quyền hạn Terminal: Agent được quyền tự chủ mở terminal nội bộ để chạy các câu lệnh kiểm tra hạ tầng, cài đặt gói thư viện phụ thuộc (npm install, pip install -r requirements.txt) hoặc kích hoạt cụm container môi trường (docker-compose up -d) để phục vụ việc debug trực tiếp.
+
+Tự động kiểm định chất lượng (Browser Validation): Khi hoàn thiện xong phần giao diện UI của bất kỳ component hay tính năng nào, Agent phải chủ động gọi trình duyệt tích hợp (Embedded Browser) để tự rà soát lỗi vỡ layout, kiểm tra độ mượt của các hiệu ứng phản hồi trạng thái tương tác và quét sạch các log lỗi tại tab Console trước khi chuyển giao trạng thái hoàn thành cho người dùng.

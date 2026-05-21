@@ -6,12 +6,14 @@
  */
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono, Playfair_Display } from "next/font/google";
+import { ClientInteractions } from "@/components/runtime/ClientInteractions";
+import "./prototype.css";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin", "vietnamese"],
 });
 
 const geistMono = Geist_Mono({
@@ -19,7 +21,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/** Serif tiêu đề landing — khớp prototype yag_landing.html */
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   title: "YAG - Nền Tảng Viết Truyện Trực Tuyến",
   description:
     "Nền tảng viết truyện thông minh tích hợp AI, hỗ trợ sáng tác, kiểm duyệt tự động và xây dựng cộng đồng độc giả - tác giả.",
@@ -30,6 +41,13 @@ export const metadata: Metadata = {
     "nền tảng sáng tác",
     "YAG",
   ],
+  openGraph: {
+    title: "YAG - Nền Tảng Viết Truyện Trực Tuyến",
+    description:
+      "Đọc truyện, sáng tác cùng AI, kiểm duyệt nội dung và xây dựng cộng đồng độc giả - tác giả.",
+    type: "website",
+    locale: "vi_VN",
+  },
 };
 
 export default function RootLayout({
@@ -40,9 +58,12 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistMono.variable} ${playfair.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className={`${inter.className} min-h-full flex flex-col`}>
+        {children}
+        <ClientInteractions />
+      </body>
     </html>
   );
 }

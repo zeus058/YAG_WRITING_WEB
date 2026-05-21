@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
 
 /**
@@ -207,26 +208,26 @@ export default function LandingPage() {
     <div className="bg-[#41503D] min-h-screen text-white font-sans overflow-x-hidden">
       {/* ═══════════ NAVBAR ═══════════ */}
       <nav id="mainNav" className={isScrolled ? "scrolled" : ""}>
-        <a className="logo" href="#">
+        <Link className="logo" href="/">
           Y<span className="logo-accent">A</span>G<div className="logo-dot"></div>
-        </a>
+        </Link>
         <ul className="nav-links">
           <li>
-            <a href="#">Khám phá</a>
+            <Link href="/discover">Khám phá</Link>
           </li>
           <li>
-            <a href="#">Thể loại</a>
+            <Link href="/discover">Thể loại</Link>
           </li>
           <li>
-            <a href="#">Diễn đàn</a>
+            <Link href="/forum">Diễn đàn</Link>
           </li>
           <li>
-            <a href="#">Tác giả</a>
+            <Link href="/author-studio">Tác giả</Link>
           </li>
         </ul>
         <div className="nav-actions">
-          <button className="btn-nav-ghost">Đăng nhập</button>
-          <button className="btn-nav-cta">Đăng ký miễn phí</button>
+          <Link className="btn-nav-ghost" href="/auth?tab=login">Đăng nhập</Link>
+          <Link className="btn-nav-cta" href="/auth?tab=register">Đăng ký miễn phí</Link>
         </div>
       </nav>
 
@@ -262,7 +263,7 @@ export default function LandingPage() {
               nghĩa thông minh — tất cả trong một nền tảng dành cho người Việt.
             </p>
             <div className="hero-btns">
-              <a className="btn-primary" href="#">
+              <Link className="btn-primary" href="/auth?tab=register">
                 <svg
                   style={{
                     width: "16px",
@@ -278,8 +279,8 @@ export default function LandingPage() {
                   <polygon points="10,8 16,12 10,16" fill="white" stroke="none" />
                 </svg>
                 Bắt đầu miễn phí
-              </a>
-              <a className="btn-ghost" href="#">
+              </Link>
+              <Link className="btn-ghost" href="/author-studio">
                 Tôi muốn viết truyện
                 <svg
                   style={{
@@ -295,7 +296,7 @@ export default function LandingPage() {
                 >
                   <path d="m9 18 6-6-6-6" />
                 </svg>
-              </a>
+              </Link>
             </div>
             <div className="hero-stats">
               <div>
@@ -1358,9 +1359,9 @@ export default function LandingPage() {
                   tác phẩm bạn muốn.
                 </p>
               </div>
-              <a className="btn-see-all" href="#">
+              <Link className="btn-see-all" href="/discover">
                 Xem tất cả →
-              </a>
+              </Link>
             </div>
           </RevealOnScroll>
 
@@ -1813,8 +1814,8 @@ export default function LandingPage() {
               <div className="t-card">
                 <div className="t-stars">★★★★☆</div>
                 <p className="t-text">
-                  Tìm kiếm AI cực hay! Tôi chỉ gõ "truyện về tình yêu thời chiến
-                  buồn" là nó đề xuất đúng thứ tôi muốn đọc. Không cần biết tên
+                  Tìm kiếm AI cực hay! Tôi chỉ gõ &quot;truyện về tình yêu thời chiến
+                  buồn&quot; là nó đề xuất đúng thứ tôi muốn đọc. Không cần biết tên
                   hay tác giả.
                 </p>
                 <div className="t-author">
@@ -1926,7 +1927,7 @@ export default function LandingPage() {
                     AI gợi ý không giới hạn
                   </li>
                 </ul>
-                <button className="btn-plan btn-plan-outline">Bắt đầu</button>
+                <Link className="btn-plan btn-plan-outline" href="/auth?tab=register">Bắt đầu</Link>
               </div>
             </RevealOnScroll>
 
@@ -2001,7 +2002,7 @@ export default function LandingPage() {
                     Hỗ trợ ưu tiên
                   </li>
                 </ul>
-                <button className="btn-plan btn-plan-solid">Đăng ký ngay</button>
+                <Link className="btn-plan btn-plan-solid" href="/membership">Đăng ký ngay</Link>
               </div>
             </RevealOnScroll>
 
@@ -2075,9 +2076,9 @@ export default function LandingPage() {
                     Tiết kiệm 40% so với tháng
                   </li>
                 </ul>
-                <button className="btn-plan btn-plan-outline">
+                <Link className="btn-plan btn-plan-outline" href="/membership">
                   Chọn gói năm
-                </button>
+                </Link>
               </div>
             </RevealOnScroll>
           </div>
@@ -2113,20 +2114,20 @@ export default function LandingPage() {
               những câu chuyện đáng nhớ.
             </p>
             <div className="cta-btns">
-              <a
+              <Link
                 className="btn-primary"
-                href="#"
+                href="/auth?tab=register"
                 style={{ fontSize: "15px", padding: "16px 36px" }}
               >
                 ✦ Đăng ký miễn phí
-              </a>
-              <a
+              </Link>
+              <Link
                 className="btn-ghost"
-                href="#"
+                href="/discover"
                 style={{ fontSize: "15px", padding: "16px 32px" }}
               >
                 Khám phá truyện
-              </a>
+              </Link>
             </div>
             <p className="cta-note">
               Không cần thẻ tín dụng · Bắt đầu trong 30 giây · Thanh toán qua
@@ -2153,16 +2154,16 @@ export default function LandingPage() {
               <div className="footer-col-title">Khám phá</div>
               <ul className="footer-links">
                 <li>
-                  <a href="#">Trang chủ</a>
+                  <Link href="/dashboard">Trang chủ đọc</Link>
                 </li>
                 <li>
-                  <a href="#">Thể loại truyện</a>
+                  <Link href="/discover">Khám phá truyện</Link>
                 </li>
                 <li>
-                  <a href="#">Bảng xếp hạng</a>
+                  <Link href="/library">Thư viện cá nhân</Link>
                 </li>
                 <li>
-                  <a href="#">Truyện mới</a>
+                  <Link href="/membership">Membership</Link>
                 </li>
               </ul>
             </div>
@@ -2170,16 +2171,16 @@ export default function LandingPage() {
               <div className="footer-col-title">Tác giả</div>
               <ul className="footer-links">
                 <li>
-                  <a href="#">Author Studio</a>
+                  <Link href="/author-works">Tác phẩm của tôi</Link>
                 </li>
                 <li>
-                  <a href="#">Hướng dẫn viết</a>
+                  <Link href="/author-studio">Không gian viết</Link>
                 </li>
                 <li>
-                  <a href="#">Chính sách nội dung</a>
+                  <Link href="/publish-chapter">Xuất bản chương</Link>
                 </li>
                 <li>
-                  <a href="#">Chương trình chia sẻ</a>
+                  <Link href="/schedule-commitment">Lịch đăng & cam kết</Link>
                 </li>
               </ul>
             </div>
@@ -2187,40 +2188,40 @@ export default function LandingPage() {
               <div className="footer-col-title">Hỗ trợ</div>
               <ul className="footer-links">
                 <li>
-                  <a href="#">Về chúng tôi</a>
+                  <Link href="/about">Về YAG</Link>
                 </li>
                 <li>
-                  <a href="#">Điều khoản sử dụng</a>
+                  <Link href="/terms">Điều khoản sử dụng</Link>
                 </li>
                 <li>
-                  <a href="#">Chính sách bảo mật</a>
+                  <Link href="/privacy">Chính sách bảo mật</Link>
                 </li>
                 <li>
-                  <a href="#">Liên hệ</a>
+                  <Link href="/contact">Liên hệ hỗ trợ</Link>
                 </li>
               </ul>
             </div>
           </div>
           <div className="footer-bottom">
             <div className="footer-copy">
-              © 2025 YAG Writing Web · HCMUS Intro2SE · Nhóm 1
+              © 2026 YAG Writing Web · HCMUS Intro2SE · Nhóm 1 · Prototype học thuật
             </div>
             <div className="footer-socials">
-              <button className="social-btn" aria-label="Facebook">
+              <Link className="social-btn" href="/profile" aria-label="Hồ sơ mẫu">
                 <svg viewBox="0 0 24 24">
                   <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
                 </svg>
-              </button>
-              <button className="social-btn" aria-label="Discord">
+              </Link>
+              <Link className="social-btn" href="/notifications" aria-label="Thông báo mẫu">
                 <svg viewBox="0 0 24 24">
                   <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
                 </svg>
-              </button>
-              <button className="social-btn" aria-label="GitHub">
+              </Link>
+              <Link className="social-btn" href="/about" aria-label="Thông tin dự án">
                 <svg viewBox="0 0 24 24">
                   <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
                 </svg>
-              </button>
+              </Link>
             </div>
           </div>
         </div>

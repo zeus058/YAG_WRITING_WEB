@@ -41,7 +41,7 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--crimson);
   --color-secondary: var(--coral);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -57,7 +57,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), 'Inter', Arial, Helvetica, sans-serif;
   transition: background-color var(--transition-base), color var(--transition-base);
   overflow-x: hidden;
 }
@@ -156,6 +156,9 @@ nav.scrolled {
   align-items: center;
 }
 .btn-nav-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   color: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.22);
@@ -165,6 +168,7 @@ nav.scrolled {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s;
+  text-decoration: none;
 }
 .btn-nav-ghost:hover {
   background: rgba(255, 255, 255, 0.1);
@@ -172,6 +176,9 @@ nav.scrolled {
   border-color: rgba(255, 255, 255, 0.4);
 }
 .btn-nav-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--crimson);
   color: #fff;
   border: none;
@@ -182,6 +189,7 @@ nav.scrolled {
   cursor: pointer;
   box-shadow: 0 4px 18px rgba(200, 28, 48, 0.4);
   transition: all 0.25s;
+  text-decoration: none;
 }
 .btn-nav-cta:hover {
   background: var(--crimson-dark);
@@ -246,7 +254,7 @@ nav.scrolled {
   right: -40px;
   top: 50%;
   transform: translateY(-50%);
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
   font-size: 220px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.025);
@@ -318,7 +326,7 @@ nav.scrolled {
 }
 
 .hero-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
   font-size: clamp(42px, 5.5vw, 70px);
   font-weight: 700;
   color: #fff;
@@ -396,7 +404,7 @@ nav.scrolled {
   animation: fadeUp 0.9s 0.8s both;
 }
 .stat-val {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
   font-size: 26px;
   font-weight: 700;
   color: #fff;
@@ -550,7 +558,7 @@ nav.scrolled {
   margin-bottom: 14px;
 }
 .sec-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
   font-size: clamp(26px, 3.5vw, 42px);
   font-weight: 700;
   line-height: 1.2;
@@ -609,7 +617,7 @@ nav.scrolled {
 .feat-card {
   flex: 0 0 340px;
   background: #fff;
-  border-radius: 20px;
+  border-radius: 8px;
   padding: 36px 30px 30px;
   position: relative;
   overflow: hidden;
@@ -640,7 +648,7 @@ nav.scrolled {
 .feat-icon-area {
   height: 140px;
   margin-bottom: 22px;
-  border-radius: 14px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -648,7 +656,7 @@ nav.scrolled {
   overflow: hidden;
 }
 .feat-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
   font-size: 20px;
   font-weight: 700;
   color: var(--jungle);
@@ -794,7 +802,7 @@ nav.scrolled {
   scroll-snap-align: start;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
   transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
 }
@@ -844,7 +852,7 @@ nav.scrolled {
   margin-bottom: 5px;
 }
 .s-name {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
   font-size: 14px;
   font-weight: 700;
   color: #fff;
@@ -992,7 +1000,7 @@ nav.scrolled {
   justify-content: center;
 }
 .step-name {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
   font-size: 18px;
   font-weight: 700;
   color: #fff;
@@ -1030,7 +1038,7 @@ nav.scrolled {
 .t-card {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
+  border-radius: 8px;
   padding: 28px 24px;
   transition: all 0.3s;
   position: relative;
@@ -1040,7 +1048,7 @@ nav.scrolled {
   position: absolute;
   top: 16px;
   right: 22px;
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
   font-size: 72px;
   color: rgba(254, 189, 178, 0.1);
   line-height: 1;
@@ -1122,7 +1130,7 @@ nav.scrolled {
 }
 .plan-card {
   background: #fff;
-  border-radius: 20px;
+  border-radius: 8px;
   padding: 32px 26px;
   border: 2px solid transparent;
   position: relative;
@@ -1164,7 +1172,7 @@ nav.scrolled {
   margin-bottom: 12px;
 }
 .plan-price {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
   font-size: 36px;
   font-weight: 700;
   color: var(--jungle);
@@ -1210,6 +1218,9 @@ nav.scrolled {
   stroke: rgba(65, 80, 61, 0.3);
 }
 .btn-plan {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   padding: 12px;
   border-radius: 12px;
@@ -1218,6 +1229,7 @@ nav.scrolled {
   cursor: pointer;
   border: none;
   transition: all 0.25s;
+  text-decoration: none;
 }
 .btn-plan-outline {
   background: transparent;
@@ -1286,7 +1298,7 @@ nav.scrolled {
   margin-bottom: 24px;
 }
 .cta-title {
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
   font-size: clamp(30px, 4.5vw, 56px);
   font-weight: 700;
   color: #fff;
@@ -1390,14 +1402,13 @@ footer {
   gap: 12px;
 }
 .social-btn {
+  position: relative;
   width: 34px;
   height: 34px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   cursor: pointer;
   transition: all 0.25s;
   color: rgba(255, 255, 255, 0.5);
@@ -1408,9 +1419,17 @@ footer {
   color: #fff;
 }
 .social-btn svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 16px;
   height: 16px;
-  fill: currentColor;
+  display: block;
+  margin: 0;
+  padding: 0;
+  fill: none;
+  stroke: currentColor;
 }
 
 /* === INTERSECTION OBSERVER REVEAL === */
@@ -1453,4 +1472,23 @@ footer {
   .footer-top { grid-template-columns: 1fr 1fr; gap: 32px; }
   .how-grid { grid-template-columns: 1fr; gap: 40px; }
   .how-connector { display: none; }
+}
+
+@keyframes logoPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(226, 92, 114, 0.6);
+  }
+  70% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 8px rgba(226, 92, 114, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(226, 92, 114, 0);
+  }
+}
+
+.logo-dot {
+  animation: logoPulse 2s infinite;
 }

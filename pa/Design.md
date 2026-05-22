@@ -151,38 +151,199 @@ Gợi ý triển khai: chọn khoảng 9-10 lớp quan trọng nhất từ hệ 
 | | | | | |
 
 ## 4. Data Design
-Duy Trường viết phần này
+
 ### 4.1. Data Diagram
-    Written by:
-    Edited by:
-    Reviewed by:
+    Written by: 23120182 Nguyễn Duy Trường
+    Edited by: 
+    Reviewed by: 23120169 Nguyễn Phú Thọ
 
-[Draw the data diagram of the system, identifying the data components that need to be stored and illustrating the relationships between them.]
+Sơ đồ quan hệ thực thể (ERD) dưới đây mô tả cấu trúc cơ sở dữ liệu quan hệ (PostgreSQL) kết hợp lưu trữ dữ liệu Vector (pgvector extension) của hệ thống **YAG - WRITING NOVELS WEB**. 
 
-Phạm vi cần bám theo `Proposal.md` và `Requirement.md`:
+Sơ đồ này phản ánh đầy đủ các thành phần lưu trữ phục vụ các luồng nghiệp vụ cốt lõi: Quản lý tài khoản, sáng tác & quản lý chương, bình luận & đánh giá tương tác, Membership/Thanh toán VNPAY, kiểm duyệt tự động AI và tìm kiếm/đề xuất ngữ nghĩa.
 
-- Data Diagram cần thể hiện dữ liệu lưu trong PostgreSQL và phần dữ liệu vector phục vụ AI Search/Recommendation bằng pgvector.
-- Các nhóm dữ liệu cần cân nhắc: tài khoản người dùng, hồ sơ, tác phẩm, chương truyện, thể loại, bình luận, đánh giá, lịch sử đọc, thư viện đọc, Membership, giao dịch, lịch đăng chương, log kiểm duyệt AI, embedding/vector, thông báo và audit log quản trị.
-- Nếu có Redis hoặc RabbitMQ trong kiến trúc, thể hiện đúng vai trò của chúng như cache/hàng đợi xử lý, không nhầm với dữ liệu lưu trữ chính.
+![Entity relationship diagram for YAG Writing Novels Web showing PostgreSQL tables users, profiles, stories, chapters, reviews, story_embeddings, publish_schedules, ai_moderation_logs, comments, libraries, membership_plans, transactions, reading_histories and their relationships](/images_proposal/Entity-Relationship diagram.png)
+
+#### Mô tả các thành phần và công nghệ lưu trữ:
+- **Cơ sở dữ liệu chính (PostgreSQL):** Lưu trữ toàn bộ dữ liệu có cấu trúc của hệ thống, bao gồm các bảng về tài khoản, hồ sơ cá nhân, thông tin tác phẩm, chi tiết chương, tương tác độc giả (bình luận, đánh giá), các gói dịch vụ và lịch sử giao dịch.
+- **Lưu trữ Vector (pgvector):** Bảng `story_embeddings` sử dụng trường kiểu dữ liệu `vector(1536)` để lưu trữ các biểu diễn vector (embeddings) của cốt truyện. Đây là thành phần cốt lõi hỗ trợ chức năng **Tìm kiếm thông minh AI (U008)** và **Đề xuất truyện AI (U009)** bằng cách đo lường độ tương đồng cosine (Cosine Similarity).
+- **Phân tách bộ nhớ Cache & Hàng đợi:** 
+  - **Redis (Cache):** Dùng để lưu trữ session, đếm lượt xem (View Count) thời gian thực và lưu cache tạm thời nội dung chương đọc nhiều (U007), không lưu trữ vật lý trong sơ đồ dữ liệu quan hệ này.
+  - **RabbitMQ (Message Queue):** Điều phối các tác vụ bất đồng bộ như đẩy tác vụ kiểm duyệt chương sang Gemini API (U013) giúp tối ưu hóa hiệu năng hệ thống.
+- **Lưu trữ tệp tĩnh (Cloudinary CDN):** Các trường như `avatar_url` (bảng `profiles`) và `cover_url` (bảng `stories`) chỉ lưu trữ URL liên kết trỏ tới dịch vụ lưu trữ đám mây Cloudinary, tối ưu dung lượng và tốc độ phân phối nội dung tĩnh.
+
+---
 
 ### 4.2. Data Specification
-    Written by:
-    Edited by:
-    Reviewed by:
+    Written by: 23120182 Nguyễn Duy Trường
+    Edited by: 
+    Reviewed by: 23120169 Nguyễn Phú Thọ
 
-[If using a Database Management System (DBMS), describe the data tables, the information for each data column including attribute name, data type and value constraints, key constraints, and explain the attribute.]
+Dưới đây là đặc tả chi tiết cho 13 bảng dữ liệu quan trọng của hệ thống **YAG - WRITING NOVELS WEB**, được thiết kế trên hệ quản trị cơ sở dữ liệu **PostgreSQL** (có hỗ trợ plugin `pgvector`).
 
-[If using XML/JSON or a self-defined structured file to store data, the file structure, attribute information, data type, and value constraints need to be specifically described. An example of the content for the information storage file should be included.]
-
-Gợi ý triển khai: đặc tả các bảng dữ liệu quan trọng tương ứng với Data Diagram. Với dự án YAG, ưu tiên các bảng phục vụ các luồng nghiệp vụ chính như quản lý tài khoản, tác phẩm, chương truyện, tương tác, Membership/thanh toán, kiểm duyệt AI và tìm kiếm/gợi ý AI.
-
-#### 4.2.1. Table T1
-
-[Describe the purpose of this table.]
+#### 4.2.1. Bảng `users` (Tài khoản người dùng)
+Bảng này dùng để lưu trữ thông tin đăng nhập, phân quyền (Role-Based Access Control) và trạng thái kích hoạt Membership của người dùng trên hệ thống.
 
 | No. | Column Name | Data Type | Constraint | Key | Description |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| | | | | | |
+| 1 | `id` | `UUID` | NOT NULL, DEFAULT gen_random_uuid() | PK | Khóa chính, định danh duy nhất cho tài khoản người dùng |
+| 2 | `username` | `VARCHAR(50)` | NOT NULL, UNIQUE, viết liền không dấu | | Tên đăng nhập duy nhất của tài khoản |
+| 3 | `email` | `VARCHAR(100)` | NOT NULL, UNIQUE, đúng định dạng Email | | Địa chỉ Email của người dùng phục vụ xác thực/khôi phục mật khẩu |
+| 4 | `password_hash` | `VARCHAR(255)` | NOT NULL | | Mật khẩu đã được mã hóa một chiều bằng thuật toán Bcrypt |
+| 5 | `role` | `VARCHAR(20)` | NOT NULL, IN ('admin', 'author', 'reader') | | Quyền truy cập: admin (quản trị), author (tác giả), reader (độc giả) |
+| 6 | `premium_until` | `TIMESTAMP` | NULL | | Thời hạn hiệu lực của gói Membership (Null nếu chưa đăng ký hoặc đã hết hạn) |
+| 7 | `created_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm đăng ký tài khoản |
+| 8 | `updated_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm cập nhật thông tin tài khoản gần nhất |
+
+#### 4.2.2. Bảng `profiles` (Thông tin hồ sơ chi tiết)
+Bảng này lưu trữ thông tin cá nhân bổ sung, bút danh của tác giả/độc giả và điểm uy tín phục vụ giám sát cam kết lộ trình.
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `user_id` | `UUID` | NOT NULL, ON DELETE CASCADE | PK, FK | Khóa chính, đồng thời là khóa ngoại liên kết tới bảng `users(id)` |
+| 2 | `display_name` | `VARCHAR(100)` | NOT NULL | | Tên hiển thị công khai trên hệ thống (Bút danh của tác giả) |
+| 3 | `avatar_url` | `VARCHAR(255)` | NULL | | Đường dẫn URL ảnh đại diện lưu trữ trên Cloudinary |
+| 4 | `bio` | `TEXT` | NULL | | Đoạn giới thiệu bản thân ngắn của người dùng |
+| 5 | `reputation_score` | `INTEGER` | NOT NULL, DEFAULT 100, Range: 0-100 | | Điểm uy tín sáng tác của tác giả (trừ điểm nếu trễ lộ trình đăng chương) |
+| 6 | `created_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm khởi tạo hồ sơ |
+| 7 | `updated_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm cập nhật hồ sơ gần nhất |
+
+#### 4.2.3. Bảng `stories` (Thông tin tác phẩm)
+Bảng này dùng để quản lý các tác phẩm (bộ truyện) được sáng tác bởi các tác giả trên hệ thống.
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `id` | `UUID` | NOT NULL, DEFAULT gen_random_uuid() | PK | Khóa chính, định danh duy nhất cho mỗi bộ truyện |
+| 2 | `author_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết tới bảng `users(id)`, chỉ định tác giả sở hữu |
+| 3 | `title` | `VARCHAR(255)` | NOT NULL, UNIQUE | | Tiêu đề của bộ truyện (không được trùng lặp) |
+| 4 | `description` | `TEXT` | NOT NULL | | Tóm tắt cốt truyện và các thông tin giới thiệu chung |
+| 5 | `cover_url` | `VARCHAR(255)` | NULL | | Đường dẫn URL ảnh bìa truyện lưu trữ trên Cloudinary |
+| 6 | `category` | `VARCHAR(50)` | NOT NULL | | Thể loại chính của truyện (Ví dụ: Kiếm hiệp, Kỳ ảo, Đô thị...) |
+| 7 | `status` | `VARCHAR(20)` | NOT NULL, DEFAULT 'ongoing', IN ('ongoing', 'completed', 'paused') | | Trạng thái sáng tác: ongoing (đang viết), completed (đã hoàn thành), paused (tạm ngưng) |
+| 8 | `view_count` | `INTEGER` | NOT NULL, DEFAULT 0, >= 0 | | Tổng số lượt đọc của bộ truyện (đồng bộ định kỳ từ Redis) |
+| 9 | `rating_avg` | `DECIMAL(3,2)` | NOT NULL, DEFAULT 0.00, Range: 0.00 - 5.00 | | Điểm đánh giá trung bình của truyện dựa trên tất cả review |
+| 10 | `created_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm tạo truyện |
+| 11 | `updated_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm cập nhật thông tin truyện gần nhất |
+
+#### 4.2.4. Bảng `chapters` (Nội dung chương truyện)
+Bảng này dùng để lưu trữ nội dung chi tiết của từng chương truyện, cấu hình trạng thái duyệt tự động và phân quyền đọc (trả phí/miễn phí).
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `id` | `UUID` | NOT NULL, DEFAULT gen_random_uuid() | PK | Khóa chính, định danh duy nhất cho mỗi chương truyện |
+| 2 | `story_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết tới bảng `stories(id)`, chỉ định thuộc về bộ truyện nào |
+| 3 | `chapter_number` | `INTEGER` | NOT NULL, > 0 | | Số thứ tự chương trong bộ truyện |
+| 4 | `title` | `VARCHAR(255)` | NOT NULL | | Tiêu đề của chương (Ví dụ: Chương 1: Khởi đầu mới) |
+| 5 | `content` | `TEXT` | NOT NULL | | Nội dung văn bản chi tiết của chương truyện |
+| 6 | `moderation_status` | `VARCHAR(20)` | NOT NULL, DEFAULT 'pending', IN ('pending', 'approved', 'rejected', 'flagged') | | Trạng thái kiểm duyệt: pending (chờ duyệt), approved (đã duyệt), rejected (bị từ chối), flagged (nghi ngờ vi phạm) |
+| 7 | `is_premium` | `BOOLEAN` | NOT NULL, DEFAULT FALSE | | Trạng thái chương VIP: TRUE (yêu cầu Membership để đọc), FALSE (miễn phí) |
+| 8 | `publish_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời gian công bố chương truyện cho độc giả đọc |
+| 9 | `created_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm soạn thảo chương truyện |
+| 10 | `updated_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm cập nhật chương truyện lần cuối |
+
+#### 4.2.5. Bảng `comments` (Bình luận của độc giả)
+Bảng này lưu trữ các bình luận tương tác của độc giả trên từng chương truyện cụ thể, hỗ trợ cấu hình phân cấp (reply bình luận).
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `id` | `UUID` | NOT NULL, DEFAULT gen_random_uuid() | PK | Khóa chính, định danh duy nhất cho bình luận |
+| 2 | `user_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết tới bảng `users(id)`, định danh người bình luận |
+| 3 | `chapter_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết tới bảng `chapters(id)`, bình luận thuộc chương nào |
+| 4 | `content` | `TEXT` | NOT NULL | | Nội dung bình luận của độc giả |
+| 5 | `parent_id` | `UUID` | NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết tới `comments(id)` để trả lời bình luận cấp trên |
+| 6 | `created_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm gửi bình luận |
+
+#### 4.2.6. Bảng `reviews` (Đánh giá tác phẩm)
+Bảng này ghi nhận số sao đánh giá và nhận xét của độc giả dành cho toàn bộ tác phẩm truyện.
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `id` | `UUID` | NOT NULL, DEFAULT gen_random_uuid() | PK | Khóa chính, định danh duy nhất cho lượt đánh giá |
+| 2 | `user_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết tới bảng `users(id)`, người thực hiện đánh giá |
+| 3 | `story_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết tới bảng `stories(id)`, đánh giá cho tác phẩm nào |
+| 4 | `rating` | `INTEGER` | NOT NULL, IN (1, 2, 3, 4, 5) | | Số điểm đánh giá (từ 1 đến 5 sao) |
+| 5 | `content` | `TEXT` | NULL | | Bài nhận xét chi tiết của độc giả |
+| 6 | `created_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm gửi đánh giá |
+
+#### 4.2.7. Bảng `membership_plans` (Danh mục gói hội viên)
+Bảng này quản lý thông tin các gói cước đăng ký hội viên Membership có sẵn trên hệ thống.
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `id` | `VARCHAR(30)` | NOT NULL | PK | Khóa chính, định danh mã gói hội viên (Ví dụ: 'MONTHLY', 'YEARLY') |
+| 2 | `name` | `VARCHAR(100)` | NOT NULL | | Tên gói cước hiển thị trên giao diện (Ví dụ: Gói Bạc 1 Tháng) |
+| 3 | `duration_days` | `INTEGER` | NOT NULL, > 0 | | Số ngày sử dụng mà gói cước cung cấp |
+| 4 | `price` | `DECIMAL(12,2)` | NOT NULL, >= 0 | | Giá tiền của gói cước bằng Việt Nam Đồng (VND) |
+| 5 | `description` | `TEXT` | NULL | | Chi tiết các đặc quyền đi kèm gói Membership |
+
+#### 4.2.8. Bảng `transactions` (Giao dịch thanh toán)
+Bảng này lưu trữ toàn bộ lịch sử thanh toán đăng ký Membership của độc giả thông qua cổng thanh toán VNPAY.
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `id` | `UUID` | NOT NULL, DEFAULT gen_random_uuid() | PK | Khóa chính, định danh duy nhất cho giao dịch trên hệ thống |
+| 2 | `user_id` | `UUID` | NULL, ON DELETE SET NULL | FK | Khóa ngoại liên kết tới bảng `users(id)`, người thực hiện thanh toán |
+| 3 | `plan_id` | `VARCHAR(30)` | NOT NULL | FK | Khóa ngoại liên kết tới bảng `membership_plans(id)`, gói cước được mua |
+| 4 | `amount` | `DECIMAL(12,2)` | NOT NULL, > 0 | | Số tiền thực tế của giao dịch thanh toán |
+| 5 | `vnp_txn_ref` | `VARCHAR(100)` | NOT NULL, UNIQUE | | Mã tham chiếu giao dịch duy nhất gửi sang cổng VNPAY |
+| 6 | `vnp_transaction_no`| `VARCHAR(100)` | NULL, UNIQUE | | Mã giao dịch chính thức do cổng VNPAY phản hồi sau khi thanh toán thành công |
+| 7 | `status` | `VARCHAR(20)` | NOT NULL, DEFAULT 'pending', IN ('pending', 'success', 'failed') | | Trạng thái giao dịch: pending (đang chờ), success (thành công), failed (thất bại) |
+| 8 | `created_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm khởi tạo giao dịch thanh toán |
+| 9 | `updated_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm cập nhật trạng thái giao dịch gần nhất |
+
+#### 4.2.9. Bảng `ai_moderation_logs` (Nhật ký kiểm duyệt AI)
+Bảng này ghi nhận các log kiểm duyệt chương tự động bằng Gemini AI, lưu trữ các phân tích chi tiết phục vụ khiếu nại hoặc kiểm tra của Admin.
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `id` | `UUID` | NOT NULL, DEFAULT gen_random_uuid() | PK | Khóa chính, định danh duy nhất cho log kiểm duyệt |
+| 2 | `chapter_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết bảng `chapters(id)`, xác định chương được quét |
+| 3 | `is_violation` | `BOOLEAN` | NOT NULL | | Kết quả kiểm duyệt: TRUE (phát hiện vi phạm chính sách), FALSE (an toàn) |
+| 4 | `violation_category`| `VARCHAR(50)` | NULL | | Phân loại lỗi vi phạm chính sách nếu có (Ví dụ: Bạo lực, Nhạy cảm, HateSpeech...) |
+| 5 | `confidence_score` | `DECIMAL(5,4)` | NOT NULL, Range: 0.0000 - 1.0000 | | Điểm số độ tin cậy/mức độ vi phạm do Gemini AI đánh giá |
+| 6 | `reason` | `TEXT` | NULL | | Giải thích chi tiết hoặc trích dẫn đoạn vi phạm do AI phân tích |
+| 7 | `moderated_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm thực hiện quét và lưu log |
+
+#### 4.2.10. Bảng `story_embeddings` (Dữ liệu Vector cốt truyện - pgvector)
+Bảng này lưu trữ biểu diễn vector 1536 chiều của tóm tắt truyện, đây là bảng phục vụ riêng cho tính năng tìm kiếm và đề xuất ngữ nghĩa bằng pgvector.
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `story_id` | `UUID` | NOT NULL, ON DELETE CASCADE | PK, FK | Khóa chính, đồng thời là khóa ngoại liên kết tới bảng `stories(id)` |
+| 2 | `plot_summary` | `TEXT` | NOT NULL | | Tóm tắt cốt truyện đã được chuẩn hóa phục vụ sinh vector |
+| 3 | `embedding` | `vector(1536)` | NOT NULL | | Vector embedding 1536 chiều sinh ra từ mô hình của Gemini API |
+| 4 | `updated_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm cập nhật/đồng bộ hóa vector gần nhất |
+
+#### 4.2.11. Bảng `publish_schedules` (Lịch đăng và cam kết lộ trình)
+Bảng này quản lý việc hẹn giờ tự động xuất bản chương và lưu vết giám sát lộ trình đăng truyện của tác giả.
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `id` | `UUID` | NOT NULL, DEFAULT gen_random_uuid() | PK | Khóa chính, định danh duy nhất cho lịch hẹn giờ đăng |
+| 2 | `story_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết bảng `stories(id)`, tác phẩm được hẹn lịch |
+| 3 | `chapter_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết bảng `chapters(id)`, chương truyện được hẹn đăng |
+| 4 | `scheduled_time` | `TIMESTAMP` | NOT NULL | | Thời điểm hẹn giờ xuất bản chính thức |
+| 5 | `status` | `VARCHAR(20)` | NOT NULL, DEFAULT 'scheduled', IN ('scheduled', 'published', 'missed') | | Trạng thái: scheduled (đã lên lịch), published (đã đăng), missed (bị trễ/hủy) |
+| 6 | `created_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm thiết lập lịch hẹn giờ |
+
+#### 4.2.12. Bảng `reading_histories` (Lịch sử đọc truyện)
+Bảng này ghi nhận thông tin đọc truyện của độc giả, giúp độc giả đọc tiếp dễ dàng và cung cấp dữ liệu đầu vào cho AI Recommendation.
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `id` | `UUID` | NOT NULL, DEFAULT gen_random_uuid() | PK | Khóa chính, định danh duy nhất cho bản ghi lịch sử |
+| 2 | `user_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết bảng `users(id)`, độc giả đọc truyện |
+| 3 | `story_id` | `UUID` | NOT NULL, ON DELETE CASCADE | FK | Khóa ngoại liên kết bảng `stories(id)`, bộ truyện đã đọc |
+| 4 | `last_chapter_id` | `UUID` | NULL, ON DELETE SET NULL | FK | Khóa ngoại liên kết bảng `chapters(id)`, chương truyện gần nhất đang đọc |
+| 5 | `last_read_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm gần nhất đọc chương này |
+
+#### 4.2.13. Bảng `libraries` (Thư viện truyện cá nhân)
+Bảng này lưu trữ danh sách các bộ truyện độc giả đã đánh dấu bookmark hoặc lưu vào thư viện riêng để nhận thông báo chương mới.
+
+| No. | Column Name | Data Type | Constraint | Key | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `user_id` | `UUID` | NOT NULL, ON DELETE CASCADE | PK, FK | Khóa ngoại liên kết bảng `users(id)`, xác định thư viện của độc giả nào |
+| 2 | `story_id` | `UUID` | NOT NULL, ON DELETE CASCADE | PK, FK | Khóa ngoại liên kết bảng `stories(id)`, bộ truyện được thêm vào thư viện |
+| 3 | `bookmarked_at` | `TIMESTAMP` | NOT NULL, DEFAULT NOW() | | Thời điểm độc giả thêm bộ truyện này vào thư viện |
 
 ## 5. User Interface and User Experience Design
 Gia Hiển viết phần này

@@ -122,7 +122,7 @@
 
 #### 3.1.1. System Decomposition Tree Diagram
 
-System Decomposition Tree dưới đây thể hiện cấu trúc phân tầng và các thành phần cấu thành nên hệ thống YAG:
+System Decomposition Tree thể hiện cấu trúc phân tầng và các thành phần cấu thành nên hệ thống YAG:
 
 ![image](images_design/2.svg)
 

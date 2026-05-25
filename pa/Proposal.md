@@ -62,7 +62,7 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
 | _**Review Hardware**_                      | Đánh giá đề xuất các yêu cầu về thiết bị đầu cuối và hạ tầng máy chủ cần thiết để triển khai hệ thống                                               |
 | _**Review Implementation**_                | Đánh giá đề xuất cho quá trình hiện thực hóa mã nguồn, đảm bảo đề xuất có trình bày các quy tắc cần tuân thủ khi viết code và chức năng đã thiết kế |
 
-![Nhiệm vụ của Gia Hiển](images/task_hien.png)
+![Nhiệm vụ của Gia Hiển](images_proposal/task_hien.png)
 
 - **23120151 - Huỳnh Yến Nhi - 15%**
 
@@ -72,7 +72,7 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
 | _**Review Preliminary Problem Statement**_ | Đánh giá tính logic và mức độ thuyết phục của phần đặt vấn đề, đảm bảo bám sát nhu cầu thị trường và khả năng thực hiện         |
 | _**Review Software Design**_               | Đánh giá đề xuất về giao diện (UI) và trải nghiệm người dùng (UX) để đảm bảo tính thẩm mỹ và dễ sử dụng                         |
 
-![Nhiệm vụ của Yến Nhi](images/task_nhi.png)
+![Nhiệm vụ của Yến Nhi](images_proposal/task_nhi.png)
 
 - **23120169 - Nguyễn Phú Thọ - 20%**
 
@@ -83,7 +83,7 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
 | _**Review Testing**_                        | Đánh giá kế hoạch và phương pháp kiểm thử đảm bảo các chức năng thực hiện chính xác, đảm bảo các lỗi tiềm tàng đều được bao phủ trong kế hoạch |
 | _**Review Human Resources & Costing Plan**_ | Đánh giá đề xuất bảng tính chi phí và phân bổ nhân sự để đảm bảo tính thực tế và tối ưu ngân sách                                              |
 
-![Nhiệm vụ của Phú Thọ](images/task_tho.png)
+![Nhiệm vụ của Phú Thọ](images_proposal/task_tho.png)
 
 - **23120177 - Phạm Hương Trà - 15%**
 
@@ -93,7 +93,7 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
 | _**Review Software Features**_           | Đánh giá tính khả thi của các tính năng đã đề xuất, loại bỏ hoặc bổ sung các tính năng cần thiết                            |
 | _**Review Deployment and Maintainance**_ | Đánh giá đề xuất các phương án triển khai để đảm bảo tính an toàn và giảm thiểu thời gian gián đoạn của hệ thống (downtime) |
 
-![Nhiệm vụ của Hương Trà](images/task_tra.png)
+![Nhiệm vụ của Hương Trà](images_proposal/task_tra.png)
 
 - **23120182 - Nguyễn Duy Trường - 15%**
 
@@ -103,7 +103,7 @@ _Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy
 | _**Write Software Design**_        | Đưa ra đề xuất về một bản thiết kế chi tiết từ UI đến Database, cũng như thực hiện các yêu cầu kiểm thử  |
 | _**Review Requirements Analysis**_ | Đánh giá đề xuất về tính đầy đủ của các yêu cầu đã phân tích, tránh bỏ sót nhu cầu của người dùng        |
 
-![Nhiệm vụ của Duy Trường](images/task_truong.png)
+![Nhiệm vụ của Duy Trường](images_proposal/task_truong.png)
 
 ## 2. Preliminary Problem Statement
 
@@ -338,7 +338,7 @@ _**a. Đăng truyện và Kiểm duyệt AI tự động**_
 - **Database:** Cơ sở dữ liệu lưu trữ nội dung và trạng thái truyện.
 
 **Biểu đồ trình tự (Sequence Diagram):**
-![Biểu đồ trình tự](images/usecase_storywriting.png)
+![Biểu đồ trình tự](images_proposal/usecase_storywriting.png)
 
 **Mô tả chi tiết luồng dữ liệu:**
 
@@ -360,7 +360,7 @@ _**b. Đăng ký gói Membership và Mở khóa truyện**_
 
 **Biểu đồ trình tự (Sequence Diagram):**
 
-![Biểu đồ trình tự](images/usecase_membership.png)
+![Biểu đồ trình tự](images_proposal/usecase_membership.png)
 
 Hệ thống không bao giờ tin tưởng hoàn toàn vào dữ liệu do Frontend gửi lên sau khi thanh toán xong (vì user có thể can thiệp URL để fake kết quả). Việc nâng cấp tài khoản chỉ được thực hiện khi Payment Service nhận được tín hiệu xác nhận trực tiếp từ Server của cổng thanh toán và xác thực chữ ký thành công.
 
@@ -377,7 +377,7 @@ _**c. Tìm kiếm thông minh bằng AI (Semantic Search)**_
 - **Relational DB (PostgreSQL):** Chứa thông tin hiển thị (tên truyện, tác giả, ảnh bìa).
 
 **Biểu đồ trình tự (Sequence Diagram):**
-![Biểu đồ trình tự](images/usecase_semanticsearch.png)
+![Biểu đồ trình tự](images_proposal/usecase_semanticsearch.png)
 
 _**d. Chu trình đọc truyện và Tương tác của Độc giả**_
 
@@ -393,7 +393,7 @@ _**d. Chu trình đọc truyện và Tương tác của Độc giả**_
 
 **Biểu đồ trình tự (Sequence Diagram):**
 
-![Biểu đồ trình tự](images/usecase_readingandinteraction.png)
+![Biểu đồ trình tự](images_proposal/usecase_readingandinteraction.png)
 
 _**e. Quá trình hoạt động của Diễn đàn (Forum)**_
 
@@ -409,7 +409,7 @@ _**e. Quá trình hoạt động của Diễn đàn (Forum)**_
 
 **Biểu đồ trình tự (Sequence Diagram):**
 
-![Biểu đồ trình tự](images/usecase_forum.png)
+![Biểu đồ trình tự](images_proposal/usecase_forum.png)
 
 _**f. Quản trị viên và Cơ chế giám sát lộ trình đăng tải**_
 
@@ -425,7 +425,7 @@ _**f. Quản trị viên và Cơ chế giám sát lộ trình đăng tải**_
 
 **Biểu đồ trình tự (Sequence Diagram):**
 
-![Biểu đồ trình tự](images/usecase_monitoringwriting.png)
+![Biểu đồ trình tự](images_proposal/usecase_monitoringwriting.png)
 
 _**g. Thống kê và Báo cáo doanh thu Membership**_
 
@@ -441,13 +441,13 @@ _**g. Thống kê và Báo cáo doanh thu Membership**_
 
 **Biểu đồ trình tự (Sequence Diagram):**
 
-![Biểu đồ trình tự](images/usecase_membershipanalysis.png)
+![Biểu đồ trình tự](images_proposal/usecase_membershipanalysis.png)
 
 #### 4.2.2 UI Design
 
 _**a. Chức năng đọc truyện**_
 
-![Biểu đồ trình tự](images/screen_writing.png)
+![Biểu đồ trình tự](images_proposal/screen_reading.png)
 
 Do tính chất đặc thù của hệ thống đọc truyện, giao diện cần tuân thủ các nguyên tắc thiết kế sau:
 
@@ -457,13 +457,13 @@ Do tính chất đặc thù của hệ thống đọc truyện, giao diện cầ
 
 _**b. Chức năng viết truyện**_
 
-![Biểu đồ trình tự](images/screen_reading.png)
+![Biểu đồ trình tự](images_proposal/screen_writing.png)
 
 **Layout chia đôi (Split View):** 70% màn hình bên trái dành cho khung soạn thảo văn bản, 30% bên phải là một Sidebar trượt có thể đóng/mở dành cho AI Assistant (để tác giả vừa viết vừa tham khảo gợi ý từ AI mà không cần chuyển tab).
 
 _**c. Chức năng diễn đàn**_
 
-![Biểu đồ trình tự](images/screen_forum.png)
+![Biểu đồ trình tự](images_proposal/screen_forum.png)
 
 - **Trang chủ Diễn đàn (`ForumHome`):** Nơi hiển thị danh sách các bài viết (Topic) được phân loại theo Tag (VD: _Thảo luận truyện, Chia sẻ kinh nghiệm viết, Thông báo từ Admin_). Giao diện sử dụng thiết kế dạng bảng hoặc dạng thẻ (Card) giống các nền tảng Reddit hoặc Spiderum.
 - **Tạo Chủ đề mới (`CreateTopic`):** Một màn hình chứa Editor thu gọn (không phức tạp như Editor viết truyện của tác giả), cho phép đính kèm ảnh và gán Tag phân loại.
@@ -489,7 +489,7 @@ _**a. Entity Relationship Diagram - ERD**_
 
 Sơ đồ dưới đây mô tả cấu trúc của Cơ sở dữ liệu Quan hệ cốt lõi.
 
-![Biểu đồ trình tự](images/database_overall.png)
+![Biểu đồ trình tự](images_proposal/database_overall.png)
 
 Để đáp ứng các User Story về tính năng và bảo mật, cấu trúc bảng có các điểm thiết kế quan trọng sau:
 
@@ -518,7 +518,7 @@ _**c. Thiết kế Cơ sở dữ liệu phân hệ Diễn đàn (Forum)**_
 
 Cấu trúc này được tách biệt để quản lý các bài thảo luận, không nhầm lẫn với nội dung sáng tác chính, nhưng vẫn giữ liên kết chặt chẽ với thực thể Users và Stories.
 
-![Biểu đồ trình tự](images/database_forum.png)
+![Biểu đồ trình tự](images_proposal/database_forum.png)
 
 ### 4.3 Implementation
 
@@ -818,8 +818,8 @@ Trong quá trình thực hiện đồ án và xây dựng bản Proposal này, n
 
 - **Nội dung sinh viên tự làm và cách chỉnh sửa:** Xem xét nội dung do AI đề xuất và tìm hiểu thêm về khả năng của RateLimit, cũng như sự không ăn toàn của việc chỉ vô hiệu hóa chuột phải. Từ đó, nhóm lựa chọn sử dụng RateLimit làm nền tảng công nghệ chính, tuy nhiên để tăng khả năng chống các hành động sao chép nội dung cơ bản thì việc áp dụng vô hiệu hóa chuột phải, Ctrl+C vẫn được cấu hình. Ngoài ra, xem xét và áp dụng cơ chế Fallback trong vận hành Web trong tương lai.
 
-![AI](images/AI.png)
-![AI](images/AI2.png)
+![AI](images_proposal/AI.png)
+![AI](images_proposal/AI2.png)
 
 ## 8. Presentation
 

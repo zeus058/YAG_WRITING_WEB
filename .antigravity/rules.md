@@ -367,7 +367,3 @@ Phương án B: [Mô tả] → Ưu: ... Nhược: ...
 
 Bạn muốn chọn phương án nào?
 ```
-
----
-
-*Cập nhật khi có thay đổi kiến trúc — commit kèm lý do thay đổi rule.*

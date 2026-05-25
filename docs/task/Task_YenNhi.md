@@ -1,9 +1,6 @@
 # CÔNG VIỆC CHI TIẾT - HUỲNH YẾN NHI
-## VAI TRÒ: FRONTEND DEVELOPER & CO-QA / COMPATIBILITY TESTING SPECIALIST
 
----
-
-## 1. ĐỒNG BAN KIỂM ĐỊNH CHẤT LƯỢNG (CO-QA & COMPATIBILITY)
+## 1. KIỂM ĐỊNH CHẤT LƯỢNG
 
 ### A. Kiểm thử khả năng hiển thị tương thích (Responsive Testing)
 *   **Thiết lập quy trình kiểm thử giao diện chéo:**
@@ -18,9 +15,7 @@
 *   **Spell & Visual Check:** Rà soát và trực tiếp sửa các lỗi chính tả giao diện, chỉnh sửa vị trí khoảng cách đệm (Padding/Margin) bị lệch lệch trên Frontend.
 *   Đồng hành cùng Hương Trà chạy thử nghiệm thủ công toàn hệ thống, ghi chép lỗi và kiểm chứng sau khi thành viên sửa xong.
 
----
-
-## 2. LẬP TRÌNH NGHIỆP VỤ BACKEND (FASTAPI USE CASES)
+## 2. LẬP TRÌNH BACKEND (FASTAPI USE CASES)
 
 ### [U003] Tạo & Quản lý Tác phẩm
 *   **API Tạo truyện mới (`POST /api/v1/stories`):**
@@ -63,8 +58,6 @@
 *   **Phát bình luận thời gian thực:**
     *   Tích hợp cơ chế Pub/Sub của **Redis** kết hợp WebSockets.
     *   Khi có bình luận mới được lưu thành công vào CSDL Postgres, Backend sẽ phát (Broadcast) bình luận đó qua WebSocket đến toàn bộ các độc giả khác đang cùng mở trang đọc chương truyện đó để bình luận tự động xuất hiện cuộn xuống màn hình thời gian thực mà không bắt họ F5 trang.
-
----
 
 ## 3. ĐIỀU CHỈNH GIAO DIỆN FRONTEND (NEXT.JS PAGES)
 

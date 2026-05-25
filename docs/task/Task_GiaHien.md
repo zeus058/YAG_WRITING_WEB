@@ -1,10 +1,6 @@
 # CÔNG VIỆC CHI TIẾT - TRẦN GIA HIỂN
-## VAI TRÒ: TEAM LEADER & UI/UX FRONTEND LEAD & DATABASE CO-WORKER
-
----
 
 ## 1. CƠ SỞ DỮ LIỆU (DATABASE DESIGN & IMPLEMENTATION)
-*Hợp tác chặt chẽ với Nguyễn Duy Trường để thiết kế, tạo bảng và cấu hình dữ liệu mẫu cho cụm bảng phân quyền và người dùng.*
 
 ### A. Thiết kế chi tiết cấu trúc bảng (PostgreSQL)
 *   **Bảng `users` (Quản lý tài khoản bảo mật):**
@@ -38,9 +34,7 @@
     *   Ít nhất 10 tài khoản độc giả thường và 5 độc giả Premium (`premium_until` còn hạn).
     *   Cấu hình sẵn bản ghi lịch sử đọc và thư viện bookmark tương ứng để kiểm thử.
 
----
-
-## 2. LẬP TRÌNH NGHIỆP VỤ BACKEND (FASTAPI USE CASES)
+## 2. LẬP TRÌNH BACKEND (FASTAPI USE CASES)
 
 ### [U001] Đăng ký / Đăng nhập & Khôi phục mật khẩu
 *   **API Đăng ký (`POST /api/v1/auth/register`):**
@@ -62,8 +56,6 @@
     *   Đón nhận file hình ảnh (`UploadFile`) dạng multipart/form-data.
     *   Kiểm tra định dạng ảnh (`image/png`, `image/jpeg`, `image/webp`) và giới hạn kích thước tối đa 2MB.
     *   Kết nối SDK Cloudinary, tải ảnh lên thư mục `/yag/avatars/`, áp dụng tự động resize ảnh về dạng hình vuông (250x250 pixels) và định dạng sang WebP để tối ưu băng thông. Trả về CDN URL lưu vào DB.
-
----
 
 ## 3. ĐIỀU CHỈNH GIAO DIỆN FRONTEND (NEXT.JS PAGES)
 

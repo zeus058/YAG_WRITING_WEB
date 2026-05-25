@@ -1,10 +1,6 @@
 # CÔNG VIỆC CHI TIẾT - NGUYỄN DUY TRƯỜNG
-## VAI TRÒ: DATABASE ARCHITECT & CORE BUSINESS BACKEND & MEMBERSHIP SPECIALIST
-
----
 
 ## 1. CƠ SỞ DỮ LIỆU (DATABASE DESIGN & IMPLEMENTATION)
-*Hợp tác chặt chẽ với Trần Gia Hiển để thiết kế, tạo bảng và cấu hình dữ liệu mẫu cho cụm bảng truyện và giao dịch.*
 
 ### A. Thiết kế chi tiết cấu trúc bảng (PostgreSQL)
 *   **Bảng `stories` (Quản lý tác phẩm sáng tác) - Thiết kế cùng Gia Hiển & Yến Nhi:**
@@ -49,9 +45,7 @@
     *   Tạo index dạng B-Tree cho các cột thường tìm kiếm: `stories(title)`, `stories(category)`, `chapters(story_id, chapter_number)`.
     *   Tạo index duy nhất (`UNIQUE INDEX`) cho các mã tham chiếu giao dịch: `transactions(vnp_txn_ref)`.
 
----
-
-## 2. LẬP TRÌNH NGHIỆP VỤ BACKEND (FASTAPI USE CASES)
+## 2. LẬP TRÌNH BACKEND (FASTAPI USE CASES)
 
 ### [U011] Đăng ký Membership
 *   **API Danh mục gói cước (`GET /api/v1/membership/plans`):**
@@ -74,8 +68,6 @@
         3. Truy vấn transaction tương ứng trong CSDL bằng `vnp_txn_ref`. Đối chiếu số tiền thanh toán (`vnp_Amount`) khớp với hóa đơn.
         4. Kiểm tra trạng thái hiện tại của transaction. Nếu đang `pending`, tiến hành cập nhật trạng thái thành `success` (hoặc `failed` tùy mã phản hồi của VNPAY).
         5. **Cấp hạn sử dụng Premium:** Lấy số ngày sử dụng (`duration_days`) của gói cước trong bảng `membership_plans`, tính toán và cộng dồn vào trường `premium_until` của tài khoản độc giả mua gói. Trả về cho VNPAY mã xác nhận thành công `{ "RspCode": "00", "Message": "Confirm success" }`.
-
----
 
 ## 3. ĐIỀU CHỈNH GIAO DIỆN FRONTEND (NEXT.JS PAGES)
 

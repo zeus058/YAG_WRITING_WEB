@@ -1,9 +1,6 @@
 # CÔNG VIỆC CHI TIẾT - PHẠM HƯƠNG TRÀ
-## VAI TRÒ: QA/TESTING LEAD & AI SMART ENGINE SPECIALIST
 
----
-
-## 1. TRƯỞNG BAN KIỂM ĐỊNH CHẤT LƯỢNG (QA/TESTING LEAD)
+## 1. KIỂM ĐỊNH CHẤT LƯỢNG
 
 ### A. Xây dựng tài liệu Kế hoạch kiểm thử tổng thể (Test Plan)
 *   **Xác định phạm vi:** Lên danh sách toàn bộ các thành phần hệ thống cần kiểm thử, bao gồm 15 Use Cases nghiệp vụ, kiểm thử hiệu năng API, và độ ổn định của luồng bất đồng bộ (RabbitMQ).
@@ -17,9 +14,7 @@
 *   **Lập Biên bản theo dõi lỗi (Bug Report):** Thiết lập file theo dõi lỗi (gồm: ID lỗi, màn hình lỗi, mô tả lỗi, mức độ nghiêm trọng, người phụ trách sửa, trạng thái Open/Closed) để các thành viên sửa lỗi kịp thời.
 *   Viết tài liệu báo cáo kết quả kiểm thử (Test Report) tổng hợp tỷ lệ pass/fail các testcase để hoàn thiện báo cáo đồ án nộp cho giảng viên.
 
----
-
-## 2. LẬP TRÌNH TRÍ TUỆ NHÂN TẠO BACKEND (AI ENGINE USE CASES)
+## 2. LẬP TRÌNH AI ENGINE USE CASES
 
 ### [U006] Gợi ý tình tiết AI (Miu AI Sidebar)
 *   **API Gemini Assistant (`POST /api/v1/ai/suggestions`):**
@@ -46,8 +41,6 @@
     *   Truy xuất lịch sử đọc truyện (`reading_histories`) và thư viện yêu thích (`libraries`) của độc giả hiện tại để xây dựng "Vector sở thích độc giả".
     *   So khớp Vector sở thích đó với các Vector của kho truyện trong bảng `story_embeddings` bằng khoảng cách Cosine.
     *   Lọc bỏ các truyện độc giả đã đọc hết, đề xuất danh sách top 5 tác phẩm có độ tương đồng sở thích cao nhất.
-
----
 
 ## 3. ĐIỀU CHỈNH GIAO DIỆN FRONTEND (NEXT.JS PAGES)
 

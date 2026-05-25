@@ -1,7 +1,4 @@
 # CÔNG VIỆC CHI TIẾT - NGUYỄN PHÚ THỌ
-## VAI TRÒ: DEVOPS LEAD & ARCHITECT & ASYNCHRONOUS BACKEND SPECIALIST
-
----
 
 ## 1. HẠ TẦNG DỰ ÁN & CI/CD PIPELINE
 
@@ -21,9 +18,7 @@
         3. Khởi chạy công cụ Linter để kiểm tra chất lượng mã nguồn: **Flake8** cho Python và **ESLint** cho Next.js, phát hiện lỗi cú pháp và cảnh báo code thừa.
         4. Tự động chạy toàn bộ bộ kiểm thử Unit Tests bằng **pytest** ở Backend. Nếu có bất kỳ testcase nào bị lỗi hoặc code không đạt chuẩn chất lượng linter, GitHub Actions sẽ tự động chặn không cho phép Merge code để đảm bảo an toàn tuyệt đối cho nhánh chung.
 
----
-
-## 2. LẬP TRÌNH NGHIỆP VỤ BACKEND (FASTAPI USE CASES)
+## 2. LẬP TRÌNH BACKEND (FASTAPI USE CASES)
 
 ### [U005] Xuất bản truyện (Publishing Workflow)
 *   **API Yêu cầu Xuất bản (`POST /api/v1/author/chapters/{chapter_id}/publish`):**
@@ -57,8 +52,6 @@
 *   **Cụm API dành riêng cho Admin:**
     *   API lấy thông tin thống kê nhanh, API khóa tài khoản người dùng vi phạm, API ghi đè quyết định duyệt chương của AI (Admin có quyền duyệt thủ công lại các chương bị AI gắn cờ nhầm).
     *   **Audit Trail:** Mọi thao tác xử lý của Admin bắt buộc phải được ghi nhận vết chi tiết (lưu trữ người thao tác, thời gian, hành động, lý do) vào cơ sở dữ liệu phục vụ truy vết bảo mật.
-
----
 
 ## 3. ĐIỀU CHỈNH GIAO DIỆN FRONTEND (NEXT.JS PAGES)
 

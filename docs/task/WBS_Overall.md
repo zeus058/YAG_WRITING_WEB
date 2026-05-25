@@ -1,7 +1,4 @@
 # BẢNG PHÂN CHIA CHI TIẾT TOÀN DIỆN CÔNG VIỆC THÀNH VIÊN (WBS)
-## ĐỒ ÁN: YAG - NỀN TẢNG ĐỌC VÀ SÁNG TÁC TIỂU THUYẾT THÔNG MINH HỖ TRỢ BỞI AI
-
----
 
 ## MA TRẬN PHÂN CHIA TOÀN BỘ USE CASES VÀ PAGES (S01 - S21)
 
@@ -13,8 +10,6 @@
 | **Phạm Hương Trà** | U006: Gợi ý tình tiết AI<br>U008: AI Tìm kiếm ngữ nghĩa (pgvector)<br>U009: AI Đề xuất truyện | S05: Khám phá & Tìm kiếm (AI Semantic Search)<br>S16 (Sidebar phải): Trợ lý Miu AI ở Editor | **QA/Testing Lead**:<br>- Thiết kế Test Plan & Test Suite tổng thể<br>- Kiểm thử tích hợp API & Báo cáo lỗi (Bug) |
 | **Huỳnh Yến Nhi** | U003: Tạo & Quản lý Tác phẩm<br>U004: Soạn thảo (Autosave WebSockets)<br>U007: Đọc truyện & Caching<br>U010: Bình luận & Đánh giá (Real-time) | S06: Trang truyện Detail (Mục lục & comment)<br>S08: Diễn đàn (Cộng đồng WebSocket)<br>S14: Trung tâm thông báo (Badges WebSocket)<br>S16 (Editor trái): Khung soạn thảo Markdown | **Co-QA/Testing**:<br>- Kiểm thử Responsive trên Desktop/Mobile/Tablet<br>- Kiểm thử khả năng truy cập Usability/A11y |
 
----
-
 ## QUY TRÌNH HỢP TÁC & HOÀN THIỆN CODE (GIT FLOW)
 
 1. **Gia Hiển & Duy Trường** triển khai SQL Script -> Tạo Database trên Docker local của cả nhóm.
@@ -24,8 +19,6 @@
    * Nếu có lỗi cú pháp hoặc test bị fail -> CI báo đỏ -> Thành viên sửa lỗi.
    * Nếu CI báo xanh -> **Hương Trà & Yến Nhi** tiến hành kiểm định code chất lượng, chạy thử. Nếu ổn định sẽ duyệt Merge vào nhánh `dev`.
 5. Sau khi hoàn thành tất cả tính năng, **Phú Thọ** thực hiện Deploy phiên bản ổn định nhất lên Google Cloud Run từ nhánh `main`.
-
----
 
 ## TIÊU CHÍ ĐÁNH GIÁ HOÀN THÀNH (DEFINITION OF DONE)
 

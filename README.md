@@ -393,11 +393,11 @@ Mã nguồn dự án được bảo chứng chất lượng nhờ quy trình rà
 
 Hệ thống được phát triển với sự đóng góp cân bằng và đồng đều (Mỗi thành viên đảm nhận **20%** khối lượng dự án, phân vai trò phối hợp nhịp nhàng):
 
-* **Trần Gia Hiển** - *Product Owner & Testing Lead* - [@GiaHien23](https://github.com/GiaHien23)
-* **Nguyễn Duy Trường** - *Software Architect & DB Designer* - [@DuyTruong182](https://github.com/DuyTruong182)
-* **Nguyễn Phú Thọ** - *DevOps & Infrastructure Lead* - [@PhuTho169](https://github.com/PhuTho169)
-* **Phạm Hương Trà** - *Business Analyst & QA Engineer* - [@HuongTra177](https://github.com/HuongTra177)
-* **Huỳnh Yến Nhi** - *UI/UX Designer & Conceptualizer* - [@YenNhi151](https://github.com/YenNhi151)
+* **Trần Gia Hiển** - *Product Owner & Testing Lead*
+* **Nguyễn Duy Trường** - *Software Architect & DB Designer*
+* **Nguyễn Phú Thọ** - *DevOps & Infrastructure Lead*
+* **Phạm Hương Trà** - *Business Analyst & QA Engineer*
+* **Huỳnh Yến Nhi** - *UI/UX Designer & Conceptualizer*
 
 ---
 

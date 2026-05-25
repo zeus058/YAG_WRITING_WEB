@@ -63,20 +63,6 @@
     *   Kiểm tra định dạng ảnh (`image/png`, `image/jpeg`, `image/webp`) và giới hạn kích thước tối đa 2MB.
     *   Kết nối SDK Cloudinary, tải ảnh lên thư mục `/yag/avatars/`, áp dụng tự động resize ảnh về dạng hình vuông (250x250 pixels) và định dạng sang WebP để tối ưu băng thông. Trả về CDN URL lưu vào DB.
 
-### [U007] Đọc truyện & Caching Redis
-*   **API Đọc chương truyện (`GET /api/v1/chapters/{chapter_id}`):**
-    *   Nhận request từ Client, kiểm tra chương có bị khóa VIP (`is_premium`) hay không.
-    *   **Logic Cache Redis:**
-        1. Tạo key `chapter:content:{chapter_id}`. Kiểm tra sự tồn tại trong Redis.
-        2. Nếu có dữ liệu (Cache Hit): Lấy trực tiếp và trả về client.
-        3. Nếu không có (Cache Miss): Truy vấn CSDL Postgres, lưu dữ liệu vào Redis với thời gian hết hạn (TTL) là 2 giờ (`EXPIRE 7200`), sau đó trả về cho client.
-*   **Đếm lượt xem bất đồng bộ qua Redis:**
-    *   Mỗi lượt đọc gọi lệnh `INCR story:views:{story_id}` trong Redis.
-    *   Viết một tác vụ chạy ngầm định kỳ cứ mỗi 10 phút quét toàn bộ các key `story:views:*` trong Redis, lấy số lượt xem cộng dồn và thực thi lệnh SQL `UPDATE stories SET view_count = view_count + {increment} WHERE id = {story_id}` trong Postgres, sau đó xóa key cũ trong Redis để tránh rác.
-*   **API Bookmark & Lịch sử:**
-    *   `POST /api/v1/stories/{story_id}/bookmark`: Thêm/Xóa truyện vào tủ sách cá nhân.
-    *   Tự động cập nhật bản ghi lịch sử đọc dở trong bảng `reading_histories` khi có API đọc chương thành công.
-
 ---
 
 ## 3. ĐIỀU CHỈNH GIAO DIỆN FRONTEND (NEXT.JS PAGES)

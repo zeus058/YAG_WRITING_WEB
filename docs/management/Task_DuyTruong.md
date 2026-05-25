@@ -7,7 +7,7 @@
 *Hợp tác chặt chẽ với Trần Gia Hiển để thiết kế, tạo bảng và cấu hình dữ liệu mẫu cho cụm bảng truyện và giao dịch.*
 
 ### A. Thiết kế chi tiết cấu trúc bảng (PostgreSQL)
-*   **Bảng `stories` (Quản lý tác phẩm sáng tác):**
+*   **Bảng `stories` (Quản lý tác phẩm sáng tác) - Thiết kế cùng Gia Hiển & Yến Nhi:**
     *   `id`: Kiểu dữ liệu `UUID`, khóa chính, tự động sinh (`DEFAULT gen_random_uuid()`).
     *   `author_id`: Kiểu dữ liệu `UUID`, khóa ngoại liên kết `users(id)` kèm ràng buộc xóa dây chuyền (`ON DELETE CASCADE`).
     *   `title`: Kiểu dữ liệu `VARCHAR(255)`, không rỗng, duy nhất (`UNIQUE`).
@@ -52,16 +52,6 @@
 ---
 
 ## 2. LẬP TRÌNH NGHIỆP VỤ BACKEND (FASTAPI USE CASES)
-
-### [U003] Tạo & Quản lý Tác phẩm
-*   **API Tạo truyện mới (`POST /api/v1/stories`):**
-    *   Xác thực quyền tác giả (`role = 'author'`).
-    *   Kiểm tra trùng lặp tiêu đề truyện trong CSDL.
-    *   Nhận file ảnh bìa truyện từ client, tải lên Cloudinary trong thư mục `/yag/covers/`, nén ảnh và lấy URL lưu vào DB.
-*   **API Cập nhật thông tin truyện (`PUT /api/v1/stories/{story_id}`):**
-    *   Cho phép sửa ảnh bìa, tóm tắt truyện, và đổi trạng thái tiến độ sáng tác.
-*   **API Quản lý chương (`GET /api/v1/author/stories/{story_id}/chapters`):**
-    *   Liệt kê toàn bộ chương truyện (kể cả chương đang soạn, chưa duyệt) của chính tác giả để quản lý.
 
 ### [U011] Đăng ký Membership
 *   **API Danh mục gói cước (`GET /api/v1/membership/plans`):**

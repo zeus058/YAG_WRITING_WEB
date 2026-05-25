@@ -20,7 +20,17 @@
 
 ---
 
-## 2. LẬP TRÌNH TƯƠNG TÁC THỜI GIAN THỰC BACKEND (FASTAPI WEBSOCKETS)
+## 2. LẬP TRÌNH NGHIỆP VỤ BACKEND (FASTAPI USE CASES)
+
+### [U003] Tạo & Quản lý Tác phẩm
+*   **API Tạo truyện mới (`POST /api/v1/stories`):**
+    *   Xác thực quyền tác giả (`role = 'author'`).
+    *   Kiểm tra trùng lặp tiêu đề truyện trong CSDL.
+    *   Nhận file ảnh bìa truyện từ client, tải lên Cloudinary trong thư mục `/yag/covers/`, nén ảnh và lấy URL lưu vào DB.
+*   **API Cập nhật thông tin truyện (`PUT /api/v1/stories/{story_id}`):**
+    *   Cho phép sửa ảnh bìa, tóm tắt truyện, và đổi trạng thái tiến độ sáng tác.
+*   **API Quản lý chương (`GET /api/v1/author/stories/{story_id}/chapters`):**
+    *   Liệt kê toàn bộ chương truyện (kể cả chương đang soạn, chưa duyệt) của chính tác giả để quản lý.
 
 ### [U004] Soạn thảo chương truyện (WebSocket Autosave)
 *   **Lập trình kết nối WebSocket hai chiều:**
@@ -30,6 +40,20 @@
         *   Thiết lập sự kiện lắng nghe: Mỗi khi tác giả dừng gõ chữ quá 5 giây hoặc định kỳ mỗi 10 giây, Client âm thầm gửi payload JSON chứa tiêu đề và nội dung chương hiện tại qua WebSocket.
         *   Backend tiếp nhận dữ liệu từ WebSocket, thực hiện cập nhật ghi đè nhanh nội dung vào bảng `chapters` trong PostgreSQL dưới trạng thái `draft`.
         *   Sau khi lưu thành công, Backend gửi tín hiệu phản hồi xác nhận `"Autosave success"` về cho client để hiển thị biểu tượng thông báo xanh an toàn trên màn hình, giúp tác giả tuyệt đối yên tâm không bao giờ bị mất bản thảo.
+
+### [U007] Đọc truyện & Caching Redis
+*   **API Đọc chương truyện (`GET /api/v1/chapters/{chapter_id}`):**
+    *   Nhận request từ Client, kiểm tra chương có bị khóa VIP (`is_premium`) hay không.
+    *   **Logic Cache Redis:**
+        1. Tạo key `chapter:content:{chapter_id}`. Kiểm tra sự tồn tại trong Redis.
+        2. Nếu có dữ liệu (Cache Hit): Lấy trực tiếp và trả về client.
+        3. Nếu không có (Cache Miss): Truy vấn CSDL Postgres, lưu dữ liệu vào Redis với thời gian hết hạn (TTL) là 2 giờ (`EXPIRE 7200`), sau đó trả về cho client.
+*   **Đếm lượt xem bất đồng bộ qua Redis:**
+    *   Mỗi lượt đọc gọi lệnh `INCR story:views:{story_id}` trong Redis.
+    *   Viết một tác vụ chạy ngầm định kỳ cứ mỗi 10 phút quét toàn bộ các key `story:views:*` trong Redis, lấy số lượt xem cộng dồn và thực thi lệnh SQL `UPDATE stories SET view_count = view_count + {increment} WHERE id = {story_id}` trong Postgres, sau đó xóa key cũ trong Redis để tránh rác.
+*   **API Bookmark & Lịch sử:**
+    *   `POST /api/v1/stories/{story_id}/bookmark`: Thêm/Xóa truyện vào tủ sách cá nhân.
+    *   Tự động cập nhật bản ghi lịch sử đọc dở trong bảng `reading_histories` khi có API đọc chương thành công.
 
 ### [U010] Bình luận & Đánh giá (Real-time Broadcast)
 *   **API Đăng Bình luận & Đánh giá sao (`POST /api/v1/chapters/{chapter_id}/comments`):**

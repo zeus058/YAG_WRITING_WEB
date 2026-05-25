@@ -34,7 +34,7 @@
 | Hoàn thiện tài liệu | Hoàn thiện Mục 5 (AI Usage Declaration) và Mục 7 (Reflective Report). |
 | Cấu hình AI Engine | Cấu hình thành công môi trường local cho plugin pgvector. |
 
-![Task Hien](images/task_hien.png)
+![Task Hien](images_require/task_hien.png)
 
 ### 23120151 - Huỳnh Yến Nhi (20%)
 | Nhiệm vụ | Mô tả chi tiết |
@@ -43,7 +43,7 @@
 | Cấu hình môi trường Frontend | Khởi tạo xong project Next.js, cài đặt TailwindCSS và đẩy code lên GitHub. |
 | Cấu hình Frontend Studio | Hoàn thiện UI màn hình Author Studio (Split-view) và luồng Diễn đàn (Forum). |
 
-![Task Nhi](images/task_nhi.png)
+![Task Nhi](images_require/task_nhi.png)
 
 ### 23120169 - Nguyễn Phú Thọ (20%)
 | Nhiệm vụ | Mô tả chi tiết |
@@ -53,7 +53,7 @@
 | Hạ tầng & CI/CD | Cung cấp file docker-compose.yml hoàn chỉnh (PostgreSQL, Redis, RabbitMQ) và Thiết lập Git Flow, cấu hình CI cơ bản (Linter) trên GitHub. |
 | Hướng dẫn dự án | Viết file README chi tiết hướng dẫn cài đặt và vận hành hệ thống. |
 
-![Task Thọ](images/task_tho.png)
+![Task Thọ](images_require/task_tho.png)
 
 ### 23120177 - Phạm Hương Trà (20%)
 | Nhiệm vụ | Mô tả chi tiết |
@@ -62,7 +62,7 @@
 | Mô tả Use Case Độc giả | Hoàn thành đặc tả nhóm Use Case: Interact (U010), Membership (U011), Payment (U012). |
 | Frontend Reader | Hoàn thiện UI màn hình Xác thực (Login/Register) và giao diện Đọc truyện. |
 
-![Task Tra](images/task_tra.png)
+![Task Tra](images_require/task_tra.png)
 
 ### 23120182 - Nguyễn Duy Trường (20%)
 | Nhiệm vụ | Mô tả chi tiết |
@@ -71,7 +71,7 @@
 | Mô tả Use Case Tác giả | Hoàn thành đặc tả nhóm Use Case: Auth (U001), Profile (U002), Quản lý Tác phẩm (U003), Write (U004), Publish (U005). |
 | Database & Migration | Viết xong file SQL Migrations để tạo bảng, khóa ngoại dựa trên bản vẽ ERD. |
 
-![Task Truong](images/task_truong.png)
+![Task Truong](images_require/task_truong.png)
 
 ## 2. Problem Statement
     Written by: 23120151 Huỳnh Yến Nhi
@@ -180,7 +180,7 @@ Các yêu cầu được phân nhóm dựa trên các luồng nghiệp vụ cố
     Edited by: 
     Reviewed by: 23120169 Nguyễn Phú Thọ
 
-![Use Case Model](images/usecaseDiagram.png)
+![Use Case Model](images_require/usecaseDiagram.png)
 
 ### 4.2. Use Case Specification
 #### 4.2.1. U001: Đăng ký / Đăng nhập
@@ -468,9 +468,9 @@ Trong quá trình hoàn thiện tài liệu, nhóm có sử dụng công cụ AI
 
 **Nội dung sinh viên tự làm & Kiểm chứng:** Nhóm đã đọc hiểu và tự đối chiếu lại các góp ý của AI với định hướng ban đầu của dự án. Nhóm hoàn toàn không sao chép văn bản của AI mà tự tay thực hiện việc sửa lỗi định dạng Markdown, đánh số lại mục lục và rà soát, tinh chỉnh lại các ràng buộc thiết kế, luồng hệ thống để tài liệu đạt độ hoàn thiện cao nhất.
 
-![AI Usage](images/AI1.png)
+![AI Usage](images_require/AI1.png)
 
-![AI Usage](images/AI2.png)
+![AI Usage](images_require/AI2.png)
 ## 6. Presentation
 Video thuyết trình: https://youtu.be/2hARxf5t9Cc
 

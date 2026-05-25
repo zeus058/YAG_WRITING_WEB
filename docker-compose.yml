@@ -1,31 +1,32 @@
-# Cấu hình cụm hạ tầng phụ trợ cho môi trường phát triển Local
-# Bao gồm: PostgreSQL (+ pgvector), Redis, RabbitMQ
+version: '3.8'
 
 services:
-  # === CƠ SỞ DỮ LIỆU QUAN HỆ + VECTOR ===
+  # PostgreSQL Database Service with pgvector pre-installed
   postgres:
     image: pgvector/pgvector:pg16
     container_name: yag_postgres
-    restart: unless-stopped
+    restart: always
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: yag_admin
-      POSTGRES_PASSWORD: yag_secret_2026
-      POSTGRES_DB: yag_writing_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yag
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U yag_admin -d yag_writing_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d yag"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - yag_network
 
-  # === BỘ NHỚ ĐỆM & ĐẾM LƯỢT XEM TỐC ĐỘ CAO ===
+  # Redis Caching Service for Session, View Count, and WS Pub/Sub
   redis:
     image: redis:7-alpine
     container_name: yag_redis
-    restart: unless-stopped
+    restart: always
     ports:
       - "6379:6379"
     volumes:
@@ -35,15 +36,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - yag_network
 
-  # === HÀNG ĐỢI TÁC VỤ BẤT ĐỒNG BỘ (AI MODERATOR) ===
+  # RabbitMQ Message Broker for Async AI Moderation Pipeline
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: yag_rabbitmq
-    restart: unless-stopped
+    restart: always
     ports:
-      - "5672:5672"   # Cổng AMQP cho producer/consumer
-      - "15672:15672" # Cổng giao diện quản trị RabbitMQ
+      - "5672:5672"     # AMQP Broker port
+      - "15672:15672"   # Management Web Console port
     environment:
       RABBITMQ_DEFAULT_USER: yag_mq
       RABBITMQ_DEFAULT_PASS: yag_mq_secret
@@ -54,11 +57,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - yag_network
 
 volumes:
   postgres_data:
-    driver: local
   redis_data:
-    driver: local
   rabbitmq_data:
-    driver: local
+
+networks:
+  yag_network:
+    driver: bridge

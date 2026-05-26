@@ -1,0 +1,18 @@
+========== BACKEND ==========
+1. Build Dockerfile:
+    [-] docker build -t yag-backend .
+    [-] docker run --rm -p 8000:8000 yag-backend
+2. Start Docker: docker compose up -d
+3. Check List: docker compose ps
+
+Screen:
+
+NAME           STATUS
+yag_backend    Up              0.0.0.0:8000->8000/tcp
+yag_postgres   Up (healthy)
+yag_redis      Up (healthy)
+yag_rabbitmq   Up (healthy)
+
+=> Startup successful!
+
+4. Open browser: http://localhost:8000/docs

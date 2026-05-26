@@ -51,6 +51,35 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    container_name: yag_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://yag_user:yag_secret@postgres:5432/yag_db
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://yag_mq:yag_mq_secret@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    container_name: yag_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

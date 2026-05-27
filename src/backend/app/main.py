@@ -26,6 +26,13 @@ app.add_middleware(
 # Register all API endpoints
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+from app.core.database import Base, engine
+
+@app.on_event("startup")
+def init_db():
+    import app.models
+    Base.metadata.create_all(bind=engine)
+
 @app.get("/", tags=["Main"])
 def read_root():
     return {

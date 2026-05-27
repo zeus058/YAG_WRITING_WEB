@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "yag_development_secret_key_change_in_production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     
+    # Cloudinary CDN Configuration
+    CLOUDINARY_CLOUD_NAME: str | None = None
+    CLOUDINARY_API_KEY: str | None = None
+    CLOUDINARY_API_SECRET: str | None = None
+    
     class Config:
         case_sensitive = True
         env_file = ".env"

@@ -37,4 +37,6 @@ class Story(Base):
 
     __table_args__ = (
         CheckConstraint("status IN ('ongoing', 'completed', 'paused')", name="chk_stories_status"),
+        CheckConstraint("view_count >= 0", name="chk_stories_view_count_non_negative"),
+        CheckConstraint("rating_avg >= 0.00 AND rating_avg <= 5.00", name="chk_stories_rating_avg_range"),
     )

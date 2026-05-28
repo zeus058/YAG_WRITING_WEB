@@ -3,18 +3,23 @@ System Configuration Module.
 Defines system-wide environment variables and app settings.
 """
 from pydantic_settings import BaseSettings
+from typing import Optional
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "YAG - Smart Novel Writing Platform"
     API_V1_STR: str = "/api/v1"
     
     # Database Settings
+    DATABASE_URL: Optional[str] = None
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "yag"
     
     # Redis & RabbitMQ Settings
+    REDIS_URL: Optional[str] = None
+    RABBITMQ_URL: Optional[str] = None
+    
     REDIS_HOST: str = "localhost"
     RABBITMQ_HOST: str = "localhost"
     

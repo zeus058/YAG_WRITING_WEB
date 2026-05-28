@@ -6,3 +6,4 @@ Contains base models and entities for database mapping:
 - MembershipPlan, Transaction (U011, U012)
 - AIModerationLog, PublishSchedule, StoryEmbedding (U005, U008, U013, U014)
 """
+from app.models.story import Story, Chapter

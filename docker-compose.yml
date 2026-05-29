@@ -60,6 +60,12 @@ services:
     ports:
       - "8000:8000"
     environment:
+      POSTGRES_SERVER: postgres
+      POSTGRES_USER: yag_user
+      POSTGRES_PASSWORD: yag_secret
+      POSTGRES_DB: yag_db
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
       DATABASE_URL: postgresql://yag_user:yag_secret@postgres:5432/yag_db
       REDIS_URL: redis://redis:6379/0
       RABBITMQ_URL: amqp://yag_mq:yag_mq_secret@rabbitmq:5672/

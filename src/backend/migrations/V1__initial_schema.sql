@@ -352,5 +352,42 @@ END
 $$;
 
 -- =============================================================================
+-- ADDITIONAL INDEXES (from Task_HuongTra, Task_PhuTho, and api-routes.md)
+-- =============================================================================
+
+-- comments: lookup comments by chapter (primary access pattern)
+CREATE INDEX IF NOT EXISTS idx_comments_chapter_id
+    ON comments (chapter_id);
+
+-- comments: lookup replies to a specific comment
+CREATE INDEX IF NOT EXISTS idx_comments_parent_id
+    ON comments (parent_id);
+
+-- libraries: lookup a reader's bookmarked stories
+CREATE INDEX IF NOT EXISTS idx_libraries_user_id
+    ON libraries (user_id);
+
+-- publish_schedules: filter by story
+CREATE INDEX IF NOT EXISTS idx_publish_schedules_story_id
+    ON publish_schedules (story_id);
+
+-- publish_schedules: individual scheduled_time index for range queries
+CREATE INDEX IF NOT EXISTS idx_publish_schedules_scheduled_time
+    ON publish_schedules (scheduled_time);
+
+-- -------------------------
+-- GIN Full-Text Search index on stories (for GET /api/search?q=)
+-- Uses PostgreSQL tsvector with 'simple' config (language-agnostic for Vietnamese)
+-- -------------------------
+CREATE INDEX IF NOT EXISTS idx_stories_fulltext_search
+    ON stories
+    USING GIN (to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(description, '')));
+
+COMMENT ON INDEX idx_stories_fulltext_search IS
+    'GIN full-text search index for keyword search on story title and description. '
+    'Query with: WHERE to_tsvector(''simple'', title || '' '' || description) @@ to_tsquery(''simple'', $query)';
+
+
+-- =============================================================================
 -- END OF MIGRATION V1
 -- =============================================================================

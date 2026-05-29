@@ -1,5 +1,6 @@
 import uuid
 import sys
+import os
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import text
 from app.core.database import SessionLocal, Base, engine
@@ -22,15 +23,21 @@ from app.models import (
 
 def seed_database():
     print("Resetting database tables...")
-    # Drop all and recreate to ensure clean slate
+    # Drop all first using metadata to ensure a clean slate
     Base.metadata.drop_all(bind=engine)
     
-    # Enable vector extension
-    with engine.begin() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+    # Read the V1 migration SQL file and execute it
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    migration_path = os.path.join(current_dir, "..", "migrations", "V1__initial_schema.sql")
     
-    Base.metadata.create_all(bind=engine)
-    print("Database tables created successfully!")
+    print(f"Applying schema migration from {migration_path}...")
+    with open(migration_path, "r", encoding="utf-8") as f:
+        migration_sql = f.read()
+        
+    with engine.begin() as conn:
+        conn.execute(text(migration_sql))
+        
+    print("Database tables and custom indexes created successfully from migration script!")
     
     db = SessionLocal()
     try:

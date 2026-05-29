@@ -25,6 +25,10 @@ class User(Base):
     profile = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     stories = relationship("Story", back_populates="author", cascade="all, delete-orphan")
     transactions = relationship("Transaction", back_populates="user")
+    comments = relationship("Comment", back_populates="user")
+    reviews = relationship("Review", back_populates="user")
+    reading_histories = relationship("ReadingHistory", back_populates="user")
+    libraries = relationship("Library", back_populates="user")
 
     __table_args__ = (
         CheckConstraint("role IN ('admin', 'author', 'reader')", name="chk_users_role"),

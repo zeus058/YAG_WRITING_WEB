@@ -30,5 +30,5 @@ class AiModerationLog(Base):
     chapter = relationship("Chapter", back_populates="moderation_log")
 
     __table_args__ = (
-        CheckConstraint("confidence_score >= 0.0 AND confidence_score <= 1.0", name="chk_ai_moderation_logs_confidence_score_range"),
+        CheckConstraint("confidence_score IS NULL OR (confidence_score >= 0.0 AND confidence_score <= 1.0)", name="chk_ai_moderation_logs_confidence_score_range"),
     )

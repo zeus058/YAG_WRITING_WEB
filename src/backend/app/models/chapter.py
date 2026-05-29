@@ -36,6 +36,7 @@ class Chapter(Base):
     story = relationship("Story", back_populates="chapters")
     comments = relationship("Comment", back_populates="chapter", cascade="all, delete-orphan")
     moderation_log = relationship("AiModerationLog", back_populates="chapter", uselist=False, cascade="all, delete-orphan")
+    reading_histories = relationship("ReadingHistory", back_populates="chapter")
 
     __table_args__ = (
         CheckConstraint("chapter_number > 0", name="chk_chapters_chapter_number"),

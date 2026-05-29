@@ -1,6 +1,7 @@
 """
-U005 - Worker: Consumer xử lý task xuất bản chương từ RabbitMQ.
-Sử dụng pika (sync) theo requirements.txt có sẵn.
+Worker: Consumer xử lý task từ RabbitMQ.
+- U005: publish_chapter  → kiểm duyệt Gemini → cập nhật DB
+- U013: moderate_chapter → kiểm duyệt thủ công từ Admin
 Chạy độc lập: python -m app.worker.main
 """
 import json
@@ -13,9 +14,11 @@ import pika
 sys.path.append("/app")
 
 from app.core.config import settings
-from app.services.publish_service import (
-    PUBLISH_QUEUE_NAME,
-    get_rabbitmq_connection,
+from app.services.publish_service import PUBLISH_QUEUE_NAME, get_rabbitmq_connection
+from app.services.moderation_service import (
+    ModerationResult,
+    moderate_content,
+    apply_moderation_result,
 )
 
 logging.basicConfig(
@@ -31,50 +34,52 @@ logger = logging.getLogger("worker")
 
 def handle_publish_chapter(payload: dict) -> None:
     """
-    Xử lý task xuất bản chương truyện.
+    U005 + U013: Xuất bản chương → Kiểm duyệt Gemini → Cập nhật DB.
 
-    Steps:
-    1. Lấy chapter từ DB
-    2. Kiểm duyệt nội dung
-    3. Cập nhật status → 'published'
-    4. Gửi notification đến người đọc theo dõi
+    Flow:
+    1. Lấy nội dung chapter từ DB
+    2. Gọi Gemini kiểm duyệt (U013)
+    3. Cập nhật status theo kết quả: published / flagged / draft
     """
     chapter_id = payload.get("chapter_id")
     requested_by = payload.get("requested_by")
 
     logger.info(f"[Worker] Bắt đầu xử lý: chapter_id={chapter_id}, by={requested_by}")
 
-    # TODO: Kết nối DB
+    # TODO: Lấy nội dung chapter từ DB
     # from app.core.database import SessionLocal
     # db = SessionLocal()
-    # try:
-    #     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    # chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    # content = chapter.content
+    db = None  # Placeholder
+    content = f"Nội dung chapter {chapter_id}"  # Placeholder — thay bằng chapter.content
 
-    # Bước 1: Kiểm duyệt nội dung
-    logger.info(f"[Worker] Đang kiểm duyệt nội dung chapter {chapter_id}...")
-    time.sleep(0.5)  # Giả lập thời gian xử lý
+    # Bước 1: Kiểm duyệt nội dung bằng Gemini (U013)
+    logger.info(f"[Worker] Bắt đầu kiểm duyệt Gemini cho chapter {chapter_id}...")
+    report = moderate_content(content=content, chapter_id=chapter_id)
 
-    # Bước 2: Cập nhật trạng thái DB
-    logger.info(f"[Worker] Cập nhật chapter {chapter_id} → published")
-    # chapter.status = "published"
-    # chapter.published_at = datetime.utcnow()
-    # db.commit()
+    # Bước 2: Cập nhật trạng thái DB theo kết quả
+    apply_moderation_result(chapter_id=chapter_id, report=report, db=db)
 
-    # Bước 3: Gửi notification
-    logger.info(f"[Worker] Gửi notification cho người theo dõi chapter {chapter_id}...")
-    # send_notifications(chapter)
-
-    logger.info(f"[Worker] ✅ Xuất bản thành công: chapter_id={chapter_id}")
+    # Bước 3: Log kết quả cuối
+    if report.result == ModerationResult.APPROVED:
+        logger.info(f"[Worker] ✅ Chapter {chapter_id} đã xuất bản thành công")
+    elif report.result == ModerationResult.FLAGGED:
+        logger.warning(
+            f"[Worker] ⚠️  Chapter {chapter_id} bị gắn cờ vi phạm: "
+            f"{report.flagged_categories} — chờ admin duyệt"
+        )
+    else:
+        logger.error(f"[Worker] ❌ Kiểm duyệt lỗi cho chapter {chapter_id}: {report.reason}")
 
 
 # ──────────────────────────────────────────────
-# Message Callback (pika style)
+# Message Dispatcher
 # ──────────────────────────────────────────────
 
-def on_message(channel, method, properties, body):
+def on_message(channel, method, properties, body) -> None:
     """
-    Callback được gọi mỗi khi có message mới trong queue.
-    pika gọi hàm này với 4 tham số cố định.
+    Callback pika — nhận message từ queue và điều phối đến handler.
     """
     try:
         payload = json.loads(body.decode("utf-8"))
@@ -84,21 +89,20 @@ def on_message(channel, method, properties, body):
 
         if task_type == "publish_chapter":
             handle_publish_chapter(payload)
-            # ACK: báo RabbitMQ đã xử lý thành công, xóa message khỏi queue
             channel.basic_ack(delivery_tag=method.delivery_tag)
+
         else:
             logger.warning(f"[Worker] Task type không xác định: {task_type}")
-            # ACK luôn để tránh loop vô hạn với message không hợp lệ
             channel.basic_ack(delivery_tag=method.delivery_tag)
 
     except json.JSONDecodeError as e:
         logger.error(f"[Worker] Message JSON không hợp lệ: {e}")
-        # ACK để loại bỏ message lỗi, không requeue
+        # ACK để tránh loop vô hạn với message lỗi
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
     except Exception as e:
         logger.error(f"[Worker] Lỗi xử lý message: {e}")
-        # NACK + requeue=True: đẩy lại queue để retry
+        # NACK + requeue=True để retry
         channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
 
@@ -114,18 +118,16 @@ def start_worker() -> None:
             connection = get_rabbitmq_connection()
             channel = connection.channel()
 
-            # Xử lý 1 message tại một thời điểm (fair dispatch)
             channel.basic_qos(prefetch_count=1)
-
             channel.queue_declare(queue=PUBLISH_QUEUE_NAME, durable=True)
             channel.basic_consume(queue=PUBLISH_QUEUE_NAME, on_message_callback=on_message)
 
             logger.info(f"[Worker] ✅ Sẵn sàng. Lắng nghe queue: '{PUBLISH_QUEUE_NAME}'")
-            channel.start_consuming()  # Blocking loop
+            channel.start_consuming()
 
         except pika.exceptions.AMQPConnectionError as e:
             logger.error(f"[Worker] Mất kết nối RabbitMQ: {e}. Thử lại sau 5 giây...")
-            time.sleep(5)  # Chờ rồi reconnect
+            time.sleep(5)
 
         except KeyboardInterrupt:
             logger.info("[Worker] Dừng worker.")

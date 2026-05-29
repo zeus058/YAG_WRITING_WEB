@@ -1,0 +1,2653 @@
+{
+  "generated_at": "2026-05-25 14:55:26",
+  "repo_root": "D:\\SE\\PROJECT\\SE_Writing_Web",
+  "total_files": 73,
+  "total_functions": 116,
+  "total_routes": 18,
+  "backend_modules": [
+    {
+      "name": "root",
+      "rel_path": "src\\backend\\app\\root",
+      "purpose": "Module root",
+      "files": [
+        {
+          "rel_path": "src\\backend\\app\\__init__.py",
+          "language": "python",
+          "size_bytes": 157,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (157 bytes)"
+        },
+        {
+          "rel_path": "src\\backend\\app\\main.py",
+          "language": "python",
+          "size_bytes": 977,
+          "functions": [
+            {
+              "name": "read_root",
+              "lineno": 30,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": [
+                "app.get('/', tags=['Main'])"
+              ]
+            }
+          ],
+          "classes": [],
+          "routes": [
+            {
+              "method": "GET",
+              "path": "/",
+              "handler": "read_root",
+              "lineno": 30,
+              "use_case": "",
+              "description": ""
+            }
+          ],
+          "imports": [
+            "from fastapi import FastAPI",
+            "from fastapi.middleware.cors import CORSMiddleware",
+            "from app.core.config import settings",
+            "from app.api.v1.router import api_router"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Routes: GET /"
+        }
+      ],
+      "use_cases": []
+    },
+    {
+      "name": "api",
+      "rel_path": "src\\backend\\app\\api",
+      "purpose": "Module api",
+      "files": [
+        {
+          "rel_path": "src\\backend\\app\\api\\__init__.py",
+          "language": "python",
+          "size_bytes": 136,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (136 bytes)"
+        },
+        {
+          "rel_path": "src\\backend\\app\\api\\deps.py",
+          "language": "python",
+          "size_bytes": 386,
+          "functions": [
+            {
+              "name": "get_db",
+              "lineno": 8,
+              "docstring": "Dependency injector for database sessions.",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "from typing import Generator",
+            "from app.core.database import SessionLocal"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Functions: get_db"
+        },
+        {
+          "rel_path": "src\\backend\\app\\api\\v1\\__init__.py",
+          "language": "python",
+          "size_bytes": 119,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (119 bytes)"
+        },
+        {
+          "rel_path": "src\\backend\\app\\api\\v1\\endpoints\\__init__.py",
+          "language": "python",
+          "size_bytes": 372,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (372 bytes)"
+        },
+        {
+          "rel_path": "src\\backend\\app\\api\\v1\\endpoints\\admin.py",
+          "language": "python",
+          "size_bytes": 1060,
+          "functions": [
+            {
+              "name": "request_publish",
+              "lineno": 12,
+              "docstring": "",
+              "args": [
+                "chapter_id",
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.post('/chapters/{chapter_id}/publish', summary='U005 - Yêu cầu xuất bản chương truyện (Gửi async Task vào RabbitMQ)')"
+              ]
+            },
+            {
+              "name": "get_moderation_queue",
+              "lineno": 16,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.get('/moderation/queue', summary='U020 - Bảng hàng đợi duyệt cờ Admin')"
+              ]
+            },
+            {
+              "name": "get_stats",
+              "lineno": 20,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.get('/dashboard/stats', summary='U015 - Trang tổng quan báo cáo quản trị viên (Admin Dashboard)')"
+              ]
+            }
+          ],
+          "classes": [],
+          "routes": [
+            {
+              "method": "POST",
+              "path": "/chapters/{chapter_id}/publish",
+              "handler": "request_publish",
+              "lineno": 12,
+              "use_case": "U004,U005,U007",
+              "description": ""
+            },
+            {
+              "method": "GET",
+              "path": "/moderation/queue",
+              "handler": "get_moderation_queue",
+              "lineno": 16,
+              "use_case": "U013",
+              "description": ""
+            },
+            {
+              "method": "GET",
+              "path": "/dashboard/stats",
+              "handler": "get_stats",
+              "lineno": 20,
+              "use_case": "",
+              "description": ""
+            }
+          ],
+          "imports": [
+            "from fastapi import APIRouter, Depends",
+            "from sqlalchemy.orm import Session",
+            "from app.api import deps"
+          ],
+          "use_cases": [
+            "U015"
+          ],
+          "screens": [],
+          "summary": "Routes: POST /chapters/{chapter_id}/publish, GET /moderation/queue, GET /dashboard/stats"
+        },
+        {
+          "rel_path": "src\\backend\\app\\api\\v1\\endpoints\\ai.py",
+          "language": "python",
+          "size_bytes": 999,
+          "functions": [
+            {
+              "name": "ai_suggestions",
+              "lineno": 12,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.post('/suggestions', summary='U006 - Miu AI Sidebar: gợi ý 3 phương án phát triển tình tiết')"
+              ]
+            },
+            {
+              "name": "semantic_search",
+              "lineno": 16,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.post('/search', summary='U008 - Tìm kiếm cốt truyện ngữ nghĩa bằng ngôn ngữ tự nhiên (pgvector)')"
+              ]
+            },
+            {
+              "name": "ai_recommendations",
+              "lineno": 20,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.get('/recommendations', summary='U009 - AI Đề xuất truyện cá nhân hóa theo sở thích')"
+              ]
+            }
+          ],
+          "classes": [],
+          "routes": [
+            {
+              "method": "POST",
+              "path": "/suggestions",
+              "handler": "ai_suggestions",
+              "lineno": 12,
+              "use_case": "U006",
+              "description": ""
+            },
+            {
+              "method": "POST",
+              "path": "/search",
+              "handler": "semantic_search",
+              "lineno": 16,
+              "use_case": "U008",
+              "description": ""
+            },
+            {
+              "method": "GET",
+              "path": "/recommendations",
+              "handler": "ai_recommendations",
+              "lineno": 20,
+              "use_case": "U009",
+              "description": ""
+            }
+          ],
+          "imports": [
+            "from fastapi import APIRouter, Depends",
+            "from sqlalchemy.orm import Session",
+            "from app.api import deps"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Routes: POST /suggestions, POST /search, GET /recommendations"
+        },
+        {
+          "rel_path": "src\\backend\\app\\api\\v1\\endpoints\\auth.py",
+          "language": "python",
+          "size_bytes": 1050,
+          "functions": [
+            {
+              "name": "register",
+              "lineno": 12,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.post('/register', summary='U001 - Đăng ký tài khoản mới')"
+              ]
+            },
+            {
+              "name": "login",
+              "lineno": 16,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.post('/login', summary='U001 - Đăng nhập tài khoản')"
+              ]
+            },
+            {
+              "name": "reset_request",
+              "lineno": 20,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.post('/password-reset/request', summary='U001 - Yêu cầu khôi phục mật khẩu qua OTP')"
+              ]
+            },
+            {
+              "name": "update_profile",
+              "lineno": 24,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.put('/profiles/me', summary='U002 - Cập nhật hồ sơ cá nhân')"
+              ]
+            }
+          ],
+          "classes": [],
+          "routes": [
+            {
+              "method": "POST",
+              "path": "/register",
+              "handler": "register",
+              "lineno": 12,
+              "use_case": "U001",
+              "description": ""
+            },
+            {
+              "method": "POST",
+              "path": "/login",
+              "handler": "login",
+              "lineno": 16,
+              "use_case": "U001",
+              "description": ""
+            },
+            {
+              "method": "POST",
+              "path": "/password-reset/request",
+              "handler": "reset_request",
+              "lineno": 20,
+              "use_case": "",
+              "description": ""
+            },
+            {
+              "method": "PUT",
+              "path": "/profiles/me",
+              "handler": "update_profile",
+              "lineno": 24,
+              "use_case": "U002",
+              "description": ""
+            }
+          ],
+          "imports": [
+            "from fastapi import APIRouter, Depends",
+            "from sqlalchemy.orm import Session",
+            "from app.api import deps"
+          ],
+          "use_cases": [
+            "U001"
+          ],
+          "screens": [],
+          "summary": "Routes: POST /register, POST /login, POST /password-reset/request | (+1 route khác)"
+        },
+        {
+          "rel_path": "src\\backend\\app\\api\\v1\\endpoints\\chapters.py",
+          "language": "python",
+          "size_bytes": 1231,
+          "functions": [
+            {
+              "name": "get_chapter",
+              "lineno": 12,
+              "docstring": "",
+              "args": [
+                "chapter_id",
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.get('/{chapter_id}', summary='U007 - Đọc nội dung chương truyện (Có Cache Redis & RBAC check)')"
+              ]
+            },
+            {
+              "name": "add_comment",
+              "lineno": 16,
+              "docstring": "",
+              "args": [
+                "chapter_id",
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.post('/{chapter_id}/comments', summary='U010 - Đăng tải bình luận/đánh giá phân cấp thời gian thực')"
+              ]
+            },
+            {
+              "name": "websocket_editor",
+              "lineno": 20,
+              "docstring": "U004 - WebSocket Autosave Editor Connection.\nListens for typing pauses (5s) and triggers quick draft updates to DB.",
+              "args": [
+                "websocket",
+                "chapter_id"
+              ],
+              "is_async": true,
+              "decorators": [
+                "router.websocket('/{chapter_id}/ws')"
+              ]
+            }
+          ],
+          "classes": [],
+          "routes": [
+            {
+              "method": "GET",
+              "path": "/{chapter_id}",
+              "handler": "get_chapter",
+              "lineno": 12,
+              "use_case": "U004,U005,U007",
+              "description": ""
+            },
+            {
+              "method": "POST",
+              "path": "/{chapter_id}/comments",
+              "handler": "add_comment",
+              "lineno": 16,
+              "use_case": "U004,U005,U007,U010",
+              "description": ""
+            }
+          ],
+          "imports": [
+            "from fastapi import APIRouter, WebSocket, Depends",
+            "from sqlalchemy.orm import Session",
+            "from app.api import deps"
+          ],
+          "use_cases": [
+            "U007",
+            "U005",
+            "U004"
+          ],
+          "screens": [],
+          "summary": "Routes: GET /{chapter_id}, POST /{chapter_id}/comments"
+        },
+        {
+          "rel_path": "src\\backend\\app\\api\\v1\\endpoints\\payment.py",
+          "language": "python",
+          "size_bytes": 905,
+          "functions": [
+            {
+              "name": "get_plans",
+              "lineno": 12,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.get('/plans', summary='U011 - Danh mục các gói cước Premium')"
+              ]
+            },
+            {
+              "name": "checkout",
+              "lineno": 16,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.post('/vnpay/checkout', summary='U012 - Khởi tạo hóa đơn và sinh checkout URL VNPAY')"
+              ]
+            },
+            {
+              "name": "ipn_callback",
+              "lineno": 20,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.post('/vnpay/ipn', summary='U012 - Endpoint IPN VNPAY (Server-to-Server callback)')"
+              ]
+            }
+          ],
+          "classes": [],
+          "routes": [
+            {
+              "method": "GET",
+              "path": "/plans",
+              "handler": "get_plans",
+              "lineno": 12,
+              "use_case": "",
+              "description": ""
+            },
+            {
+              "method": "POST",
+              "path": "/vnpay/checkout",
+              "handler": "checkout",
+              "lineno": 16,
+              "use_case": "U012",
+              "description": ""
+            },
+            {
+              "method": "POST",
+              "path": "/vnpay/ipn",
+              "handler": "ipn_callback",
+              "lineno": 20,
+              "use_case": "U012",
+              "description": ""
+            }
+          ],
+          "imports": [
+            "from fastapi import APIRouter, Depends",
+            "from sqlalchemy.orm import Session",
+            "from app.api import deps"
+          ],
+          "use_cases": [
+            "U012"
+          ],
+          "screens": [],
+          "summary": "Routes: GET /plans, POST /vnpay/checkout, POST /vnpay/ipn"
+        },
+        {
+          "rel_path": "src\\backend\\app\\api\\v1\\endpoints\\stories.py",
+          "language": "python",
+          "size_bytes": 674,
+          "functions": [
+            {
+              "name": "create_story",
+              "lineno": 12,
+              "docstring": "",
+              "args": [
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.post('/', summary='U003 - Khởi tạo bộ truyện mới và tải bìa truyện lên Cloudinary')"
+              ]
+            },
+            {
+              "name": "update_story",
+              "lineno": 16,
+              "docstring": "",
+              "args": [
+                "story_id",
+                "db"
+              ],
+              "is_async": false,
+              "decorators": [
+                "router.put('/{story_id}', summary='U003 - Cập nhật thông tin chung của bộ truyện')"
+              ]
+            }
+          ],
+          "classes": [],
+          "routes": [
+            {
+              "method": "POST",
+              "path": "/",
+              "handler": "create_story",
+              "lineno": 12,
+              "use_case": "U003",
+              "description": ""
+            },
+            {
+              "method": "PUT",
+              "path": "/{story_id}",
+              "handler": "update_story",
+              "lineno": 16,
+              "use_case": "U003",
+              "description": ""
+            }
+          ],
+          "imports": [
+            "from fastapi import APIRouter, Depends",
+            "from sqlalchemy.orm import Session",
+            "from app.api import deps"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Routes: POST /, PUT /{story_id}"
+        },
+        {
+          "rel_path": "src\\backend\\app\\api\\v1\\router.py",
+          "language": "python",
+          "size_bytes": 937,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "from fastapi import APIRouter",
+            "from app.api.v1.endpoints import auth, stories, chapters, payment, ai, admin"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (937 bytes)"
+        }
+      ],
+      "use_cases": [
+        "U001",
+        "U004",
+        "U005",
+        "U007",
+        "U012",
+        "U015"
+      ]
+    },
+    {
+      "name": "core",
+      "rel_path": "src\\backend\\app\\core",
+      "purpose": "Cấu hình, bảo mật, JWT, dependencies",
+      "files": [
+        {
+          "rel_path": "src\\backend\\app\\core\\__init__.py",
+          "language": "python",
+          "size_bytes": 143,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (143 bytes)"
+        },
+        {
+          "rel_path": "src\\backend\\app\\core\\config.py",
+          "language": "python",
+          "size_bytes": 819,
+          "functions": [],
+          "classes": [
+            {
+              "name": "Settings",
+              "lineno": 7,
+              "docstring": "",
+              "methods": [],
+              "bases": [
+                "BaseSettings"
+              ]
+            },
+            {
+              "name": "Config",
+              "lineno": 25,
+              "docstring": "",
+              "methods": [],
+              "bases": []
+            }
+          ],
+          "routes": [],
+          "imports": [
+            "from pydantic_settings import BaseSettings"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Classes: Settings, Config"
+        },
+        {
+          "rel_path": "src\\backend\\app\\core\\database.py",
+          "language": "python",
+          "size_bytes": 650,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "from sqlalchemy import create_engine",
+            "from sqlalchemy.ext.declarative import declarative_base",
+            "from sqlalchemy.orm import sessionmaker",
+            "from app.core.config import settings"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (650 bytes)"
+        },
+        {
+          "rel_path": "src\\backend\\app\\core\\security.py",
+          "language": "python",
+          "size_bytes": 1113,
+          "functions": [
+            {
+              "name": "verify_password",
+              "lineno": 14,
+              "docstring": "",
+              "args": [
+                "plain_password",
+                "hashed_password"
+              ],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "get_password_hash",
+              "lineno": 17,
+              "docstring": "",
+              "args": [
+                "password"
+              ],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "create_access_token",
+              "lineno": 20,
+              "docstring": "",
+              "args": [
+                "subject",
+                "expires_delta"
+              ],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "from datetime import datetime, timedelta, timezone",
+            "from typing import Any, Union",
+            "from jose import jwt",
+            "from passlib.context import CryptContext",
+            "from app.core.config import settings"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Functions: verify_password, get_password_hash, create_access_token"
+        }
+      ],
+      "use_cases": []
+    },
+    {
+      "name": "models",
+      "rel_path": "src\\backend\\app\\models",
+      "purpose": "SQLAlchemy ORM models — ánh xạ bảng DB",
+      "files": [
+        {
+          "rel_path": "src\\backend\\app\\models\\__init__.py",
+          "language": "python",
+          "size_bytes": 306,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (306 bytes)"
+        }
+      ],
+      "use_cases": []
+    },
+    {
+      "name": "schemas",
+      "rel_path": "src\\backend\\app\\schemas",
+      "purpose": "Pydantic schemas — validate request/response",
+      "files": [
+        {
+          "rel_path": "src\\backend\\app\\schemas\\__init__.py",
+          "language": "python",
+          "size_bytes": 127,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (127 bytes)"
+        }
+      ],
+      "use_cases": []
+    },
+    {
+      "name": "services",
+      "rel_path": "src\\backend\\app\\services",
+      "purpose": "Business logic layer — xử lý nghiệp vụ",
+      "files": [
+        {
+          "rel_path": "src\\backend\\app\\services\\__init__.py",
+          "language": "python",
+          "size_bytes": 269,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (269 bytes)"
+        }
+      ],
+      "use_cases": []
+    },
+    {
+      "name": "worker",
+      "rel_path": "src\\backend\\app\\worker",
+      "purpose": "Module worker",
+      "files": [
+        {
+          "rel_path": "src\\backend\\app\\worker\\__init__.py",
+          "language": "python",
+          "size_bytes": 223,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Python module (223 bytes)"
+        }
+      ],
+      "use_cases": []
+    }
+  ],
+  "frontend_modules": [
+    {
+      "name": "app",
+      "rel_path": "src\\frontend\\src\\app",
+      "purpose": "Next.js App Router — pages và API routes",
+      "files": [
+        {
+          "rel_path": "src\\frontend\\src\\app\\about\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 137,
+          "functions": [
+            {
+              "name": "AboutPage",
+              "lineno": 3,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import { InfoPage } from \"@/components/features/info\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: AboutPage"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\account-settings\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 207,
+          "functions": [
+            {
+              "name": "AccountSettingsPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { SettingsScreen } from \"@/components/features/reader/ReaderScreens\";"
+          ],
+          "use_cases": [],
+          "screens": [
+            "S13"
+          ],
+          "summary": "Components: AccountSettingsPage | Screen: S13"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\admin-dashboard\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 216,
+          "functions": [
+            {
+              "name": "AdminDashboardPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { AdminDashboardScreen } from \"@/components/features/admin/AdminScreens\";"
+          ],
+          "use_cases": [
+            "U015"
+          ],
+          "screens": [
+            "S19"
+          ],
+          "summary": "Components: AdminDashboardPage | Screen: S19"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\auth\\_auth-chrome.tsx",
+          "language": "typescript",
+          "size_bytes": 1557,
+          "functions": [
+            {
+              "name": "AuthBackdrop",
+              "lineno": 29,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "AuthProductFooter",
+              "lineno": 42,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import Link from \"next/link\";"
+          ],
+          "use_cases": [
+            "U001"
+          ],
+          "screens": [],
+          "summary": "Components: AuthBackdrop, AuthProductFooter"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\auth\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 13603,
+          "functions": [
+            {
+              "name": "AuthPage",
+              "lineno": 10,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useMocks",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useState",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useEffect",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useRouter",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React, { useState, useEffect } from \"react\";",
+            "import Link from \"next/link\";",
+            "import { useRouter } from \"next/navigation\";",
+            "import { Icon, BrandLogo as ProductLogo } from \"@/components/ui\";",
+            "import { AuthBackdrop, AuthProductFooter } from \"./_auth-chrome\";",
+            "import { appEnv, yagApi } from \"@/lib\";"
+          ],
+          "use_cases": [
+            "U001"
+          ],
+          "screens": [],
+          "summary": "Components: AuthPage | Hooks: useMocks, useState, useEffect"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\auth\\recovery\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 12566,
+          "functions": [
+            {
+              "name": "PasswordRecoveryPage",
+              "lineno": 10,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useMocks",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useState",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useEffect",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useRouter",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React, { useState, useEffect } from \"react\";",
+            "import Link from \"next/link\";",
+            "import { useRouter } from \"next/navigation\";",
+            "import { Icon, BrandLogo as ProductLogo } from \"@/components/ui\";",
+            "import { AuthBackdrop, AuthProductFooter } from \"../_auth-chrome\";",
+            "import { appEnv, yagApi } from \"@/lib\";"
+          ],
+          "use_cases": [
+            "U001"
+          ],
+          "screens": [],
+          "summary": "Components: PasswordRecoveryPage | Hooks: useMocks, useState, useEffect"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\author-studio\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 212,
+          "functions": [
+            {
+              "name": "AuthorStudioPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { AuthorStudioScreen } from \"@/components/features/author/AuthorScreens\";"
+          ],
+          "use_cases": [
+            "U001"
+          ],
+          "screens": [
+            "S16"
+          ],
+          "summary": "Components: AuthorStudioPage | Screen: S16"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\author-works\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 209,
+          "functions": [
+            {
+              "name": "AuthorWorksPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { AuthorWorksScreen } from \"@/components/features/author/AuthorScreens\";"
+          ],
+          "use_cases": [
+            "U001"
+          ],
+          "screens": [],
+          "summary": "Components: AuthorWorksPage"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\contact\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 141,
+          "functions": [
+            {
+              "name": "ContactPage",
+              "lineno": 3,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import { InfoPage } from \"@/components/features/info\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: ContactPage"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\content-moderation\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 211,
+          "functions": [
+            {
+              "name": "ContentModerationPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { ModerationScreen } from \"@/components/features/admin/AdminScreens\";"
+          ],
+          "use_cases": [
+            "U013"
+          ],
+          "screens": [
+            "S20"
+          ],
+          "summary": "Components: ContentModerationPage | Screen: S20"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\dashboard\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 6365,
+          "functions": [
+            {
+              "name": "DashboardPage",
+              "lineno": 9,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useState",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useEffect",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React, { useState, useEffect } from \"react\";",
+            "import Link from \"next/link\";",
+            "import { stories } from \"@/data/yag\";",
+            "import { Cover, QuickStories, RankingItem, ReadingCard, UpdateStoryRow } from \"@/components/ui\";",
+            "import { AppShell } from \"@/components/layout\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: DashboardPage | Hooks: useState, useEffect"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\discover\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 200,
+          "functions": [
+            {
+              "name": "DiscoverPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { DiscoverScreen } from \"@/components/features/reader/ReaderScreens\";"
+          ],
+          "use_cases": [],
+          "screens": [
+            "S05"
+          ],
+          "summary": "Components: DiscoverPage | Screen: S05"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\forum\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 191,
+          "functions": [
+            {
+              "name": "ForumPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { ForumScreen } from \"@/components/features/reader/ReaderScreens\";"
+          ],
+          "use_cases": [],
+          "screens": [
+            "S08"
+          ],
+          "summary": "Components: ForumPage | Screen: S08"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\layout.tsx",
+          "language": "typescript",
+          "size_bytes": 2089,
+          "functions": [
+            {
+              "name": "RootLayout",
+              "lineno": 53,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import type { Metadata } from \"next\";",
+            "import { Inter, Geist_Mono, Playfair_Display } from \"next/font/google\";",
+            "import { ClientInteractions } from \"@/components/runtime/ClientInteractions\";",
+            "import \"./prototype.css\";",
+            "import \"./globals.css\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: RootLayout"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\library\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 197,
+          "functions": [
+            {
+              "name": "LibraryPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { LibraryScreen } from \"@/components/features/reader/ReaderScreens\";"
+          ],
+          "use_cases": [],
+          "screens": [
+            "S11"
+          ],
+          "summary": "Components: LibraryPage | Screen: S11"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\membership\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 206,
+          "functions": [
+            {
+              "name": "MembershipPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { MembershipScreen } from \"@/components/features/reader/ReaderScreens\";"
+          ],
+          "use_cases": [
+            "U011"
+          ],
+          "screens": [
+            "S09"
+          ],
+          "summary": "Components: MembershipPage | Screen: S09"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\notifications\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 215,
+          "functions": [
+            {
+              "name": "NotificationsPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { NotificationsScreen } from \"@/components/features/reader/ReaderScreens\";"
+          ],
+          "use_cases": [],
+          "screens": [
+            "S14"
+          ],
+          "summary": "Components: NotificationsPage | Screen: S14"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 89082,
+          "functions": [
+            {
+              "name": "LandingPage",
+              "lineno": 107,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useState",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useEffect",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useRef",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import Link from \"next/link\";",
+            "import React, { useState, useEffect, useRef } from \"react\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: LandingPage | Hooks: useState, useEffect, useRef"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\payment-result\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 203,
+          "functions": [
+            {
+              "name": "PaymentResultPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { PaymentScreen } from \"@/components/features/reader/ReaderScreens\";"
+          ],
+          "use_cases": [
+            "U012"
+          ],
+          "screens": [
+            "S10"
+          ],
+          "summary": "Components: PaymentResultPage | Screen: S10"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\privacy\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 141,
+          "functions": [
+            {
+              "name": "PrivacyPage",
+              "lineno": 3,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import { InfoPage } from \"@/components/features/info\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: PrivacyPage"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\profile\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 197,
+          "functions": [
+            {
+              "name": "ProfilePage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { ProfileScreen } from \"@/components/features/reader/ReaderScreens\";"
+          ],
+          "use_cases": [
+            "U002"
+          ],
+          "screens": [
+            "S12"
+          ],
+          "summary": "Components: ProfilePage | Screen: S12"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\publish-chapter\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 204,
+          "functions": [
+            {
+              "name": "PublishChapterPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { PublishScreen } from \"@/components/features/author/AuthorScreens\";"
+          ],
+          "use_cases": [
+            "U007",
+            "U005",
+            "U004"
+          ],
+          "screens": [
+            "S17"
+          ],
+          "summary": "Components: PublishChapterPage | Screen: S17"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\reader-mode\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 198,
+          "functions": [
+            {
+              "name": "ReaderModePage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { ReaderScreen } from \"@/components/features/reader/ReaderScreens\";"
+          ],
+          "use_cases": [],
+          "screens": [
+            "S07"
+          ],
+          "summary": "Components: ReaderModePage | Screen: S07"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\reports\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 195,
+          "functions": [
+            {
+              "name": "ReportsPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { ReportsScreen } from \"@/components/features/admin/AdminScreens\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: ReportsPage"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\schedule-commitment\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 210,
+          "functions": [
+            {
+              "name": "ScheduleCommitmentPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { ScheduleScreen } from \"@/components/features/author/AuthorScreens\";"
+          ],
+          "use_cases": [
+            "U014"
+          ],
+          "screens": [
+            "S18"
+          ],
+          "summary": "Components: ScheduleCommitmentPage | Screen: S18"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\story-detail\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 209,
+          "functions": [
+            {
+              "name": "StoryDetailPage",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React from \"react\";",
+            "import { StoryDetailScreen } from \"@/components/features/reader/ReaderScreens\";"
+          ],
+          "use_cases": [
+            "U003"
+          ],
+          "screens": [
+            "S06"
+          ],
+          "summary": "Components: StoryDetailPage | Screen: S06"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\app\\terms\\page.tsx",
+          "language": "typescript",
+          "size_bytes": 137,
+          "functions": [
+            {
+              "name": "TermsPage",
+              "lineno": 3,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import { InfoPage } from \"@/components/features/info\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: TermsPage"
+        }
+      ],
+      "use_cases": [
+        "U001",
+        "U002",
+        "U003",
+        "U004",
+        "U005",
+        "U007",
+        "U011",
+        "U012",
+        "U013",
+        "U014",
+        "U015"
+      ]
+    },
+    {
+      "name": "components",
+      "rel_path": "src\\frontend\\src\\components",
+      "purpose": "React components tái sử dụng",
+      "files": [
+        {
+          "rel_path": "src\\frontend\\src\\components\\features\\admin\\AdminScreens.tsx",
+          "language": "typescript",
+          "size_bytes": 5400,
+          "functions": [
+            {
+              "name": "AdminDashboardScreen",
+              "lineno": 4,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "ModerationScreen",
+              "lineno": 8,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "ReportsScreen",
+              "lineno": 12,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import { BarChart, ErrorGuide, LineChart, MetricCard } from \"@/components/ui\";",
+            "import { AppShell } from \"@/components/layout\";"
+          ],
+          "use_cases": [
+            "U015"
+          ],
+          "screens": [
+            "S19"
+          ],
+          "summary": "Components: AdminDashboardScreen, ModerationScreen, ReportsScreen | Screen: S19"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\features\\auth\\AuthScreens.tsx",
+          "language": "typescript",
+          "size_bytes": 8406,
+          "functions": [
+            {
+              "name": "PasswordField",
+              "lineno": 38,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "AuthScreen",
+              "lineno": 84,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "RecoveryScreen",
+              "lineno": 119,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import type { ReactNode } from \"react\";",
+            "import { Icon, BrandLogo as ProductLogo } from \"@/components/ui\";",
+            "import { ProductFooter } from \"@/components/layout\";"
+          ],
+          "use_cases": [
+            "U001"
+          ],
+          "screens": [],
+          "summary": "Components: PasswordField, AuthScreen, RecoveryScreen"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\features\\author\\AuthorScreens.tsx",
+          "language": "typescript",
+          "size_bytes": 11201,
+          "functions": [
+            {
+              "name": "AuthorWorksScreen",
+              "lineno": 5,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "AuthorStudioScreen",
+              "lineno": 15,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "PublishScreen",
+              "lineno": 26,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "ScheduleScreen",
+              "lineno": 30,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import { stories } from \"@/data/yag\";",
+            "import { Icon, Cover, ErrorGuide, MetricCard } from \"@/components/ui\";",
+            "import { AppShell, ProductFooter } from \"@/components/layout\";"
+          ],
+          "use_cases": [
+            "U001"
+          ],
+          "screens": [],
+          "summary": "Components: AuthorWorksScreen, AuthorStudioScreen, PublishScreen"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\features\\index.ts",
+          "language": "typescript",
+          "size_bytes": 728,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "TS/TSX module (728 bytes)"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\features\\info\\index.ts",
+          "language": "typescript",
+          "size_bytes": 40,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "TS/TSX module (40 bytes)"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\features\\info\\InfoPage.tsx",
+          "language": "typescript",
+          "size_bytes": 28313,
+          "functions": [
+            {
+              "name": "InfoPage",
+              "lineno": 172,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useState",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import React, { useState } from \"react\";",
+            "import Link from \"next/link\";",
+            "import type { IconName } from \"@/data/yag\";",
+            "import { ProductFooter } from \"@/components/layout\";",
+            "import { BrandLogo, Icon } from \"@/components/ui\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: InfoPage | Hooks: useState"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\features\\reader\\ReaderScreens.tsx",
+          "language": "typescript",
+          "size_bytes": 37069,
+          "functions": [
+            {
+              "name": "HomeFeedScreen",
+              "lineno": 34,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "DiscoverScreen",
+              "lineno": 71,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "StoryDetailScreen",
+              "lineno": 92,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "ReaderScreen",
+              "lineno": 107,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "ForumScreen",
+              "lineno": 218,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "MembershipScreen",
+              "lineno": 226,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "PaymentScreen",
+              "lineno": 241,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "LibraryScreen",
+              "lineno": 249,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "ProfileScreen",
+              "lineno": 258,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "SettingsScreen",
+              "lineno": 297,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "NotificationsScreen",
+              "lineno": 375,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import { stories, type IconName } from \"@/data/yag\";",
+            "import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, RankingItem, ReadingCard, UpdateStoryRow } from \"@/component",
+            "import { AppShell } from \"@/components/layout\";",
+            "import { PasswordField } from \"../auth/AuthScreens\";"
+          ],
+          "use_cases": [],
+          "screens": [
+            "S07"
+          ],
+          "summary": "Components: HomeFeedScreen, DiscoverScreen, StoryDetailScreen | Screen: S07"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\layout\\AppShell.tsx",
+          "language": "typescript",
+          "size_bytes": 4963,
+          "functions": [
+            {
+              "name": "AppShell",
+              "lineno": 42,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import type { ReactNode } from \"react\";",
+            "import Link from \"next/link\";",
+            "import {",
+            "import { BrandLogo, Icon } from \"@/components/ui\";",
+            "import { ProductFooter } from \"./ProductFooter\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: AppShell"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\layout\\index.ts",
+          "language": "typescript",
+          "size_bytes": 90,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "TS/TSX module (90 bytes)"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\layout\\ProductFooter.tsx",
+          "language": "typescript",
+          "size_bytes": 2277,
+          "functions": [
+            {
+              "name": "ProductFooter",
+              "lineno": 4,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import Link from \"next/link\";",
+            "import { BrandLogo, Icon } from \"@/components/ui\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: ProductFooter"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\runtime\\ClientInteractions.tsx",
+          "language": "typescript",
+          "size_bytes": 11035,
+          "functions": [
+            {
+              "name": "ClientInteractions",
+              "lineno": 166,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useMocks",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useEffect",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useRouter",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import { useEffect } from \"react\";",
+            "import { useRouter } from \"next/navigation\";",
+            "import { appEnv, yagApi } from \"@/lib\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: ClientInteractions | Hooks: useMocks, useEffect, useRouter"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\ui\\BrandLogo.tsx",
+          "language": "typescript",
+          "size_bytes": 246,
+          "functions": [
+            {
+              "name": "BrandLogo",
+              "lineno": 5,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: BrandLogo"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\ui\\Charts.tsx",
+          "language": "typescript",
+          "size_bytes": 969,
+          "functions": [
+            {
+              "name": "LineChart",
+              "lineno": 1,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "BarChart",
+              "lineno": 14,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: LineChart, BarChart"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\ui\\Cover.tsx",
+          "language": "typescript",
+          "size_bytes": 1053,
+          "functions": [
+            {
+              "name": "Cover",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: Cover"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\ui\\Feedback.tsx",
+          "language": "typescript",
+          "size_bytes": 319,
+          "functions": [
+            {
+              "name": "ErrorGuide",
+              "lineno": 6,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: ErrorGuide"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\ui\\Icon.tsx",
+          "language": "typescript",
+          "size_bytes": 4726,
+          "functions": [
+            {
+              "name": "Icon",
+              "lineno": 8,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import type { IconName } from \"@/data/yag\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: Icon"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\ui\\index.ts",
+          "language": "typescript",
+          "size_bytes": 375,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "TS/TSX module (375 bytes)"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\ui\\Metrics.tsx",
+          "language": "typescript",
+          "size_bytes": 402,
+          "functions": [
+            {
+              "name": "MetricCard",
+              "lineno": 7,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Components: MetricCard"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\components\\ui\\StoryCards.tsx",
+          "language": "typescript",
+          "size_bytes": 3446,
+          "functions": [
+            {
+              "name": "StoryBadge",
+              "lineno": 5,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "HomeStoryCard",
+              "lineno": 12,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "ReadingCard",
+              "lineno": 35,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "RankingItem",
+              "lineno": 52,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "UpdateStoryRow",
+              "lineno": 65,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "QuickStories",
+              "lineno": 81,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import Link from \"next/link\";",
+            "import { stories, type Story } from \"@/data/yag\";",
+            "import { Cover } from \"./Cover\";"
+          ],
+          "use_cases": [
+            "U003"
+          ],
+          "screens": [],
+          "summary": "Components: StoryBadge, HomeStoryCard, ReadingCard"
+        }
+      ],
+      "use_cases": [
+        "U001",
+        "U003",
+        "U015"
+      ]
+    },
+    {
+      "name": "data",
+      "rel_path": "src\\frontend\\src\\data",
+      "purpose": "Module data",
+      "files": [
+        {
+          "rel_path": "src\\frontend\\src\\data\\yag.ts",
+          "language": "typescript",
+          "size_bytes": 7074,
+          "functions": [
+            {
+              "name": "getScreenId",
+              "lineno": 161,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "getPageById",
+              "lineno": 165,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "getRoleForPage",
+              "lineno": 169,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "TS/TSX module (7074 bytes)"
+        }
+      ],
+      "use_cases": []
+    },
+    {
+      "name": "lib",
+      "rel_path": "src\\frontend\\src\\lib",
+      "purpose": "Utilities, API client, custom hooks",
+      "files": [
+        {
+          "rel_path": "src\\frontend\\src\\lib\\api.ts",
+          "language": "typescript",
+          "size_bytes": 5528,
+          "functions": [
+            {
+              "name": "apiFetch",
+              "lineno": 27,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import { getAccessToken, setAuthTokens } from \"./auth\";",
+            "import { appEnv, resolveApiUrl } from \"./env\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "TS/TSX module (5528 bytes)"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\lib\\auth.ts",
+          "language": "typescript",
+          "size_bytes": 841,
+          "functions": [
+            {
+              "name": "getAccessToken",
+              "lineno": 9,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "setAuthTokens",
+              "lineno": 13,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "clearAuthTokens",
+              "lineno": 21,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [
+            "U001"
+          ],
+          "screens": [],
+          "summary": "TS/TSX module (841 bytes)"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\lib\\env.ts",
+          "language": "typescript",
+          "size_bytes": 787,
+          "functions": [
+            {
+              "name": "resolveApiUrl",
+              "lineno": 13,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            },
+            {
+              "name": "useMocks",
+              "lineno": 0,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "Hooks: useMocks"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\lib\\index.ts",
+          "language": "typescript",
+          "size_bytes": 104,
+          "functions": [],
+          "classes": [],
+          "routes": [],
+          "imports": [],
+          "use_cases": [],
+          "screens": [],
+          "summary": "TS/TSX module (104 bytes)"
+        },
+        {
+          "rel_path": "src\\frontend\\src\\lib\\realtime.ts",
+          "language": "typescript",
+          "size_bytes": 1343,
+          "functions": [
+            {
+              "name": "createDraftSocket",
+              "lineno": 13,
+              "docstring": "",
+              "args": [],
+              "is_async": false,
+              "decorators": []
+            }
+          ],
+          "classes": [],
+          "routes": [],
+          "imports": [
+            "import { getAccessToken } from \"./auth\";",
+            "import { appEnv } from \"./env\";"
+          ],
+          "use_cases": [],
+          "screens": [],
+          "summary": "TS/TSX module (1343 bytes)"
+        }
+      ],
+      "use_cases": [
+        "U001"
+      ]
+    }
+  ],
+  "all_routes": [
+    {
+      "method": "POST",
+      "path": "/chapters/{chapter_id}/publish",
+      "handler": "request_publish",
+      "lineno": 12,
+      "use_case": "U004,U005,U007",
+      "description": ""
+    },
+    {
+      "method": "GET",
+      "path": "/moderation/queue",
+      "handler": "get_moderation_queue",
+      "lineno": 16,
+      "use_case": "U013",
+      "description": ""
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard/stats",
+      "handler": "get_stats",
+      "lineno": 20,
+      "use_case": "",
+      "description": ""
+    },
+    {
+      "method": "POST",
+      "path": "/suggestions",
+      "handler": "ai_suggestions",
+      "lineno": 12,
+      "use_case": "U006",
+      "description": ""
+    },
+    {
+      "method": "POST",
+      "path": "/search",
+      "handler": "semantic_search",
+      "lineno": 16,
+      "use_case": "U008",
+      "description": ""
+    },
+    {
+      "method": "GET",
+      "path": "/recommendations",
+      "handler": "ai_recommendations",
+      "lineno": 20,
+      "use_case": "U009",
+      "description": ""
+    },
+    {
+      "method": "POST",
+      "path": "/register",
+      "handler": "register",
+      "lineno": 12,
+      "use_case": "U001",
+      "description": ""
+    },
+    {
+      "method": "POST",
+      "path": "/login",
+      "handler": "login",
+      "lineno": 16,
+      "use_case": "U001",
+      "description": ""
+    },
+    {
+      "method": "POST",
+      "path": "/password-reset/request",
+      "handler": "reset_request",
+      "lineno": 20,
+      "use_case": "",
+      "description": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/profiles/me",
+      "handler": "update_profile",
+      "lineno": 24,
+      "use_case": "U002",
+      "description": ""
+    },
+    {
+      "method": "GET",
+      "path": "/{chapter_id}",
+      "handler": "get_chapter",
+      "lineno": 12,
+      "use_case": "U004,U005,U007",
+      "description": ""
+    },
+    {
+      "method": "POST",
+      "path": "/{chapter_id}/comments",
+      "handler": "add_comment",
+      "lineno": 16,
+      "use_case": "U004,U005,U007,U010",
+      "description": ""
+    },
+    {
+      "method": "GET",
+      "path": "/plans",
+      "handler": "get_plans",
+      "lineno": 12,
+      "use_case": "",
+      "description": ""
+    },
+    {
+      "method": "POST",
+      "path": "/vnpay/checkout",
+      "handler": "checkout",
+      "lineno": 16,
+      "use_case": "U012",
+      "description": ""
+    },
+    {
+      "method": "POST",
+      "path": "/vnpay/ipn",
+      "handler": "ipn_callback",
+      "lineno": 20,
+      "use_case": "U012",
+      "description": ""
+    },
+    {
+      "method": "POST",
+      "path": "/",
+      "handler": "create_story",
+      "lineno": 12,
+      "use_case": "U003",
+      "description": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/{story_id}",
+      "handler": "update_story",
+      "lineno": 16,
+      "use_case": "U003",
+      "description": ""
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "handler": "read_root",
+      "lineno": 30,
+      "use_case": "",
+      "description": ""
+    }
+  ]
+}

@@ -42,6 +42,60 @@ class BookmarkResponse(BaseModel):
     bookmarked: bool
     message: str
 
+
+class CommentCreate(BaseModel):
+    content: str = Field(..., min_length=1)
+    parent_id: Optional[UUID] = None
+
+
+class CommentResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    chapter_id: UUID
+    content: str
+    parent_id: Optional[UUID] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CommentListResponse(BaseModel):
+    comments: List[CommentResponse]
+
+
+class CommentUpdate(BaseModel):
+    content: str = Field(..., min_length=1)
+
+
+class CommentTreeResponse(CommentResponse):
+    replies: List["CommentTreeResponse"] = Field(default_factory=list)
+
+
+class CommentTreeListResponse(BaseModel):
+    comments: List[CommentTreeResponse]
+
+
+class ReviewCreate(BaseModel):
+    rating: int = Field(..., ge=1, le=5)
+    content: Optional[str] = None
+
+
+class ReviewResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    story_id: UUID
+    rating: int
+    content: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ReviewListResponse(BaseModel):
+    reviews: List[ReviewResponse]
+
 class StoryCreate(BaseModel):
     title: str
     description: str

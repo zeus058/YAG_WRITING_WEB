@@ -3,6 +3,7 @@ Interactive Chapter Reading & WebSocket Editor Routing Handler.
 Assigned Member: Huỳnh Yến Nhi (U004, U007, U010 - TC-016, TC-017, TC-019, TC-020).
 """
 from datetime import datetime
+import asyncio
 import json
 from typing import Any
 from uuid import UUID
@@ -16,12 +17,51 @@ from starlette.websockets import WebSocketState
 from app.api import deps
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.models.story import Chapter, ReadingHistory, Story
-from app.schemas.story import ChapterCreate, ChapterReadResponse, ChapterResponse, ChapterUpdate
+from app.models.story import Chapter, Comment, ReadingHistory, Story
+from app.schemas.story import (
+    ChapterCreate,
+    ChapterReadResponse,
+    ChapterResponse,
+    ChapterUpdate,
+    CommentCreate,
+    CommentListResponse,
+    CommentResponse,
+    CommentTreeListResponse,
+    CommentTreeResponse,
+    CommentUpdate,
+)
 
 router = APIRouter()
 author_router = APIRouter()
 CHAPTER_CACHE_TTL_SECONDS = 7200
+COMMENT_CHANNEL_PREFIX = "chapter:comments"
+
+
+class CommentConnectionManager:
+    def __init__(self):
+        self.active_connections: dict[str, list[WebSocket]] = {}
+
+    async def connect(self, chapter_id: UUID, websocket: WebSocket) -> None:
+        await websocket.accept()
+        self.active_connections.setdefault(str(chapter_id), []).append(websocket)
+
+    def disconnect(self, chapter_id: UUID, websocket: WebSocket) -> None:
+        connections = self.active_connections.get(str(chapter_id), [])
+        if websocket in connections:
+            connections.remove(websocket)
+        if not connections:
+            self.active_connections.pop(str(chapter_id), None)
+
+    async def broadcast(self, chapter_id: UUID | str, message: dict[str, Any]) -> None:
+        connections = list(self.active_connections.get(str(chapter_id), []))
+        for websocket in connections:
+            try:
+                await websocket.send_json(message)
+            except RuntimeError:
+                self.disconnect(UUID(str(chapter_id)), websocket)
+
+
+comment_manager = CommentConnectionManager()
 
 
 class AutosaveMessage(BaseModel):
@@ -106,6 +146,10 @@ def chapter_cache_key(chapter_id: UUID) -> str:
 
 def story_views_key(story_id: UUID | str) -> str:
     return f"story:views:{story_id}"
+
+
+def comment_channel(chapter_id: UUID | str) -> str:
+    return f"{COMMENT_CHANNEL_PREFIX}:{chapter_id}"
 
 
 def serialize_chapter(chapter: Chapter) -> dict[str, Any]:
@@ -199,6 +243,54 @@ def cache_chapter(redis_client, chapter_data: dict[str, Any]) -> None:
         )
     except redis.RedisError:
         return
+
+
+def serialize_comment(comment: Comment) -> dict[str, Any]:
+    return {
+        "id": str(comment.id),
+        "user_id": str(comment.user_id),
+        "chapter_id": str(comment.chapter_id),
+        "content": comment.content,
+        "parent_id": str(comment.parent_id) if comment.parent_id else None,
+        "created_at": comment.created_at.isoformat(),
+        "updated_at": comment.updated_at.isoformat() if comment.updated_at else None,
+    }
+
+
+def build_comment_tree(comments: list[Comment]) -> list[dict[str, Any]]:
+    nodes = [
+        {
+            **serialize_comment(comment),
+            "replies": [],
+        }
+        for comment in comments
+    ]
+    by_id = {node["id"]: node for node in nodes}
+    roots = []
+
+    for node in nodes:
+        parent_id = node["parent_id"]
+        if parent_id and parent_id in by_id:
+            by_id[parent_id]["replies"].append(node)
+        else:
+            roots.append(node)
+
+    return roots
+
+
+async def publish_comment(redis_client, chapter_id: UUID, comment: Comment) -> None:
+    payload = {
+        "type": "comment.created",
+        "chapter_id": str(chapter_id),
+        "comment": serialize_comment(comment),
+    }
+    if not redis_client:
+        await comment_manager.broadcast(chapter_id, payload)
+        return
+    try:
+        redis_client.publish(comment_channel(chapter_id), json.dumps(payload))
+    except redis.RedisError:
+        await comment_manager.broadcast(chapter_id, payload)
 
 
 def flush_story_view_counts(db: Session, redis_client) -> int:
@@ -329,9 +421,191 @@ def get_chapter(
     }
 
 
-@router.post("/{chapter_id}/comments", summary="U010 - Đăng tải bình luận/đánh giá phân cấp thời gian thực")
-def add_comment(chapter_id: str, db: Session = Depends(deps.get_db)):
-    return {"message": "Comment registered and broadcasted", "chapter_id": chapter_id}
+@router.get(
+    "/{chapter_id}/comments",
+    response_model=CommentListResponse,
+    summary="U010 - Lấy danh sách bình luận của chương",
+)
+def get_comments(chapter_id: UUID, db: Session = Depends(deps.get_db)):
+    chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    if not chapter:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+
+    comments = (
+        db.query(Comment)
+        .filter(Comment.chapter_id == chapter_id)
+        .order_by(Comment.created_at.asc())
+        .all()
+    )
+    return {"comments": comments}
+
+
+@router.get(
+    "/{chapter_id}/comments/tree",
+    response_model=CommentTreeListResponse,
+    summary="U010 - Lấy cây bình luận phân cấp của chương",
+)
+def get_comment_tree(chapter_id: UUID, db: Session = Depends(deps.get_db)):
+    chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    if not chapter:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+
+    comments = (
+        db.query(Comment)
+        .filter(Comment.chapter_id == chapter_id)
+        .order_by(Comment.created_at.asc())
+        .all()
+    )
+    return {"comments": build_comment_tree(comments)}
+
+
+@router.post(
+    "/{chapter_id}/comments",
+    response_model=CommentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="U010 - Đăng tải bình luận phân cấp thời gian thực",
+)
+async def add_comment(
+    chapter_id: UUID,
+    comment_in: CommentCreate,
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(get_current_user),
+):
+    chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    if not chapter:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+
+    content = comment_in.content.strip()
+    if not content:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Comment content cannot be empty")
+
+    if comment_in.parent_id:
+        parent = (
+            db.query(Comment)
+            .filter(Comment.id == comment_in.parent_id, Comment.chapter_id == chapter_id)
+            .first()
+        )
+        if not parent:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parent comment is invalid")
+
+    comment = Comment(
+        user_id=current_user.id,
+        chapter_id=chapter_id,
+        content=content,
+        parent_id=comment_in.parent_id,
+    )
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+
+    await publish_comment(get_redis_client(), chapter_id, comment)
+    return comment
+
+
+@router.put(
+    "/{chapter_id}/comments/{comment_id}",
+    response_model=CommentResponse,
+    summary="U010 - Sửa bình luận của người dùng hiện tại",
+)
+async def update_comment(
+    chapter_id: UUID,
+    comment_id: UUID,
+    comment_in: CommentUpdate,
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(get_current_user),
+):
+    comment = (
+        db.query(Comment)
+        .filter(Comment.id == comment_id, Comment.chapter_id == chapter_id)
+        .first()
+    )
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+    if comment.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to edit this comment")
+
+    content = comment_in.content.strip()
+    if not content:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Comment content cannot be empty")
+
+    comment.content = content
+    comment.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(comment)
+
+    await publish_comment(get_redis_client(), chapter_id, comment)
+    return comment
+
+
+@router.delete(
+    "/{chapter_id}/comments/{comment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="U010 - Xóa bình luận của người dùng hiện tại",
+)
+def delete_comment(
+    chapter_id: UUID,
+    comment_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(get_current_user),
+):
+    comment = (
+        db.query(Comment)
+        .filter(Comment.id == comment_id, Comment.chapter_id == chapter_id)
+        .first()
+    )
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+    if comment.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this comment")
+
+    db.delete(comment)
+    db.commit()
+    return None
+
+
+@router.websocket("/{chapter_id}/comments/ws")
+async def websocket_comments(websocket: WebSocket, chapter_id: UUID):
+    """
+    U010 - WebSocket channel for live chapter comments.
+    REST comment creation broadcasts {type: "comment.created", comment: ...}.
+    """
+    await comment_manager.connect(chapter_id, websocket)
+    redis_client = get_redis_client()
+    pubsub = None
+    listener_task = None
+
+    async def redis_listener():
+        while True:
+            message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            if message and message.get("data"):
+                await websocket.send_text(message["data"])
+            await asyncio.sleep(0.1)
+
+    try:
+        await websocket.send_json(
+            {
+                "type": "connected",
+                "chapter_id": str(chapter_id),
+                "message": "Connected to live comments.",
+            }
+        )
+        try:
+            pubsub = redis_client.pubsub()
+            pubsub.subscribe(comment_channel(chapter_id))
+            listener_task = asyncio.create_task(redis_listener())
+        except redis.RedisError:
+            pubsub = None
+
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        return
+    finally:
+        if listener_task:
+            listener_task.cancel()
+        if pubsub:
+            pubsub.close()
+        comment_manager.disconnect(chapter_id, websocket)
 
 
 @author_router.put("/{chapter_id}/draft", response_model=ChapterResponse, summary="U004 - Autosave draft fallback qua REST")

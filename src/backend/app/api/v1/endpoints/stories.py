@@ -5,10 +5,20 @@ Assigned Member: Huỳnh Yến Nhi (U003 - TC-018).
 import shutil
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, status, UploadFile
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from app.api import deps
-from app.models.story import Chapter, Library, Story
-from app.schemas.story import BookmarkResponse, StoryStatus, StoryUpdate, StoryResponse, StoryDetailResponse, ChapterResponse
+from app.models.story import Chapter, Library, Review, Story
+from app.schemas.story import (
+    BookmarkResponse,
+    ChapterResponse,
+    ReviewCreate,
+    ReviewListResponse,
+    ReviewResponse,
+    StoryDetailResponse,
+    StoryResponse,
+    StoryStatus,
+    StoryUpdate,
+)
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -189,6 +199,135 @@ def toggle_bookmark(
         "bookmarked": True,
         "message": "Story added to library",
     }
+
+
+@router.get("/library/me", response_model=List[StoryResponse], summary="U007 - Lấy thư viện cá nhân của người dùng")
+def get_my_library(
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(deps.get_current_author),
+):
+    return (
+        db.query(Story)
+        .join(Library, Library.story_id == Story.id)
+        .filter(Library.user_id == current_user.id)
+        .order_by(Library.bookmarked_at.desc())
+        .all()
+    )
+
+
+def refresh_story_rating(db: Session, story: Story) -> None:
+    rating_avg = db.query(func.avg(Review.rating)).filter(Review.story_id == story.id).scalar()
+    story.rating_avg = round(float(rating_avg or 0), 2)
+
+
+@router.post(
+    "/{story_id}/reviews",
+    response_model=ReviewResponse,
+    summary="U010 - Đánh giá sao cho tác phẩm",
+)
+def submit_review(
+    story_id: UUID,
+    review_in: ReviewCreate,
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(deps.get_current_author),
+):
+    story = get_story_or_404(db, story_id)
+    content = review_in.content.strip() if review_in.content else None
+
+    review = (
+        db.query(Review)
+        .filter(Review.user_id == current_user.id, Review.story_id == story_id)
+        .first()
+    )
+    if review:
+        review.rating = review_in.rating
+        review.content = content
+        review.updated_at = datetime.utcnow()
+    else:
+        review = Review(
+            user_id=current_user.id,
+            story_id=story_id,
+            rating=review_in.rating,
+            content=content,
+        )
+        db.add(review)
+
+    db.flush()
+    refresh_story_rating(db, story)
+    db.commit()
+    db.refresh(review)
+    return review
+
+
+@router.get(
+    "/{story_id}/reviews",
+    response_model=ReviewListResponse,
+    summary="U010 - Lấy danh sách đánh giá của tác phẩm",
+)
+def get_reviews(story_id: UUID, db: Session = Depends(deps.get_db)):
+    get_story_or_404(db, story_id)
+    reviews = (
+        db.query(Review)
+        .filter(Review.story_id == story_id)
+        .order_by(Review.updated_at.desc())
+        .all()
+    )
+    return {"reviews": reviews}
+
+
+@router.put(
+    "/{story_id}/reviews/me",
+    response_model=ReviewResponse,
+    summary="U010 - Cập nhật đánh giá của người dùng hiện tại",
+)
+def update_my_review(
+    story_id: UUID,
+    review_in: ReviewCreate,
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(deps.get_current_author),
+):
+    story = get_story_or_404(db, story_id)
+    review = (
+        db.query(Review)
+        .filter(Review.user_id == current_user.id, Review.story_id == story_id)
+        .first()
+    )
+    if not review:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+
+    review.rating = review_in.rating
+    review.content = review_in.content.strip() if review_in.content else None
+    review.updated_at = datetime.utcnow()
+    refresh_story_rating(db, story)
+    db.commit()
+    db.refresh(review)
+    return review
+
+
+@router.delete(
+    "/{story_id}/reviews/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="U010 - Xóa đánh giá của người dùng hiện tại",
+)
+def delete_my_review(
+    story_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(deps.get_current_author),
+):
+    story = get_story_or_404(db, story_id)
+    review = (
+        db.query(Review)
+        .filter(Review.user_id == current_user.id, Review.story_id == story_id)
+        .first()
+    )
+    if not review:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+
+    db.delete(review)
+    db.flush()
+    refresh_story_rating(db, story)
+    db.commit()
+    return None
 
 
 @router.put("/{story_id}", response_model=StoryResponse, summary="U003 - Cập nhật thông tin chung của bộ truyện")

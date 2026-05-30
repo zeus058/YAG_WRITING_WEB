@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     
     REDIS_HOST: str = "localhost"
     RABBITMQ_HOST: str = "localhost"
+
+    # Cloudinary Settings
+    CLOUDINARY_CLOUD_NAME: Optional[str] = None
+    CLOUDINARY_API_KEY: Optional[str] = None
+    CLOUDINARY_API_SECRET: Optional[str] = None
+    CLOUDINARY_COVER_FOLDER: str = "yag/covers"
     
     # Security Settings
     SECRET_KEY: str = "yag_development_secret_key_change_in_production"

@@ -2,12 +2,12 @@
 Stories & Novel Creation Routing Handler.
 Assigned Member: Huỳnh Yến Nhi (U003 - TC-018).
 """
-import shutil
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, status, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from app.api import deps
 from app.models.story import Chapter, Library, Review, Story
+from app.services.media_service import upload_story_cover_to_cloudinary
 from app.schemas.story import (
     BookmarkResponse,
     ChapterResponse,
@@ -20,13 +20,10 @@ from app.schemas.story import (
     StoryUpdate,
 )
 from datetime import datetime
-from pathlib import Path
 from typing import List, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 router = APIRouter()
-COVER_UPLOAD_DIR = Path(__file__).resolve().parents[4] / "uploads" / "covers"
-COVER_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_story_or_404(db: Session, story_id: UUID) -> Story:
@@ -34,21 +31,6 @@ def get_story_or_404(db: Session, story_id: UUID) -> Story:
     if not story:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Story not found")
     return story
-
-
-def save_cover_file(cover_file: UploadFile, request: Request) -> str:
-    suffix = Path(cover_file.filename or "").suffix.lower()
-    if suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
-        suffix = ".jpg"
-
-    filename = f"{uuid4().hex}{suffix}"
-    destination = COVER_UPLOAD_DIR / filename
-    cover_file.file.seek(0)
-    with destination.open("wb") as buffer:
-        shutil.copyfileobj(cover_file.file, buffer)
-
-    base_url = str(request.base_url).rstrip("/")
-    return f"{base_url}/media/covers/{filename}"
 
 
 @router.post("/", response_model=StoryResponse, summary="U003 - Khởi tạo bộ truyện mới")
@@ -71,7 +53,7 @@ def create_story(
 
     cover_url = None
     if cover_file:
-        cover_url = save_cover_file(cover_file, request)
+        cover_url = upload_story_cover_to_cloudinary(cover_file)
 
     new_story = Story(
         author_id=current_author.id,
@@ -372,7 +354,7 @@ async def update_story(
     for key, value in update_data.items():
         setattr(story, key, value)
     if cover_file:
-        story.cover_url = save_cover_file(cover_file, request)
+        story.cover_url = upload_story_cover_to_cloudinary(cover_file)
 
     db.commit()
     db.refresh(story)

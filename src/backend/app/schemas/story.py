@@ -1,7 +1,10 @@
-from pydantic import BaseModel, ConfigDict
-from typing import Optional, List
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal, Optional, List
 from datetime import datetime
 from uuid import UUID
+
+StoryStatus = Literal["ongoing", "completed", "paused"]
+ModerationStatus = Literal["pending", "approved", "rejected", "flagged"]
 
 class ChapterBase(BaseModel):
     title: str
@@ -9,10 +12,21 @@ class ChapterBase(BaseModel):
     content: str
     is_premium: Optional[bool] = False
 
+
+class ChapterCreate(ChapterBase):
+    story_id: UUID
+
+
+class ChapterUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    is_premium: Optional[bool] = None
+
+
 class ChapterResponse(ChapterBase):
     id: UUID
     story_id: UUID
-    moderation_status: str
+    moderation_status: ModerationStatus
     publish_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
@@ -21,14 +35,13 @@ class StoryCreate(BaseModel):
     title: str
     description: str
     category: str
-    # cover_url will be handled separately if needed, or included here. U003 says load from client. Let's make it optional.
     cover_url: Optional[str] = None
 
 class StoryUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     category: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[StoryStatus] = None
     cover_url: Optional[str] = None
 
 class StoryResponse(BaseModel):
@@ -37,7 +50,7 @@ class StoryResponse(BaseModel):
     title: str
     description: str
     category: str
-    status: str
+    status: StoryStatus
     cover_url: Optional[str]
     view_count: int
     rating_avg: float
@@ -47,4 +60,4 @@ class StoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class StoryDetailResponse(StoryResponse):
-    chapters: List[ChapterResponse] = []
+    chapters: List[ChapterResponse] = Field(default_factory=list)

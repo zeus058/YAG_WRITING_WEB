@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Text, Integer, Numeric, ForeignKey, DateTime, Boolean
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, Numeric, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -7,14 +7,19 @@ from app.core.database import Base
 
 class Story(Base):
     __tablename__ = "stories"
+    __table_args__ = (
+        CheckConstraint("status IN ('ongoing', 'completed', 'paused')", name="ck_stories_status"),
+    )
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    author_id = Column(UUID(as_uuid=True), index=True) # Explicitly define without ForeignKey to users.id if users table doesn't exist yet
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=text("gen_random_uuid()"))
+    # F1 auth/user tables are not implemented in this skeleton yet.
+    # Keep the UUID contract now; add ForeignKey("users.id") when User exists.
+    author_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     title = Column(String(255), nullable=False, unique=True)
     description = Column(Text, nullable=False)
     cover_url = Column(String(255), nullable=True)
     category = Column(String(50), nullable=False)
-    status = Column(String(20), default='ongoing') # ongoing, completed, paused
+    status = Column(String(20), default="ongoing", nullable=False)
     view_count = Column(Integer, default=0)
     rating_avg = Column(Numeric(3, 2), default=0.00)
     
@@ -25,14 +30,21 @@ class Story(Base):
 
 class Chapter(Base):
     __tablename__ = "chapters"
+    __table_args__ = (
+        CheckConstraint("chapter_number > 0", name="ck_chapters_chapter_number_positive"),
+        CheckConstraint(
+            "moderation_status IN ('pending', 'approved', 'rejected', 'flagged')",
+            name="ck_chapters_moderation_status",
+        ),
+    )
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    story_id = Column(UUID(as_uuid=True), ForeignKey("stories.id", ondelete="CASCADE"))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=text("gen_random_uuid()"))
+    story_id = Column(UUID(as_uuid=True), ForeignKey("stories.id", ondelete="CASCADE"), nullable=False)
     chapter_number = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
-    moderation_status = Column(String(20), default='pending') # pending, approved, rejected, flagged
-    is_premium = Column(Boolean, default=False) # True = cần Membership
+    moderation_status = Column(String(20), default="pending", nullable=False)
+    is_premium = Column(Boolean, default=False, nullable=False)
     
     publish_at = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)

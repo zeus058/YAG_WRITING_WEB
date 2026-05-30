@@ -31,6 +31,17 @@ class ChapterResponse(ChapterBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+
+class ChapterReadResponse(ChapterResponse):
+    cache_status: Literal["hit", "miss", "bypass"]
+    view_count_buffered: bool
+
+
+class BookmarkResponse(BaseModel):
+    story_id: UUID
+    bookmarked: bool
+    message: str
+
 class StoryCreate(BaseModel):
     title: str
     description: str

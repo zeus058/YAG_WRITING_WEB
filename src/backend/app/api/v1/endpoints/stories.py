@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.api import deps
-from app.models.story import Story, Chapter
-from app.schemas.story import StoryStatus, StoryUpdate, StoryResponse, StoryDetailResponse, ChapterResponse
+from app.models.story import Chapter, Library, Story
+from app.schemas.story import BookmarkResponse, StoryStatus, StoryUpdate, StoryResponse, StoryDetailResponse, ChapterResponse
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -157,6 +157,37 @@ def get_story_detail(story_id: UUID, db: Session = Depends(deps.get_db)):
         "created_at": story.created_at,
         "updated_at": story.updated_at,
         "chapters": chapters,
+    }
+
+
+@router.post("/{story_id}/bookmark", response_model=BookmarkResponse, summary="U007 - Thêm hoặc bỏ truyện khỏi thư viện cá nhân")
+def toggle_bookmark(
+    story_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(deps.get_current_author),
+):
+    get_story_or_404(db, story_id)
+    bookmark = (
+        db.query(Library)
+        .filter(Library.user_id == current_user.id, Library.story_id == story_id)
+        .first()
+    )
+
+    if bookmark:
+        db.delete(bookmark)
+        db.commit()
+        return {
+            "story_id": story_id,
+            "bookmarked": False,
+            "message": "Story removed from library",
+        }
+
+    db.add(Library(user_id=current_user.id, story_id=story_id))
+    db.commit()
+    return {
+        "story_id": story_id,
+        "bookmarked": True,
+        "message": "Story added to library",
     }
 
 

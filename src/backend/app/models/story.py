@@ -51,3 +51,23 @@ class Chapter(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     story = relationship("Story", back_populates="chapters")
+
+
+class ReadingHistory(Base):
+    __tablename__ = "reading_histories"
+
+    user_id = Column(UUID(as_uuid=True), primary_key=True)
+    chapter_id = Column(UUID(as_uuid=True), ForeignKey("chapters.id", ondelete="CASCADE"), primary_key=True)
+    read_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    chapter = relationship("Chapter")
+
+
+class Library(Base):
+    __tablename__ = "libraries"
+
+    user_id = Column(UUID(as_uuid=True), primary_key=True)
+    story_id = Column(UUID(as_uuid=True), ForeignKey("stories.id", ondelete="CASCADE"), primary_key=True)
+    bookmarked_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    story = relationship("Story")

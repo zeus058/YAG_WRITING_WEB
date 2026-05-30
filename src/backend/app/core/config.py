@@ -21,7 +21,17 @@ class Settings(BaseSettings):
     # Security Settings
     SECRET_KEY: str = "yag_development_secret_key_change_in_production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    
+
+    # VNPAY Sandbox Settings
+    VNP_TMN_CODE: str = "YAGTEST1"
+    VNP_HASH_SECRET: str = "YAGDEVSECRETKEY12345678"
+    VNP_URL: str = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+    VNP_RETURN_URL: str = "http://localhost:3000/payment-result"
+    VNP_API_URL: str = "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction"
+
+    # AI Engine
+    GEMINI_API_KEY: str = ""
+
     class Config:
         case_sensitive = True
         env_file = ".env"

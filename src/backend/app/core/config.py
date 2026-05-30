@@ -10,16 +10,19 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # Database Settings
+    DATABASE_URL: str = ""
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "yag"
 
     # Redis Settings
+    REDIS_URL: str = ""
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
 
     # RabbitMQ Settings
+    RABBITMQ_URL: str = ""
     RABBITMQ_HOST: str = "localhost"
     RABBITMQ_PORT: int = 5672
     RABBITMQ_USER: str = "guest"
@@ -31,6 +34,11 @@ class Settings(BaseSettings):
 
     # Gemini API
     GEMINI_API_KEY: str = ""
+
+    # Scheduler
+    SCHEDULER_ENABLED: bool = True
+    SCHEDULE_SCAN_HOUR_UTC: int = 17
+    SCHEDULE_SCAN_MINUTE_UTC: int = 5
 
     # Cloudinary
     CLOUDINARY_CLOUD_NAME: str = ""

@@ -70,6 +70,26 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+
+  moderation-worker:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    container_name: yag_moderation_worker
+    restart: unless-stopped
+    command: ["python", "worker.py"]
+    environment:
+      DATABASE_URL: postgresql://yag_user:yag_secret@postgres:5432/yag_db
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://yag_mq:yag_mq_secret@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./src/frontend

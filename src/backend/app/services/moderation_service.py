@@ -1,171 +1,182 @@
-"""
-U013 - Moderation Service: Kiểm duyệt nội dung chương truyện bằng Gemini AI.
-Được gọi từ worker sau khi nhận task publish từ RabbitMQ queue.
-"""
 import json
 import logging
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional
 
 import google.generativeai as genai
 
 from app.core.config import settings
+from app.models.ai_moderation_log import AIModerationLog
+from app.models.chapter import Chapter
 
 logger = logging.getLogger(__name__)
 
 
-# ──────────────────────────────────────────────
-# Enums & Data Classes
-# ──────────────────────────────────────────────
-
 class ModerationResult(str, Enum):
-    APPROVED  = "approved"   # Nội dung sạch → cho phép xuất bản
-    FLAGGED   = "flagged"    # Nội dung vi phạm → chờ admin duyệt thủ công
-    ERROR     = "error"      # Gemini lỗi → fallback an toàn, giữ nguyên
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    FLAGGED = "flagged"
+    ERROR = "error"
 
 
 @dataclass
 class ModerationReport:
     result: ModerationResult
     reason: str
-    flagged_categories: list[str]   # Ví dụ: ["violence", "sexual_content"]
-    confidence: float               # 0.0 → 1.0
+    flagged_categories: list[str]
+    confidence: float
     raw_response: Optional[str] = None
 
 
-# ──────────────────────────────────────────────
-# Gemini Client Setup
-# ──────────────────────────────────────────────
-
 def _get_gemini_model():
-    """Khởi tạo Gemini model từ API key trong config."""
     genai.configure(api_key=settings.GEMINI_API_KEY)
     return genai.GenerativeModel("gemini-1.5-flash")
 
 
 MODERATION_PROMPT = """
-Bạn là hệ thống kiểm duyệt nội dung tự động cho nền tảng đọc truyện.
-Hãy phân tích đoạn văn bản sau và trả về JSON với cấu trúc chính xác như sau:
+You are the automated safety moderation system for YAG, a Vietnamese web novel
+platform. Analyze the chapter content against these policy areas:
 
+- Vietnamese cultural decency and illegal/offensive content.
+- Extreme graphic violence, gore, torture, or cruelty.
+- Hate speech, harassment, dehumanization, or discriminatory attacks.
+- Sexual or pornographic content, especially sensitive or exploitative content.
+- Child safety risks.
+
+Return strict JSON only, with no markdown:
 {{
-  "result": "approved" hoặc "flagged",
-  "reason": "Mô tả ngắn lý do",
-  "flagged_categories": ["danh sách vi phạm, để [] nếu không có"],
-  "confidence": số thực từ 0.0 đến 1.0
+  "result": "approved" | "rejected" | "flagged",
+  "reason": "short specific reason",
+  "flagged_categories": ["violence", "hate_speech", "sexual_content", "cultural_violation", "child_safety"],
+  "confidence_score": 0.0
 }}
 
-Các danh mục vi phạm cần kiểm tra:
-- violence: Bạo lực, máu me, tra tấn
-- sexual_content: Nội dung tình dục
-- hate_speech: Ngôn từ thù địch, phân biệt đối xử
-- child_safety: Nội dung có hại cho trẻ em
-- spam: Spam, quảng cáo trá hình
+Use "approved" when the chapter is safe. Use "flagged" when it needs admin
+review. Use "rejected" when the violation is clear and severe.
 
-Chỉ trả về JSON thuần túy, không có markdown, không có giải thích thêm.
-
-Nội dung cần kiểm duyệt:
+Chapter content:
 \"\"\"
 {content}
 \"\"\"
 """
 
 
-# ──────────────────────────────────────────────
-# Core Moderation Logic
-# ──────────────────────────────────────────────
+def _extract_json(text: str) -> dict:
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = stripped.strip("`")
+        if stripped.lower().startswith("json"):
+            stripped = stripped[4:].strip()
+
+    start = stripped.find("{")
+    end = stripped.rfind("}")
+    if start != -1 and end != -1:
+        stripped = stripped[start : end + 1]
+
+    return json.loads(stripped)
+
+
+def _normalize_result(value: str) -> ModerationResult:
+    normalized = (value or "").strip().lower()
+    if normalized == "approved":
+        return ModerationResult.APPROVED
+    if normalized == "rejected":
+        return ModerationResult.REJECTED
+    if normalized == "flagged":
+        return ModerationResult.FLAGGED
+    return ModerationResult.ERROR
+
+
+def _clamp_confidence(value) -> float:
+    try:
+        confidence = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return min(1.0, max(0.0, confidence))
+
 
 def moderate_content(content: str, chapter_id: str) -> ModerationReport:
-    """
-    Gửi nội dung đến Gemini để kiểm duyệt.
-
-    Args:
-        content:    Nội dung chapter cần kiểm duyệt
-        chapter_id: ID chapter (dùng cho logging)
-
-    Returns:
-        ModerationReport với kết quả approved/flagged/error
-    """
     if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE":
-        logger.warning(f"[U013] GEMINI_API_KEY chưa cấu hình — auto approve chapter {chapter_id}")
+        logger.warning("GEMINI_API_KEY is not configured; auto-approving chapter %s", chapter_id)
         return ModerationReport(
             result=ModerationResult.APPROVED,
-            reason="Gemini API key chưa cấu hình, bỏ qua kiểm duyệt",
+            reason="Gemini API key is not configured; moderation skipped in local mode.",
             flagged_categories=[],
             confidence=1.0,
         )
 
     try:
         model = _get_gemini_model()
-        prompt = MODERATION_PROMPT.format(content=content[:4000])  # Giới hạn 4000 ký tự
-
-        logger.info(f"[U013] Gửi nội dung chapter {chapter_id} đến Gemini...")
+        prompt = MODERATION_PROMPT.format(content=content[:12000])
         response = model.generate_content(prompt)
         raw_text = response.text.strip()
+        parsed = _extract_json(raw_text)
 
-        # Parse JSON response từ Gemini
-        parsed = json.loads(raw_text)
+        categories = parsed.get("flagged_categories") or []
+        if isinstance(categories, str):
+            categories = [categories]
 
-        result = ModerationResult(parsed.get("result", "error"))
         report = ModerationReport(
-            result=result,
+            result=_normalize_result(parsed.get("result")),
             reason=parsed.get("reason", ""),
-            flagged_categories=parsed.get("flagged_categories", []),
-            confidence=float(parsed.get("confidence", 0.0)),
+            flagged_categories=[str(category) for category in categories],
+            confidence=_clamp_confidence(parsed.get("confidence_score", parsed.get("confidence"))),
             raw_response=raw_text,
         )
-
         logger.info(
-            f"[U013] Kết quả kiểm duyệt chapter {chapter_id}: "
-            f"{result.value} (confidence={report.confidence:.2f})"
+            "Moderation result for chapter %s: %s confidence=%.2f",
+            chapter_id,
+            report.result.value,
+            report.confidence,
         )
         return report
-
-    except json.JSONDecodeError as e:
-        logger.error(f"[U013] Gemini trả về JSON không hợp lệ cho chapter {chapter_id}: {e}")
+    except json.JSONDecodeError as exc:
+        logger.error("Gemini returned invalid JSON for chapter %s: %s", chapter_id, exc)
         return ModerationReport(
             result=ModerationResult.ERROR,
-            reason=f"Gemini response không parse được: {e}",
+            reason=f"Gemini response is not valid JSON: {exc}",
             flagged_categories=[],
             confidence=0.0,
         )
-    except Exception as e:
-        logger.error(f"[U013] Lỗi khi gọi Gemini cho chapter {chapter_id}: {e}")
+    except Exception as exc:
+        logger.error("Gemini moderation failed for chapter %s: %s", chapter_id, exc)
         return ModerationReport(
             result=ModerationResult.ERROR,
-            reason=f"Gemini API lỗi: {e}",
+            reason=f"Gemini API error: {exc}",
             flagged_categories=[],
             confidence=0.0,
         )
 
 
-# ──────────────────────────────────────────────
-# DB Status Update (sau khi có kết quả kiểm duyệt)
-# ──────────────────────────────────────────────
+def apply_moderation_result(chapter_id: str, report: ModerationReport, db) -> Chapter:
+    chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    if not chapter:
+        raise LookupError(f"Chapter {chapter_id} not found")
 
-def apply_moderation_result(chapter_id: str, report: ModerationReport, db) -> None:
-    """
-    Cập nhật trạng thái chapter trong DB dựa theo kết quả kiểm duyệt.
+    if report.result == ModerationResult.ERROR:
+        chapter.moderation_status = "pending"
+    else:
+        chapter.moderation_status = report.result.value
 
-    - APPROVED → status = "published"
-    - FLAGGED  → status = "flagged" (chờ admin xử lý thủ công)
-    - ERROR    → status = "draft"   (giữ nguyên, retry sau)
-
-    TODO: Thay bằng query thật khi có model Chapter:
-        from app.models.chapter import Chapter
-        chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
-        chapter.status = status_map[report.result]
-        chapter.moderation_reason = report.reason
-        chapter.moderation_categories = report.flagged_categories
-        db.commit()
-    """
-    status_map = {
-        ModerationResult.APPROVED: "published",
-        ModerationResult.FLAGGED:  "flagged",
-        ModerationResult.ERROR:    "draft",
-    }
-    new_status = status_map[report.result]
-    logger.info(
-        f"[U013] Cập nhật chapter {chapter_id}: "
-        f"{report.result.value} → status='{new_status}' | reason: {report.reason}"
+    categories = [str(category) for category in report.flagged_categories]
+    log = AIModerationLog(
+        chapter_id=chapter.id,
+        is_violation=report.result in {ModerationResult.REJECTED, ModerationResult.FLAGGED},
+        violation_category=", ".join(categories)[:50] if categories else None,
+        confidence_score=report.confidence,
+        reason=report.reason,
     )
+
+    db.add(chapter)
+    db.add(log)
+    db.commit()
+    db.refresh(chapter)
+
+    logger.info(
+        "Chapter %s moderation_status=%s logged violation=%s",
+        chapter_id,
+        chapter.moderation_status,
+        log.is_violation,
+    )
+    return chapter

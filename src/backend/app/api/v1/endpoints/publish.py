@@ -1,7 +1,3 @@
-"""
-U005 - Endpoint xuất bản chương truyện.
-POST /api/v1/chapters/{chapter_id}/publish
-"""
 import asyncio
 from functools import partial
 
@@ -10,67 +6,91 @@ from sqlalchemy.orm import Session
 
 from app.api import deps
 from app.core.config import settings
+from app.models.user import User
+from app.schemas.publish import PublishChapterRequest, PublishChapterResponse
 from app.services.publish_service import (
     PUBLISH_QUEUE_NAME,
-    PublishTaskPayload,
+    prepare_chapter_for_publish,
     push_publish_task_to_queue,
-    validate_chapter_for_publish,
+    restore_chapter_publish_state,
 )
+from app.services.schedule_service import get_author_schedule_overview
 
 router = APIRouter()
 
 
 @router.post(
     "/chapters/{chapter_id}/publish",
-    summary="U005 - Yêu cầu xuất bản chương truyện (Gửi async Task vào RabbitMQ)",
+    include_in_schema=False,
     status_code=status.HTTP_202_ACCEPTED,
+    response_model=PublishChapterResponse,
+)
+@router.post(
+    "/author/chapters/{chapter_id}/publish",
+    summary="U005 - Queue a chapter publishing request for AI moderation",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=PublishChapterResponse,
 )
 async def request_publish_chapter(
     chapter_id: str,
+    request: PublishChapterRequest | None = None,
     db: Session = Depends(deps.get_db),
-    # current_user = Depends(deps.get_current_user),  # Bật khi có auth
+    current_user: User = Depends(deps.get_current_user),
 ):
-    """
-    **U005 - Xuất bản chương truyện (Bất đồng bộ)**
+    request = request or PublishChapterRequest()
 
-    Flow:
-    1. Validate chapter tồn tại và ở trạng thái `draft`
-    2. Tạo task payload
-    3. Đẩy vào RabbitMQ queue (chạy trong thread pool, không block event loop)
-    4. Trả về **202 Accepted** ngay lập tức
-
-    Worker sẽ xử lý: kiểm duyệt → cập nhật DB → gửi notification.
-    """
-    # Bước 1: Validate chapter
     try:
-        validate_chapter_for_publish(chapter_id, db)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        prepared = prepare_chapter_for_publish(
+            chapter_id=chapter_id,
+            db=db,
+            current_user=current_user,
+            publish_at=request.publish_at,
+            is_premium=request.is_premium,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
-    # Bước 2: Tạo payload
-    payload = PublishTaskPayload(
-        chapter_id=chapter_id,
-        requested_by="current_user_id",  # TODO: thay bằng current_user.id
-    )
-
-    # Bước 3: Gọi pika sync trong thread pool để không block FastAPI event loop
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     success = await loop.run_in_executor(
         None,
-        partial(push_publish_task_to_queue, payload),
+        partial(push_publish_task_to_queue, prepared.payload),
     )
 
     if not success:
+        restore_chapter_publish_state(
+            chapter_id,
+            db,
+            prepared.previous_status,
+            prepared.previous_is_premium,
+            prepared.previous_publish_at,
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Không thể kết nối RabbitMQ tại {settings.RABBITMQ_HOST}. Thử lại sau.",
+            detail=f"Cannot connect to RabbitMQ at {settings.RABBITMQ_HOST}. Try again later.",
         )
 
-    # Bước 4: 202 Accepted — không chờ worker xử lý xong
     return {
         "status": "accepted",
-        "message": "Yêu cầu xuất bản đã được nhận và đang xử lý.",
-        "chapter_id": chapter_id,
+        "message": "Publish request accepted and queued for AI moderation.",
+        "chapter_id": prepared.payload.chapter_id,
+        "story_id": prepared.payload.story_id,
         "queue": PUBLISH_QUEUE_NAME,
-        "queued_at": payload.requested_at,
+        "moderation_status": "pending",
+        "publish_at": prepared.payload.publish_at,
+        "is_premium": request.is_premium,
+        "queued_at": prepared.payload.requested_at,
     }
+
+
+@router.get("/author/schedule/overview", summary="U014 - Author schedule chart data")
+def get_author_schedule_chart_data(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    if current_user.role not in {"author", "admin"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="AUTHOR_REQUIRED")
+    return get_author_schedule_overview(db, current_user)

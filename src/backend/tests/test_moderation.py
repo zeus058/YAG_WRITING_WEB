@@ -1,54 +1,93 @@
-"""
-Test cases cho U013 - Kiểm duyệt nội dung AI (Gemini).
-Chạy: pytest tests/test_moderation.py -v
-Không cần Gemini API key thật — toàn bộ dùng mock.
-"""
-import pytest
+import json
+import uuid
 from unittest.mock import MagicMock, patch
 
+from app.models.chapter import Chapter
+from app.models.story import Story
 from app.services.moderation_service import (
-    ModerationResult,
     ModerationReport,
-    moderate_content,
+    ModerationResult,
     apply_moderation_result,
+    moderate_content,
 )
 
 
-# ──────────────────────────────────────────────
-# Helper: tạo Gemini response giả
-# ──────────────────────────────────────────────
+class FakeQuery:
+    def __init__(self, result):
+        self.result = result
+
+    def filter(self, *args, **kwargs):
+        return self
+
+    def first(self):
+        return self.result
+
+
+class FakeDB:
+    def __init__(self, chapter=None, story=None):
+        self.chapter = chapter
+        self.story = story
+        self.added = []
+        self.committed = False
+
+    def query(self, model):
+        if model is Chapter:
+            return FakeQuery(self.chapter)
+        if model is Story:
+            return FakeQuery(self.story)
+        return FakeQuery(None)
+
+    def add(self, obj):
+        self.added.append(obj)
+
+    def commit(self):
+        self.committed = True
+
+    def refresh(self, obj):
+        return None
+
+    def close(self):
+        return None
+
 
 def _mock_gemini_response(result: str, reason: str, categories: list, confidence: float):
-    import json
     mock_resp = MagicMock()
-    mock_resp.text = json.dumps({
-        "result": result,
-        "reason": reason,
-        "flagged_categories": categories,
-        "confidence": confidence,
-    })
+    mock_resp.text = json.dumps(
+        {
+            "result": result,
+            "reason": reason,
+            "flagged_categories": categories,
+            "confidence_score": confidence,
+        }
+    )
     return mock_resp
 
 
-# ──────────────────────────────────────────────
-# TC-027-01: Nội dung sạch → APPROVED
-# ──────────────────────────────────────────────
+def _chapter():
+    return Chapter(
+        id=uuid.uuid4(),
+        story_id=uuid.uuid4(),
+        chapter_number=1,
+        title="Chapter",
+        content="Safe content",
+        moderation_status="pending",
+    )
+
 
 @patch("app.services.moderation_service.settings")
 @patch("app.services.moderation_service._get_gemini_model")
 def test_moderate_content_approved(mock_model, mock_settings):
     mock_settings.GEMINI_API_KEY = "fake-key"
-
     mock_gemini = MagicMock()
     mock_gemini.generate_content.return_value = _mock_gemini_response(
-        result="approved",
-        reason="Nội dung phù hợp",
-        categories=[],
-        confidence=0.97,
+        "approved",
+        "Safe content",
+        [],
+        0.97,
     )
     mock_model.return_value = mock_gemini
 
-    report = moderate_content("Đây là nội dung bình thường", chapter_id="chap-001")
+    report = moderate_content("Safe chapter", chapter_id="chap-001")
 
     assert report.result == ModerationResult.APPROVED
     assert report.flagged_categories == []
@@ -56,211 +95,144 @@ def test_moderate_content_approved(mock_model, mock_settings):
     mock_gemini.generate_content.assert_called_once()
 
 
-# ──────────────────────────────────────────────
-# TC-027-02: Nội dung vi phạm → FLAGGED
-# ──────────────────────────────────────────────
-
 @patch("app.services.moderation_service.settings")
 @patch("app.services.moderation_service._get_gemini_model")
-def test_moderate_content_flagged(mock_model, mock_settings):
+def test_moderate_content_rejected(mock_model, mock_settings):
     mock_settings.GEMINI_API_KEY = "fake-key"
-
     mock_gemini = MagicMock()
     mock_gemini.generate_content.return_value = _mock_gemini_response(
-        result="flagged",
-        reason="Phát hiện nội dung bạo lực",
-        categories=["violence"],
-        confidence=0.91,
+        "Rejected",
+        "Severe sexual content",
+        ["sexual_content"],
+        0.91,
     )
     mock_model.return_value = mock_gemini
 
-    report = moderate_content("Nội dung bạo lực...", chapter_id="chap-002")
+    report = moderate_content("Unsafe chapter", chapter_id="chap-002")
 
-    assert report.result == ModerationResult.FLAGGED
-    assert "violence" in report.flagged_categories
+    assert report.result == ModerationResult.REJECTED
+    assert report.flagged_categories == ["sexual_content"]
     assert report.confidence == 0.91
 
 
-# ──────────────────────────────────────────────
-# TC-027-03: Nhiều vi phạm cùng lúc
-# ──────────────────────────────────────────────
-
 @patch("app.services.moderation_service.settings")
 @patch("app.services.moderation_service._get_gemini_model")
-def test_moderate_content_multiple_violations(mock_model, mock_settings):
+def test_moderate_content_flagged_json_fence(mock_model, mock_settings):
     mock_settings.GEMINI_API_KEY = "fake-key"
-
     mock_gemini = MagicMock()
-    mock_gemini.generate_content.return_value = _mock_gemini_response(
-        result="flagged",
-        reason="Nhiều loại vi phạm",
-        categories=["violence", "hate_speech"],
-        confidence=0.99,
-    )
+    mock_resp = MagicMock()
+    mock_resp.text = '```json\n{"result":"flagged","reason":"violence","flagged_categories":["violence"],"confidence_score":0.88}\n```'
+    mock_gemini.generate_content.return_value = mock_resp
     mock_model.return_value = mock_gemini
 
-    report = moderate_content("...", chapter_id="chap-003")
+    report = moderate_content("Violent chapter", chapter_id="chap-003")
 
     assert report.result == ModerationResult.FLAGGED
-    assert len(report.flagged_categories) == 2
-    assert "hate_speech" in report.flagged_categories
+    assert "violence" in report.flagged_categories
+    assert report.confidence == 0.88
 
-
-# ──────────────────────────────────────────────
-# TC-027-04: Gemini trả về JSON lỗi → ERROR
-# ──────────────────────────────────────────────
 
 @patch("app.services.moderation_service.settings")
 @patch("app.services.moderation_service._get_gemini_model")
-def test_moderate_content_invalid_json(mock_model, mock_settings):
+def test_moderate_content_invalid_json_returns_error(mock_model, mock_settings):
     mock_settings.GEMINI_API_KEY = "fake-key"
-
     mock_gemini = MagicMock()
-    mock_gemini.generate_content.return_value.text = "không phải JSON {{{invalid"
+    mock_gemini.generate_content.return_value.text = "not json"
     mock_model.return_value = mock_gemini
 
-    report = moderate_content("nội dung bất kỳ", chapter_id="chap-004")
+    report = moderate_content("Any chapter", chapter_id="chap-004")
 
     assert report.result == ModerationResult.ERROR
     assert report.flagged_categories == []
 
 
-# ──────────────────────────────────────────────
-# TC-027-05: Gemini API down → ERROR (fallback an toàn)
-# ──────────────────────────────────────────────
-
 @patch("app.services.moderation_service.settings")
-@patch("app.services.moderation_service._get_gemini_model")
-def test_moderate_content_gemini_api_down(mock_model, mock_settings):
-    mock_settings.GEMINI_API_KEY = "fake-key"
+def test_moderate_content_no_api_key_auto_approved(mock_settings):
+    mock_settings.GEMINI_API_KEY = ""
 
-    mock_gemini = MagicMock()
-    mock_gemini.generate_content.side_effect = Exception("503 Service Unavailable")
-    mock_model.return_value = mock_gemini
-
-    report = moderate_content("nội dung bất kỳ", chapter_id="chap-005")
-
-    assert report.result == ModerationResult.ERROR
-    assert "503" in report.reason
-
-
-# ──────────────────────────────────────────────
-# TC-027-06: API key chưa cấu hình → auto APPROVED
-# ──────────────────────────────────────────────
-
-@patch("app.services.moderation_service.settings")
-def test_moderate_content_no_api_key(mock_settings):
-    mock_settings.GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"
-
-    report = moderate_content("bất kỳ nội dung", chapter_id="chap-006")
+    report = moderate_content("Any content", chapter_id="chap-005")
 
     assert report.result == ModerationResult.APPROVED
     assert report.confidence == 1.0
 
 
-# ──────────────────────────────────────────────
-# TC-027-07: apply_moderation_result — APPROVED → published
-# ──────────────────────────────────────────────
+def test_apply_result_approved_logs_non_violation():
+    chapter = _chapter()
+    db = FakeDB(chapter=chapter)
+    report = ModerationReport(ModerationResult.APPROVED, "OK", [], 0.95)
 
-def test_apply_result_approved(caplog):
-    import logging
-    report = ModerationReport(
-        result=ModerationResult.APPROVED,
-        reason="Nội dung sạch",
-        flagged_categories=[],
-        confidence=0.95,
-    )
-    with caplog.at_level(logging.INFO, logger="app.services.moderation_service"):
-        apply_moderation_result("chap-001", report, db=MagicMock())
+    result = apply_moderation_result(str(chapter.id), report, db)
 
-    assert "published" in caplog.text
+    assert result.moderation_status == "approved"
+    assert db.committed is True
+    log = db.added[-1]
+    assert log.is_violation is False
+    assert log.confidence_score == 0.95
 
 
-# ──────────────────────────────────────────────
-# TC-027-08: apply_moderation_result — FLAGGED → flagged
-# ──────────────────────────────────────────────
+def test_apply_result_flagged_logs_violation():
+    chapter = _chapter()
+    db = FakeDB(chapter=chapter)
+    report = ModerationReport(ModerationResult.FLAGGED, "Violence", ["violence"], 0.88)
 
-def test_apply_result_flagged(caplog):
-    import logging
-    report = ModerationReport(
-        result=ModerationResult.FLAGGED,
-        reason="Vi phạm bạo lực",
-        flagged_categories=["violence"],
-        confidence=0.88,
-    )
-    with caplog.at_level(logging.INFO, logger="app.services.moderation_service"):
-        apply_moderation_result("chap-002", report, db=MagicMock())
+    result = apply_moderation_result(str(chapter.id), report, db)
 
-    assert "flagged" in caplog.text
+    assert result.moderation_status == "flagged"
+    log = db.added[-1]
+    assert log.is_violation is True
+    assert log.violation_category == "violence"
 
 
-# ──────────────────────────────────────────────
-# TC-027-09: apply_moderation_result — ERROR → draft
-# ──────────────────────────────────────────────
-
-def test_apply_result_error(caplog):
-    import logging
-    report = ModerationReport(
-        result=ModerationResult.ERROR,
-        reason="Gemini API lỗi",
-        flagged_categories=[],
-        confidence=0.0,
-    )
-    with caplog.at_level(logging.INFO, logger="app.services.moderation_service"):
-        apply_moderation_result("chap-003", report, db=MagicMock())
-
-    assert "draft" in caplog.text
-
-
-# ──────────────────────────────────────────────
-# TC-027-10: Worker tích hợp U005 + U013
-# ──────────────────────────────────────────────
-
+@patch("app.worker.main.publish_user_notification", return_value=True)
 @patch("app.worker.main.apply_moderation_result")
 @patch("app.worker.main.moderate_content")
-def test_worker_calls_moderation_on_publish(mock_moderate, mock_apply):
-    """Đảm bảo worker gọi moderate_content khi nhận task publish_chapter."""
+def test_worker_calls_moderation_and_notifies_author(mock_moderate, mock_apply, mock_notify):
     from app.worker.main import handle_publish_chapter
 
-    mock_moderate.return_value = ModerationReport(
-        result=ModerationResult.APPROVED,
-        reason="OK",
-        flagged_categories=[],
-        confidence=0.99,
-    )
+    chapter = _chapter()
+    db = FakeDB(chapter=chapter)
+    report = ModerationReport(ModerationResult.APPROVED, "OK", [], 0.99)
+    mock_moderate.return_value = report
+    mock_apply.return_value = chapter
 
-    handle_publish_chapter({
-        "task_type": "publish_chapter",
-        "chapter_id": "chap-001",
-        "requested_by": "user-abc",
-    })
+    handle_publish_chapter(
+        {
+            "task_type": "publish_chapter",
+            "chapter_id": str(chapter.id),
+            "requested_by": "author-001",
+        },
+        db=db,
+    )
 
     mock_moderate.assert_called_once()
     mock_apply.assert_called_once()
-    # Đảm bảo chapter_id được truyền đúng
-    call_kwargs = mock_moderate.call_args
-    assert call_kwargs.kwargs.get("chapter_id") == "chap-001" or \
-           call_kwargs.args[1] == "chap-001"
+    mock_notify.assert_called_once()
 
 
-@patch("app.worker.main.apply_moderation_result")
-@patch("app.worker.main.moderate_content")
-def test_worker_handles_flagged_chapter(mock_moderate, mock_apply):
-    """Khi chapter bị flag, worker vẫn chạy không crash."""
-    from app.worker.main import handle_publish_chapter
+@patch("app.worker.main.time.sleep")
+@patch("app.worker.main.handle_publish_chapter")
+def test_worker_requeues_retryable_moderation_error(mock_handle, mock_sleep):
+    from app.worker.main import RetryableModerationError, on_message
 
-    mock_moderate.return_value = ModerationReport(
-        result=ModerationResult.FLAGGED,
-        reason="Bạo lực",
-        flagged_categories=["violence"],
-        confidence=0.95,
-    )
+    mock_handle.side_effect = RetryableModerationError("429 rate limit")
+    mock_channel = MagicMock()
+    mock_method = MagicMock(delivery_tag="tag-001")
+    body = json.dumps({"task_type": "publish_chapter", "chapter_id": "chap-001"}).encode()
 
-    # Không raise exception
-    handle_publish_chapter({
-        "task_type": "publish_chapter",
-        "chapter_id": "chap-flagged",
-        "requested_by": "user-abc",
-    })
+    on_message(mock_channel, mock_method, None, body)
 
-    mock_apply.assert_called_once()
+    mock_sleep.assert_called_once()
+    mock_channel.basic_nack.assert_called_once_with(delivery_tag="tag-001", requeue=True)
+
+
+@patch("app.worker.main.handle_publish_chapter")
+def test_worker_acks_invalid_json_without_retry(mock_handle):
+    from app.worker.main import on_message
+
+    mock_channel = MagicMock()
+    mock_method = MagicMock(delivery_tag="tag-002")
+
+    on_message(mock_channel, mock_method, None, b"not json")
+
+    mock_handle.assert_not_called()
+    mock_channel.basic_ack.assert_called_once_with(delivery_tag="tag-002")

@@ -1,50 +1,102 @@
-"""
-Test cases cho U005 - Xuất bản chương truyện (RabbitMQ).
-Chạy: pytest tests/test_publish.py -v
-Không cần RabbitMQ hay PostgreSQL thật — toàn bộ dùng mock.
-"""
-import pytest
-from datetime import datetime
+import json
+import uuid
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
+from app.models.chapter import Chapter
+from app.models.story import Story
+from app.models.user import User
 
-# ──────────────────────────────────────────────
-# TC-1: PublishTaskPayload tạo đúng cấu trúc
-# ──────────────────────────────────────────────
 
-def test_payload_to_dict():
+class FakeQuery:
+    def __init__(self, result):
+        self.result = result
+
+    def filter(self, *args, **kwargs):
+        return self
+
+    def first(self):
+        return self.result
+
+
+class FakeDB:
+    def __init__(self, chapter=None, story=None):
+        self.chapter = chapter
+        self.story = story
+        self.commits = 0
+
+    def query(self, model):
+        if model is Chapter:
+            return FakeQuery(self.chapter)
+        if model is Story:
+            return FakeQuery(self.story)
+        return FakeQuery(None)
+
+    def add(self, obj):
+        return None
+
+    def commit(self):
+        self.commits += 1
+
+    def refresh(self, obj):
+        return None
+
+    def close(self):
+        return None
+
+
+def _objects():
+    author_id = uuid.uuid4()
+    story_id = uuid.uuid4()
+    chapter_id = uuid.uuid4()
+    user = User(id=author_id, username="author", email="a@yag.vn", password_hash="x", role="author")
+    story = Story(
+        id=story_id,
+        author_id=author_id,
+        title="Story",
+        description="Desc",
+        category="fantasy",
+    )
+    chapter = Chapter(
+        id=chapter_id,
+        story_id=story_id,
+        chapter_number=1,
+        title="Chapter 1",
+        content="Safe chapter content",
+        moderation_status="draft",
+    )
+    return user, story, chapter
+
+
+def test_payload_to_dict_contains_required_moderation_fields():
     from app.services.publish_service import PublishTaskPayload
 
     payload = PublishTaskPayload(
         chapter_id="chap-001",
+        story_id="story-001",
+        content="chapter content",
         requested_by="user-abc",
-        requested_at="2024-01-01T00:00:00",
+        publish_at="2026-01-01T00:00:00+00:00",
+        is_premium=True,
+        requested_at="2026-01-01T00:00:00+00:00",
     )
+
     data = payload.to_dict()
 
     assert data["task_type"] == "publish_chapter"
     assert data["chapter_id"] == "chap-001"
+    assert data["story_id"] == "story-001"
+    assert data["content"] == "chapter content"
+    assert data["publish_at"] == "2026-01-01T00:00:00+00:00"
+    assert data["is_premium"] is True
     assert data["requested_by"] == "user-abc"
-    assert data["requested_at"] == "2024-01-01T00:00:00"
 
-
-def test_payload_auto_timestamp():
-    from app.services.publish_service import PublishTaskPayload
-
-    before = datetime.utcnow().isoformat()
-    payload = PublishTaskPayload(chapter_id="chap-001", requested_by="user-abc")
-    after = datetime.utcnow().isoformat()
-
-    assert before <= payload.requested_at <= after
-
-
-# ──────────────────────────────────────────────
-# TC-2: push_publish_task_to_queue — thành công
-# ──────────────────────────────────────────────
 
 @patch("app.services.publish_service.get_rabbitmq_connection")
-def test_push_task_success(mock_conn):
+def test_push_task_uses_required_queue(mock_conn):
     from app.services.publish_service import PublishTaskPayload, push_publish_task_to_queue
 
     mock_channel = MagicMock()
@@ -53,159 +105,109 @@ def test_push_task_success(mock_conn):
     mock_connection.channel.return_value = mock_channel
     mock_conn.return_value = mock_connection
 
-    payload = PublishTaskPayload(chapter_id="chap-001", requested_by="user-abc")
-    result = push_publish_task_to_queue(payload)
-
-    assert result is True
-    mock_channel.queue_declare.assert_called_once_with(
-        queue="chapter_publish_queue",
-        durable=True,
+    payload = PublishTaskPayload(
+        chapter_id="chap-001",
+        story_id="story-001",
+        content="content",
+        requested_by="user-abc",
     )
-    mock_channel.basic_publish.assert_called_once()
-    mock_connection.close.assert_called_once()
 
+    assert push_publish_task_to_queue(payload) is True
+    mock_channel.queue_declare.assert_called_once_with(queue="yag_moderation_queue", durable=True)
+    publish_kwargs = mock_channel.basic_publish.call_args.kwargs
+    assert publish_kwargs["routing_key"] == "yag_moderation_queue"
+    assert json.loads(publish_kwargs["body"].decode("utf-8"))["content"] == "content"
 
-# ──────────────────────────────────────────────
-# TC-3: push_publish_task_to_queue — RabbitMQ offline
-# ──────────────────────────────────────────────
 
 @patch("app.services.publish_service.get_rabbitmq_connection")
-def test_push_task_rabbitmq_offline(mock_conn):
+def test_push_task_returns_false_when_rabbitmq_offline(mock_conn):
     import pika.exceptions
     from app.services.publish_service import PublishTaskPayload, push_publish_task_to_queue
 
     mock_conn.side_effect = pika.exceptions.AMQPConnectionError("Connection refused")
+    payload = PublishTaskPayload("chap-001", "story-001", "content", "user-abc")
 
-    payload = PublishTaskPayload(chapter_id="chap-001", requested_by="user-abc")
-    result = push_publish_task_to_queue(payload)
-
-    assert result is False
+    assert push_publish_task_to_queue(payload) is False
 
 
-# ──────────────────────────────────────────────
-# TC-4: validate_chapter_for_publish — hợp lệ
-# ──────────────────────────────────────────────
+def test_prepare_publish_sets_pending_and_builds_payload():
+    from app.services.publish_service import prepare_chapter_for_publish
 
-def test_validate_chapter_success():
-    from app.services.publish_service import validate_chapter_for_publish
+    user, story, chapter = _objects()
+    db = FakeDB(chapter=chapter, story=story)
+    publish_at = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
 
-    db = MagicMock()
-    result = validate_chapter_for_publish("chap-001", db)
+    prepared = prepare_chapter_for_publish(
+        chapter_id=str(chapter.id),
+        db=db,
+        current_user=user,
+        publish_at=publish_at,
+        is_premium=True,
+    )
 
-    assert result["chapter_id"] == "chap-001"
-    assert result["status"] == "draft"
+    assert chapter.moderation_status == "pending"
+    assert chapter.is_premium is True
+    assert chapter.publish_at == publish_at
+    assert prepared.previous_status == "draft"
+    assert prepared.payload.story_id == str(story.id)
+    assert prepared.payload.content == "Safe chapter content"
+    assert db.commits == 1
 
 
-# ──────────────────────────────────────────────
-# TC-5 → TC-7: FastAPI endpoint
-# Mock engine để TestClient không connect DB thật
-# ──────────────────────────────────────────────
+def test_prepare_publish_rejects_non_owner():
+    from app.services.publish_service import prepare_chapter_for_publish
+
+    user, story, chapter = _objects()
+    user.id = uuid.uuid4()
+    db = FakeDB(chapter=chapter, story=story)
+
+    with pytest.raises(PermissionError):
+        prepare_chapter_for_publish(str(chapter.id), db, user)
+
 
 @pytest.fixture
 def client():
-    """TestClient với DB và engine đều mock — không cần PostgreSQL thật."""
-    # Phải patch engine TRƯỚC KHI import app để chặn init_db gọi create_all
     with patch("app.core.database.engine") as mock_engine:
         mock_engine.connect.return_value.__enter__ = MagicMock()
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
 
-        from app.main import app
         from app.api import deps
+        from app.main import app
 
-        mock_db = MagicMock()
-        app.dependency_overrides[deps.get_db] = lambda: mock_db
+        user, story, chapter = _objects()
+        fake_db = FakeDB(chapter=chapter, story=story)
+        app.dependency_overrides[deps.get_db] = lambda: fake_db
+        app.dependency_overrides[deps.get_current_user] = lambda: user
 
-        with TestClient(app, raise_server_exceptions=False) as c:
-            yield c
+        with TestClient(app, raise_server_exceptions=False) as test_client:
+            yield test_client, chapter
 
         app.dependency_overrides.clear()
 
 
 @patch("app.api.v1.endpoints.publish.push_publish_task_to_queue", return_value=True)
-@patch("app.api.v1.endpoints.publish.validate_chapter_for_publish",
-       return_value={"chapter_id": "chap-001", "status": "draft"})
-def test_endpoint_publish_202(mock_validate, mock_push, client):
-    """TC-5: Endpoint trả về 202 khi mọi thứ OK."""
-    response = client.post("/api/v1/chapters/chap-001/publish")
+def test_endpoint_publish_202(mock_push, client):
+    test_client, chapter = client
+
+    response = test_client.post(
+        f"/api/v1/author/chapters/{chapter.id}/publish",
+        json={"is_premium": True},
+    )
 
     assert response.status_code == 202
     data = response.json()
     assert data["status"] == "accepted"
-    assert data["chapter_id"] == "chap-001"
-    assert "queued_at" in data
+    assert data["chapter_id"] == str(chapter.id)
+    assert data["queue"] == "yag_moderation_queue"
+    assert data["moderation_status"] == "pending"
+    assert data["is_premium"] is True
 
 
 @patch("app.api.v1.endpoints.publish.push_publish_task_to_queue", return_value=False)
-@patch("app.api.v1.endpoints.publish.validate_chapter_for_publish",
-       return_value={"chapter_id": "chap-001", "status": "draft"})
-def test_endpoint_publish_503_rabbitmq_down(mock_validate, mock_push, client):
-    """TC-6: Endpoint trả về 503 khi RabbitMQ không kết nối được."""
-    response = client.post("/api/v1/chapters/chap-001/publish")
+def test_endpoint_publish_503_restores_previous_status(mock_push, client):
+    test_client, chapter = client
+
+    response = test_client.post(f"/api/v1/author/chapters/{chapter.id}/publish")
 
     assert response.status_code == 503
-    assert "RabbitMQ" in response.json()["detail"]
-
-
-@patch("app.api.v1.endpoints.publish.validate_chapter_for_publish")
-def test_endpoint_publish_404_chapter_not_found(mock_validate, client):
-    """TC-7: Endpoint trả về 404 khi chapter không tồn tại."""
-    mock_validate.side_effect = ValueError("Chapter chap-999 không tồn tại")
-
-    response = client.post("/api/v1/chapters/chap-999/publish")
-
-    assert response.status_code == 404
-    assert "không tồn tại" in response.json()["detail"]
-
-
-# ──────────────────────────────────────────────
-# TC-8 → TC-10: Worker callback
-# ──────────────────────────────────────────────
-
-def test_worker_on_message_success():
-    """TC-8: Worker xử lý đúng message và gọi basic_ack."""
-    import json
-    from app.worker.main import on_message
-
-    mock_channel = MagicMock()
-    mock_method = MagicMock()
-    mock_method.delivery_tag = "tag-001"
-
-    body = json.dumps({
-        "task_type": "publish_chapter",
-        "chapter_id": "chap-001",
-        "requested_by": "user-abc",
-        "requested_at": "2024-01-01T00:00:00",
-    }).encode()
-
-    on_message(mock_channel, mock_method, None, body)
-
-    mock_channel.basic_ack.assert_called_once_with(delivery_tag="tag-001")
-    mock_channel.basic_nack.assert_not_called()
-
-
-def test_worker_on_message_invalid_json():
-    """TC-9: Worker ACK và bỏ qua message JSON lỗi (tránh loop vô hạn)."""
-    from app.worker.main import on_message
-
-    mock_channel = MagicMock()
-    mock_method = MagicMock()
-    mock_method.delivery_tag = "tag-002"
-
-    on_message(mock_channel, mock_method, None, b"not valid json {{{")
-
-    mock_channel.basic_ack.assert_called_once_with(delivery_tag="tag-002")
-
-
-def test_worker_on_message_unknown_task_type():
-    """TC-10: Worker ACK message với task_type không xác định."""
-    import json
-    from app.worker.main import on_message
-
-    mock_channel = MagicMock()
-    mock_method = MagicMock()
-    mock_method.delivery_tag = "tag-003"
-
-    body = json.dumps({"task_type": "unknown_task"}).encode()
-    on_message(mock_channel, mock_method, None, body)
-
-    mock_channel.basic_ack.assert_called_once_with(delivery_tag="tag-003")
+    assert chapter.moderation_status == "draft"

@@ -43,6 +43,10 @@ class BookmarkResponse(BaseModel):
     message: str
 
 
+class MessageResponse(BaseModel):
+    message: str
+
+
 class CommentCreate(BaseModel):
     content: str = Field(..., min_length=1)
     parent_id: Optional[UUID] = None

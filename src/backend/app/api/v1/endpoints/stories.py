@@ -11,6 +11,7 @@ from app.services.media_service import upload_story_cover_to_cloudinary
 from app.schemas.story import (
     BookmarkResponse,
     ChapterResponse,
+    MessageResponse,
     ReviewCreate,
     ReviewListResponse,
     ReviewResponse,
@@ -288,7 +289,7 @@ def update_my_review(
 
 @router.delete(
     "/{story_id}/reviews/me",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=MessageResponse,
     summary="U010 - Xóa đánh giá của người dùng hiện tại",
 )
 def delete_my_review(
@@ -309,13 +310,17 @@ def delete_my_review(
     db.flush()
     refresh_story_rating(db, story)
     db.commit()
-    return None
+    return {"message": "Review deleted successfully"}
 
 
 @router.put("/{story_id}", response_model=StoryResponse, summary="U003 - Cập nhật thông tin chung của bộ truyện")
-async def update_story(
+def update_story(
     story_id: UUID,
-    request: Request,
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    status_value: Optional[StoryStatus] = Form(None, alias="status"),
+    cover_file: Optional[UploadFile] = File(None),
     db: Session = Depends(deps.get_db),
     current_author=Depends(deps.get_current_author)
 ):
@@ -323,23 +328,12 @@ async def update_story(
     if story.author_id != current_author.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to edit this story")
 
-    content_type = request.headers.get("content-type", "")
-    cover_file = None
-
-    if content_type.startswith("multipart/form-data"):
-        form = await request.form()
-        story_in = StoryUpdate(
-            title=str(form["title"]) if "title" in form and form["title"] else None,
-            description=str(form["description"]) if "description" in form and form["description"] else None,
-            category=str(form["category"]) if "category" in form and form["category"] else None,
-            status=str(form["status"]) if "status" in form and form["status"] else None,
-        )
-        cover_candidate = form.get("cover_file")
-        if hasattr(cover_candidate, "filename"):
-            cover_file = cover_candidate
-    else:
-        payload = await request.json()
-        story_in = StoryUpdate(**payload)
+    story_in = StoryUpdate(
+        title=title,
+        description=description,
+        category=category,
+        status=status_value,
+    )
 
     if story_in.title:
         existing_story = (
@@ -350,7 +344,10 @@ async def update_story(
         if existing_story:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Story title already exists")
 
-    update_data = story_in.model_dump(exclude_unset=True)
+    update_data = story_in.model_dump(exclude_none=True)
+    if not update_data and not cover_file:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No story fields provided")
+
     for key, value in update_data.items():
         setattr(story, key, value)
     if cover_file:

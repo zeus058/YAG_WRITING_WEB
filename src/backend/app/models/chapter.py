@@ -18,6 +18,7 @@ class Chapter(Base):
         UUID(as_uuid=True),
         ForeignKey("stories.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     chapter_number = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)
@@ -25,8 +26,8 @@ class Chapter(Base):
     moderation_status = Column(
         String(20),
         nullable=False,
-        default="pending",
-        server_default="pending",
+        default="draft",
+        server_default="draft",
     )
     is_premium = Column(Boolean, nullable=False, default=False, server_default="false")
     publish_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -40,6 +41,6 @@ class Chapter(Base):
 
     __table_args__ = (
         CheckConstraint("chapter_number > 0", name="chk_chapters_chapter_number"),
-        CheckConstraint("moderation_status IN ('pending', 'approved', 'rejected', 'flagged')", name="chk_chapters_moderation_status"),
+        CheckConstraint("moderation_status IN ('draft', 'pending', 'approved', 'rejected', 'flagged')", name="chk_chapters_moderation_status"),
         Index("idx_chapters_story_number", story_id, chapter_number),
     )

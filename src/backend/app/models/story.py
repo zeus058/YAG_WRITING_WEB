@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from sqlalchemy import Column, String, Integer, Text, Numeric, DateTime, ForeignKey, CheckConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -18,6 +19,7 @@ class Story(Base):
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     title = Column(String(255), nullable=False, unique=True, index=True)
     description = Column(Text, nullable=False)
@@ -38,6 +40,10 @@ class Story(Base):
     @property
     def chapter_count(self) -> int:
         return len(self.chapters)
+
+    @property
+    def chapter_count_published(self) -> int:
+        return sum(1 for c in self.chapters if c.moderation_status == "approved" and c.publish_at <= datetime.utcnow())
 
     @property
     def rating_count(self) -> int:

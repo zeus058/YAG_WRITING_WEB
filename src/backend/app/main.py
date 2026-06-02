@@ -1,12 +1,8 @@
-"""
-Main FastAPI Application Entrypoint.
-Initializes the application instance, adds global middleware, and mounts API router.
-"""
 import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
@@ -14,6 +10,8 @@ from app.api.v1.router import api_router
 from app.api.v1.endpoints.chapters import flush_story_view_counts, get_redis_client
 from app.core.database import engine, Base, SessionLocal
 import app.models  # Ensure models are loaded before creating tables
+from app.services.notification_service import stream_user_notifications
+from app.services.schedule_service import shutdown_schedule_scheduler, start_schedule_scheduler
 
 async def periodic_view_count_flush() -> None:
     while True:
@@ -36,6 +34,9 @@ async def lifespan(app: FastAPI):
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
     Base.metadata.create_all(bind=engine)
     
+    # Start schedule scheduler
+    start_schedule_scheduler()
+    
     # Start background view count flush task
     flush_task = asyncio.create_task(periodic_view_count_flush())
     yield
@@ -45,6 +46,9 @@ async def lifespan(app: FastAPI):
         await flush_task
     except asyncio.CancelledError:
         pass
+    
+    # Shutdown scheduler
+    shutdown_schedule_scheduler()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -78,4 +82,14 @@ def read_root():
         "project": settings.PROJECT_NAME,
         "docs": "/docs"
     }
+
+
+@app.websocket("/ws/notifications/{user_id}")
+async def websocket_notifications(websocket: WebSocket, user_id: str):
+    await stream_user_notifications(websocket, user_id)
+
+
+@app.websocket(f"{settings.API_V1_STR}/ws/notifications/{{user_id}}")
+async def websocket_notifications_v1(websocket: WebSocket, user_id: str):
+    await stream_user_notifications(websocket, user_id)
 

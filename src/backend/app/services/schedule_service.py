@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 from typing import Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -22,7 +22,7 @@ from app.services.notification_service import publish_user_notification
 
 logger = logging.getLogger(__name__)
 
-DAILY_JOB_ID = "u014_publish_schedule_monitor"
+HOURLY_JOB_ID = "u014_publish_schedule_monitor_hourly"
 SECONDS_PER_DAY = 24 * 60 * 60
 REPUTATION_PENALTY_PER_DAY = 5
 MAX_REPUTATION_PENALTY_PER_MISS = 30
@@ -48,7 +48,7 @@ def _find_publication_for_schedule(db: Session, schedule: PublishSchedule) -> Op
         .filter(
             Chapter.story_id == schedule.story_id,
             Chapter.moderation_status == "approved",
-            Chapter.publish_at >= schedule.scheduled_time,
+            Chapter.publish_at <= schedule.scheduled_time,
         )
         .order_by(Chapter.publish_at.desc())
         .first()
@@ -313,8 +313,8 @@ def start_schedule_scheduler() -> None:
     _scheduler = BackgroundScheduler(timezone="UTC")
     _scheduler.add_job(
         run_publish_schedule_scan,
-        CronTrigger(hour=settings.SCHEDULE_SCAN_HOUR_UTC, minute=settings.SCHEDULE_SCAN_MINUTE_UTC),
-        id=DAILY_JOB_ID,
+        IntervalTrigger(hours=1),
+        id=HOURLY_JOB_ID,
         replace_existing=True,
         max_instances=1,
         coalesce=True,
@@ -322,9 +322,7 @@ def start_schedule_scheduler() -> None:
     )
     _scheduler.start()
     logger.info(
-        "U014 scheduler started: daily at %02d:%02d UTC",
-        settings.SCHEDULE_SCAN_HOUR_UTC,
-        settings.SCHEDULE_SCAN_MINUTE_UTC,
+        "U014 scheduler started: hourly",
     )
 
 

@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 
 const palettes = [
   ["#C81C30", "#FFECCE", "#41503D"],

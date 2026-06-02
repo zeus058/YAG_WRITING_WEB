@@ -8,6 +8,7 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono, Playfair_Display } from "next/font/google";
 import { ClientInteractions } from "@/components/runtime/ClientInteractions";
+import { AuthProvider } from "@/lib";
 import "./prototype.css";
 import "./globals.css";
 
@@ -61,9 +62,12 @@ export default function RootLayout({
       className={`${inter.variable} ${geistMono.variable} ${playfair.variable} h-full antialiased`}
     >
       <body className={`${inter.className} min-h-full flex flex-col`}>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <ClientInteractions />
       </body>
     </html>
   );
 }
+

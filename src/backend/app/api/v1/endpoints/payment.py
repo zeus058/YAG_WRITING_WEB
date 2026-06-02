@@ -26,6 +26,7 @@ from app.schemas.membership import (
 )
 from app.schemas.payment import (
     TransactionHistoryItem,
+    TransactionStatusResponse,
     VNPAYIPNResponse,
 )
 from app.services import membership as membership_svc
@@ -86,6 +87,12 @@ def get_membership_status(
     status_code=status.HTTP_201_CREATED,
     summary="U012 - Khởi tạo hóa đơn và sinh checkout URL VNPAY",
 )
+@membership_router.post(
+    "/checkout",
+    response_model=CheckoutResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="U011/U012 - Khởi tạo checkout Membership",
+)
 def checkout(
     body: CheckoutRequest,
     request: Request,
@@ -129,11 +136,14 @@ def checkout(
         amount=float(plan.price),
         ip_addr=client_ip,
         order_info=order_info,
+        return_url=body.return_url,
     )
 
     return CheckoutResponse(
         payment_url=payment_url,
         vnp_txn_ref=vnp_txn_ref,
+        paymentUrl=payment_url,
+        transactionId=vnp_txn_ref,
     )
 
 
@@ -159,6 +169,46 @@ def ipn_callback(
     query_params = dict(request.query_params)
     rsp_code, message = payment_svc.process_ipn(db, query_params)
     return VNPAYIPNResponse(RspCode=rsp_code, Message=message)
+
+
+@router.get(
+    "/transactions/{vnp_txn_ref}",
+    response_model=TransactionStatusResponse,
+    summary="U012 - Tra cứu trạng thái giao dịch theo mã VNPAY reference",
+)
+def get_transaction_status(
+    vnp_txn_ref: str,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    """
+    Frontend payment-result uses this endpoint to confirm backend/IPN state
+    instead of trusting browser redirect query params.
+    """
+    transaction = (
+        db.query(Transaction)
+        .filter(Transaction.vnp_txn_ref == vnp_txn_ref, Transaction.user_id == current_user.id)
+        .options(joinedload(Transaction.membership_plan))
+        .first()
+    )
+    if not transaction:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+
+    return TransactionStatusResponse(
+        id=transaction.id,
+        vnp_txn_ref=transaction.vnp_txn_ref,
+        plan_id=transaction.plan_id,
+        plan_name=transaction.membership_plan.name if transaction.membership_plan else None,
+        amount=float(transaction.amount),
+        status=transaction.status,
+        vnp_transaction_no=transaction.vnp_transaction_no,
+        vnp_response_code=transaction.vnp_response_code,
+        vnp_transaction_status=transaction.vnp_transaction_status,
+        paid_at=transaction.paid_at,
+        failed_at=transaction.failed_at,
+        ipn_received_at=transaction.ipn_received_at,
+        created_at=transaction.created_at,
+    )
 
 
 @router.get(

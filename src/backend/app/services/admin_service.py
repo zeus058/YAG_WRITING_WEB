@@ -335,13 +335,13 @@ class AdminService:
         previous_status = chapter.moderation_status
         chapter.moderation_status = decision
 
-        moderation_log = AIModerationLog(
-            chapter_id=chapter.id,
-            is_violation=decision in {"rejected", "flagged"},
-            violation_category=violation_category,
-            confidence_score=confidence_score,
-            reason=f"Admin override: {reason}",
-        )
+        moderation_log = db.query(AIModerationLog).filter(AIModerationLog.chapter_id == chapter.id).first()
+        if moderation_log is None:
+            moderation_log = AIModerationLog(chapter_id=chapter.id)
+        moderation_log.is_violation = decision in {"rejected", "flagged"}
+        moderation_log.violation_category = violation_category
+        moderation_log.confidence_score = confidence_score
+        moderation_log.reason = f"Admin override: {reason}"
         db.add(chapter)
         db.add(moderation_log)
         AdminService.create_audit_log(

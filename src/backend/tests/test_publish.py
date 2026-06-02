@@ -97,7 +97,8 @@ def test_payload_to_dict_contains_required_moderation_fields():
 
 @patch("app.services.publish_service.get_rabbitmq_connection")
 def test_push_task_uses_required_queue(mock_conn):
-    from app.services.publish_service import PublishTaskPayload, push_publish_task_to_queue
+    from app.core.config import settings
+    from app.services.publish_service import PUBLISH_QUEUE_NAME, PublishTaskPayload, push_publish_task_to_queue
 
     mock_channel = MagicMock()
     mock_connection = MagicMock()
@@ -113,9 +114,12 @@ def test_push_task_uses_required_queue(mock_conn):
     )
 
     assert push_publish_task_to_queue(payload) is True
-    mock_channel.queue_declare.assert_called_once_with(queue="yag_moderation_queue", durable=True)
+    declared_queues = [call.kwargs["queue"] for call in mock_channel.queue_declare.call_args_list]
+    assert PUBLISH_QUEUE_NAME in declared_queues
+    assert settings.RABBITMQ_MODERATION_RETRY_QUEUE in declared_queues
+    assert settings.RABBITMQ_MODERATION_DLQ in declared_queues
     publish_kwargs = mock_channel.basic_publish.call_args.kwargs
-    assert publish_kwargs["routing_key"] == "yag_moderation_queue"
+    assert publish_kwargs["routing_key"] == PUBLISH_QUEUE_NAME
     assert json.loads(publish_kwargs["body"].decode("utf-8"))["content"] == "content"
 
 
@@ -187,6 +191,8 @@ def client():
 
 @patch("app.api.v1.endpoints.publish.push_publish_task_to_queue", return_value=True)
 def test_endpoint_publish_202(mock_push, client):
+    from app.services.publish_service import PUBLISH_QUEUE_NAME
+
     test_client, chapter = client
 
     response = test_client.post(
@@ -198,7 +204,7 @@ def test_endpoint_publish_202(mock_push, client):
     data = response.json()
     assert data["status"] == "accepted"
     assert data["chapter_id"] == str(chapter.id)
-    assert data["queue"] == "yag_moderation_queue"
+    assert data["queue"] == PUBLISH_QUEUE_NAME
     assert data["moderation_status"] == "pending"
     assert data["is_premium"] is True
 

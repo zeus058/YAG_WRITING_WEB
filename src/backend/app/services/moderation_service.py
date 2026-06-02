@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-import google.generativeai as genai
+from google import genai
 
 from app.core.config import settings
 from app.models.ai_moderation_log import AIModerationLog
@@ -29,9 +29,8 @@ class ModerationReport:
     raw_response: Optional[str] = None
 
 
-def _get_gemini_model():
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    return genai.GenerativeModel("gemini-1.5-flash")
+def _get_gemini_client():
+    return genai.Client(api_key=settings.GEMINI_API_KEY)
 
 
 MODERATION_PROMPT = """
@@ -107,9 +106,12 @@ def moderate_content(content: str, chapter_id: str) -> ModerationReport:
         )
 
     try:
-        model = _get_gemini_model()
+        client = _get_gemini_client()
         prompt = MODERATION_PROMPT.format(content=content[:12000])
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt,
+        )
         raw_text = response.text.strip()
         parsed = _extract_json(raw_text)
 
@@ -160,13 +162,14 @@ def apply_moderation_result(chapter_id: str, report: ModerationReport, db) -> Ch
         chapter.moderation_status = report.result.value
 
     categories = [str(category) for category in report.flagged_categories]
-    log = AIModerationLog(
-        chapter_id=chapter.id,
-        is_violation=report.result in {ModerationResult.REJECTED, ModerationResult.FLAGGED},
-        violation_category=", ".join(categories)[:50] if categories else None,
-        confidence_score=report.confidence,
-        reason=report.reason,
-    )
+    log = db.query(AIModerationLog).filter(AIModerationLog.chapter_id == chapter.id).first()
+    if log is None:
+        log = AIModerationLog(chapter_id=chapter.id)
+
+    log.is_violation = report.result in {ModerationResult.REJECTED, ModerationResult.FLAGGED}
+    log.violation_category = ", ".join(categories)[:50] if categories else None
+    log.confidence_score = report.confidence
+    log.reason = report.reason
 
     db.add(chapter)
     db.add(log)

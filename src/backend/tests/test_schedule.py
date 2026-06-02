@@ -137,7 +137,7 @@ def test_scan_marks_schedule_published_when_chapter_exists(mock_notify, mock_ema
         title="On time",
         content="Published chapter",
         moderation_status="approved",
-        publish_at=datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc),
+        publish_at=datetime(2026, 6, 1, 0, 0, tzinfo=timezone.utc),
     )
     db = FakeDB(
         schedule=schedule,

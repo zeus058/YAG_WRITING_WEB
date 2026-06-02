@@ -24,9 +24,9 @@ type ApiFetchOptions = Omit<RequestInit, "body"> & {
   timeoutMs?: number;
 };
 
-export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<ApiResult<T>> {
+export async function apiFetch<T = any>(path: string, options: ApiFetchOptions = {}): Promise<ApiResult<T>> {
   const controller = new AbortController();
-  const timeout = window.setTimeout(
+  const timeout = setTimeout(
     () => controller.abort(),
     options.timeoutMs ?? appEnv.requestTimeoutMs
   );
@@ -63,7 +63,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
 
     return { data: payload as T, status: response.status };
   } finally {
-    window.clearTimeout(timeout);
+    clearTimeout(timeout);
   }
 }
 
@@ -79,6 +79,7 @@ export type AuthResponse = {
 };
 
 export const yagApi = {
+  apiFetch,
   health: () => apiFetch<{ status: string; service: string; version: string }>("/health"),
 
   auth: {
@@ -108,22 +109,48 @@ export const yagApi = {
         method: "POST",
         body: payload,
       }),
+    me: () =>
+      apiFetch<AuthResponse["user"] & { profile?: { display_name: string; avatar_url?: string | null; bio?: string | null; reputation_score?: number } }>("/api/v1/auth/me", {
+        method: "GET",
+      }),
   },
 
   reader: {
     searchStories: (params: { query: string; semantic?: boolean; genre?: string }) =>
-      apiFetch("/api/v1/stories/search", {
+      apiFetch<any>("/api/v1/stories/search", {
         method: "POST",
         body: params,
       }),
-    getRecommendations: () => apiFetch("/api/v1/recommendations"),
+    getRecommendations: () => apiFetch<any>("/api/v1/recommendations"),
     followStory: (storyId: string) =>
-      apiFetch(`/api/v1/stories/${storyId}/follow`, { method: "POST" }),
-    postComment: (chapterId: string, body: { content: string; rating?: number }) =>
-      apiFetch(`/api/v1/chapters/${chapterId}/comments`, {
+      apiFetch<any>(`/api/v1/stories/${storyId}/bookmark`, { method: "POST" }),
+    postComment: (chapterId: string, body: { content: string; parent_id?: string | null }) =>
+      apiFetch<any>(`/api/v1/chapters/${chapterId}/comments`, {
         method: "POST",
         body,
       }),
+    listStories: (params?: { category?: string; status?: string; q?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.category) query.set("category", params.category);
+      if (params?.status) query.set("status", params.status);
+      if (params?.q) query.set("q", params.q);
+      return apiFetch<any[]>(`/api/v1/stories/?${query.toString()}`, { method: "GET" });
+    },
+    getStoryDetail: (storyId: string) =>
+      apiFetch<any>(`/api/v1/stories/${storyId}`, { method: "GET" }),
+    getChapters: (storyId: string) =>
+      apiFetch<any[]>(`/api/v1/stories/${storyId}/chapters`, { method: "GET" }),
+    getReviews: (storyId: string) =>
+      apiFetch<{ reviews: any[] }>(`/api/v1/stories/${storyId}/reviews`, { method: "GET" }),
+    getLibrary: () =>
+      apiFetch<any[]>("/api/v1/stories/library/me", { method: "GET" }),
+  },
+
+  chapters: {
+    getChapter: (chapterId: string) =>
+      apiFetch<any>(`/api/v1/chapters/${chapterId}`, { method: "GET" }),
+    getComments: (chapterId: string) =>
+      apiFetch<{ comments: any[] }>(`/api/v1/chapters/${chapterId}/comments/tree`, { method: "GET" }),
   },
 
   author: {
@@ -134,7 +161,7 @@ export const yagApi = {
         body,
         headers: new Headers(), // Let the browser set multipart/form-data boundary
       }),
-    updateStory: (storyId: string, body: any) =>
+    updateStory: (storyId: string, body: Record<string, unknown>) =>
       apiFetch(`/api/v1/stories/${storyId}`, {
         method: "PUT",
         body,
@@ -168,6 +195,19 @@ export const yagApi = {
         method: "POST",
         body,
       }),
+    getTransaction: (vnpTxnRef: string) =>
+      apiFetch<{
+        id: string;
+        vnp_txn_ref: string;
+        plan_id: string;
+        plan_name?: string | null;
+        amount: number;
+        status: "pending" | "success" | "failed";
+        vnp_transaction_no?: string | null;
+        ipn_received_at?: string | null;
+      }>(`/api/v1/payments/transactions/${vnpTxnRef}`, {
+        method: "GET",
+      }),
   },
 
   admin: {
@@ -181,6 +221,24 @@ export const yagApi = {
       apiFetch("/api/v1/admin/reports", {
         method: "POST",
         body: params,
+      }),
+  },
+  notifications: {
+    list: (limit = 50) =>
+      apiFetch<{ notifications: any[] }>(`/api/v1/notifications/?limit=${limit}`, {
+        method: "GET",
+      }),
+    markAsRead: (id: string) =>
+      apiFetch<any>(`/api/v1/notifications/${id}/read`, {
+        method: "POST",
+      }),
+    markAllAsRead: () =>
+      apiFetch<{ status: string; marked_read_count: number }>("/api/v1/notifications/read-all", {
+        method: "POST",
+      }),
+    unreadCount: () =>
+      apiFetch<{ unread_count: number }>("/api/v1/notifications/unread-count", {
+        method: "GET",
       }),
   },
 };

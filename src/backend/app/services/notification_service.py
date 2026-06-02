@@ -1,12 +1,17 @@
 import asyncio
 import json
 import logging
-from typing import Any
+from typing import Any, Optional
+from uuid import UUID
+from datetime import datetime, timezone
 
 import redis
 from fastapi import WebSocket, WebSocketDisconnect
+from jose import JWTError, jwt
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.models.notification import Notification
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +50,34 @@ def publish_user_notification(user_id: str, payload: dict[str, Any]) -> bool:
         return False
 
 
+def _token_from_websocket(websocket: WebSocket) -> str | None:
+    if settings.ALLOW_WEBSOCKET_QUERY_TOKEN:
+        token = websocket.query_params.get("token") or websocket.query_params.get("access_token")
+        if token:
+            return token
+    auth_header = websocket.headers.get("authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header.split(" ", 1)[1]
+    return websocket.cookies.get("access_token") or websocket.cookies.get("token")
+
+
+def _is_authorized_notification_socket(websocket: WebSocket, user_id: str) -> bool:
+    token = _token_from_websocket(websocket)
+    if not token:
+        return False
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+    except JWTError:
+        return False
+    return str(payload.get("sub")) == str(user_id)
+
+
 async def stream_user_notifications(websocket: WebSocket, user_id: str) -> None:
     """Forward Redis pub/sub events to a WebSocket client."""
+    if not _is_authorized_notification_socket(websocket, user_id):
+        await websocket.close(code=1008)
+        return
+
     await websocket.accept()
     pubsub = None
 
@@ -86,3 +117,95 @@ async def stream_user_notifications(websocket: WebSocket, user_id: str) -> None:
                 pubsub.close()
             except Exception:
                 pass
+
+
+# ---------------------------------------------------------------------------
+# Database Persistent Operations
+# ---------------------------------------------------------------------------
+
+def create_notification(
+    db: Session,
+    user_id: UUID,
+    type: str,
+    title: str,
+    message: str,
+    payload: Optional[dict[str, Any]] = None,
+) -> Notification:
+    """Creates a notification record in PostgreSQL and broadcasts it via Redis pub/sub."""
+    db_notification = Notification(
+        user_id=user_id,
+        type=type,
+        title=title,
+        message=message,
+        payload=payload,
+    )
+    db.add(db_notification)
+    db.commit()
+    db.refresh(db_notification)
+
+    # Prepare JSON payload for live websocket delivery
+    live_payload = {
+        "id": str(db_notification.id),
+        "user_id": str(db_notification.user_id),
+        "type": db_notification.type,
+        "title": db_notification.title,
+        "message": db_notification.message,
+        "payload": db_notification.payload,
+        "read_at": None,
+        "created_at": db_notification.created_at.isoformat() if db_notification.created_at else None,
+    }
+    publish_user_notification(str(user_id), live_payload)
+    return db_notification
+
+
+def get_user_notifications(
+    db: Session,
+    user_id: UUID,
+    limit: int = 50,
+) -> list[Notification]:
+    """Retrieves all notifications for a specific user, sorted by creation date."""
+    return (
+        db.query(Notification)
+        .filter(Notification.user_id == user_id)
+        .order_by(Notification.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def mark_notification_as_read(
+    db: Session,
+    notification_id: UUID,
+    user_id: UUID,
+) -> Optional[Notification]:
+    """Marks a single notification as read by setting read_at to the current time."""
+    notification = (
+        db.query(Notification)
+        .filter(Notification.id == notification_id, Notification.user_id == user_id)
+        .first()
+    )
+    if notification and not notification.read_at:
+        notification.read_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(notification)
+    return notification
+
+
+def mark_all_notifications_as_read(db: Session, user_id: UUID) -> int:
+    """Marks all unread notifications as read for a specific user."""
+    result = (
+        db.query(Notification)
+        .filter(Notification.user_id == user_id, Notification.read_at.is_(None))
+        .update({Notification.read_at: datetime.now(timezone.utc)}, synchronize_session=False)
+    )
+    db.commit()
+    return result
+
+
+def get_unread_count(db: Session, user_id: UUID) -> int:
+    """Returns the count of unread notifications for a user."""
+    return (
+        db.query(Notification)
+        .filter(Notification.user_id == user_id, Notification.read_at.is_(None))
+        .count()
+    )

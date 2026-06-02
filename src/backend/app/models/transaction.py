@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy import Column, String, Numeric, ForeignKey, DateTime, CheckConstraint, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -33,6 +33,12 @@ class Transaction(Base):
         default="pending",
         server_default="pending",
     )
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+    failed_at = Column(DateTime(timezone=True), nullable=True)
+    vnp_response_code = Column(String(20), nullable=True)
+    vnp_transaction_status = Column(String(20), nullable=True)
+    ipn_received_at = Column(DateTime(timezone=True), nullable=True)
+    raw_ipn_payload = Column(JSONB, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

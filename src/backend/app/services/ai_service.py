@@ -411,15 +411,49 @@ async def search_stories_semantic(db: Any, request: AISemanticSearchRequest) -> 
             fallback_rows = []
 
         if not fallback_rows:
-            fallback_rows = [
-                {
-                    "story_id": f"fallback-{index + 1}",
-                    "title": f"Fallback story {index + 1}",
-                    "plot_summary": f"Semantic search fallback for query: {query}",
-                    "distance": float(index) / 10.0,
-                }
-                for index in range(min(3, limit))
-            ]
+            try:
+                result = db.execute(
+                    text(
+                        """
+                        SELECT
+                            s.id AS story_id,
+                            s.title,
+                            s.description AS plot_summary,
+                            0.5 AS distance
+                        FROM stories AS s
+                        WHERE lower(s.title) LIKE lower(:pattern)
+                           OR lower(s.description) LIKE lower(:pattern)
+                           OR lower(s.category) LIKE lower(:pattern)
+                        ORDER BY COALESCE(s.rating_avg, 0) DESC, COALESCE(s.view_count, 0) DESC
+                        LIMIT :limit
+                        """
+                    ),
+                    {"pattern": f"%{query}%", "limit": limit},
+                )
+                fallback_rows = _result_rows(result)
+            except Exception:  # pragma: no cover - defensive fallback
+                fallback_rows = []
+
+        if not fallback_rows:
+            try:
+                result = db.execute(
+                    text(
+                        """
+                        SELECT
+                            s.id AS story_id,
+                            s.title,
+                            s.description AS plot_summary,
+                            0.75 AS distance
+                        FROM stories AS s
+                        ORDER BY COALESCE(s.rating_avg, 0) DESC, COALESCE(s.view_count, 0) DESC
+                        LIMIT :limit
+                        """
+                    ),
+                    {"limit": limit},
+                )
+                fallback_rows = _result_rows(result)
+            except Exception:  # pragma: no cover - defensive fallback
+                fallback_rows = []
 
         return AISemanticSearchResponse(
             query=query,

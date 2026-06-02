@@ -2,6 +2,8 @@ import json
 import logging
 import sys
 import time
+import asyncio
+from uuid import UUID
 
 import pika
 
@@ -16,7 +18,7 @@ from app.services.moderation_service import (
     apply_moderation_result,
     moderate_content,
 )
-from app.services.notification_service import publish_user_notification
+from app.services.notification_service import create_notification
 from app.services.publish_service import PUBLISH_QUEUE_NAME, get_rabbitmq_connection
 
 logging.basicConfig(
@@ -34,6 +36,54 @@ class RetryableModerationError(Exception):
 
 class PermanentWorkerError(Exception):
     pass
+
+
+def declare_moderation_queues(channel) -> None:
+    channel.queue_declare(queue=settings.RABBITMQ_MODERATION_DLQ, durable=True)
+    channel.queue_declare(
+        queue=settings.RABBITMQ_MODERATION_RETRY_QUEUE,
+        durable=True,
+        arguments={
+            "x-message-ttl": REQUEUE_DELAY_SECONDS * 1000,
+            "x-dead-letter-exchange": "",
+            "x-dead-letter-routing-key": PUBLISH_QUEUE_NAME,
+        },
+    )
+    channel.queue_declare(queue=PUBLISH_QUEUE_NAME, durable=True)
+
+
+def _retry_count(properties) -> int:
+    headers = getattr(properties, "headers", None) or {}
+    try:
+        return int(headers.get("x-retry-count", 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _publish_retry(channel, payload: dict, properties, reason: str) -> bool:
+    retry_count = _retry_count(properties) + 1
+    headers = dict(getattr(properties, "headers", None) or {})
+    headers["x-retry-count"] = retry_count
+    headers["x-last-error"] = reason[:500]
+
+    target_queue = settings.RABBITMQ_MODERATION_RETRY_QUEUE
+    if retry_count > settings.RABBITMQ_MODERATION_MAX_RETRIES:
+        target_queue = settings.RABBITMQ_MODERATION_DLQ
+        logger.error("Moving moderation task to DLQ after %s retries: %s", retry_count - 1, reason)
+    else:
+        logger.warning("Retrying moderation task in %ss (attempt %s/%s): %s", REQUEUE_DELAY_SECONDS, retry_count, settings.RABBITMQ_MODERATION_MAX_RETRIES, reason)
+
+    channel.basic_publish(
+        exchange="",
+        routing_key=target_queue,
+        body=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        properties=pika.BasicProperties(
+            delivery_mode=pika.DeliveryMode.Persistent,
+            content_type="application/json",
+            headers=headers,
+        ),
+    )
+    return target_queue != settings.RABBITMQ_MODERATION_DLQ
 
 
 def _load_chapter(db, chapter_id: str) -> Chapter:
@@ -61,6 +111,22 @@ def _build_notification(chapter: Chapter, report) -> dict:
     }
 
 
+def _sync_embedding_if_approved(db, chapter: Chapter, report) -> None:
+    if report.result != ModerationResult.APPROVED or not settings.GEMINI_API_KEY:
+        return
+
+    story = db.query(Story).filter(Story.id == chapter.story_id).first()
+    if not story:
+        return
+
+    try:
+        from app.services.ai_service import sync_story_embedding
+
+        asyncio.run(sync_story_embedding(db, story_id=str(story.id), description=story.description))
+    except Exception as exc:
+        logger.warning("Failed to sync embedding for story %s after moderation: %s", story.id, exc)
+
+
 def handle_publish_chapter(payload: dict, db=None) -> None:
     chapter_id = payload.get("chapter_id")
     if not chapter_id:
@@ -82,10 +148,19 @@ def handle_publish_chapter(payload: dict, db=None) -> None:
             raise RetryableModerationError(report.reason)
 
         chapter = apply_moderation_result(chapter_id=chapter_id, report=report, db=db)
+        _sync_embedding_if_approved(db, chapter, report)
 
         author_id = payload.get("requested_by") or _load_story_author_id(db, chapter.story_id)
         if author_id:
-            publish_user_notification(author_id, _build_notification(chapter, report))
+            notification_payload = _build_notification(chapter, report)
+            create_notification(
+                db=db,
+                user_id=UUID(str(author_id)),
+                type="chapter_moderation_result",
+                title="Ket qua kiem duyet chuong",
+                message=f"Chuong '{chapter.title}' da duoc cap nhat trang thai: {chapter.moderation_status}.",
+                payload=notification_payload,
+            )
 
         logger.info(
             "Finished moderation for chapter %s with status=%s",
@@ -115,15 +190,15 @@ def on_message(channel, method, properties, body) -> None:
         logger.warning("Unknown task type: %s", task_type)
         channel.basic_ack(delivery_tag=method.delivery_tag)
     except RetryableModerationError as exc:
-        logger.warning("Retryable moderation failure: %s", exc)
-        time.sleep(REQUEUE_DELAY_SECONDS)
-        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+        _publish_retry(channel, payload, properties, str(exc))
+        channel.basic_ack(delivery_tag=method.delivery_tag)
     except PermanentWorkerError as exc:
         logger.error("Permanent worker error, dropping message: %s", exc)
         channel.basic_ack(delivery_tag=method.delivery_tag)
     except Exception as exc:
         logger.error("Unexpected worker error: %s", exc)
-        channel.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+        _publish_retry(channel, payload, properties, str(exc))
+        channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
 def start_worker() -> None:
@@ -132,7 +207,7 @@ def start_worker() -> None:
             logger.info("Connecting RabbitMQ at %s", settings.RABBITMQ_HOST)
             connection = get_rabbitmq_connection()
             channel = connection.channel()
-            channel.queue_declare(queue=PUBLISH_QUEUE_NAME, durable=True)
+            declare_moderation_queues(channel)
             channel.basic_qos(prefetch_count=1)
             channel.basic_consume(queue=PUBLISH_QUEUE_NAME, on_message_callback=on_message)
 

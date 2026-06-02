@@ -84,7 +84,8 @@ def unlock_user(
     }
 
 
-@router.get("/moderation/queue", summary="U013/U015 - Admin moderation queue")
+@router.get("/moderation", summary="U013/U015 - Admin moderation queue")
+@router.get("/moderation/queue", include_in_schema=False)
 def get_moderation_queue(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(_require_admin),
@@ -94,6 +95,29 @@ def get_moderation_queue(
 
 @router.post("/moderation/{chapter_id}/override", summary="U015 - Override AI moderation decision")
 def override_moderation(
+    chapter_id: str,
+    request: ModerationOverrideRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(_require_admin),
+):
+    chapter = AdminService.override_chapter_moderation(
+        db=db,
+        admin=current_user,
+        chapter_id=chapter_id,
+        decision=request.decision,
+        reason=request.reason,
+        violation_category=request.violation_category,
+        confidence_score=request.confidence_score,
+    )
+    return {
+        "chapter_id": str(chapter.id),
+        "story_id": str(chapter.story_id),
+        "moderation_status": chapter.moderation_status,
+    }
+
+
+@router.post("/moderation/{chapter_id}", summary="U015 - Frontend moderation decision alias")
+def review_moderation_decision(
     chapter_id: str,
     request: ModerationOverrideRequest,
     db: Session = Depends(deps.get_db),

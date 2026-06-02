@@ -14,7 +14,7 @@ from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
-PUBLISH_QUEUE_NAME = "yag_moderation_queue"
+PUBLISH_QUEUE_NAME = settings.RABBITMQ_MODERATION_QUEUE
 
 
 @dataclass
@@ -72,6 +72,19 @@ def push_publish_task_to_queue(payload: PublishTaskPayload) -> bool:
     try:
         connection = get_rabbitmq_connection()
         channel = connection.channel()
+        channel.queue_declare(
+            queue=settings.RABBITMQ_MODERATION_DLQ,
+            durable=True,
+        )
+        channel.queue_declare(
+            queue=settings.RABBITMQ_MODERATION_RETRY_QUEUE,
+            durable=True,
+            arguments={
+                "x-message-ttl": 60000,
+                "x-dead-letter-exchange": "",
+                "x-dead-letter-routing-key": PUBLISH_QUEUE_NAME,
+            },
+        )
         channel.queue_declare(queue=PUBLISH_QUEUE_NAME, durable=True)
         channel.basic_publish(
             exchange="",

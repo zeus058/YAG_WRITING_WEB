@@ -10,10 +10,11 @@ import json
 from typing import Any, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 import redis
 from sqlalchemy.orm import Session
+from jose import jwt, JWTError
 from starlette.websockets import WebSocketState
 
 from app.api import deps
@@ -103,7 +104,7 @@ def apply_chapter_update(chapter: Chapter, update: ChapterUpdate) -> None:
     update_data = update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(chapter, key, value)
-    chapter.moderation_status = "pending"
+    chapter.moderation_status = "draft"
     chapter.updated_at = datetime.utcnow()
 
 
@@ -117,24 +118,79 @@ def autosave_update_from_message(message: AutosaveMessage) -> ChapterUpdate:
     return ChapterUpdate(**message.model_dump(exclude_none=True))
 
 
-def get_websocket_author(websocket: WebSocket):
+def get_websocket_author(websocket: WebSocket, db: Session) -> User:
     """
-    Isolated until full JWT WebSocket auth is wired.
-    Mirrors the REST author dependency so U004 can enforce ownership consistently.
+    Extracts and validates the JWT token from the WebSocket connection
+    and checks that the user is an author or admin.
     """
-    current_author = deps.get_current_author()
-    if getattr(current_author, "role", None) != "author":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only authors can autosave drafts")
-    return current_author
+    token = None
+    if settings.ALLOW_WEBSOCKET_QUERY_TOKEN:
+        token = websocket.query_params.get("token") or websocket.query_params.get("access_token")
+    if not token:
+        auth_header = websocket.headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+    if not token:
+        token = websocket.cookies.get("access_token") or websocket.cookies.get("token")
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="INVALID_OR_EXPIRED_TOKEN",
+        )
+
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        user_id: str | None = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="INVALID_OR_EXPIRED_TOKEN",
+            )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="INVALID_OR_EXPIRED_TOKEN",
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="INVALID_OR_EXPIRED_TOKEN",
+        )
+
+    if user.is_locked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ACCOUNT_LOCKED",
+        )
+
+    if user.role not in ["author", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản không có quyền tác giả",
+        )
+
+    return user
 
 
 def get_redis_client():
-    redis_url = settings.REDIS_URL or f"redis://{settings.REDIS_HOST}:6379/0"
+    redis_url = settings.REDIS_URL or f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/0"
     return redis.Redis.from_url(redis_url, decode_responses=True, socket_connect_timeout=1, socket_timeout=1)
 
 
 def chapter_cache_key(chapter_id: UUID) -> str:
     return f"chapter:content:{chapter_id}"
+
+
+def invalidate_chapter_cache(redis_client, chapter_id: UUID | str) -> None:
+    if not redis_client:
+        return
+    try:
+        redis_client.delete(chapter_cache_key(UUID(str(chapter_id))))
+    except (ValueError, redis.RedisError):
+        return
 
 
 def story_views_key(story_id: UUID | str) -> str:
@@ -198,13 +254,19 @@ def ensure_reader_can_read(chapter_data: dict[str, Any], current_user) -> None:
         )
 
 
+def is_future_datetime(value: datetime) -> bool:
+    if value.tzinfo is None:
+        return value > datetime.utcnow()
+    return value > datetime.now(timezone.utc)
+
+
 def ensure_chapter_is_available(chapter_data: dict[str, Any], current_user) -> None:
     is_author = str(getattr(current_user, "id", "")) == str(chapter_data["story_author_id"])
     if chapter_data["moderation_status"] != "approved" and not is_author:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not available")
 
     publish_at = datetime.fromisoformat(chapter_data["publish_at"])
-    if publish_at > datetime.utcnow() and not is_author:
+    if is_future_datetime(publish_at) and not is_author:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not published yet")
 
 
@@ -362,7 +424,7 @@ def create_chapter(
         title=chapter_in.title,
         content=chapter_in.content,
         is_premium=chapter_in.is_premium or False,
-        moderation_status="pending",
+        moderation_status="draft",
     )
     db.add(chapter)
     db.commit()
@@ -381,6 +443,7 @@ def update_chapter(
     apply_chapter_update(chapter, chapter_in)
     db.commit()
     db.refresh(chapter)
+    invalidate_chapter_cache(get_redis_client(), chapter_id)
     return chapter
 
 
@@ -411,7 +474,7 @@ def get_chapter(
         is_author = current_user and chapter.story.author_id == current_user.id
         if chapter.moderation_status != "approved" and not is_author:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not available")
-        if chapter.publish_at > datetime.utcnow() and not is_author:
+        if is_future_datetime(chapter.publish_at) and not is_author:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not published yet")
         chapter_data = serialize_chapter(chapter)
         cache_chapter(redis_client, chapter_data)
@@ -442,15 +505,23 @@ def get_chapter(
     response_model=CommentListResponse,
     summary="U010 - Lấy danh sách bình luận của chương",
 )
-def get_comments(chapter_id: UUID, db: Session = Depends(deps.get_db)):
+def get_comments(
+    chapter_id: UUID,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(deps.get_db),
+):
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
 
+    offset = (page - 1) * limit
     comments = (
         db.query(Comment)
         .filter(Comment.chapter_id == chapter_id)
         .order_by(Comment.created_at.asc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
     return {"comments": comments}
@@ -461,15 +532,23 @@ def get_comments(chapter_id: UUID, db: Session = Depends(deps.get_db)):
     response_model=CommentTreeListResponse,
     summary="U010 - Lấy cây bình luận phân cấp của chương",
 )
-def get_comment_tree(chapter_id: UUID, db: Session = Depends(deps.get_db)):
+def get_comment_tree(
+    chapter_id: UUID,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(deps.get_db),
+):
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
 
+    offset = (page - 1) * limit
     comments = (
         db.query(Comment)
         .filter(Comment.chapter_id == chapter_id)
         .order_by(Comment.created_at.asc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
     return {"comments": build_comment_tree(comments)}
@@ -635,6 +714,7 @@ def save_author_draft(
     apply_chapter_update(chapter, draft_in)
     db.commit()
     db.refresh(chapter)
+    invalidate_chapter_cache(get_redis_client(), chapter_id)
     return chapter
 
 
@@ -648,7 +728,7 @@ async def websocket_editor(websocket: WebSocket, chapter_id: UUID):
     db = SessionLocal()
 
     try:
-        current_author = get_websocket_author(websocket)
+        current_author = get_websocket_author(websocket, db)
         chapter = get_author_chapter_or_404(db, chapter_id, current_author)
         await websocket.send_json(
             {
@@ -668,6 +748,7 @@ async def websocket_editor(websocket: WebSocket, chapter_id: UUID):
                 )
                 db.commit()
                 db.refresh(chapter)
+                invalidate_chapter_cache(get_redis_client(), chapter_id)
                 await websocket.send_json(
                     {
                         "type": "autosave",

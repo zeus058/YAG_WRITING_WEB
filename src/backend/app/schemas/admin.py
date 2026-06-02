@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class AdminReasonRequest(BaseModel):
@@ -44,9 +44,14 @@ class AdminRevenueSeriesResponse(BaseModel):
 
 
 class AdminReportRequest(BaseModel):
-    from_date: date
-    to_date: date
-    report_type: Literal["revenue", "users", "content"] = "revenue"
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_date: date = Field(validation_alias=AliasChoices("from_date", "from"))
+    to_date: date = Field(validation_alias=AliasChoices("to_date", "to"))
+    report_type: Literal["revenue", "users", "content"] = Field(
+        default="revenue",
+        validation_alias=AliasChoices("report_type", "type"),
+    )
 
 
 class AdminReportRow(BaseModel):

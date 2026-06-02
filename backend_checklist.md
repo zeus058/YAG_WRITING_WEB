@@ -79,7 +79,7 @@ Tài liệu này lưu trữ tiến độ phát triển các tính năng Backend 
 - [ ] Thiết kế Test Plan chi tiết & kịch bản kiểm thử tích hợp (Integration Tests) và bảo mật (Security Tests). -> *Chưa được hoàn thiện*
 
 ### B. [U006] Gợi ý tình tiết AI (Miu AI Sidebar)
-- [ ] API Gợi ý tình tiết (`POST /api/v1/ai/suggestions`): Nhận context <= 1000 từ + mode, thiết kế prompt cho Gemini đóng vai biên tập viên văn học sinh 3 phương án chi tiết dưới dạng cấu trúc JSON, xử lý ngoại lệ fallback. -> *Hiện tại là placeholder tại `app/api/v1/endpoints/ai.py`*
+- [x] API Gợi ý tình tiết (`POST /api/v1/ai/suggestions`): Nhận context <= 1000 từ + mode, thiết kế prompt cho Gemini đóng vai biên tập viên văn học sinh 3 phương án chi tiết dưới dạng cấu trúc JSON, xử lý ngoại lệ fallback. -> *Đã hoàn thành tại `app/api/v1/endpoints/ai.py` & `app/services/ai_service.py`*
 
 ### C. [U008] AI Tìm kiếm ngữ nghĩa (pgvector)
 - [x] Tích hợp `pgvector` extension vào Database. -> *Đã cấu hình tại `migrations/V1__initial_schema.sql`*

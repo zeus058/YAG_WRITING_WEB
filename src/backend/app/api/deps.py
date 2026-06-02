@@ -3,6 +3,7 @@ FastAPI Route Dependency Injection Modules.
 Provides database sessions, authenticated current user states, and RBAC filters.
 """
 from typing import Generator
+import uuid
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -55,3 +56,13 @@ def get_current_user(
         raise credentials_exception
         
     return user
+
+def get_current_author(current_user: User = Depends(get_current_user)) -> User:
+    """Enforces that the authenticated user has the 'author' or 'admin' role."""
+    if current_user.role not in ["author", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản không có quyền tác giả"
+        )
+    return current_user
+

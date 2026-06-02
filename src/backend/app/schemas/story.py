@@ -10,6 +10,14 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# ---------------------------------------------------------------------------
+# Import modular schemas to satisfy imports in other files
+# ---------------------------------------------------------------------------
+from app.schemas.chapter import ChapterCreate, ChapterUpdate, ChapterResponse
+from app.schemas.comment import CommentCreate, CommentResponse
+from app.schemas.review import ReviewCreate, ReviewResponse
+
+StoryStatus = Literal["ongoing", "completed", "paused"]
 
 # ---------------------------------------------------------------------------
 # Nested schemas
@@ -23,8 +31,6 @@ class AuthorBrief(BaseModel):
     display_name: str = Field(..., description="Bút danh")
     avatar_url: Optional[str] = Field(default=None, description="URL ảnh đại diện")
     reputation_score: Optional[int] = Field(default=None, description="Điểm uy tín")
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 # ---------------------------------------------------------------------------
@@ -57,7 +63,7 @@ class StoryUpdate(BaseModel):
         default=None, min_length=50, description="Tóm tắt mới"
     )
     category: Optional[str] = Field(default=None, description="Thể loại mới")
-    status: Optional[Literal["ongoing", "completed", "paused"]] = Field(
+    status: Optional[StoryStatus] = Field(
         default=None, description="Trạng thái tác phẩm"
     )
     cover_url: Optional[str] = Field(default=None, description="URL ảnh bìa mới")
@@ -113,3 +119,51 @@ class StoryListResponse(BaseModel):
     page: int = Field(..., description="Trang hiện tại")
     limit: int = Field(..., description="Số lượng mỗi trang")
     total_pages: int = Field(..., description="Tổng số trang")
+
+
+# ---------------------------------------------------------------------------
+# U003/U004 additions
+# ---------------------------------------------------------------------------
+
+
+class StoryDetailResponse(StoryResponse):
+    chapters: List[ChapterResponse] = Field(default_factory=list)
+
+
+class ChapterReadResponse(ChapterResponse):
+    cache_status: Literal["hit", "miss", "bypass"]
+    view_count_buffered: bool
+
+
+class BookmarkResponse(BaseModel):
+    story_id: uuid.UUID
+    bookmarked: bool
+    message: str
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
+class CommentListResponse(BaseModel):
+    comments: List[CommentResponse]
+
+
+class CommentUpdate(BaseModel):
+    content: str = Field(..., min_length=1)
+
+
+class CommentTreeResponse(CommentResponse):
+    replies: List["CommentTreeResponse"] = Field(default_factory=list)
+
+
+class CommentTreeListResponse(BaseModel):
+    comments: List[CommentTreeResponse]
+
+
+class ReviewListResponse(BaseModel):
+    reviews: List[ReviewResponse]
+
+
+# Rebuild self-referencing model
+CommentTreeResponse.model_rebuild()

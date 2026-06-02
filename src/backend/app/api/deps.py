@@ -21,12 +21,6 @@ oauth2_scheme = OAuth2PasswordBearer(
     auto_error=False  # Make it graceful so we can raise custom clear exception details
 )
 
-# Mandatory authentication token extraction for required auth routes
-oauth2_mandatory = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/auth/login",
-    auto_error=True
-)
-
 def get_db() -> Generator:
     """Dependency injector for database sessions."""
     try:
@@ -37,7 +31,7 @@ def get_db() -> Generator:
 
 def get_current_user(
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_mandatory)
+    token: Optional[str] = Depends(oauth2_scheme)
 ) -> User:
     """Validates the JWT token signature and retrieves the matching User model."""
     credentials_exception = HTTPException(
@@ -46,6 +40,9 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
+    if not token:
+        raise credentials_exception
+        
     try:
         # Decode using HS256 algorithm and the core system secret key
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])

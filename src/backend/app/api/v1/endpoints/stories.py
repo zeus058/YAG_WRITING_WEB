@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 from app.api import deps
-from app.models.story import Chapter, Library, Review, Story
+from app.models import Chapter, Library, Review, Story
 from app.services.media_service import upload_story_cover_to_cloudinary
 from app.schemas.story import (
     BookmarkResponse,

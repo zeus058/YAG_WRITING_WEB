@@ -1,13 +1,41 @@
 import type { NextConfig } from "next";
 
 // Production build-time environment validation
-if (process.env.ENVIRONMENT === "production") {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (apiBase && (apiBase.includes("localhost") || apiBase.includes("127.0.0.1"))) {
+const deployEnvironment =
+  process.env.NEXT_PUBLIC_DEPLOY_ENV ??
+  process.env.NEXT_PUBLIC_ENVIRONMENT ??
+  process.env.ENVIRONMENT ??
+  "development";
+const normalizedDeployEnvironment = deployEnvironment.toLowerCase();
+
+function assertRequiredProductionUrl(name: string, allowedProtocols: string[]) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`[Production Readiness Error] ${name} must be set for production deployment.`);
+  }
+
+  const parsed = new URL(value);
+  if (!allowedProtocols.includes(parsed.protocol)) {
     throw new Error(
-      `[Production Readiness Error] NEXT_PUBLIC_API_BASE_URL is set to '${apiBase}'. ` +
-      `For production deployment, the API base URL must not be localhost or 127.0.0.1.`
+      `[Production Readiness Error] ${name} must use ${allowedProtocols.join(" or ")} in production.`
     );
+  }
+
+  if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "0.0.0.0") {
+    throw new Error(
+      `[Production Readiness Error] ${name} is set to '${value}'. ` +
+      `For production deployment, public URLs must not be localhost.`
+    );
+  }
+}
+
+if (normalizedDeployEnvironment === "production") {
+  assertRequiredProductionUrl("NEXT_PUBLIC_APP_URL", ["https:"]);
+  assertRequiredProductionUrl("NEXT_PUBLIC_API_BASE_URL", ["https:"]);
+  assertRequiredProductionUrl("NEXT_PUBLIC_WS_BASE_URL", ["wss:"]);
+
+  if (process.env.NEXT_PUBLIC_USE_MOCKS !== "false") {
+    throw new Error("[Production Readiness Error] NEXT_PUBLIC_USE_MOCKS must be explicitly false in production.");
   }
 }
 

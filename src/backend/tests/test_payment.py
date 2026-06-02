@@ -31,7 +31,8 @@ from app.models.membership_plan import MembershipPlan
 from app.models.story import Story
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.services import payment as payment_svc
+from app.services import payment_service as payment_svc
+
 
 client = TestClient(app)
 

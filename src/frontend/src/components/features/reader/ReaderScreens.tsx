@@ -305,9 +305,40 @@ export function DiscoverScreen() {
             />
           )}
           {isLoading ? (
-            <div style={{ padding: 48, textAlign: "center", color: "var(--muted)" }}>
-              Đang tải kết quả tìm kiếm...
-            </div>
+            <>
+              <style>{`
+                @keyframes shimmer {
+                  0% { opacity: 0.4; }
+                  50% { opacity: 0.8; }
+                  100% { opacity: 0.4; }
+                }
+                .skeleton-pulse {
+                  animation: shimmer 1.5s infinite ease-in-out;
+                }
+              `}</style>
+              <div className="home-story-grid">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div 
+                    className="home-story-card skeleton-pulse" 
+                    key={index}
+                    style={{
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <div className="home-story-cover" style={{ backgroundColor: "rgba(255,255,255,0.06)", minHeight: 180, borderRadius: 4 }} />
+                    <div className="home-story-body" style={{ padding: "12px 0 0 0" }}>
+                      <div style={{ backgroundColor: "rgba(255,255,255,0.12)", height: 16, width: "75%", marginBottom: 8, borderRadius: 2 }} />
+                      <div style={{ backgroundColor: "rgba(255,255,255,0.06)", height: 12, width: "50%", marginBottom: 12, borderRadius: 2 }} />
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <div style={{ backgroundColor: "rgba(255,255,255,0.06)", height: 12, width: "25%", borderRadius: 2 }} />
+                        <div style={{ backgroundColor: "rgba(255,255,255,0.06)", height: 12, width: "20%", borderRadius: 2 }} />
+                        <div style={{ backgroundColor: "rgba(255,255,255,0.06)", height: 12, width: "20%", borderRadius: 2 }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <QuickStories storiesList={storiesList} />
           )}

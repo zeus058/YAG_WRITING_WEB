@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
@@ -8,15 +8,60 @@ on:
 
 jobs:
   # ────────────────────────────────────────────────────────────
-  # JOB 1: Backend
+  # JOB 1: Backend CI
   # ────────────────────────────────────────────────────────────
   backend:
-    name: Backend (Python 3.11)
+    name: Backend CI (Python 3.11)
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:15
+        env:
+          POSTGRES_USER: yag_user
+          POSTGRES_PASSWORD: yag_secret
+          POSTGRES_DB: yag_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:3
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_running"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     defaults:
       run:
         working-directory: ./src/backend
+
+    env:
+      DATABASE_URL: postgresql://yag_user:yag_secret@localhost:5432/yag_db
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: localhost
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      GEMINI_API_KEY: ""
 
     steps:
       - name: Checkout code
@@ -29,24 +74,29 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 pytest pytest-cov
 
       - name: Lint with Flake8
         run: |
-          pip install flake8
+          # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
 
-      - name: Run unit tests with pytest
-        run: |
-          pip install pytest pytest-cov
-          pytest --cov=app --cov-report=term-missing -v
+      - name: Run Database Migrations
+        run: python -m app.manage_migrations
+
+      - name: Run unit and integration tests with pytest
+        run: pytest --cov=app --cov-report=term-missing -v
 
   # ────────────────────────────────────────────────────────────
-  # JOB 2: Frontend
+  # JOB 2: Frontend CI
   # ────────────────────────────────────────────────────────────
   frontend:
-    name: Frontend (Node.js 20)
+    name: Frontend CI (Node.js 20)
     runs-on: ubuntu-latest
 
     defaults:
@@ -72,3 +122,41 @@ jobs:
 
       - name: Build check
         run: npm run build
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 3: CD Deploy (Automated Migrations on live environments)
+  # ────────────────────────────────────────────────────────────
+  deploy:
+    name: Continuous Deployment
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    defaults:
+      run:
+        working-directory: ./src/backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install sqlalchemy psycopg2-binary
+
+      - name: Apply Database Migrations on Production/Staging
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "WARNING: DATABASE_URL secret is not configured. Skipping migrations rollout."
+          else
+            python -m app.manage_migrations
+            echo "SUCCESS: Database migrations successfully rolled out to live environments."
+          fi

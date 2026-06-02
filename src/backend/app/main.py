@@ -101,10 +101,11 @@ async def request_context_middleware(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
-# Serve local media uploads in development. Production can replace this with Cloudinary URLs.
-uploads_dir = Path(__file__).resolve().parents[1] / "uploads"
-uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/media", StaticFiles(directory=str(uploads_dir)), name="media")
+# Serve local uploads only outside production. Internet deployment uses Cloudinary URLs.
+if settings.ENVIRONMENT != "production":
+    uploads_dir = Path(__file__).resolve().parents[1] / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/media", StaticFiles(directory=str(uploads_dir)), name="media")
 
 @app.get("/", tags=["Main"])
 def read_root():

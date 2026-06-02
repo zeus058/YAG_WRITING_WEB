@@ -88,7 +88,7 @@ Tài liệu này lưu trữ tiến độ phát triển các tính năng Backend 
 - [x] API Tìm kiếm ngữ nghĩa (`POST /api/v1/stories/search`): Nhận câu hỏi tự nhiên, vector hóa qua Gemini Embedding, truy vấn bằng toán tử khoảng cách Cosine `<=>` để trả về top truyện tương đồng nhất. -> *Đã hoàn thành tại `app/api/v1/endpoints/stories.py` & `app/services/ai_service.py`*
 
 ### D. [U009] AI Đề xuất truyện (AI Recommendation)
-- [ ] API Gợi ý cá nhân hóa (`GET /api/v1/recommendations`): Dựng vector sở thích từ `reading_histories` và `libraries` của độc giả, so khớp Cosine với `story_embeddings`, trả top 5 truyện đề xuất. -> *Hiện tại là placeholder tại `app/api/v1/endpoints/ai.py`*
+- [x] API Gợi ý cá nhân hóa (`GET /api/v1/recommendations`): Dựng vector sở thích từ `reading_histories` và `libraries` của độc giả, so khớp Cosine với `story_embeddings`, trả top 5 truyện đề xuất. -> *Đã hoàn thành tại `app/api/v1/endpoints/recommendations.py` & `app/services/ai_service.py`*
 
 ---
 

@@ -35,6 +35,9 @@ from app.services import payment as payment_svc
 
 client = TestClient(app)
 
+# Override VNPAY configurations for unit tests to ensure strict signature verification is active
+settings.VNP_HASH_SECRET = "YAGDEVSECRETKEY12345678"
+
 
 # ---------------------------------------------------------------------------
 # Helper fixtures / utilities
@@ -248,3 +251,97 @@ class TestIPNProcessLogic:
 
         code, msg = payment_svc.process_ipn(MockDB(), params)
         assert code == "02"
+
+
+class TestVerifyPaymentResultLogic:
+    """Test verify_payment_result function."""
+
+    def _sign_params(self, params: dict) -> str:
+        """Helper: compute HMAC-SHA512 hash for VNPAY params."""
+        filtered = {k: v for k, v in params.items() if k not in ("vnp_SecureHash", "vnp_SecureHashType")}
+        sorted_params = sorted(filtered.items())
+        query_string = urlencode(sorted_params)
+        return hmac.new(
+            settings.VNP_HASH_SECRET.encode("utf-8"),
+            query_string.encode("utf-8"),
+            hashlib.sha512,
+        ).hexdigest()
+
+    def test_verify_result_invalid_checksum(self):
+        """Invalid checksum in verify returns success=False."""
+        params = {"vnp_TxnRef": "X", "vnp_SecureHash": "bad"}
+
+        class MockDB:
+            pass
+
+        result = payment_svc.verify_payment_result(MockDB(), params)
+        assert result["success"] is False
+        assert "checksum" in result["message"]
+
+    def test_verify_result_transaction_not_found(self):
+        """Valid checksum but missing transaction returns success=False."""
+        params = {
+            "vnp_TxnRef": "NONEXISTENT",
+            "vnp_Amount": "100",
+        }
+        params["vnp_SecureHash"] = self._sign_params(params)
+
+        class MockQuery:
+            def filter(self, *args): return self
+            def first(self): return None
+
+        class MockDB:
+            def query(self, model): return MockQuery()
+
+        result = payment_svc.verify_payment_result(MockDB(), params)
+        assert result["success"] is False
+        assert "Không tìm thấy" in result["message"]
+
+    def test_verify_result_mock_checkout_extension(self):
+        """Mock checkout extends current user premium subscription."""
+        params = {
+            "vnp_TxnRef": "MOCK_TXN_REF",
+            "vnp_Amount": "4900000",
+        }
+
+        class MockUser:
+            def __init__(self):
+                self.premium_until = None
+
+        class MockDB:
+            def commit(self):
+                pass
+
+        user = MockUser()
+        result = payment_svc.verify_payment_result(MockDB(), params, current_user=user)
+        assert result["success"] is True
+        assert result["plan_name"] == "Gói Tháng Premium"
+        assert user.premium_until is not None
+
+        # Test extending an already active membership
+        initial_expiry = user.premium_until
+        result2 = payment_svc.verify_payment_result(MockDB(), params, current_user=user)
+        assert result2["success"] is True
+        assert user.premium_until > initial_expiry
+
+    def test_verify_result_mock_checkout_yearly(self):
+        """Mock checkout for yearly package adds 365 days."""
+        params = {
+            "vnp_TxnRef": "MOCK_TXN_REF",
+            "vnp_Amount": "39900000",  # 399,000 VND
+        }
+
+        class MockUser:
+            def __init__(self):
+                self.premium_until = None
+
+        class MockDB:
+            def commit(self):
+                pass
+
+        user = MockUser()
+        result = payment_svc.verify_payment_result(MockDB(), params, current_user=user)
+        assert result["success"] is True
+        assert result["plan_name"] == "Gói Năm Premium"
+        assert result["amount"] == 399000.0
+

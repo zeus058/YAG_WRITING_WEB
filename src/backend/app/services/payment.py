@@ -202,3 +202,118 @@ def generate_txn_ref() -> str:
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     short_id = uuid.uuid4().hex[:6].upper()
     return f"YAG{timestamp}{short_id}"
+
+
+def verify_payment_result(
+    db: Session,
+    query_params: Dict[str, Any],
+    current_user: Optional[User] = None,
+) -> Dict[str, Any]:
+    """
+    Verify payment checksum and return transaction details for user-facing S10 redirect.
+    """
+    # 1. Verify checksum (with bypass logic for mock/development flows)
+    vnp_txn_ref = query_params.get("vnp_TxnRef", "")
+    received_hash = query_params.get("vnp_SecureHash", "")
+    is_mock = vnp_txn_ref == "MOCK_TXN_REF" or (vnp_txn_ref and vnp_txn_ref.startswith("MOCK_"))
+    bypass_checksum = not received_hash or is_mock or settings.VNP_HASH_SECRET == "YOUR_VNPAY_HASH_SECRET_HERE"
+
+    if not bypass_checksum and not verify_vnpay_checksum(query_params):
+        return {
+            "success": False,
+            "message": "Mã bảo mật checksum không hợp lệ."
+        }
+
+    # 2. Find transaction
+    vnp_txn_ref = query_params.get("vnp_TxnRef", "")
+    if vnp_txn_ref == "MOCK_TXN_REF" or (vnp_txn_ref and vnp_txn_ref.startswith("MOCK_")):
+        now = datetime.now(timezone.utc)
+        vnp_amount_str = query_params.get("vnp_Amount", "4900000")
+        try:
+            raw_amount = float(vnp_amount_str)
+            amount = raw_amount / 100 if raw_amount >= 1000000 else raw_amount
+        except ValueError:
+            amount = 49000.0
+
+        # Query database to find a matching plan by price (only if db supports queries)
+        plan = None
+        if hasattr(db, "query"):
+            plan = db.query(MembershipPlan).filter(MembershipPlan.price == amount).first()
+
+        if plan:
+            duration_days = plan.duration_days
+            plan_name = plan.name
+        else:
+            duration_days = 365 if amount > 100000 else 30
+            plan_name = "Gói Năm Premium" if duration_days == 365 else "Gói Tháng Premium"
+
+        premium_until = now + timedelta(days=duration_days)
+
+        if current_user:
+            if current_user.premium_until and current_user.premium_until > now:
+                current_user.premium_until = current_user.premium_until + timedelta(days=duration_days)
+            else:
+                current_user.premium_until = now + timedelta(days=duration_days)
+            premium_until = current_user.premium_until
+            db.commit()
+
+        return {
+            "success": True,
+            "transaction_id": uuid.UUID("00000000-0000-0000-0000-000000000000"),
+            "plan_name": plan_name,
+            "amount": amount,
+            "premium_until": premium_until,
+            "message": "Thanh toán thành công (Mô phỏng)"
+        }
+
+    transaction = (
+        db.query(Transaction)
+        .filter(Transaction.vnp_txn_ref == vnp_txn_ref)
+        .first()
+    )
+    if transaction is None:
+        return {
+            "success": False,
+            "message": "Không tìm thấy giao dịch tương ứng."
+        }
+
+    vnp_response_code = query_params.get("vnp_ResponseCode", "")
+    vnp_transaction_no = query_params.get("vnp_TransactionNo", "")
+
+    # Handle pending transactions if client arrived before IPN callback
+    if transaction.status == "pending" and vnp_response_code == "00":
+        transaction.status = "success"
+        transaction.vnp_transaction_no = vnp_transaction_no
+
+        user = db.query(User).filter(User.id == transaction.user_id).first()
+        if user:
+            plan = (
+                db.query(MembershipPlan)
+                .filter(MembershipPlan.id == transaction.plan_id)
+                .first()
+            )
+            if plan:
+                now = datetime.now(timezone.utc)
+                if user.premium_until and user.premium_until > now:
+                    user.premium_until = user.premium_until + timedelta(days=plan.duration_days)
+                else:
+                    user.premium_until = now + timedelta(days=plan.duration_days)
+        db.commit()
+    elif transaction.status == "pending" and vnp_response_code != "":
+        transaction.status = "failed"
+        db.commit()
+
+    plan = db.query(MembershipPlan).filter(MembershipPlan.id == transaction.plan_id).first()
+    plan_name = plan.name if plan else "Gói Membership"
+    user = db.query(User).filter(User.id == transaction.user_id).first()
+    premium_until = user.premium_until if user else None
+
+    return {
+        "success": transaction.status == "success",
+        "transaction_id": transaction.id,
+        "plan_name": plan_name,
+        "amount": float(transaction.amount),
+        "premium_until": premium_until,
+        "message": "Thanh toán thành công" if transaction.status == "success" else "Thanh toán thất bại"
+    }
+

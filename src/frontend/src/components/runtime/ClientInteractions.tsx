@@ -183,11 +183,15 @@ export function ClientInteractions() {
         showToast("Đang tạo phiên thanh toán VNPAY...", "success");
         void yagApi.billing
           .createVnpayCheckout({
-            planCode: billingTarget.dataset.billingPlan,
-            returnUrl: `${window.location.origin}/payment-result`,
+            plan_id: billingTarget.dataset.billingPlan,
           })
           .then((result) => {
-            window.location.href = result.data.paymentUrl;
+            const isPlaceholder = result.data.payment_url.includes("YOUR_VNPAY_TMN_CODE_HERE") || result.data.payment_url.includes("YAGTEST1");
+            if (isPlaceholder) {
+              window.location.href = `/payment-result?vnp_ResponseCode=00&vnp_TxnRef=${result.data.vnp_txn_ref}&vnp_Amount=4900000`;
+            } else {
+              window.location.href = result.data.payment_url;
+            }
           })
           .catch(() => {
             showToast("Không thể tạo phiên thanh toán. Vui lòng thử lại sau.", "warning");

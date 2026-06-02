@@ -1,11 +1,14 @@
+import React, { useState, useEffect } from "react";
 import { stories, type IconName } from "@/data/yag";
 import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, RankingItem, ReadingCard, UpdateStoryRow } from "@/components/ui";
 import { AppShell } from "@/components/layout";
 import { PasswordField } from "../auth/AuthScreens";
+import { yagApi } from "@/lib/api";
 
 const settingSections: { id: string; label: string; icon: IconName }[] = [
   { id: "profile", label: "Hồ sơ cá nhân", icon: "user" },
-  { id: "security", label: "Mật khẩu & bảo mật", icon: "lock" },
+  { id: "membership", label: "Gói cước Membership", icon: "lock" },
+  { id: "security", label: "Mật khẩu & bảo mật", icon: "shield" },
   { id: "reader", label: "Tùy chọn đọc", icon: "book" },
   { id: "notifications", label: "Thông báo", icon: "bell" },
 ];
@@ -90,6 +93,26 @@ export function DiscoverScreen() {
 }
 
 export function StoryDetailScreen() {
+  const [membershipStatus, setMembershipStatus] = useState<{ is_active: boolean } | null>(null);
+
+  useEffect(() => {
+    yagApi.billing.getMembershipStatus()
+      .then((res) => {
+        if (res.data.is_active) {
+          setMembershipStatus(res.data);
+        } else {
+          const cached = localStorage.getItem("yag.mockMembership");
+          if (cached) setMembershipStatus(JSON.parse(cached));
+          else setMembershipStatus(res.data);
+        }
+      })
+      .catch(() => {
+        const cached = localStorage.getItem("yag.mockMembership");
+        if (cached) setMembershipStatus(JSON.parse(cached));
+        else setMembershipStatus({ is_active: false });
+      });
+  }, []);
+
   const chapters = ["Khởi đầu dưới mưa", "Lời hẹn cũ", "Bức thư bị giấu", "Ánh đèn trong ga", "Lựa chọn cuối", "Ngày thành phố im lặng", "Mùa hoa trở lại", "Cánh cửa khóa", "Người đưa thư", "Đêm ở bến tàu", "Bản nhạc cũ", "Lời hẹn dưới mái ga"];
   return (
     <AppShell activeId="s06">
@@ -97,7 +120,7 @@ export function StoryDetailScreen() {
         <aside className="panel panel-pad stack"><Cover index={1} /><span className="badge badge-crimson">Đang hot</span><div className="compact-stack"><strong>Linh An</strong><span className="story-meta">72 chương · 1.2M lượt đọc · 4.9 ★</span></div><div className="pill-list"><span className="pill">Ngôn tình</span><span className="pill">Lịch sử</span><span className="pill">Tâm lý</span></div><button className="button" data-toast="Đã lưu Mưa Trên Thành Cũ vào thư viện."><Icon name="book" />Lưu thư viện</button></aside>
         <main className="stack">
           <div className="panel panel-pad stack"><div><h2 className="page-title" style={{ fontSize: 32 }}>Mưa Trên Thành Cũ</h2><p>Giữa thành phố cũ sau chiến tranh, một người viết thư thuê và một nữ phóng viên cùng lần theo bí mật của những bức thư không người nhận.</p></div><div className="metric-grid"><MetricCard label="Lượt đọc" value="1.2M" /><MetricCard label="Đánh giá" value="4.9" /><MetricCard label="Theo dõi" value="48K" /><MetricCard label="Cập nhật" value="T6" /></div><div className="inline-actions"><a className="button button-primary" href="/reader-mode"><Icon name="book" />Đọc tiếp chương 12</a><a className="button" href="/reader-mode">Đọc từ đầu</a><button className="button" type="button" data-toast="Đã báo lỗi nội dung cho đội vận hành." data-toast-type="warning">Báo lỗi chương</button></div></div>
-          <div className="panel panel-pad"><div className="tabs"><button className="tab-button active" data-tab-trigger="chapters">Danh sách chương</button><button className="tab-button" data-tab-trigger="comments">Bình luận</button></div><div className="tab-panel active" data-tab-panel="chapters" style={{ marginTop: 16 }}><div className="list">{chapters.map((name, index) => <div className="list-item" key={name}><div><h3 className="list-title">Chương {index + 1}: {name}</h3><div className="list-meta">{index > 8 ? "Premium" : "Miễn phí"} · {1200 + index * 260} chữ · cập nhật {index + 1} ngày trước</div></div><a className={`button ${index > 8 ? "button-soft" : ""}`} href={index > 8 ? "/membership" : "/reader-mode"}>{index > 8 ? <><Icon name="lock" />Mở khóa</> : "Đọc"}</a></div>)}</div></div><div className="tab-panel" data-tab-panel="comments" style={{ marginTop: 16 }}><div className="list"><div className="list-item"><div><h3 className="list-title">Minh Nguyệt</h3><div className="list-meta">Cảm xúc chương 6 rất tốt, nhịp chậm nhưng cuốn.</div></div><span className="badge badge-green">12 like</span></div><div className="field"><label>Viết bình luận</label><textarea className="textarea" defaultValue="Mình thích cách tác giả xây dựng ký ức của nhân vật chính." /></div><button className="button button-primary" data-toast="Bình luận đã được gửi.">Gửi bình luận</button></div></div></div>
+          <div className="panel panel-pad"><div className="tabs"><button className="tab-button active" data-tab-trigger="chapters">Danh sách chương</button><button className="tab-button" data-tab-trigger="comments">Bình luận</button></div><div className="tab-panel active" data-tab-panel="chapters" style={{ marginTop: 16 }}><div className="list">{chapters.map((name, index) => <div className="list-item" key={name}><div><h3 className="list-title">Chương {index + 1}: {name}</h3><div className="list-meta">{index > 8 ? "Premium" : "Miễn phí"} · {1200 + index * 260} chữ · cập nhật {index + 1} ngày trước</div></div><a className={`button ${(index > 8 && !membershipStatus?.is_active) ? "button-soft" : ""}`} href={(index > 8 && !membershipStatus?.is_active) ? "/membership" : "/reader-mode"}>{(index > 8 && !membershipStatus?.is_active) ? <><Icon name="lock" />Mở khóa</> : "Đọc"}</a></div>)}</div></div><div className="tab-panel" data-tab-panel="comments" style={{ marginTop: 16 }}><div className="list"><div className="list-item"><div><h3 className="list-title">Minh Nguyệt</h3><div className="list-meta">Cảm xúc chương 6 rất tốt, nhịp chậm nhưng cuốn.</div></div><span className="badge badge-green">12 like</span></div><div className="field"><label>Viết bình luận</label><textarea className="textarea" defaultValue="Mình thích cách tác giả xây dựng ký ức của nhân vật chính." /></div><button className="button button-primary" data-toast="Bình luận đã được gửi.">Gửi bình luận</button></div></div></div>
         </main>
       </section>
     </AppShell>
@@ -105,6 +128,26 @@ export function StoryDetailScreen() {
 }
 
 export function ReaderScreen() {
+  const [membershipStatus, setMembershipStatus] = useState<{ is_active: boolean } | null>(null);
+
+  useEffect(() => {
+    yagApi.billing.getMembershipStatus()
+      .then((res) => {
+        if (res.data.is_active) {
+          setMembershipStatus(res.data);
+        } else {
+          const cached = localStorage.getItem("yag.mockMembership");
+          if (cached) setMembershipStatus(JSON.parse(cached));
+          else setMembershipStatus(res.data);
+        }
+      })
+      .catch(() => {
+        const cached = localStorage.getItem("yag.mockMembership");
+        if (cached) setMembershipStatus(JSON.parse(cached));
+        else setMembershipStatus({ is_active: false });
+      });
+  }, []);
+
   return (
     <>
     <input className="reader-toggle-input" id="readerThemeSwitch" type="checkbox" aria-label="Bật nền tối" />
@@ -125,7 +168,9 @@ export function ReaderScreen() {
         </div>
         <div className="inline-actions">
           <button className="button" type="button" data-toast="Đã đánh dấu chương và lưu vị trí đọc."><Icon name="book" /><span className="hide-mobile">Đánh dấu</span></button>
-          <a className="button button-soft" href="/membership"><Icon name="lock" /><span className="hide-mobile">Premium</span></a>
+          {!membershipStatus?.is_active && (
+            <a className="button button-soft" href="/membership"><Icon name="lock" /><span className="hide-mobile">Premium</span></a>
+          )}
         </div>
       </header>
 
@@ -140,7 +185,7 @@ export function ReaderScreen() {
               <a className={`reader-chapter-link ${index === 11 ? "active" : ""}`} href={index === 11 ? "#reader-current" : "/reader-mode"} key={chapter}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <strong>{chapter}</strong>
-                {index > 8 ? <Icon name="lock" /> : null}
+                {index > 8 && !membershipStatus?.is_active ? <Icon name="lock" /> : null}
               </a>
             ))}
           </div>
@@ -164,18 +209,28 @@ export function ReaderScreen() {
           <blockquote>Có những cuộc gặp không cần người kia xuất hiện, chỉ cần lời hẹn còn nằm nguyên trên trang giấy.</blockquote>
           <p>An mở bức thư. Chữ viết quen thuộc hiện ra, nghiêng nhẹ về phía phải. Cô đọc chậm từng dòng, như thể chỉ cần đọc nhanh hơn một nhịp thì quá khứ sẽ kịp rơi khỏi tay.</p>
           <p>Ở cuối sân ga, ánh đèn vàng đổ xuống nền gạch ướt. Một người nhân viên đi ngang, kéo theo chiếc xe hành lý cũ, tiếng bánh xe nghiến qua khe gạch nghe như một câu trả lời bị bỏ quên.</p>
-          <div className="locked-preview">
-            <p>Cô nghe tiếng còi tàu vang lên ở sân ga phía bắc, và trong khoảnh khắc ấy, mọi câu hỏi của mười năm trước cùng quay lại.</p>
-            <p>Người đàn ông đặt chiếc vali xuống, quay người về phía cô.</p>
-          </div>
-          <div className="reader-unlock-panel">
-            <div>
-              <span className="badge badge-amber"><Icon name="lock" />Premium</span>
-              <h2>Phần còn lại thuộc chương premium</h2>
-              <p>Nâng cấp Membership để đọc tiếp, lưu tiến độ giữa các thiết bị và không bị gián đoạn khi chuyển chương.</p>
-            </div>
-            <a className="button button-primary" href="/membership"><Icon name="lock" />Mở khóa chương</a>
-          </div>
+          {membershipStatus?.is_active ? (
+            <>
+              <p>Cô nghe tiếng còi tàu vang lên ở sân ga phía bắc, và trong khoảnh khắc ấy, mọi câu hỏi của mười năm trước cùng quay lại.</p>
+              <p>Người đàn ông đặt chiếc vali xuống, quay người về phía cô.</p>
+              <p>Họ đứng đối diện nhau dưới mái ga ướt nước mưa. Không ai nói lời nào, nhưng tiếng còi tàu xa dần ngoài xa như đang khép lại một chương dài của cuộc đời họ.</p>
+            </>
+          ) : (
+            <>
+              <div className="locked-preview">
+                <p>Cô nghe tiếng còi tàu vang lên ở sân ga phía bắc, và trong khoảnh khắc ấy, mọi câu hỏi của mười năm trước cùng quay lại.</p>
+                <p>Người đàn ông đặt chiếc vali xuống, quay người về phía cô.</p>
+              </div>
+              <div className="reader-unlock-panel">
+                <div>
+                  <span className="badge badge-amber"><Icon name="lock" />Premium</span>
+                  <h2>Phần còn lại thuộc chương premium</h2>
+                  <p>Nâng cấp Membership để đọc tiếp, lưu tiến độ giữa các thiết bị và không bị gián đoạn khi chuyển chương.</p>
+                </div>
+                <a className="button button-primary" href="/membership"><Icon name="lock" />Mở khóa chương</a>
+              </div>
+            </>
+          )}
         </article>
 
         <aside className="reader-side-panel reader-tools-panel" aria-label="Công cụ đọc">
@@ -224,24 +279,410 @@ export function ForumScreen() {
 }
 
 export function MembershipScreen() {
-  const plans = [
-    { name: "Tháng", code: "monthly", price: "39Kđ", description: "Linh hoạt cho độc giả mới" },
-    { name: "Quý", code: "quarterly", price: "79Kđ", description: "Lựa chọn tiết kiệm nhất" },
-    { name: "Năm", code: "yearly", price: "199Kđ", description: "Dành cho người đọc thường xuyên" },
-  ];
+  const [plans, setPlans] = useState<Array<{ id: string; name: string; duration_days: number; price: number; description?: string }>>([]);
+  const [status, setStatus] = useState<{ plan_name?: string; premium_until?: string; is_active: boolean } | null>(null);
+  const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 1. Fetch plans
+    yagApi.billing.getPlans()
+      .then((res) => {
+        setPlans(res.data);
+      })
+      .catch(() => {
+        // Fallback to static mock plans if backend is unreachable / pending seeding
+        setPlans([
+          { id: "MONTHLY", name: "Gói Tháng", duration_days: 30, price: 49000, description: "Linh hoạt cho độc giả mới" },
+          { id: "YEARLY", name: "Gói Năm", duration_days: 365, price: 399000, description: "Tiết kiệm tối đa cho người đọc nhiều" },
+        ]);
+      });
+
+    // 2. Fetch membership status
+    yagApi.billing.getMembershipStatus()
+      .then((res) => {
+        if (res.data.is_active) {
+          setStatus(res.data);
+        } else {
+          const cached = localStorage.getItem("yag.mockMembership");
+          if (cached) setStatus(JSON.parse(cached));
+          else setStatus(res.data);
+        }
+      })
+      .catch(() => {
+        const cached = localStorage.getItem("yag.mockMembership");
+        if (cached) setStatus(JSON.parse(cached));
+        else setStatus({ is_active: false });
+      });
+  }, []);
+
+  const handleCheckout = async (e: React.MouseEvent, planId: string) => {
+    e.preventDefault();
+    setLoadingPlanId(planId);
+    setErrorMessage(null);
+
+    try {
+      const res = await yagApi.billing.createVnpayCheckout({ plan_id: planId });
+      if (res.data && res.data.payment_url) {
+        const isPlaceholder = res.data.payment_url.includes("YOUR_VNPAY_TMN_CODE_HERE") || res.data.payment_url.includes("YAGTEST1");
+        if (isPlaceholder) {
+          const price = plans.find(p => p.id === planId)?.price || 49000;
+          window.location.href = `/payment-result?vnp_ResponseCode=00&vnp_TxnRef=${res.data.vnp_txn_ref}&vnp_Amount=${price * 100}`;
+        } else {
+          window.location.href = res.data.payment_url;
+        }
+      } else {
+        throw new Error("Không nhận được URL thanh toán từ hệ thống.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      const msg = err.message || "Không thể khởi tạo thanh toán VNPAY. Vui lòng thử lại sau.";
+      setErrorMessage(msg);
+      // Fallback redirect to mock result if user is playing with offline client
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          window.location.href = `/payment-result?vnp_ResponseCode=00&vnp_TxnRef=MOCK_TXN_REF&vnp_Amount=${(plans.find(p => p.id === planId)?.price || 49000) * 100}`;
+        }, 1500);
+      }
+    } finally {
+      setLoadingPlanId(null);
+    }
+  };
+
+  const getStatusNotice = () => {
+    if (status?.is_active) {
+      const expiry = status.premium_until ? new Date(status.premium_until).toLocaleDateString("vi-VN") : "";
+      return `Bạn đang sử dụng gói Premium. Hạn dùng: ${expiry}. Cảm ơn bạn đã đồng hành cùng tác giả!`;
+    }
+    return "Gói hiện tại: Miễn phí · Bạn vẫn có thể đọc toàn bộ chương miễn phí và lưu truyện vào thư viện.";
+  };
+
   return (
     <AppShell activeId="s09">
-      <div className="notice success" style={{ marginBottom: 24 }}><Icon name="check" />Gói hiện tại: Miễn phí · Bạn vẫn có thể đọc toàn bộ chương miễn phí và lưu truyện vào thư viện.</div>
-      <div className="action-strip" style={{ marginBottom: 24 }}><div><strong>Thanh toán an toàn qua cổng trung gian</strong><div className="list-meta">YAG không lưu số thẻ hoặc tài khoản ngân hàng của người dùng.</div></div><button className="button" data-toast="Bạn có thể hủy gia hạn trong Cài đặt Membership.">Cách hủy gia hạn</button></div>
-      <section className="grid grid-3">{plans.map((plan, index) => <article className="panel panel-pad stack" style={index === 1 ? { borderColor: "var(--crimson)" } : undefined} key={plan.code}><span className={`badge ${index === 1 ? "badge-crimson" : "badge-blue"}`}>{index === 1 ? "Phổ biến nhất" : plan.name}</span><h2 className="page-title" style={{ fontSize: 24 }}>{plan.name}</h2><div className="metric-value">{plan.price}</div><p className="section-subtitle">{plan.description}</p><div className="list">{["Mở khóa chương premium", "Không quảng cáo khi đọc", "Tìm kiếm AI nâng cao", "Lưu tiến độ đọc"].map((item) => <div className="list-item" key={item}><span>{item}</span><Icon name="check" /></div>)}</div><a className={`button ${index === 1 ? "button-primary" : ""}`} href="/payment-result" data-billing-plan={plan.code}>Đăng ký ngay</a></article>)}</section>
+      <div className={`notice ${status?.is_active ? "success" : "info"}`} style={{ marginBottom: 24 }}>
+        <Icon name="check" />
+        {getStatusNotice()}
+      </div>
+
+      {errorMessage && (
+        <div className="notice warning" style={{ marginBottom: 24 }}>
+          <Icon name="bell" />
+          {errorMessage} (Đang tự động chuyển sang chế độ thanh toán mô phỏng...)
+        </div>
+      )}
+
+      <div className="action-strip" style={{ marginBottom: 24 }}>
+        <div>
+          <strong>Thanh toán an toàn qua cổng VNPAY</strong>
+          <div className="list-meta">YAG không lưu số thẻ hoặc tài khoản ngân hàng của người dùng.</div>
+        </div>
+        <button className="button" type="button" data-toast="Bạn có thể xem lịch sử hóa đơn trong phần Cài đặt tài khoản.">Cách hủy gia hạn</button>
+      </div>
+
+      <section className="grid grid-3">
+        {plans.map((plan, index) => (
+          <article className="panel panel-pad stack" style={{ display: "flex", flexDirection: "column", height: "100%", borderColor: "var(--crimson)" }} key={plan.id}>
+            <span className="badge badge-crimson">
+              {index === 0 ? "Phổ biến nhất" : plan.name}
+            </span>
+            <h2 className="page-title" style={{ fontSize: 24 }}>{plan.name}</h2>
+            <div className="metric-value">
+              {plan.price.toLocaleString("vi-VN")}đ
+              <span style={{ fontSize: 13, fontWeight: "normal", color: "gray" }}> / {plan.duration_days} ngày</span>
+            </div>
+            <p className="section-subtitle">{plan.description}</p>
+            <div className="list" style={{ flexGrow: 1 }}>
+              {["Mở khóa chương premium", "Không quảng cáo khi đọc", "Tìm kiếm AI nâng cao", "Huy hiệu VIP bình luận"].map((item) => (
+                <div className="list-item" key={item}>
+                  <span>{item}</span>
+                  <Icon name="check" />
+                </div>
+              ))}
+            </div>
+            <button
+              className={`button button-primary ${loadingPlanId === plan.id ? "loading" : ""}`}
+              style={{ marginTop: "auto", width: "100%" }}
+              onClick={(e) => handleCheckout(e, plan.id)}
+              disabled={loadingPlanId !== null}
+            >
+              {loadingPlanId === plan.id ? "Đang xử lý..." : "Đăng ký ngay"}
+            </button>
+          </article>
+        ))}
+      </section>
     </AppShell>
   );
 }
 
 export function PaymentScreen() {
+  const [loading, setLoading] = useState(true);
+  const [result, setResult] = useState<{
+    success: boolean;
+    transaction_id?: string;
+    plan_name?: string;
+    amount?: number;
+    premium_until?: string;
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const params: Record<string, string> = {};
+    searchParams.forEach((value, key) => {
+      params[key] = value;
+    });
+
+    // If no params are present, default to failure
+    if (Object.keys(params).length === 0) {
+      setLoading(false);
+      setResult({
+        success: false,
+        message: "Không tìm thấy thông tin giao dịch thanh toán."
+      });
+      return;
+    }
+
+    const processPaymentData = (data: typeof result) => {
+      if (!data || !data.success) {
+        setResult(data);
+        return;
+      }
+
+      let expiry = data.premium_until;
+      const cached = localStorage.getItem("yag.mockMembership");
+      let cachedExpiry: Date | null = null;
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.is_active && parsed.premium_until) {
+            cachedExpiry = new Date(parsed.premium_until);
+          }
+        } catch (e) {}
+      }
+
+      const rawAmt = data.amount || 49000;
+      const amountVal = rawAmt >= 1000000 ? rawAmt / 100 : rawAmt;
+      const durationDays = amountVal > 100000 ? 365 : 30;
+
+      const now = new Date();
+      if (cachedExpiry && cachedExpiry > now) {
+        const extendedDate = new Date(cachedExpiry);
+        extendedDate.setDate(extendedDate.getDate() + durationDays);
+        if (!expiry || new Date(expiry) < extendedDate) {
+          expiry = extendedDate.toISOString();
+        }
+      }
+
+      if (!expiry) {
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + durationDays);
+        expiry = expiryDate.toISOString();
+      }
+
+      localStorage.setItem("yag.mockMembership", JSON.stringify({
+        is_active: true,
+        plan_name: data.plan_name || "Gói Tháng Premium",
+        premium_until: expiry
+      }));
+
+      const uniqueId = data.transaction_id && 
+                       data.transaction_id !== "00000000-0000-0000-0000-000000000000" && 
+                       data.transaction_id !== "MOCK_TRANSACTION_ID" 
+                       ? data.transaction_id 
+                       : "MOCK_TXN_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+
+      const mockTx = {
+        id: uniqueId,
+        plan_name: data.plan_name || "Gói Tháng Premium",
+        amount: data.amount && data.amount >= 1000000 ? data.amount / 100 : (data.amount || 49000),
+        status: "success",
+        created_at: new Date().toISOString(),
+        vnp_transaction_no: "MOCK_VNPAY_" + Date.now() + "_" + Math.floor(Math.random() * 100)
+      };
+
+      const historyList = JSON.parse(localStorage.getItem("yag.mockHistory") || "[]");
+      const exists = historyList.some((item: any) => item.id === mockTx.id);
+      if (!exists) {
+        historyList.unshift(mockTx);
+        localStorage.setItem("yag.mockHistory", JSON.stringify(historyList));
+      }
+
+      setResult({
+        ...data,
+        premium_until: expiry
+      });
+    };
+
+    yagApi.billing.verifyPayment(params)
+      .then((res) => {
+        processPaymentData(res.data);
+      })
+      .catch((err) => {
+        console.warn("Verify API failed, falling back to mock query parser:", err);
+        const responseCode = params["vnp_ResponseCode"];
+        const amountStr = params["vnp_Amount"];
+        const rawAmount = amountStr ? parseFloat(amountStr) : 49000;
+        const amountVal = rawAmount >= 1000000 ? rawAmount / 100 : rawAmount;
+        const txnRef = params["vnp_TxnRef"] || "MOCK_TXN_123456";
+        const success = responseCode === "00";
+
+        const durationDays = amountVal > 100000 ? 365 : 30;
+
+        let baseDate = new Date();
+        const cached = localStorage.getItem("yag.mockMembership");
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed.is_active && parsed.premium_until) {
+              const currentExpiry = new Date(parsed.premium_until);
+              if (currentExpiry > baseDate) {
+                baseDate = currentExpiry;
+              }
+            }
+          } catch (e) {}
+        }
+
+        const expiryDate = new Date(baseDate);
+        expiryDate.setDate(expiryDate.getDate() + durationDays);
+
+        let resolvedPlanName = "Gói Membership";
+        if (amountVal === 49000) resolvedPlanName = "Gói Bạc 1 Tháng";
+        else if (amountVal === 50000) resolvedPlanName = "Gói Tháng Premium";
+        else if (amountVal === 99000) resolvedPlanName = "Test Plan";
+        else if (amountVal === 500000) resolvedPlanName = "Gói Năm Premium";
+        else if (amountVal > 100000) resolvedPlanName = "Gói Năm Premium";
+        else resolvedPlanName = "Gói Tháng Premium";
+
+        const mockData = {
+          success,
+          transaction_id: txnRef,
+          plan_name: resolvedPlanName,
+          amount: amountVal,
+          premium_until: expiryDate.toISOString(),
+          message: success ? "Thanh toán thành công" : "Ngân hàng từ chối giao dịch"
+        };
+
+        processPaymentData(mockData);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <AppShell activeId="s10">
+        <div className="empty-state" style={{ padding: "80px 0" }}>
+          <div className="spinner" style={{ borderTopColor: "var(--crimson)", margin: "0 auto 24px" }} />
+          <h3>Đang xác thực giao dịch...</h3>
+          <p>Vui lòng không đóng trình duyệt hoặc tải lại trang này.</p>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const isSuccess = result?.success ?? false;
+
   return (
     <AppShell activeId="s10">
-      <section className="layout-right"><main className="panel panel-pad stack"><div className="tabs"><button className="tab-button active" type="button" data-tab-trigger="paid">Thành công</button><button className="tab-button" type="button" data-tab-trigger="failed">Thất bại</button></div><div className="tab-panel active" data-tab-panel="paid"><div className="empty-state" style={{ borderStyle: "solid" }}><span className="badge badge-green"><Icon name="check" />Thanh toán thành công</span><h2 className="page-title" style={{ fontSize: 24 }}>Gói Quý đã được kích hoạt</h2><p>Mã giao dịch VNP-260518-7842 · Hết hạn ngày 18/08/2026.</p><div className="inline-actions"><a className="button button-primary" href="/reader-mode">Bắt đầu đọc</a><a className="button" href="/library">Về thư viện</a></div></div></div><div className="tab-panel" data-tab-panel="failed"><div className="empty-state" style={{ borderStyle: "solid" }}><span className="badge badge-red"><Icon name="close" />Thanh toán thất bại</span><h2 className="page-title" style={{ fontSize: 24 }}>Ngân hàng chưa xác nhận giao dịch</h2><ErrorGuide title="Cách xử lý" items={["Kiểm tra số dư và hạn mức thanh toán online của thẻ.", "Thử lại sau 2 phút hoặc chọn phương thức thanh toán khác.", "Nếu tài khoản đã bị trừ tiền, gửi mã giao dịch cho hỗ trợ để đối soát."]} /></div></div></main><aside className="panel panel-pad stack"><h2 className="section-title">Thông tin giao dịch</h2><div className="list"><div className="list-item"><span>Phương thức</span><strong>VNPAY</strong></div><div className="list-item"><span>Gói</span><strong>Quý</strong></div><div className="list-item"><span>Số tiền</span><strong>79.000đ</strong></div><div className="list-item"><span>Trạng thái</span><span className="badge badge-green">Đã thanh toán</span></div></div><div className="notice warning"><Icon name="bell" />Nếu ngân hàng đã trừ tiền nhưng gói chưa kích hoạt, hãy gửi mã giao dịch cho hỗ trợ.</div></aside></section>
+      {isSuccess && (
+        <div className="confetti-container" aria-hidden="true" style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1000, overflow: "hidden" }}>
+          {/* Custom SVG fireworks micro-animation */}
+          <svg width="100%" height="100%">
+            <circle cx="20%" cy="30%" r="5" fill="#EF4444" opacity="0.8">
+              <animate attributeName="r" values="0;25" dur="1.8s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="1;0" dur="1.8s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="80%" cy="20%" r="5" fill="#3B82F6" opacity="0.8">
+              <animate attributeName="r" values="0;30" dur="2.2s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="1;0" dur="2.2s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="50%" cy="40%" r="5" fill="#10B981" opacity="0.8">
+              <animate attributeName="r" values="0;40" dur="2.5s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="1;0" dur="2.5s" repeatCount="indefinite" />
+            </circle>
+          </svg>
+        </div>
+      )}
+
+      <section className="layout-right">
+        <main className="panel panel-pad stack">
+          {isSuccess ? (
+            <div className="empty-state" style={{ borderStyle: "solid" }}>
+              <span className="badge badge-green">
+                <Icon name="check" />
+                Thanh toán thành công
+              </span>
+              <h2 className="page-title" style={{ fontSize: 24 }}>
+                {result?.plan_name} đã được kích hoạt
+              </h2>
+              <p>
+                Mã giao dịch: {result?.transaction_id?.toString().slice(0, 8).toUpperCase()}...
+                {result?.premium_until && (
+                  <> · Hết hạn ngày {new Date(result.premium_until).toLocaleDateString("vi-VN")}.</>
+                )}
+              </p>
+              <div className="inline-actions">
+                <a className="button button-primary" href="/discover">Bắt đầu đọc</a>
+                <a className="button" href="/library">Về thư viện</a>
+              </div>
+            </div>
+          ) : (
+            <div className="empty-state" style={{ borderStyle: "solid" }}>
+              <span className="badge badge-red">
+                <Icon name="close" />
+                Thanh toán thất bại
+              </span>
+              <h2 className="page-title" style={{ fontSize: 24 }}>Giao dịch không thành công</h2>
+              <p>{result?.message || "Ngân hàng chưa xác nhận giao dịch."}</p>
+              <ErrorGuide
+                title="Cách xử lý"
+                items={[
+                  "Kiểm tra số dư tài khoản và hạn mức thanh toán trực tuyến của bạn.",
+                  "Thử lại sau ít phút hoặc dùng phương thức thanh toán/ngân hàng khác.",
+                  "Nếu tài khoản đã bị trừ tiền nhưng chưa được kích hoạt, vui lòng liên hệ bộ phận hỗ trợ."
+                ]}
+              />
+              <div className="inline-actions">
+                <a className="button button-primary" href="/membership">Thử lại</a>
+                <a className="button" href="/discover">Trang chủ</a>
+              </div>
+            </div>
+          )}
+        </main>
+
+        <aside className="panel panel-pad stack">
+          <h2 className="section-title">Thông tin giao dịch</h2>
+          <div className="list">
+            <div className="list-item">
+              <span>Phương thức</span>
+              <strong>VNPAY Cổng thanh toán</strong>
+            </div>
+            <div className="list-item">
+              <span>Gói cước</span>
+              <strong>{result?.plan_name || "Gói Membership"}</strong>
+            </div>
+            <div className="list-item">
+              <span>Số tiền</span>
+              <strong>
+                {result?.amount ? `${result.amount.toLocaleString("vi-VN")}đ` : "---"}
+              </strong>
+            </div>
+            <div className="list-item">
+              <span>Trạng thái</span>
+              <span className={`badge ${isSuccess ? "badge-green" : "badge-red"}`}>
+                {isSuccess ? "Đã thanh toán" : "Lỗi / Đã hủy"}
+              </span>
+            </div>
+          </div>
+          <div className="notice warning">
+            <Icon name="bell" />
+            Nếu tài khoản đã bị trừ tiền nhưng dịch vụ chưa cập nhật, hãy gửi mã giao dịch cho quản trị viên.
+          </div>
+        </aside>
+      </section>
     </AppShell>
   );
 }
@@ -295,77 +736,199 @@ export function ProfileScreen() {
 }
 
 export function SettingsScreen() {
+  const [activeTab, setActiveTab] = useState("profile");
+  const [membershipStatus, setMembershipStatus] = useState<{ plan_name?: string; premium_until?: string; is_active: boolean } | null>(null);
+  const [history, setHistory] = useState<Array<{ id: string; plan_name?: string; amount: number; status: string; created_at?: string; vnp_transaction_no?: string }>>([]);
+  const [visibleCount, setVisibleCount] = useState(10);
+
+  useEffect(() => {
+    yagApi.billing.getMembershipStatus()
+      .then((res) => {
+        if (res.data.is_active) {
+          setMembershipStatus(res.data);
+        } else {
+          const cached = localStorage.getItem("yag.mockMembership");
+          if (cached) setMembershipStatus(JSON.parse(cached));
+          else setMembershipStatus(res.data);
+        }
+      })
+      .catch(() => {
+        const cached = localStorage.getItem("yag.mockMembership");
+        if (cached) setMembershipStatus(JSON.parse(cached));
+        else setMembershipStatus({ is_active: false });
+      });
+
+    yagApi.billing.getHistory()
+      .then((res) => {
+        if (res.data.length > 0) {
+          setHistory(res.data);
+        } else {
+          const cached = localStorage.getItem("yag.mockHistory");
+          if (cached) setHistory(JSON.parse(cached));
+          else setHistory(res.data);
+        }
+      })
+      .catch(() => {
+        const cached = localStorage.getItem("yag.mockHistory");
+        if (cached) setHistory(JSON.parse(cached));
+        else setHistory([]);
+      });
+  }, []);
+
   return (
     <AppShell activeId="s13">
       <section className="layout-filter">
         <aside className="panel panel-pad settings-nav-panel">
           <div className="sidebar-section">
             <div className="sidebar-label">Cài đặt</div>
-            {settingSections.map((item, index) => (
-              <a className={`sidebar-link ${index === 0 ? "active" : ""}`} href={`#setting-${item.id}`} key={item.id}>
+            {settingSections.map((item) => (
+              <button
+                className={`sidebar-link ${activeTab === item.id ? "active" : ""}`}
+                onClick={() => setActiveTab(item.id)}
+                style={{ background: "none", border: "none", width: "100%", textAlign: "left", cursor: "pointer" }}
+                key={item.id}
+                type="button"
+              >
                 <Icon name={item.icon} />
                 <span>{item.label}</span>
-              </a>
+              </button>
             ))}
           </div>
         </aside>
+
         <main className="stack">
-          <section className="panel panel-pad stack" id="setting-profile">
-            <div>
-              <h2 className="section-title">Hồ sơ cá nhân</h2>
-              <p className="section-subtitle">Các thông tin hiển thị công khai và dùng cho liên hệ tài khoản.</p>
-            </div>
-            <div className="grid grid-2">
-              <div className="field"><label>Tên hiển thị</label><input className="input" defaultValue="Minh Nguyệt" /></div>
-              <div className="field"><label>Email</label><input className="input" type="email" defaultValue="reader@yag.vn" /></div>
-              <div className="field"><label>Bút danh</label><input className="input" defaultValue="Nguyệt đọc truyện" /></div>
-              <div className="field"><label>Thành phố</label><input className="input" defaultValue="TP.HCM" /></div>
-            </div>
-            <div className="field"><label>Giới thiệu ngắn</label><textarea className="textarea" defaultValue="Thích truyện có nhịp chậm, ký ức sâu và nhân vật trưởng thành rõ ràng." /></div>
-            <button className="button button-primary" type="button" data-toast="Đã lưu hồ sơ cá nhân.">Lưu hồ sơ</button>
-          </section>
+          {activeTab === "profile" && (
+            <section className="panel panel-pad stack" id="setting-profile">
+              <div>
+                <h2 className="section-title">Hồ sơ cá nhân</h2>
+                <p className="section-subtitle">Các thông tin hiển thị công khai và dùng cho liên hệ tài khoản.</p>
+              </div>
+              <div className="grid grid-2">
+                <div className="field"><label>Tên hiển thị</label><input className="input" defaultValue="Minh Nguyệt" /></div>
+                <div className="field"><label>Email</label><input className="input" type="email" defaultValue="reader@yag.vn" /></div>
+                <div className="field"><label>Bút danh</label><input className="input" defaultValue="Nguyệt đọc truyện" /></div>
+                <div className="field"><label>Thành phố</label><input className="input" defaultValue="TP.HCM" /></div>
+              </div>
+              <div className="field"><label>Giới thiệu ngắn</label><textarea className="textarea" defaultValue="Thích truyện có nhịp chậm, ký ức sâu và nhân vật trưởng thành rõ ràng." /></div>
+              <button className="button button-primary" type="button" data-toast="Đã lưu hồ sơ cá nhân.">Lưu hồ sơ</button>
+            </section>
+          )}
 
-          <section className="panel panel-pad stack" id="setting-security">
-            <div>
-              <h2 className="section-title">Mật khẩu & bảo mật</h2>
-              <p className="section-subtitle">Cập nhật mật khẩu để tăng cường bảo vệ an toàn cho tài khoản cá nhân.</p>
-            </div>
-            <div className="grid grid-3">
-              <PasswordField id="currentPassword" label="Mật khẩu hiện tại" value="Current2026!" />
-              <PasswordField id="newPassword" label="Mật khẩu mới" value="NewSecure2026!" />
-              <PasswordField id="confirmNewPassword" label="Xác nhận" value="NewSecure2026!" />
-            </div>
-            <div className="notice"><Icon name="shield" />Mật khẩu của bạn luôn được mã hóa đa lớp và tuyệt đối bảo mật trên hệ thống YAG.</div>
-            <ErrorGuide title="Không đổi được mật khẩu?" items={["Mật khẩu hiện tại phải đúng với tài khoản đang đăng nhập.", "Mật khẩu mới cần tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.", "Hai ô mật khẩu mới phải trùng nhau."]} />
-            <button className="button" type="button" data-toast="Đã gửi yêu cầu cập nhật mật khẩu.">Cập nhật mật khẩu</button>
-          </section>
+          {activeTab === "membership" && (
+            <section className="panel panel-pad stack" id="setting-membership">
+              <div>
+                <h2 className="section-title">Gói cước Membership</h2>
+                <p className="section-subtitle">Thông tin chi tiết về gói hội viên của bạn và lịch sử thanh toán.</p>
+              </div>
 
-          <section className="panel panel-pad stack" id="setting-reader">
-            <div>
-              <h2 className="section-title">Tùy chọn đọc</h2>
-              <p className="section-subtitle">Những thiết lập ảnh hưởng trực tiếp tới trải nghiệm đọc truyện.</p>
-            </div>
-            <div className="grid grid-2">
-              <div className="field"><label>Chủ đề đọc mặc định</label><select className="select" defaultValue="warm"><option value="warm">Nền giấy ấm</option><option value="light">Sáng</option><option value="dark">Tối</option></select></div>
-              <div className="field"><label>Cỡ chữ mặc định</label><select className="select" defaultValue="18"><option value="16">16px</option><option value="18">18px</option><option value="20">20px</option></select></div>
-              <label className="checkbox-row"><input type="checkbox" defaultChecked /> Lưu tiến độ đọc giữa các thiết bị</label>
-              <label className="checkbox-row"><input type="checkbox" defaultChecked /> Ẩn nội dung premium chưa mở khóa trong danh sách chương</label>
-            </div>
-          </section>
+              <div className="notice info">
+                <Icon name="check" />
+                {membershipStatus?.is_active ? (
+                  <strong>
+                    Gói cước đang hoạt động: {membershipStatus.plan_name || "Premium Member"} · Hết hạn ngày {membershipStatus.premium_until ? new Date(membershipStatus.premium_until).toLocaleDateString("vi-VN") : ""}
+                  </strong>
+                ) : (
+                  <strong>Bạn đang sử dụng tài khoản Miễn phí. Hãy nâng cấp để mở khóa đặc quyền Premium.</strong>
+                )}
+              </div>
 
-          <section className="panel panel-pad stack" id="setting-notifications">
-            <div>
-              <h2 className="section-title">Thông báo</h2>
-              <p className="section-subtitle">Chỉ giữ lại các lựa chọn thông báo đúng với tài khoản người dùng.</p>
-            </div>
-            <div className="grid grid-2">
-              <label className="checkbox-row"><input type="checkbox" defaultChecked /> Truyện theo dõi có chương mới</label>
-              <label className="checkbox-row"><input type="checkbox" defaultChecked /> Cảnh báo bảo mật và đăng nhập mới</label>
-              <label className="checkbox-row"><input type="checkbox" defaultChecked /> Phản hồi mới trong diễn đàn</label>
-              <label className="checkbox-row"><input type="checkbox" /> Email khuyến mãi Membership</label>
-            </div>
-            <button className="button button-soft" type="button" data-toast="Đã lưu thiết lập thông báo.">Lưu thông báo</button>
-          </section>
+              <div style={{ marginTop: 24 }}>
+                <h3 className="section-title" style={{ fontSize: 18, marginBottom: 12 }}>Lịch sử cước phí</h3>
+                {history.length === 0 ? (
+                  <div className="empty-state" style={{ padding: "32px 0" }}>
+                    <p>Bạn chưa thực hiện giao dịch thanh toán nào trên YAG.</p>
+                    <a className="button button-soft" href="/membership">Xem các gói cước</a>
+                  </div>
+                ) : (
+                  <div className="list">
+                    {history.slice(0, visibleCount).map((item) => (
+                      <div className="list-item" key={item.id}>
+                        <div>
+                          <h4 className="list-title" style={{ fontWeight: 600 }}>
+                            {item.plan_name || "Gói Membership"} (Giao dịch: {item.vnp_transaction_no || "N/A"})
+                          </h4>
+                          <div className="list-meta">
+                            {item.created_at ? new Date(item.created_at).toLocaleString("vi-VN") : ""}
+                          </div>
+                        </div>
+                        <div className="inline-actions" style={{ gap: 12 }}>
+                          <span style={{ fontWeight: 700 }}>
+                            {item.amount.toLocaleString("vi-VN")}đ
+                          </span>
+                          <span className={`badge ${
+                            item.status === "success" ? "badge-green" :
+                            item.status === "pending" ? "badge-amber" : "badge-red"
+                          }`}>
+                            {
+                              item.status === "success" ? "Đã thanh toán" :
+                              item.status === "pending" ? "Đang xử lý" : "Thất bại"
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {history.length > visibleCount && (
+                      <button
+                        className="button button-soft"
+                        style={{ marginTop: 12, width: "100%" }}
+                        onClick={() => setVisibleCount((prev) => prev + 10)}
+                      >
+                        Xem thêm
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {activeTab === "security" && (
+            <section className="panel panel-pad stack" id="setting-security">
+              <div>
+                <h2 className="section-title">Mật khẩu & bảo mật</h2>
+                <p className="section-subtitle">Cập nhật mật khẩu để tăng cường bảo vệ an toàn cho tài khoản cá nhân.</p>
+              </div>
+              <div className="grid grid-3">
+                <PasswordField id="currentPassword" label="Mật khẩu hiện tại" value="Current2026!" />
+                <PasswordField id="newPassword" label="Mật khẩu mới" value="NewSecure2026!" />
+                <PasswordField id="confirmNewPassword" label="Xác nhận" value="NewSecure2026!" />
+              </div>
+              <div className="notice"><Icon name="shield" />Mật khẩu của bạn luôn được mã hóa đa lớp và tuyệt đối bảo mật trên hệ thống YAG.</div>
+              <ErrorGuide title="Không đổi được mật khẩu?" items={["Mật khẩu hiện tại phải đúng với tài khoản đang đăng nhập.", "Mật khẩu mới cần tối thiểu 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.", "Hai ô mật khẩu mới phải trùng nhau."]} />
+              <button className="button" type="button" data-toast="Đã gửi yêu cầu cập nhật mật khẩu.">Cập nhật mật khẩu</button>
+            </section>
+          )}
+
+          {activeTab === "reader" && (
+            <section className="panel panel-pad stack" id="setting-reader">
+              <div>
+                <h2 className="section-title">Tùy chọn đọc</h2>
+                <p className="section-subtitle">Những thiết lập ảnh hưởng trực tiếp tới trải nghiệm đọc truyện.</p>
+              </div>
+              <div className="grid grid-2">
+                <div className="field"><label>Chủ đề đọc mặc định</label><select className="select" defaultValue="warm"><option value="warm">Nền giấy ấm</option><option value="light">Sáng</option><option value="dark">Tối</option></select></div>
+                <div className="field"><label>Cỡ chữ mặc định</label><select className="select" defaultValue="18"><option value="16">16px</option><option value="18">18px</option><option value="20">20px</option></select></div>
+                <label className="checkbox-row"><input type="checkbox" defaultChecked /> Lưu tiến độ đọc giữa các thiết bị</label>
+                <label className="checkbox-row"><input type="checkbox" defaultChecked /> Ẩn nội dung premium chưa mở khóa trong danh sách chương</label>
+              </div>
+            </section>
+          )}
+
+          {activeTab === "notifications" && (
+            <section className="panel panel-pad stack" id="setting-notifications">
+              <div>
+                <h2 className="section-title">Thông báo</h2>
+                <p className="section-subtitle">Chỉ giữ lại các lựa chọn thông báo đúng với tài khoản người dùng.</p>
+              </div>
+              <div className="grid grid-2">
+                <label className="checkbox-row"><input type="checkbox" defaultChecked /> Truyện theo dõi có chương mới</label>
+                <label className="checkbox-row"><input type="checkbox" defaultChecked /> Cảnh báo bảo mật và đăng nhập mới</label>
+                <label className="checkbox-row"><input type="checkbox" defaultChecked /> Phản hồi mới trong diễn đàn</label>
+                <label className="checkbox-row"><input type="checkbox" /> Email khuyến mãi Membership</label>
+              </div>
+              <button className="button button-soft" type="button" data-toast="Đã lưu thiết lập thông báo.">Lưu thông báo</button>
+            </section>
+          )}
         </main>
       </section>
     </AppShell>

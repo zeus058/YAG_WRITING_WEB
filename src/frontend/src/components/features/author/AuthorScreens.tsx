@@ -1,13 +1,53 @@
 import { stories } from "@/data/yag";
 import { Icon, Cover, ErrorGuide, MetricCard } from "@/components/ui";
 import { AppShell, ProductFooter } from "@/components/layout";
+import Link from "next/link";
 
 export function AuthorWorksScreen() {
   return (
-    <AppShell activeId="s15" actions={<a className="button button-primary" href="/author-studio"><Icon name="edit" />Tạo tác phẩm mới</a>}>
-      <section className="metric-grid" style={{ marginBottom: 24 }}><MetricCard label="Tác phẩm" value="8" /><MetricCard label="Chương đã đăng" value="284" /><MetricCard label="Độc giả theo dõi" value="48K" /><MetricCard label="Đúng lịch" value="92%" /></section>
-      <section className="action-strip" style={{ marginBottom: 24 }}><div><strong>2 tác phẩm cần xử lý trong tuần</strong><div className="list-meta">Ưu tiên viết tiếp các truyện có độc giả đang chờ chương mới.</div></div><button className="button" data-toast="Đã lọc danh sách tác phẩm cần cập nhật trước hạn.">Xem việc cần làm</button></section>
-      <section className="grid grid-3">{stories.slice(0, 6).map((story, index) => <article className="story-card" key={story.title}><Cover index={index} /><div className="compact-stack"><span className={`badge ${index % 3 === 0 ? "badge-red" : index % 2 === 0 ? "badge-amber" : "badge-green"}`}>{index % 3 === 0 ? "Trễ lịch" : index % 2 === 0 ? "Sắp tới hạn" : "Đúng lịch"}</span><h3 className="story-title">{story.title}</h3><div className="story-meta">{story.chapters} chương · Đang đăng</div><div className="inline-actions"><a className="button button-primary" href="/author-studio">Viết tiếp</a><a className="button" href="/schedule-commitment">Lịch đăng</a></div></div></article>)}</section>
+    <AppShell activeId="s15" actions={<Link className="button button-primary" href="/author-studio"><Icon name="edit" />Tạo tác phẩm mới</Link>}>
+      <section className="metric-grid" style={{ marginBottom: 24 }}>
+        <MetricCard label="Tác phẩm" value="8" />
+        <MetricCard label="Chương đã đăng" value="284" />
+        <MetricCard label="Độc giả theo dõi" value="48K" />
+        <MetricCard label="Đúng lịch" value="92%" />
+      </section>
+
+      <section className="action-strip" style={{ marginBottom: 24 }}>
+        <div>
+          <strong>2 tác phẩm cần cập nhật trong tuần</strong>
+          <div className="list-meta">Giữ đúng cam kết tiến độ đăng để duy trì điểm uy tín tác giả cao.</div>
+        </div>
+        <button className="button" type="button" data-toast="Đã lọc danh sách tác phẩm cần cập nhật trước hạn.">Xem việc cần làm</button>
+      </section>
+
+      <section className="grid grid-3">
+        {stories.slice(0, 6).map((story, index) => (
+          <article className="story-card" key={story.title}>
+            <Cover index={index} />
+            <div className="compact-stack">
+              <span className={`badge ${
+                index % 3 === 0 ? "badge-red" : index % 2 === 0 ? "badge-amber" : "badge-green"
+              }`}>
+                {index % 3 === 0 ? "Trễ lịch" : index % 2 === 0 ? "Sắp tới hạn" : "Đúng lịch"}
+              </span>
+              <h3 className="story-title" style={{ fontWeight: 700, fontSize: 16 }}>{story.title}</h3>
+              <div className="story-meta" style={{ margin: "4px 0 12px", fontSize: 13, color: "gray" }}>
+                <div>Số chương: {story.chapters} chương</div>
+                <div>Lượt xem: {(12500 + index * 4200).toLocaleString("vi-VN")} lượt đọc</div>
+                <div>Trạng thái: {index % 4 === 0 ? "Tạm ngưng" : "Đang viết"}</div>
+              </div>
+              <div className="inline-actions" style={{ gap: 8 }}>
+                <Link className="button button-primary" href="/author-studio">
+                  <Icon name="edit" />
+                  Thêm chương mới
+                </Link>
+                <Link className="button" href="/schedule-commitment">Lịch đăng</Link>
+              </div>
+            </div>
+          </article>
+        ))}
+      </section>
     </AppShell>
   );
 }
@@ -16,7 +56,7 @@ export function AuthorStudioScreen() {
   const agentActions = [["Mở nút thắt", "Tạo 3 hướng giải quyết bí mật lá thư"], ["Tăng cảm xúc", "Đẩy cao hồi tưởng của An trong cảnh sân ga"], ["Cliffhanger", "Gợi ý câu kết chương giữ độc giả ở lại"], ["Kiểm tra nhịp", "Đánh dấu đoạn bị chậm hoặc lặp ý"]];
   return (
     <div className="studio-page">
-      <header className="studio-topbar"><div className="inline-actions"><a className="button" href="/author-works"><Icon name="arrow" />Tác phẩm</a><div><strong>Author Studio</strong><div className="story-meta">Tự động lưu · 1.284 từ · Mục tiêu 2.000 từ</div></div></div><div className="inline-actions"><button className="button" data-toast="Bản nháp đã được lưu.">Lưu nháp</button><button className="button" data-toast="Miu AI đã quét nhanh bản thảo và đánh dấu 2 đoạn nên rút gọn." data-toast-type="warning"><Icon name="check" />Kiểm tra</button><a className="button" href="/publish-chapter">Xuất bản</a><button className="button button-primary" data-toast="Đã mở bản đọc thử.">Xem trước</button></div></header>
+      <header className="studio-topbar"><div className="inline-actions"><Link className="button" href="/author-works"><Icon name="arrow" />Tác phẩm</Link><div><strong>Author Studio</strong><div className="story-meta">Tự động lưu · 1.284 từ · Mục tiêu 2.000 từ</div></div></div><div className="inline-actions"><button className="button" data-toast="Bản nháp đã được lưu.">Lưu nháp</button><button className="button" data-toast="Miu AI đã quét nhanh bản thảo và đánh dấu 2 đoạn nên rút gọn." data-toast-type="warning"><Icon name="check" />Kiểm tra</button><Link className="button" href="/publish-chapter">Xuất bản</Link><button className="button button-primary" data-toast="Đã mở bản đọc thử.">Xem trước</button></div></header>
       <main className="studio-grid"><section className="editor-area"><div className="writing-toolbar"><div className="tool-group">{["↶", "↷", "H1", "❝", "☰", "≡", "≣"].map((tool) => <button className="tool-button" type="button" title={tool} data-toast="Đã áp dụng công cụ soạn thảo." key={tool}><span>{tool}</span></button>)}</div><div className="tool-group tool-group-selects"><label>Phông chữ<select className="select compact-select" data-editor-font><option value="Inter, Arial, sans-serif">Inter</option><option value="Georgia, serif">Georgia</option></select></label><label>Cỡ chữ<select className="select compact-select" data-editor-size><option value="14px">14</option><option value="16px">16</option><option value="20px">20</option></select></label><label>Dòng<select className="select compact-select" data-editor-line><option value="1.3">1.3</option><option value="1.6">1.6</option></select></label></div><div className="tool-group"><button className="tool-button" data-format-toggle="bold"><strong>B</strong></button><button className="tool-button" data-format-toggle="italic"><em>I</em></button><button className="tool-button" data-format-toggle="underline"><span style={{ textDecoration: "underline" }}>U</span></button><button className="tool-button" data-format-toggle="highlight"><span className="color-dot" /></button></div></div><div className="writing-workspace"><aside className="chapter-outline"><div className="outline-head"><strong>Dàn ý chương</strong><span className="badge badge-green">Đúng nhịp</span></div>{["Sân ga sau mưa", "Lá thư bị trả lại", "Tiếng còi cuối mùa"].map((item, index) => <button className={`outline-item ${index === 0 ? "active" : ""}`} type="button" data-toast={`Đã mở ${item}.`} key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong><small>{index === 0 ? "Đang viết" : "Ghi chú"}</small></button>)}<div className="outline-metric"><span>Nhịp chương</span><strong>78%</strong><div className="progress"><span style={{ width: "78%" }} /></div></div></aside><div className="editor-paper"><div className="editor-meta-row"><span className="badge badge-blue">Bản nháp</span><span>Đã lưu lúc 10:42</span><span>Markdown bật</span></div><input className="editor-title" defaultValue="Chương 13: Tiếng còi cuối mùa" /><textarea className="editor-body" defaultValue={"Mưa đã ngừng khi An quay lại sân ga. Những ô cửa kính phản chiếu thành phố như một bản thảo chưa kịp sửa, nơi mỗi vệt sáng đều giữ lại một lựa chọn cũ.\n\nCô đặt phong bì lên chiếc ghế gỗ dài. Lần này, cô không chờ ai đến nhận thư."} /><div className="editor-footer-row"><span>1.284 từ · 7 phút đọc</span><span className="badge badge-green">Đã lưu</span></div></div></div></section><aside className="ai-sidebar ai-agent-sidebar"><div className="ai-agent-card"><div className="ai-avatar" aria-hidden="true"><span className="ai-ear left" /><span className="ai-ear right" /><span className="ai-face">•ᴗ•</span></div><div><strong>Miu AI</strong><div className="story-meta">Agent đồng hành viết chương</div></div><span className="badge badge-green">Online</span></div><div className="agent-status"><div><span>Context</span><strong>1.000 từ gần nhất</strong></div><div><span>Tone</span><strong>Trầm lắng</strong></div></div><div className="tabs ai-tabs"><button className="tab-button active" data-tab-trigger="plot">Tình tiết</button><button className="tab-button" data-tab-trigger="voice">Giọng văn</button><button className="tab-button" data-tab-trigger="edit">Biên tập</button></div><div className="tab-panel active stack" data-tab-panel="plot"><div className="agent-bubble"><strong>Miu nghĩ đoạn này cần một lựa chọn khó hơn.</strong><p>Cho An thấy dấu mực quen thuộc trên phong bì, nhưng người đứng ở sân ga lại không phải người cô chờ.</p></div><div className="agent-action-grid">{agentActions.map((item) => <button className="agent-action" type="button" data-agent-action data-toast={item[1]} key={item[0]}><strong>{item[0]}</strong><span>{item[1]}</span></button>)}</div></div><div className="tab-panel stack" data-tab-panel="voice"><div className="tone-meter"><span>Trữ tình</span><div className="progress"><span style={{ width: "82%" }} /></div></div><button className="button button-soft" data-toast="Miu AI đã đề xuất 3 câu thay thế giữ giọng văn trầm lắng.">Đề xuất câu thay thế</button></div><div className="tab-panel stack" data-tab-panel="edit"><div className="agent-checklist"><div><span className="badge badge-amber">2 đoạn</span><strong>Lặp hình ảnh mưa</strong><button className="button" data-toast="Đã đánh dấu các câu lặp hình ảnh mưa.">Xem</button></div></div></div><div className="agent-compose"><textarea className="textarea" rows={3} defaultValue="Miu ơi, giúp mình viết đoạn kết chương tạo cảm giác tiếc nuối." /><button className="button button-primary" data-toast="Miu AI đang tạo 3 phương án kết chương giữ đúng giọng truyện."><Icon name="arrow" />Gửi cho Miu</button></div></aside></main>
       <ProductFooter />
     </div>

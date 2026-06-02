@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import {
   getPageById,
@@ -11,6 +11,7 @@ import {
 } from "@/data/yag";
 import { BrandLogo, Icon } from "@/components/ui";
 import { ProductFooter } from "./ProductFooter";
+import { yagApi } from "@/lib/api";
 
 type AppShellProps = {
   activeId: ScreenId;
@@ -40,6 +41,52 @@ function topbarContext(role: Role) {
 }
 
 export function AppShell({ activeId, actions, children }: AppShellProps) {
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    // 1. Check local storage first
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("yag.mockMembership");
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.is_active) {
+            setIsPremium(true);
+          }
+        } catch (e) {}
+      }
+    }
+
+    // 2. Fetch membership status from API to stay synced
+    yagApi.billing.getMembershipStatus()
+      .then((res) => {
+        if (res.data.is_active) {
+          setIsPremium(true);
+        } else {
+          const cached = localStorage.getItem("yag.mockMembership");
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              setIsPremium(!!parsed.is_active);
+            } catch (e) {
+              setIsPremium(false);
+            }
+          } else {
+            setIsPremium(false);
+          }
+        }
+      })
+      .catch(() => {
+        const cached = localStorage.getItem("yag.mockMembership");
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            setIsPremium(!!parsed.is_active);
+          } catch (e) {}
+        }
+      });
+  }, []);
+
   const role = getRoleForPage(activeId);
   const user = roleInfo[role];
   const currentPage = getPageById(activeId);
@@ -99,12 +146,15 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
           </div>
           <div className="topbar-actions">
             <div className="topbar-status" aria-label="Thông tin nhanh">
-              {topbarContext(role).map((item) => (
-                <span className="topbar-status-chip" key={item.text}>
-                  <Icon name={item.icon} />
-                  {item.text}
-                </span>
-              ))}
+              {topbarContext(role).map((item) => {
+                const text = item.text === "Gói Free" && isPremium ? "Membership" : item.text;
+                return (
+                  <span className="topbar-status-chip" key={item.text}>
+                    <Icon name={item.icon} />
+                    {text}
+                  </span>
+                );
+              })}
             </div>
             <Link className="button icon-button" href="/notifications" aria-label="Thông báo">
               <Icon name="bell" />

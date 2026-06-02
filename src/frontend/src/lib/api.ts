@@ -150,11 +150,22 @@ export const yagApi = {
   },
 
   billing: {
-    createVnpayCheckout: (body: { planCode: string; returnUrl: string }) =>
-      apiFetch<{ paymentUrl: string; transactionId: string }>("/api/v1/payments/vnpay/checkout", {
+    getPlans: () =>
+      apiFetch<Array<{ id: string; name: string; duration_days: number; price: number; description?: string }>>("/api/v1/payment/plans"),
+    getMembershipStatus: () =>
+      apiFetch<{ plan_name?: string; premium_until?: string; is_active: boolean }>("/api/v1/payment/membership/status"),
+    createVnpayCheckout: (body: { plan_id: string }) =>
+      apiFetch<{ payment_url: string; vnp_txn_ref: string }>("/api/v1/payment/vnpay/checkout", {
         method: "POST",
         body,
       }),
+    verifyPayment: (params: Record<string, string | string[] | undefined>) =>
+      apiFetch<{ success: boolean; transaction_id?: string; plan_name?: string; amount?: number; premium_until?: string; message: string }>("/api/v1/payment/vnpay/verify", {
+        method: "POST",
+        body: params,
+      }),
+    getHistory: () =>
+      apiFetch<Array<{ id: string; plan_name?: string; amount: number; status: string; created_at?: string; vnp_transaction_no?: string }>>("/api/v1/payment/history"),
   },
 
   admin: {

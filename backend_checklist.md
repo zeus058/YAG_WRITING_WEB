@@ -38,7 +38,7 @@ Tài liệu này lưu trữ tiến độ phát triển các tính năng Backend 
 - [x] Tạo Index tối ưu hóa hiệu năng SQL (B-Tree cho stories, chapters; Unique index cho transactions) -> *Đã định nghĩa trong `migrations/V1__initial_schema.sql`*
 
 ### B. [U011] Đăng ký Membership
-- [ ] API Danh mục gói cước (`GET /api/v1/membership/plans`): Trả về danh sách gói cước từ DB. -> *Hiện tại là placeholder tại `app/api/v1/endpoints/payment.py`*
+- [x] API Danh mục gói cước (`GET /api/v1/membership/plans`): Trả về danh sách gói cước từ DB. -> *Đã hoàn thành tại `app/api/v1/endpoints/payment.py`*
 - [x] Middleware phân quyền RBAC: Chặn truy cập chương Premium (`is_premium = True`) nếu tài khoản của User chưa đăng ký Premium hoặc hết hạn (`premium_until`). -> *Đã định nghĩa tại `app/api/deps.py` & tích hợp tại `app/api/v1/endpoints/chapters.py`*
 
 ### C. [U012] Thanh toán VNPAY IPN

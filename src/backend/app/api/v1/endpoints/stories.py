@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, status, UploadFile
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func, or_
+from app.models import User
 from app.api import deps
 from app.models import Chapter, Library, Review, Story
 from app.services.media_service import upload_story_cover_to_cloudinary
@@ -16,7 +17,7 @@ from app.schemas.story import (
     StoryStatus,
     StoryUpdate,
 )
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 from app.schemas.ai import AISemanticSearchRequest, AISemanticSearchResponse
@@ -83,9 +84,16 @@ def list_stories(
     category: Optional[str] = None,
     status_value: Optional[StoryStatus] = Query(None, alias="status"),
     q: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(deps.get_db),
 ):
-    query = db.query(Story)
+    # Eager-load related author (and their profile) and use selectinload for collections
+    query = db.query(Story).options(
+        joinedload(Story.author).joinedload(User.profile),
+        selectinload(Story.chapters),
+        selectinload(Story.reviews),
+    )
     if category:
         query = query.filter(Story.category == category)
     if status_value:
@@ -94,18 +102,25 @@ def list_stories(
         pattern = f"%{q}%"
         query = query.filter(or_(Story.title.ilike(pattern), Story.description.ilike(pattern)))
 
-    return query.order_by(Story.updated_at.desc()).all()
+    offset = (page - 1) * limit
+    return query.order_by(Story.updated_at.desc()).offset(offset).limit(limit).all()
 
 
 @router.get("/my-stories", response_model=List[StoryResponse], summary="U003 - Danh sách truyện của tác giả hiện hành")
 def get_my_stories(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(deps.get_db),
     current_author=Depends(deps.get_current_author)
 ):
+    offset = (page - 1) * limit
     return (
         db.query(Story)
+        .options(joinedload(Story.author).joinedload(User.profile), selectinload(Story.chapters), selectinload(Story.reviews))
         .filter(Story.author_id == current_author.id)
         .order_by(Story.updated_at.desc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
 
@@ -135,12 +150,13 @@ def get_author_chapters(
 @router.get("/{story_id}", response_model=StoryDetailResponse, summary="U007 - Chi tiết tác phẩm")
 def get_story_detail(story_id: UUID, db: Session = Depends(deps.get_db)):
     story = get_story_or_404(db, story_id)
+    # Eager-load approved chapters for the detail view
     chapters = (
         db.query(Chapter)
         .filter(
             Chapter.story_id == story_id,
             Chapter.moderation_status == "approved",
-            Chapter.publish_at <= datetime.utcnow(),
+            Chapter.publish_at <= datetime.now(timezone.utc),
         )
         .order_by(Chapter.chapter_number.asc())
         .all()
@@ -164,10 +180,11 @@ def get_story_detail(story_id: UUID, db: Session = Depends(deps.get_db)):
 
 
 @router.post("/{story_id}/bookmark", response_model=BookmarkResponse, summary="U007 - Thêm hoặc bỏ truyện khỏi thư viện cá nhân")
+@router.post("/{story_id}/follow", response_model=BookmarkResponse, include_in_schema=False)
 def toggle_bookmark(
     story_id: UUID,
     db: Session = Depends(deps.get_db),
-    current_user=Depends(deps.get_current_author),
+    current_user=Depends(deps.get_current_user),
 ):
     get_story_or_404(db, story_id)
     bookmark = (
@@ -197,7 +214,7 @@ def toggle_bookmark(
 @router.get("/library/me", response_model=List[StoryResponse], summary="U007 - Lấy thư viện cá nhân của người dùng")
 def get_my_library(
     db: Session = Depends(deps.get_db),
-    current_user=Depends(deps.get_current_author),
+    current_user=Depends(deps.get_current_user),
 ):
     return (
         db.query(Story)
@@ -222,7 +239,7 @@ def submit_review(
     story_id: UUID,
     review_in: ReviewCreate,
     db: Session = Depends(deps.get_db),
-    current_user=Depends(deps.get_current_author),
+    current_user=Depends(deps.get_current_user),
 ):
     story = get_story_or_404(db, story_id)
     content = review_in.content.strip() if review_in.content else None
@@ -277,7 +294,7 @@ def update_my_review(
     story_id: UUID,
     review_in: ReviewCreate,
     db: Session = Depends(deps.get_db),
-    current_user=Depends(deps.get_current_author),
+    current_user=Depends(deps.get_current_user),
 ):
     story = get_story_or_404(db, story_id)
     review = (
@@ -305,7 +322,7 @@ def update_my_review(
 def delete_my_review(
     story_id: UUID,
     db: Session = Depends(deps.get_db),
-    current_user=Depends(deps.get_current_author),
+    current_user=Depends(deps.get_current_user),
 ):
     story = get_story_or_404(db, story_id)
     review = (
@@ -326,6 +343,7 @@ def delete_my_review(
 @router.put("/{story_id}", response_model=StoryResponse, summary="U003 - Cập nhật thông tin chung của bộ truyện")
 async def update_story(
     story_id: UUID,
+    request: Request,
     title: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
@@ -337,6 +355,15 @@ async def update_story(
     story = get_story_or_404(db, story_id)
     if story.author_id != current_author.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to edit this story")
+
+    content_type = request.headers.get("content-type", "")
+    if content_type.startswith("application/json"):
+        payload = await request.json()
+        if isinstance(payload, dict):
+            title = payload.get("title", title)
+            description = payload.get("description", description)
+            category = payload.get("category", category)
+            status_value = payload.get("status", status_value)
 
     story_in = StoryUpdate(
         title=title,
@@ -387,7 +414,7 @@ def get_public_chapters(
         .filter(
             Chapter.story_id == story_id,
             Chapter.moderation_status == "approved",
-            Chapter.publish_at <= datetime.utcnow(),
+            Chapter.publish_at <= datetime.now(timezone.utc),
         )
         .order_by(Chapter.chapter_number.asc())
         .all()

@@ -13,6 +13,7 @@ Verifies that:
 Run from project root (SE_Writing_Web/src/backend/):
     pytest tests/test_database.py -v
 """
+import os
 import uuid
 import pytest
 from decimal import Decimal
@@ -21,7 +22,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 
 # ── Connection (matches docker-compose & .env) ────────────────────────────────
-DATABASE_URL = "postgresql://yag_user:yag_secret@localhost:5432/yag_db"
+DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    os.getenv("DATABASE_URL", "postgresql://yag_user:yag_secret@localhost:5432/yag_db"),
+)
 
 @pytest.fixture(scope="session")
 def engine():

@@ -75,38 +75,38 @@ def _chapter():
 
 
 @patch("app.services.moderation_service.settings")
-@patch("app.services.moderation_service._get_gemini_model")
-def test_moderate_content_approved(mock_model, mock_settings):
+@patch("app.services.moderation_service._get_gemini_client")
+def test_moderate_content_approved(mock_client_factory, mock_settings):
     mock_settings.GEMINI_API_KEY = "fake-key"
-    mock_gemini = MagicMock()
-    mock_gemini.generate_content.return_value = _mock_gemini_response(
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = _mock_gemini_response(
         "approved",
         "Safe content",
         [],
         0.97,
     )
-    mock_model.return_value = mock_gemini
+    mock_client_factory.return_value = mock_client
 
     report = moderate_content("Safe chapter", chapter_id="chap-001")
 
     assert report.result == ModerationResult.APPROVED
     assert report.flagged_categories == []
     assert report.confidence == 0.97
-    mock_gemini.generate_content.assert_called_once()
+    mock_client.models.generate_content.assert_called_once()
 
 
 @patch("app.services.moderation_service.settings")
-@patch("app.services.moderation_service._get_gemini_model")
-def test_moderate_content_rejected(mock_model, mock_settings):
+@patch("app.services.moderation_service._get_gemini_client")
+def test_moderate_content_rejected(mock_client_factory, mock_settings):
     mock_settings.GEMINI_API_KEY = "fake-key"
-    mock_gemini = MagicMock()
-    mock_gemini.generate_content.return_value = _mock_gemini_response(
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = _mock_gemini_response(
         "Rejected",
         "Severe sexual content",
         ["sexual_content"],
         0.91,
     )
-    mock_model.return_value = mock_gemini
+    mock_client_factory.return_value = mock_client
 
     report = moderate_content("Unsafe chapter", chapter_id="chap-002")
 
@@ -116,14 +116,14 @@ def test_moderate_content_rejected(mock_model, mock_settings):
 
 
 @patch("app.services.moderation_service.settings")
-@patch("app.services.moderation_service._get_gemini_model")
-def test_moderate_content_flagged_json_fence(mock_model, mock_settings):
+@patch("app.services.moderation_service._get_gemini_client")
+def test_moderate_content_flagged_json_fence(mock_client_factory, mock_settings):
     mock_settings.GEMINI_API_KEY = "fake-key"
-    mock_gemini = MagicMock()
+    mock_client = MagicMock()
     mock_resp = MagicMock()
     mock_resp.text = '```json\n{"result":"flagged","reason":"violence","flagged_categories":["violence"],"confidence_score":0.88}\n```'
-    mock_gemini.generate_content.return_value = mock_resp
-    mock_model.return_value = mock_gemini
+    mock_client.models.generate_content.return_value = mock_resp
+    mock_client_factory.return_value = mock_client
 
     report = moderate_content("Violent chapter", chapter_id="chap-003")
 
@@ -133,12 +133,12 @@ def test_moderate_content_flagged_json_fence(mock_model, mock_settings):
 
 
 @patch("app.services.moderation_service.settings")
-@patch("app.services.moderation_service._get_gemini_model")
-def test_moderate_content_invalid_json_returns_error(mock_model, mock_settings):
+@patch("app.services.moderation_service._get_gemini_client")
+def test_moderate_content_invalid_json_returns_error(mock_client_factory, mock_settings):
     mock_settings.GEMINI_API_KEY = "fake-key"
-    mock_gemini = MagicMock()
-    mock_gemini.generate_content.return_value.text = "not json"
-    mock_model.return_value = mock_gemini
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value.text = "not json"
+    mock_client_factory.return_value = mock_client
 
     report = moderate_content("Any chapter", chapter_id="chap-004")
 
@@ -183,14 +183,15 @@ def test_apply_result_flagged_logs_violation():
     assert log.violation_category == "violence"
 
 
-@patch("app.worker.main.publish_user_notification", return_value=True)
+@patch("app.worker.main.create_notification")
 @patch("app.worker.main.apply_moderation_result")
 @patch("app.worker.main.moderate_content")
-def test_worker_calls_moderation_and_notifies_author(mock_moderate, mock_apply, mock_notify):
+def test_worker_calls_moderation_and_notifies_author(mock_moderate, mock_apply, mock_create_notification):
     from app.worker.main import handle_publish_chapter
 
     chapter = _chapter()
     db = FakeDB(chapter=chapter)
+    author_id = uuid.uuid4()
     report = ModerationReport(ModerationResult.APPROVED, "OK", [], 0.99)
     mock_moderate.return_value = report
     mock_apply.return_value = chapter
@@ -199,19 +200,19 @@ def test_worker_calls_moderation_and_notifies_author(mock_moderate, mock_apply, 
         {
             "task_type": "publish_chapter",
             "chapter_id": str(chapter.id),
-            "requested_by": "author-001",
+            "requested_by": str(author_id),
         },
         db=db,
     )
 
     mock_moderate.assert_called_once()
     mock_apply.assert_called_once()
-    mock_notify.assert_called_once()
+    mock_create_notification.assert_called_once()
 
 
-@patch("app.worker.main.time.sleep")
 @patch("app.worker.main.handle_publish_chapter")
-def test_worker_requeues_retryable_moderation_error(mock_handle, mock_sleep):
+def test_worker_requeues_retryable_moderation_error(mock_handle):
+    from app.core.config import settings
     from app.worker.main import RetryableModerationError, on_message
 
     mock_handle.side_effect = RetryableModerationError("429 rate limit")
@@ -221,8 +222,11 @@ def test_worker_requeues_retryable_moderation_error(mock_handle, mock_sleep):
 
     on_message(mock_channel, mock_method, None, body)
 
-    mock_sleep.assert_called_once()
-    mock_channel.basic_nack.assert_called_once_with(delivery_tag="tag-001", requeue=True)
+    publish_kwargs = mock_channel.basic_publish.call_args.kwargs
+    assert publish_kwargs["routing_key"] == settings.RABBITMQ_MODERATION_RETRY_QUEUE
+    assert publish_kwargs["properties"].headers["x-retry-count"] == 1
+    mock_channel.basic_ack.assert_called_once_with(delivery_tag="tag-001")
+    mock_channel.basic_nack.assert_not_called()
 
 
 @patch("app.worker.main.handle_publish_chapter")

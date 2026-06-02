@@ -26,4 +26,8 @@ def is_premium_active(user: User) -> bool:
     """Check whether a user's premium subscription is currently active."""
     if user.premium_until is None:
         return False
-    return user.premium_until > datetime.now(timezone.utc)
+    premium_until = user.premium_until
+    now = datetime.now(timezone.utc)
+    if premium_until.tzinfo is None:
+        premium_until = premium_until.replace(tzinfo=timezone.utc)
+    return premium_until > now

@@ -8,7 +8,7 @@ Screens: S09 (Membership), S10 (Kết quả thanh toán).
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +50,18 @@ class MembershipStatusResponse(BaseModel):
 class CheckoutRequest(BaseModel):
     """Schema yêu cầu thanh toán Membership."""
 
-    plan_id: str = Field(..., description="Mã gói cần thanh toán (VD: 'MONTHLY')")
+    model_config = ConfigDict(populate_by_name=True)
+
+    plan_id: str = Field(
+        ...,
+        validation_alias=AliasChoices("plan_id", "planCode"),
+        description="Mã gói cần thanh toán (VD: 'MONTHLY')",
+    )
+    return_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("return_url", "returnUrl"),
+        description="Frontend return URL after VNPAY payment.",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -63,3 +74,5 @@ class CheckoutResponse(BaseModel):
 
     payment_url: str = Field(..., description="URL redirect sang VNPAY")
     vnp_txn_ref: str = Field(..., description="Mã tham chiếu giao dịch")
+    paymentUrl: Optional[str] = Field(default=None, description="Frontend camelCase payment URL")
+    transactionId: Optional[str] = Field(default=None, description="Frontend camelCase transaction reference")

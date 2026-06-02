@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Integer, Text, Numeric, DateTime, ForeignKey, CheckConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -43,7 +43,8 @@ class Story(Base):
 
     @property
     def chapter_count_published(self) -> int:
-        return sum(1 for c in self.chapters if c.moderation_status == "approved" and c.publish_at <= datetime.utcnow())
+        now = datetime.now(timezone.utc)
+        return sum(1 for c in self.chapters if c.moderation_status == "approved" and c.publish_at <= now)
 
     @property
     def rating_count(self) -> int:

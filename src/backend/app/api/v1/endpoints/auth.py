@@ -15,6 +15,7 @@ from app.schemas.auth import (
     PasswordResetConfirm,
     ProfileUpdate,
     ProfileResponse,
+    CurrentUserResponse,
 )
 from app.services.auth_service import AuthService
 from app.services.cloudinary_service import CloudinaryService
@@ -33,6 +34,7 @@ def register(user_in: UserRegister, db: Session = Depends(deps.get_db)):
     access_token = create_access_token(subject=db_user.id)
     return {
         "access_token": access_token,
+        "accessToken": access_token,
         "token_type": "bearer",
         "user": db_user
     }
@@ -48,9 +50,19 @@ def login(login_in: UserLogin, db: Session = Depends(deps.get_db)):
     access_token = create_access_token(subject=db_user.id)
     return {
         "access_token": access_token,
+        "accessToken": access_token,
         "token_type": "bearer",
         "user": db_user
     }
+
+
+@router.get(
+    "/me",
+    response_model=CurrentUserResponse,
+    summary="U001/U002 - Lấy thông tin người dùng hiện tại",
+)
+def get_me(current_user: User = Depends(deps.get_current_user)):
+    return current_user
 
 @router.post(
     "/password-reset/request",

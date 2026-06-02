@@ -1,8 +1,11 @@
-"use client";
-
 import React from "react";
 import { MembershipScreen } from "@/components/features/reader/ReaderScreens";
+import { RequireAuth } from "@/components/auth/RequireAuth";
 
 export default function MembershipPage() {
-  return <MembershipScreen />;
+  return (
+    <RequireAuth allowedRoles={["reader", "author", "admin"]}>
+      <MembershipScreen />
+    </RequireAuth>
+  );
 }

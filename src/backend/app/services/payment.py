@@ -11,12 +11,30 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urlencode
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.membership_plan import MembershipPlan
 from app.models.transaction import Transaction
 from app.models.user import User
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _int_param(query_params: Dict[str, Any], key: str) -> int | None:
+    try:
+        return int(str(query_params.get(key, "")))
+    except (TypeError, ValueError):
+        return None
+
+
+def _stringify_payload(query_params: Dict[str, Any]) -> dict[str, str]:
+    return {key: str(value) for key, value in query_params.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -141,13 +159,14 @@ def process_ipn(
     if not verify_vnpay_checksum(query_params):
         return ("97", "Invalid Checksum")
 
-    # Step 2: Find transaction by vnp_TxnRef
+    now = datetime.now(timezone.utc)
+
+    # Step 2: Find transaction by vnp_TxnRef with a row lock when the DB supports it.
     vnp_txn_ref = query_params.get("vnp_TxnRef", "")
-    transaction = (
-        db.query(Transaction)
-        .filter(Transaction.vnp_txn_ref == vnp_txn_ref)
-        .first()
-    )
+    query = db.query(Transaction).filter(Transaction.vnp_txn_ref == vnp_txn_ref)
+    if hasattr(query, "with_for_update"):
+        query = query.with_for_update()
+    transaction = query.first()
     if transaction is None:
         return ("02", "Transaction not found")
 
@@ -156,19 +175,31 @@ def process_ipn(
         return ("04", "Transaction already processed")
 
     # Step 4: Validate amount matches (VNPAY sends amount × 100)
-    vnp_amount = int(query_params.get("vnp_Amount", "0"))
+    vnp_amount = _int_param(query_params, "vnp_Amount")
     expected_amount = int(float(transaction.amount) * 100)
-    if vnp_amount != expected_amount:
+    if vnp_amount is None or vnp_amount != expected_amount:
+        transaction.ipn_received_at = now
+        transaction.raw_ipn_payload = _stringify_payload(query_params)
+        db.commit()
         return ("04", "Amount mismatch")
 
     # Step 5: Check VNPAY response code
     vnp_response_code = query_params.get("vnp_ResponseCode", "")
+    vnp_transaction_status = query_params.get("vnp_TransactionStatus", vnp_response_code)
     vnp_transaction_no = query_params.get("vnp_TransactionNo", "")
 
-    if vnp_response_code == "00":
+    transaction.vnp_response_code = vnp_response_code
+    transaction.vnp_transaction_status = vnp_transaction_status
+    transaction.ipn_received_at = now
+    transaction.raw_ipn_payload = _stringify_payload(query_params)
+    if vnp_transaction_no:
+        transaction.vnp_transaction_no = vnp_transaction_no
+
+    if vnp_response_code == "00" and vnp_transaction_status == "00":
         # Payment successful
         transaction.status = "success"
-        transaction.vnp_transaction_no = vnp_transaction_no
+        transaction.paid_at = now
+        transaction.failed_at = None
 
         # Extend user's premium subscription
         user = db.query(User).filter(User.id == transaction.user_id).first()
@@ -179,17 +210,22 @@ def process_ipn(
                 .first()
             )
             if plan:
-                now = datetime.now(timezone.utc)
                 # If user already has active premium, extend from current expiry
-                if user.premium_until and user.premium_until > now:
-                    user.premium_until = user.premium_until + timedelta(days=plan.duration_days)
+                if user.premium_until and _as_utc(user.premium_until) > now:
+                    user.premium_until = _as_utc(user.premium_until) + timedelta(days=plan.duration_days)
                 else:
                     user.premium_until = now + timedelta(days=plan.duration_days)
     else:
         # Payment failed
         transaction.status = "failed"
+        transaction.failed_at = now
+        transaction.paid_at = None
 
-    db.commit()
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
     return ("00", "Confirm Success")
 
 

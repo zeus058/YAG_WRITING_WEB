@@ -1,14 +1,270 @@
-import { BarChart, ErrorGuide, LineChart, MetricCard } from "@/components/ui";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { BarChart, LineChart, MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
+import { yagApi, appEnv } from "@/lib";
+
+const triggerLiveToast = (message: string, type = "success") => {
+  if (typeof window === "undefined") return;
+  let stack = document.querySelector<HTMLElement>("[data-runtime-toast-stack]");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.className = "toast-stack";
+    stack.dataset.runtimeToastStack = "true";
+    document.body.appendChild(stack);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type} toast-${type}`;
+  const label = document.createElement("strong");
+  label.textContent = "YAG";
+  const body = document.createElement("span");
+  body.textContent = message;
+  toast.append(label, body);
+  stack.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+    if (stack && stack.childElementCount === 0) stack.remove();
+  }, 4000);
+};
 
 export function AdminDashboardScreen() {
-  return <AppShell activeId="s19"><section className="metric-grid"><MetricCard label="Người dùng mới 7 ngày" value="1.284" change="+12%" /><MetricCard label="Truyện chờ duyệt" value="38" change="Cần xử lý" /><MetricCard label="Doanh thu tháng" value="84M" change="+18%" /><MetricCard label="Vi phạm chờ xử lý" value="7" change="Ưu tiên cao" /></section><section className="action-strip" style={{ marginTop: 24 }}><div><strong>Hệ thống ổn định</strong><div className="list-meta">API phản hồi trung bình 182ms, hàng đợi kiểm duyệt còn 38 chương.</div></div><button className="button" data-toast="Đã làm mới số liệu vận hành.">Làm mới dữ liệu</button></section><section className="layout-right" style={{ marginTop: 24 }}><div className="panel panel-pad"><h2 className="section-title">Doanh thu</h2><LineChart /></div><div className="panel panel-pad stack"><h2 className="section-title">Việc cần xử lý</h2><div className="list"><a className="list-item" href="/content-moderation">5 chương bị gắn cờ<span className="badge badge-red">Cao</span></a><a className="list-item" href="/reports">Xuất báo cáo doanh thu tuần<span className="badge badge-blue">Thường</span></a></div></div></section></AppShell>;
+  const [stats, setStats] = useState<any>({
+    active_readers_count: 1284,
+    pending_moderations_count: 38,
+    total_revenue_vnd: 84000000,
+    violation_alerts_count: 7,
+  });
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadDashboard = async () => {
+    try {
+      if (appEnv.useMocks) {
+        setIsLoading(false);
+        return;
+      }
+      const [statsRes, alertsRes] = await Promise.all([
+        yagApi.apiFetch<any>("/api/v1/admin/stats"),
+        yagApi.apiFetch<any[]>("/api/v1/admin/schedule-alerts"),
+      ]);
+      setStats(statsRes.data);
+      setAlerts(alertsRes.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadDashboard();
+  }, []);
+
+  const formatVnd = (val: number) => {
+    return val >= 1000000 ? `${(val / 1000000).toFixed(0)}M` : `${val}đ`;
+  };
+
+  return (
+    <AppShell activeId="s19">
+      <section className="metric-grid">
+        <MetricCard label="Người dùng mới" value={String(stats.active_readers_count)} change="+12%" />
+        <MetricCard label="Chương chờ duyệt" value={String(stats.pending_moderations_count)} change="Cần xử lý" />
+        <MetricCard label="Doanh thu tháng" value={formatVnd(stats.total_revenue_vnd || 84000000)} change="+18%" />
+        <MetricCard label="Cảnh báo vi phạm" value={String(stats.violation_alerts_count)} change="Ưu tiên cao" />
+      </section>
+      <section className="action-strip" style={{ marginTop: 24 }}>
+        <div>
+          <strong>Hệ thống ổn định</strong>
+          <div className="list-meta">Hàng đợi kiểm duyệt AI đang vận hành bình thường.</div>
+        </div>
+        <button className="button" onClick={loadDashboard}>Làm mới dữ liệu</button>
+      </section>
+      <section className="layout-right" style={{ marginTop: 24 }}>
+        <div className="panel panel-pad">
+          <h2 className="section-title">Xu hướng doanh thu</h2>
+          <LineChart />
+        </div>
+        <div className="panel panel-pad stack">
+          <h2 className="section-title">Thông báo lịch đăng trễ</h2>
+          {isLoading ? (
+            <div>Đang tải...</div>
+          ) : alerts.length === 0 ? (
+            <div style={{ color: "var(--muted)" }}>Không có cảnh báo trễ lịch đăng nào.</div>
+          ) : (
+            <div className="list">
+              {alerts.map((item) => (
+                <div className="list-item" key={item.id}>
+                  <div>
+                    <h3 className="list-title">{item.message}</h3>
+                    <div className="list-meta">Tác giả bị trừ điểm uy tín.</div>
+                  </div>
+                  <span className="badge badge-red">Trễ hạn</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </AppShell>
+  );
 }
 
 export function ModerationScreen() {
-  return <AppShell activeId="s20"><section className="layout-right"><main className="panel panel-pad stack"><div className="inline-actions"><select className="select" style={{ width: "auto" }}><option>Tất cả trạng thái</option><option>Cần xem xét</option><option>Đang chờ</option></select><button className="button" data-toast="Danh sách kiểm duyệt đã được lọc.">Lọc</button></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Chương</th><th>Tác giả</th><th>Lý do AI</th><th>Trạng thái</th><th>Thời gian chờ</th></tr></thead><tbody>{["Bóng Đêm Sau Cửa Sổ", "Lời Hứa Không Tên", "Thành Phố Lặng Im", "Một Ngày Rất Xa"].map((title, index) => <tr key={title}><td>{title}</td><td>{["Linh An", "Hải Đăng", "Lam Tử", "Bảo Châu"][index]}</td><td>{["Bạo lực mô tả chi tiết", "Ngôn từ công kích", "Nghi vấn sao chép nội dung", "Thiếu cảnh báo độ tuổi"][index]}</td><td><span className={`badge ${index === 0 ? "badge-red" : "badge-amber"}`}>{index === 0 ? "Cần xem xét" : "Đang chờ"}</span></td><td>{index + 1} giờ</td></tr>)}</tbody></table></div></main><aside className="panel panel-pad stack"><h2 className="section-title">Nội dung đang duyệt</h2><span className="badge badge-red">AI gắn cờ: bạo lực mô tả chi tiết</span><p className="section-subtitle">Admin có thể duyệt, từ chối kèm lý do hoặc khóa tài khoản nếu vi phạm lặp lại.</p><ErrorGuide title="Nếu quyết định bị hệ thống chặn" items={["Nhập lý do kiểm duyệt tối thiểu 20 ký tự.", "Không khóa tài khoản khi chưa có cảnh báo trước đó.", "Kiểm tra lại lịch sử vi phạm trong hồ sơ tác giả."]} /><button className="button button-success" data-toast="Đã duyệt chương và thông báo cho tác giả.">Duyệt</button><button className="button button-danger" data-toast="Đã từ chối chương." data-toast-type="warning">Từ chối + Gửi cảnh báo</button></aside></section></AppShell>;
+  const [queue, setQueue] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [reason, setReason] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadQueue = async () => {
+    try {
+      if (appEnv.useMocks) {
+        const mockQueue = [
+          { id: "c1", title: "Bóng Đêm Sau Cửa Sổ", story: { title: "Mưa Trên Thành Cũ" }, author: { username: "Linh An" }, moderation_status: "flagged", reason: "Bạo lực mô tả chi tiết" }
+        ];
+        setQueue(mockQueue);
+        setSelectedItem(mockQueue[0]);
+        setIsLoading(false);
+        return;
+      }
+      const res = await yagApi.admin.moderationQueue();
+      const items = res.data || [];
+      setQueue(items);
+      if (items.length > 0) setSelectedItem(items[0]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadQueue();
+  }, []);
+
+  const handleApprove = async () => {
+    if (!selectedItem) return;
+    setSubmitting(true);
+    try {
+      if (appEnv.useMocks) {
+        triggerLiveToast("Đã duyệt chương (Mock).");
+        void loadQueue();
+        return;
+      }
+      await yagApi.apiFetch(`/api/v1/admin/moderation/${selectedItem.id}/approve`, {
+        method: "POST",
+        body: { reason: reason || "Admin duyệt thủ công" }
+      });
+      triggerLiveToast("Đã phê duyệt chương thành công!");
+      setReason("");
+      void loadQueue();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedItem) return;
+    setSubmitting(true);
+    try {
+      if (appEnv.useMocks) {
+        triggerLiveToast("Đã từ chối chương (Mock).");
+        void loadQueue();
+        return;
+      }
+      await yagApi.apiFetch(`/api/v1/admin/moderation/${selectedItem.id}/reject`, {
+        method: "POST",
+        body: { reason: reason || "Vi phạm quy chế cộng đồng" }
+      });
+      triggerLiveToast("Đã từ chối chương truyện.", "warning");
+      setReason("");
+      void loadQueue();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <AppShell activeId="s20">
+      <section className="layout-right">
+        <main className="panel panel-pad stack">
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Chương</th>
+                  <th>Truyện</th>
+                  <th>Lý do hệ thống</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr><td colSpan={4}>Đang tải danh sách chờ duyệt...</td></tr>
+                ) : queue.length === 0 ? (
+                  <tr><td colSpan={4}>Hàng đợi trống. Không có chương nào chờ kiểm duyệt.</td></tr>
+                ) : (
+                  queue.map((item) => (
+                    <tr
+                      key={item.id}
+                      onClick={() => setSelectedItem(item)}
+                      style={{ cursor: "pointer", background: selectedItem?.id === item.id ? "rgba(255, 255, 255, 0.05)" : "" }}
+                    >
+                      <td>{item.title}</td>
+                      <td>{item.story?.title || "Không rõ"}</td>
+                      <td>{item.reason || "Cần quét bộ lọc"}</td>
+                      <td><span className="badge badge-amber">{item.moderation_status}</span></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </main>
+        <aside className="panel panel-pad stack">
+          <h2 className="section-title">Quyết định kiểm duyệt</h2>
+          {selectedItem ? (
+            <>
+              <span className="badge badge-red">Gắn cờ: {selectedItem.reason || "Cần đánh giá nội dung"}</span>
+              <p className="section-subtitle">Chương: {selectedItem.title}</p>
+              <div className="field" style={{ marginTop: 12 }}>
+                <label>Lý do quyết định (gửi cho tác giả)</label>
+                <textarea className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Nhập lý do duyệt/từ chối..." required />
+              </div>
+              <div className="inline-actions" style={{ gap: 12, marginTop: 16 }}>
+                <button className="button button-success" onClick={handleApprove} disabled={submitting}>Duyệt thông qua</button>
+                <button className="button button-danger" onClick={handleReject} disabled={submitting}>Từ chối</button>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: "var(--muted)" }}>Chọn một chương trong hàng đợi để kiểm duyệt.</div>
+          )}
+        </aside>
+      </section>
+    </AppShell>
+  );
 }
 
 export function ReportsScreen() {
-  return <AppShell activeId="s21"><section className="panel panel-pad stack"><div className="inline-actions" style={{ justifyContent: "space-between" }}><div className="tabs"><button className="tab-button active" data-tab-trigger="revenue">Doanh thu</button><button className="tab-button" data-tab-trigger="users">Người dùng</button><button className="tab-button" data-tab-trigger="content">Nội dung</button></div><div className="inline-actions"><input className="input" style={{ width: "auto" }} defaultValue="01/05/2026 - 18/05/2026" /><button className="button button-primary" data-toast="Đã xuất báo cáo CSV.">Xuất CSV</button></div></div><div className="tab-panel active" data-tab-panel="revenue"><BarChart /></div><div className="tab-panel" data-tab-panel="users"><LineChart /></div><div className="tab-panel" data-tab-panel="content"><BarChart /></div><ErrorGuide title="Không xuất được báo cáo?" items={["Khoảng ngày không được vượt quá 90 ngày.", "Tài khoản cần quyền Admin báo cáo tài chính.", "Thử xuất lại CSV sau khi làm mới dữ liệu dashboard."]} /></section><section className="panel panel-pad" style={{ marginTop: 24 }}><h2 className="section-title">Top tác giả theo lượt đọc và doanh thu chia sẻ</h2><div className="table-wrap"><table className="data-table"><thead><tr><th>Tác giả</th><th>Lượt đọc</th><th>Doanh thu chia sẻ</th><th>Trạng thái</th></tr></thead><tbody><tr><td>Linh An</td><td>1.8M</td><td>18.2M</td><td><span className="badge badge-green">Ổn định</span></td></tr><tr><td>Hải Đăng</td><td>1.1M</td><td>11.7M</td><td><span className="badge badge-amber">Cần nhắc lịch</span></td></tr></tbody></table></div></section></AppShell>;
+  return (
+    <AppShell activeId="s21">
+      <section className="panel panel-pad stack">
+        <div className="inline-actions" style={{ justifyContent: "space-between" }}>
+          <div className="tabs">
+            <button className="tab-button active">Báo cáo doanh thu & Người dùng</button>
+          </div>
+        </div>
+        <div className="tab-panel active">
+          <BarChart />
+        </div>
+      </section>
+    </AppShell>
+  );
 }

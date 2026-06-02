@@ -2,10 +2,14 @@ import asyncio
 from functools import partial
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.api import deps
+from app.api.v1.endpoints.chapters import get_redis_client, invalidate_chapter_cache
 from app.core.config import settings
+from app.models.publish_schedule import PublishSchedule
+from app.models.story import Story
 from app.models.user import User
 from app.schemas.publish import PublishChapterRequest, PublishChapterResponse
 from app.services.publish_service import (
@@ -17,6 +21,16 @@ from app.services.publish_service import (
 from app.services.schedule_service import get_author_schedule_overview
 
 router = APIRouter()
+
+
+class ScheduleUpdateRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    cadence: str | None = Field(default=None, max_length=50)
+    next_chapter_at: str = Field(
+        ...,
+        validation_alias=AliasChoices("next_chapter_at", "nextChapterAt"),
+    )
 
 
 @router.post(
@@ -73,6 +87,8 @@ async def request_publish_chapter(
             detail=f"Cannot connect to RabbitMQ at {settings.RABBITMQ_HOST}. Try again later.",
         )
 
+    invalidate_chapter_cache(get_redis_client(), chapter_id)
+
     return {
         "status": "accepted",
         "message": "Publish request accepted and queued for AI moderation.",
@@ -94,3 +110,46 @@ def get_author_schedule_chart_data(
     if current_user.role not in {"author", "admin"}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="AUTHOR_REQUIRED")
     return get_author_schedule_overview(db, current_user)
+
+
+@router.put("/author/stories/{story_id}/schedule", summary="U014 - Update next publish schedule")
+def update_author_story_schedule(
+    story_id: str,
+    request: ScheduleUpdateRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Story not found")
+    if current_user.role != "admin" and str(story.author_id) != str(current_user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized for this story")
+
+    try:
+        from datetime import datetime
+
+        scheduled_time = datetime.fromisoformat(request.next_chapter_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="INVALID_NEXT_CHAPTER_AT") from exc
+
+    schedule = (
+        db.query(PublishSchedule)
+        .filter(PublishSchedule.story_id == story.id, PublishSchedule.status == "scheduled")
+        .order_by(PublishSchedule.scheduled_time.asc())
+        .first()
+    )
+    if schedule:
+        schedule.scheduled_time = scheduled_time
+    else:
+        schedule = PublishSchedule(story_id=story.id, scheduled_time=scheduled_time, status="scheduled")
+        db.add(schedule)
+
+    db.commit()
+    db.refresh(schedule)
+    return {
+        "story_id": str(story.id),
+        "schedule_id": str(schedule.id),
+        "cadence": request.cadence,
+        "next_chapter_at": schedule.scheduled_time,
+        "status": schedule.status,
+    }

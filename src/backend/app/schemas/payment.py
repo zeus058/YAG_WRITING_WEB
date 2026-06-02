@@ -60,3 +60,23 @@ class TransactionHistoryItem(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class TransactionStatusResponse(BaseModel):
+    """Current payment transaction status for frontend polling."""
+
+    id: uuid.UUID
+    vnp_txn_ref: str
+    plan_id: str
+    plan_name: Optional[str] = None
+    amount: float
+    status: str
+    vnp_transaction_no: Optional[str] = None
+    vnp_response_code: Optional[str] = None
+    vnp_transaction_status: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    failed_at: Optional[datetime] = None
+    ipn_received_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+

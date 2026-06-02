@@ -1,4 +1,3 @@
-import { getAccessToken } from "./auth";
 import { appEnv } from "./env";
 
 type DraftSocketOptions = {
@@ -13,12 +12,10 @@ type DraftSocketOptions = {
 export function createDraftSocket(options: DraftSocketOptions) {
   if (typeof window === "undefined") return null;
 
-  const token = getAccessToken();
   const url = new URL(
     `/ws/stories/${options.storyId}/chapters/${options.chapterId}`,
     appEnv.wsBaseUrl
   );
-  if (token) url.searchParams.set("token", token);
 
   const socket = new WebSocket(url);
   socket.addEventListener("open", () => options.onOpen?.());
@@ -44,4 +41,36 @@ export function createDraftSocket(options: DraftSocketOptions) {
     socket,
   };
 }
+
+type NotificationSocketOptions = {
+  userId: string;
+  onOpen?: () => void;
+  onMessage?: (message: unknown) => void;
+  onClose?: () => void;
+  onError?: (event: Event) => void;
+};
+
+export function createNotificationSocket(options: NotificationSocketOptions) {
+  if (typeof window === "undefined") return null;
+
+  const url = new URL(
+    `/ws/notifications/${options.userId}`,
+    appEnv.wsBaseUrl
+  );
+
+  const socket = new WebSocket(url);
+  socket.addEventListener("open", () => options.onOpen?.());
+  socket.addEventListener("message", (event) => {
+    try {
+      options.onMessage?.(JSON.parse(event.data));
+    } catch {
+      options.onMessage?.(event.data);
+    }
+  });
+  socket.addEventListener("close", () => options.onClose?.());
+  socket.addEventListener("error", (event) => options.onError?.(event));
+
+  return socket;
+}
+
 

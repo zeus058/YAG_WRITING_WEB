@@ -21,6 +21,7 @@ from app.models.reading_history import ReadingHistory
 from app.models.library import Library
 from app.models.admin_alert import AdminAlert
 from app.models.admin_audit_log import AdminAuditLog
+from app.models.notification import Notification
 
 __all__ = [
     "User",
@@ -39,5 +40,6 @@ __all__ = [
     "Library",
     "AdminAlert",
     "AdminAuditLog",
+    "Notification",
 ]
 

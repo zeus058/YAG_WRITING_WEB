@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 import redis
 
 import uuid
+from datetime import datetime, timezone
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.models.user import User
@@ -140,7 +141,11 @@ class AuthService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="ACCOUNT_LOCKED",
             )
-            
+
+        db_user.last_login_at = datetime.now(timezone.utc)
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
         return db_user
 
     @staticmethod

@@ -4,11 +4,27 @@ Defines system-wide environment variables and app settings.
 """
 from pydantic_settings import BaseSettings
 from typing import Optional
+from pydantic import model_validator
+
+
+LOCAL_URL_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")
+
+
+def _looks_local(value: str) -> bool:
+    lowered = value.lower()
+    return any(marker in lowered for marker in LOCAL_URL_MARKERS)
+
+
+def _split_csv(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "YAG - Smart Novel Writing Platform"
     API_V1_STR: str = "/api/v1"
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    ENVIRONMENT: str = "development"
+    SERVICE_ROLE: str = "api"
 
     # Database Settings
     DATABASE_URL: Optional[str] = None
@@ -28,6 +44,10 @@ class Settings(BaseSettings):
     RABBITMQ_PORT: int = 5672
     RABBITMQ_USER: str = "guest"
     RABBITMQ_PASSWORD: str = "guest"
+    RABBITMQ_MODERATION_QUEUE: str = "ai.moderation"
+    RABBITMQ_MODERATION_RETRY_QUEUE: str = "ai.moderation.retry"
+    RABBITMQ_MODERATION_DLQ: str = "ai.moderation.dlq"
+    RABBITMQ_MODERATION_MAX_RETRIES: int = 5
 
     # Cloudinary Settings
     CLOUDINARY_CLOUD_NAME: Optional[str] = None
@@ -38,12 +58,13 @@ class Settings(BaseSettings):
     # Security Settings
     SECRET_KEY: str = "yag_development_secret_key_change_in_production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ALLOW_WEBSOCKET_QUERY_TOKEN: bool = True
 
     # VNPAY Sandbox Settings
     VNP_TMN_CODE: str = "YAGTEST1"
     VNP_HASH_SECRET: str = "YAGDEVSECRETKEY12345678"
     VNP_URL: str = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
-    VNP_RETURN_URL: str = "http://localhost:3000/payment-result"
+    VNP_RETURN_URL: str = "http://localhost:3000/payment/result"
     VNP_API_URL: str = "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction"
 
     # AI Engine & Gemini API
@@ -55,9 +76,88 @@ class Settings(BaseSettings):
     AI_CONTEXT_WORD_LIMIT: int = 1000
 
     # Scheduler Settings
-    SCHEDULER_ENABLED: bool = True
+    SCHEDULER_ENABLED: bool = False
     SCHEDULE_SCAN_HOUR_UTC: int = 17
     SCHEDULE_SCAN_MINUTE_UTC: int = 5
+    VIEW_COUNT_FLUSH_ENABLED: bool = False
+    # Auto-create DB tables on startup (development only). Set to False in staging/production.
+    AUTO_CREATE_TABLES: bool = False
+    # If True, the app can automatically apply SQL files from migrations/ on startup (use carefully)
+    APPLY_MIGRATIONS_ON_STARTUP: bool = False
+
+    @model_validator(mode="after")
+    def validate_production_settings(self) -> "Settings":
+        if self.ENVIRONMENT not in {"development", "staging", "production"}:
+            raise ValueError(f"Invalid ENVIRONMENT: {self.ENVIRONMENT}")
+
+        if self.ENVIRONMENT == "production":
+            required_prod_vars = {
+                "SECRET_KEY": "yag_development_secret_key_change_in_production",
+                "VNP_HASH_SECRET": "YAGDEVSECRETKEY12345678",
+                "VNP_TMN_CODE": "YAGTEST1",
+            }
+            for var_name, default_val in required_prod_vars.items():
+                val = getattr(self, var_name)
+                if not val or val == default_val:
+                    raise ValueError(
+                        f"Field '{var_name}' must be explicitly set and different from default in production environment"
+                    )
+
+            essential_uris = {
+                "CORS_ORIGINS",
+                "DATABASE_URL",
+                "REDIS_URL",
+                "RABBITMQ_URL",
+                "GEMINI_API_KEY",
+                "VNP_URL",
+                "VNP_RETURN_URL",
+                "VNP_API_URL",
+            }
+            for uri_name in essential_uris:
+                val = getattr(self, uri_name)
+                if not val:
+                    raise ValueError(
+                        f"Field '{uri_name}' must be explicitly set in production environment"
+                    )
+
+            if self.ALLOW_WEBSOCKET_QUERY_TOKEN:
+                raise ValueError("ALLOW_WEBSOCKET_QUERY_TOKEN must be false in production")
+
+            if self.AUTO_CREATE_TABLES or self.APPLY_MIGRATIONS_ON_STARTUP:
+                raise ValueError("Database schema mutation on app startup is disabled in production")
+
+            if self.SCHEDULER_ENABLED and self.SERVICE_ROLE == "api":
+                raise ValueError("SCHEDULER_ENABLED must be false in production API replicas; run scheduler as a separate job")
+
+            if _looks_local(self.DATABASE_URL or ""):
+                raise ValueError("DATABASE_URL must not point to localhost in production")
+            if _looks_local(self.REDIS_URL or ""):
+                raise ValueError("REDIS_URL must not point to localhost in production")
+            if _looks_local(self.RABBITMQ_URL or ""):
+                raise ValueError("RABBITMQ_URL must not point to localhost in production")
+            if _looks_local(self.VNP_RETURN_URL):
+                raise ValueError("VNP_RETURN_URL must not point to localhost in production")
+            if not self.VNP_RETURN_URL.startswith("https://"):
+                raise ValueError("VNP_RETURN_URL must be HTTPS in production")
+            if "sandbox" in self.VNP_URL.lower() or "sandbox" in self.VNP_API_URL.lower():
+                raise ValueError("Production VNPAY URLs must not point to sandbox endpoints")
+
+            origins = _split_csv(self.CORS_ORIGINS)
+            if not origins:
+                raise ValueError("CORS_ORIGINS must include at least one production frontend origin")
+            if any(origin == "*" or _looks_local(origin) for origin in origins):
+                raise ValueError("CORS_ORIGINS must not include wildcard or localhost in production")
+            if any(not origin.startswith("https://") for origin in origins):
+                raise ValueError("CORS_ORIGINS must be HTTPS origins in production")
+        return self
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.CORS_ORIGINS.split(",")
+            if origin.strip()
+        ]
 
     class Config:
         case_sensitive = True
@@ -66,4 +166,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

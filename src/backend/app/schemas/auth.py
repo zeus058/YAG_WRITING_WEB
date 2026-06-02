@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, field_validator
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
@@ -14,8 +14,8 @@ class UserRegister(UserBase):
     @field_validator("role")
     @classmethod
     def validate_role(cls, v: Optional[str]) -> Optional[str]:
-        if v not in ["reader", "author", "admin"]:
-            raise ValueError("Role must be reader, author, or admin")
+        if v not in ["reader", "author"]:
+            raise ValueError("Role must be reader or author")
         return v
 
 class UserResponse(BaseModel):
@@ -36,6 +36,7 @@ class UserLogin(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    accessToken: Optional[str] = None
     token_type: str = "bearer"
     user: UserResponse
 
@@ -48,7 +49,13 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetConfirm(BaseModel):
     email: EmailStr
     otp: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
-    new_password: str = Field(..., min_length=8)
+    new_password: str = Field(
+        ...,
+        validation_alias=AliasChoices("new_password", "password"),
+        min_length=8,
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
 
 # ==========================================
 # U002 — Profile Management Schemas
@@ -69,4 +76,18 @@ class ProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CurrentUserProfile(BaseModel):
+    display_name: str
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    reputation_score: int = 100
+
+    class Config:
+        from_attributes = True
+
+
+class CurrentUserResponse(UserResponse):
+    profile: Optional[CurrentUserProfile] = None
 

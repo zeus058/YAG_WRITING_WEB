@@ -3,8 +3,10 @@ import sys
 import os
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import text
+from app.core.config import settings
 from app.core.database import SessionLocal, Base, engine
 from app.core.security import get_password_hash
+from app.manage_migrations import apply_migrations
 from app.models import (
     User,
     Profile,
@@ -21,26 +23,41 @@ from app.models import (
     Library,
 )
 
+DESTRUCTIVE_SEED_ENV = "YAG_ALLOW_DESTRUCTIVE_SEED_RESET"
+
+
 def seed_database():
-    print("Resetting database tables...")
-    # Drop all first using metadata to ensure a clean slate
-    Base.metadata.drop_all(bind=engine)
+    if settings.ENVIRONMENT != "development":
+        raise RuntimeError("seed.py is a development-only command and must not run in staging/production.")
+
+    allow_reset = os.getenv(DESTRUCTIVE_SEED_ENV) == "1"
+    if allow_reset:
+        print("Resetting database tables for local development...")
+        Base.metadata.drop_all(bind=engine)
+        with engine.begin() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS schema_migrations"))
+    else:
+        print("Preparing development database without destructive reset...")
     
-    # Read the V1 migration SQL file and execute it
+    # Apply all SQL migration files through the versioned migration runner.
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    migration_path = os.path.join(current_dir, "..", "migrations", "V1__initial_schema.sql")
-    
-    print(f"Applying schema migration from {migration_path}...")
-    with open(migration_path, "r", encoding="utf-8") as f:
-        migration_sql = f.read()
-        
-    with engine.begin() as conn:
-        conn.execute(text(migration_sql))
+    migrations_dir = os.path.join(current_dir, "..", "migrations")
+    print(f"Applying schema migrations from {migrations_dir}...")
+    apply_migrations(migrations_dir)
         
     print("Database tables and custom indexes created successfully from migration script!")
     
     db = SessionLocal()
     try:
+        if not allow_reset and (
+            db.query(User.id).first() is not None
+            or db.query(MembershipPlan.id).first() is not None
+        ):
+            raise RuntimeError(
+                "Database already contains seed data. "
+                f"Use app.reset_dev_db or set {DESTRUCTIVE_SEED_ENV}=1 only for local reset."
+            )
+
         # 1. Seed Membership Plans
         print("Seeding membership plans...")
         monthly_plan = MembershipPlan(
@@ -63,9 +80,36 @@ def seed_database():
         # 2. Seed Users & Profiles
         print("Seeding users and profiles...")
         hashed_password = get_password_hash("development_secret_123")
-        
+        demo_hashed_password = get_password_hash("Secure2026")
+
+        # Standard demo accounts
+        demo_reader = User(
+            username="reader",
+            email="reader@yag.vn",
+            password_hash=demo_hashed_password,
+            role="reader"
+        )
+        demo_author = User(
+            username="author",
+            email="author@yag.vn",
+            password_hash=demo_hashed_password,
+            role="author"
+        )
+        demo_admin = User(
+            username="admin",
+            email="admin@yag.vn",
+            password_hash=demo_hashed_password,
+            role="admin"
+        )
+        db.add_all([demo_reader, demo_author, demo_admin])
+        db.flush()
+
+        db.add(Profile(user_id=demo_reader.id, display_name="Độc giả Demo", bio="Tài khoản độc giả demo hệ thống YAG.", reputation_score=100))
+        db.add(Profile(user_id=demo_author.id, display_name="Tác giả Demo", bio="Tài khoản tác giả demo hệ thống YAG.", reputation_score=100))
+        db.add(Profile(user_id=demo_admin.id, display_name="Admin Demo", bio="Tài khoản admin demo hệ thống YAG.", reputation_score=100))
+
         # 2 Admins
-        admins = []
+        admins = [demo_admin]
         for i in range(1, 3):
             admin_user = User(
                 username=f"admin{i}",

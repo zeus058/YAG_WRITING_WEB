@@ -39,7 +39,7 @@ Tài liệu này lưu trữ tiến độ phát triển các tính năng Backend 
 
 ### B. [U011] Đăng ký Membership
 - [ ] API Danh mục gói cước (`GET /api/v1/membership/plans`): Trả về danh sách gói cước từ DB. -> *Hiện tại là placeholder tại `app/api/v1/endpoints/payment.py`*
-- [ ] Middleware phân quyền RBAC: Chặn truy cập chương Premium (`is_premium = True`) nếu tài khoản của User chưa đăng ký Premium hoặc hết hạn (`premium_until`). -> *Chưa được cấu hình*
+- [x] Middleware phân quyền RBAC: Chặn truy cập chương Premium (`is_premium = True`) nếu tài khoản của User chưa đăng ký Premium hoặc hết hạn (`premium_until`). -> *Đã định nghĩa tại `app/api/deps.py` & tích hợp tại `app/api/v1/endpoints/chapters.py`*
 
 ### C. [U012] Thanh toán VNPAY IPN
 - [ ] API Khởi tạo URL Thanh toán (`POST /api/v1/payments/vnpay/checkout`): Tạo transaction `pending`, sinh `vnp_txn_ref`, sinh chữ ký bảo mật **HMAC-SHA512**, trả về link Sandbox. -> *Hiện tại là placeholder tại `app/api/v1/endpoints/payment.py`*

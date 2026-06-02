@@ -1,11 +1,13 @@
 """
 Interactive Chapter Reading & WebSocket Editor Routing Handler.
 Assigned Member: Huỳnh Yến Nhi (U004, U007, U010 - TC-016, TC-017, TC-019, TC-020).
+
+Premium RBAC integration by: Nguyễn Duy Trường (U011).
 """
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 import json
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
@@ -17,7 +19,7 @@ from starlette.websockets import WebSocketState
 from app.api import deps
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.models import Chapter, Comment, ReadingHistory, Story
+from app.models import Chapter, Comment, ReadingHistory, Story, User
 from app.schemas.story import (
     ChapterCreate,
     ChapterReadResponse,
@@ -101,7 +103,6 @@ def apply_chapter_update(chapter: Chapter, update: ChapterUpdate) -> None:
     update_data = update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(chapter, key, value)
-    # The current schema models draft chapters as pending moderation until publish.
     chapter.moderation_status = "pending"
     chapter.updated_at = datetime.utcnow()
 
@@ -125,14 +126,6 @@ def get_websocket_author(websocket: WebSocket):
     if getattr(current_author, "role", None) != "author":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only authors can autosave drafts")
     return current_author
-
-
-def get_current_user():
-    """
-    Temporary reader dependency until JWT user resolution is shared across modules.
-    Reuses the project mock user so Swagger can exercise U007 endpoints locally.
-    """
-    return deps.get_current_author()
 
 
 def get_redis_client():
@@ -166,22 +159,42 @@ def serialize_chapter(chapter: Chapter) -> dict[str, Any]:
     }
 
 
-def can_read_chapter(chapter_data: dict[str, Any], current_user) -> bool:
-    if not chapter_data["is_premium"]:
-        return True
-    if getattr(current_user, "role", None) == "admin":
-        return True
-    if str(getattr(current_user, "id", "")) == str(chapter_data["story_author_id"]):
-        return True
-    premium_until = getattr(current_user, "premium_until", None)
-    return bool(premium_until and premium_until > datetime.utcnow())
-
-
 def ensure_reader_can_read(chapter_data: dict[str, Any], current_user) -> None:
-    if not can_read_chapter(chapter_data, current_user):
+    if not chapter_data["is_premium"]:
+        return  # Free chapter — always allowed
+
+    if current_user is None:
         raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="Premium membership is required to read this chapter",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chương này dành cho thành viên Premium. Vui lòng nâng cấp gói hội viên.",
+        )
+
+    # Admin and author can read
+    if getattr(current_user, "role", None) == "admin":
+        return
+    if str(getattr(current_user, "id", "")) == str(chapter_data["story_author_id"]):
+        return
+
+    now = datetime.now(timezone.utc)
+    premium_until = current_user.premium_until
+    if premium_until is not None:
+        if premium_until.tzinfo is None:
+            now_naive = datetime.utcnow()
+            if premium_until < now_naive:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Gói Premium đã hết hạn hoặc chưa được kích hoạt. Vui lòng gia hạn.",
+                )
+        else:
+            if premium_until < now:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Gói Premium đã hết hạn hoặc chưa được kích hoạt. Vui lòng gia hạn.",
+                )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chương này dành cho thành viên Premium. Vui lòng nâng cấp gói hội viên.",
         )
 
 
@@ -384,7 +397,7 @@ def flush_views(db: Session = Depends(deps.get_db)):
 def get_chapter(
     chapter_id: UUID,
     db: Session = Depends(deps.get_db),
-    current_user=Depends(get_current_user),
+    current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ):
     redis_client = get_redis_client()
     chapter_data = get_cached_chapter(redis_client, chapter_id)
@@ -394,9 +407,11 @@ def get_chapter(
         chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
         if not chapter:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
-        if chapter.moderation_status != "approved" and chapter.story.author_id != current_user.id:
+        
+        is_author = current_user and chapter.story.author_id == current_user.id
+        if chapter.moderation_status != "approved" and not is_author:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not available")
-        if chapter.publish_at > datetime.utcnow() and chapter.story.author_id != current_user.id:
+        if chapter.publish_at > datetime.utcnow() and not is_author:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not published yet")
         chapter_data = serialize_chapter(chapter)
         cache_chapter(redis_client, chapter_data)
@@ -404,7 +419,8 @@ def get_chapter(
     ensure_chapter_is_available(chapter_data, current_user)
     ensure_reader_can_read(chapter_data, current_user)
     view_count_buffered = increment_story_view(redis_client, chapter_data["story_id"])
-    update_reading_history(db, current_user.id, chapter_id)
+    if current_user:
+        update_reading_history(db, current_user.id, chapter_id)
     db.commit()
 
     return {
@@ -469,7 +485,7 @@ async def add_comment(
     chapter_id: UUID,
     comment_in: CommentCreate,
     db: Session = Depends(deps.get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(deps.get_current_user),
 ):
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
@@ -512,7 +528,7 @@ async def update_comment(
     comment_id: UUID,
     comment_in: CommentUpdate,
     db: Session = Depends(deps.get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(deps.get_current_user),
 ):
     comment = (
         db.query(Comment)
@@ -546,7 +562,7 @@ def delete_comment(
     chapter_id: UUID,
     comment_id: UUID,
     db: Session = Depends(deps.get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(deps.get_current_user),
 ):
     comment = (
         db.query(Comment)

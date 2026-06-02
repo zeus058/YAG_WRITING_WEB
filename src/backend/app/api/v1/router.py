@@ -10,6 +10,7 @@ api_router = APIRouter()
 # Register endpoints mapping to team members
 api_router.include_router(auth.router, prefix="/auth", tags=["F1 - Authentication (Gia Hiển)"])
 api_router.include_router(payment.router, prefix="/payment", tags=["F2 - VNPAY Payment (Duy Trường)"])
+api_router.include_router(payment.membership_router, prefix="/membership", tags=["F2 - Membership (Duy Trường)"])
 api_router.include_router(stories.router, prefix="/stories", tags=["F4 - Stories & Novel Management (Yến Nhi)"])
 api_router.include_router(chapters.router, prefix="/chapters", tags=["F4 - Interactive WS Editor (Yến Nhi)"])
 api_router.include_router(chapters.author_router, prefix="/author/chapters", tags=["F4 - Author Studio Autosave (Yến Nhi)"])

@@ -95,9 +95,9 @@ Tài liệu này lưu trữ tiến độ phát triển các tính năng Backend 
 ## 5. Huỳnh Yến Nhi (Story Management, Editor WebSocket & Comments)
 
 ### A. [U003] Tạo & Quản lý Tác phẩm
-- [ ] API Tạo truyện mới (`POST /api/v1/stories`): Check role tác giả, check trùng title, upload bìa lên Cloudinary `/yag/covers/`, nén ảnh và lưu. -> *Hiện tại là placeholder tại `app/api/v1/endpoints/stories.py`*
-- [ ] API Cập nhật thông tin truyện (`PUT /api/v1/stories/{story_id}`). -> *Hiện tại là placeholder tại `app/api/v1/endpoints/stories.py`*
-- [ ] API Quản lý chương (`GET /api/v1/author/stories/{story_id}/chapters`): Liệt kê toàn bộ chương (bao gồm cả bản nháp) của chính tác giả. -> *Chưa được khai báo route*
+- [x] API Tạo truyện mới (`POST /api/v1/stories`): Check role tác giả, check trùng title, upload bìa lên Cloudinary `/yag/covers/`, nén ảnh và lưu. -> *Đã hoàn thành tại `app/api/v1/endpoints/stories.py` & `app/services/media_service.py`*
+- [x] API Cập nhật thông tin truyện (`PUT /api/v1/stories/{story_id}`). -> *Đã hoàn thành tại `app/api/v1/endpoints/stories.py` & `app/services/media_service.py`*
+- [x] API Quản lý chương (`GET /api/v1/stories/author/{story_id}/chapters`): Liệt kê toàn bộ chương (bao gồm cả bản nháp) của chính tác giả. -> *Đã hoàn thành tại `app/api/v1/endpoints/stories.py`*
 
 ### B. [U004] Soạn thảo chương truyện (WebSocket Autosave)
 - [ ] API WebSocket Autosave (`/api/v1/author/chapters/{chapter_id}/ws`): Lắng nghe payload chứa title/content gửi từ Editor của client, tự động cập nhật đè vào bảng `chapters` với trạng thái `draft`, phản hồi `"Autosave success"`. -> *Hiện tại chỉ mới kết nối và đóng ngay lập tức (placeholder tại `app/api/v1/endpoints/chapters.py`)*

@@ -42,8 +42,8 @@ Tài liệu này lưu trữ tiến độ phát triển các tính năng Backend 
 - [x] Middleware phân quyền RBAC: Chặn truy cập chương Premium (`is_premium = True`) nếu tài khoản của User chưa đăng ký Premium hoặc hết hạn (`premium_until`). -> *Đã định nghĩa tại `app/api/deps.py` & tích hợp tại `app/api/v1/endpoints/chapters.py`*
 
 ### C. [U012] Thanh toán VNPAY IPN
-- [ ] API Khởi tạo URL Thanh toán (`POST /api/v1/payments/vnpay/checkout`): Tạo transaction `pending`, sinh `vnp_txn_ref`, sinh chữ ký bảo mật **HMAC-SHA512**, trả về link Sandbox. -> *Hiện tại là placeholder tại `app/api/v1/endpoints/payment.py`*
-- [ ] Endpoint VNPAY IPN (`GET /api/v1/payments/vnpay/ipn`): Nhận callback ngầm từ VNPAY, verify checksum HMAC-SHA512, đối chiếu số tiền, cập nhật trạng thái transaction, cấp hạn Premium (`premium_until`). -> *Hiện tại là placeholder tại `app/api/v1/endpoints/payment.py`*
+- [x] API Khởi tạo URL Thanh toán (`POST /api/v1/payment/vnpay/checkout`): Tạo transaction `pending`, sinh `vnp_txn_ref`, sinh chữ ký bảo mật **HMAC-SHA512**, trả về link Sandbox. -> *Đã hoàn thành tại `app/api/v1/endpoints/payment.py` & `app/services/payment.py`*
+- [x] Endpoint VNPAY IPN (`GET /api/v1/payment/vnpay/ipn`): Nhận callback ngầm từ VNPAY, verify checksum HMAC-SHA512, đối chiếu số tiền, cập nhật trạng thái transaction, cấp hạn Premium (`premium_until`). -> *Đã hoàn thành tại `app/api/v1/endpoints/payment.py` & `app/services/payment.py`*
 
 ---
 

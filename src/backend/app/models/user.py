@@ -34,3 +34,20 @@ class User(Base):
         CheckConstraint("role IN ('admin', 'author', 'reader')", name="chk_users_role"),
     )
 
+    @property
+    def user_id(self) -> uuid.UUID:
+        return self.id
+
+    @property
+    def display_name(self) -> str:
+        return self.profile.display_name if self.profile else self.username
+
+    @property
+    def avatar_url(self) -> str | None:
+        return self.profile.avatar_url if self.profile else None
+
+    @property
+    def reputation_score(self) -> int:
+        return self.profile.reputation_score if self.profile else 100
+
+

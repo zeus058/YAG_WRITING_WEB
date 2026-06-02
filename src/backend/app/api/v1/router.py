@@ -12,5 +12,6 @@ api_router.include_router(auth.router, prefix="/auth", tags=["F1 - Authenticatio
 api_router.include_router(payment.router, prefix="/payment", tags=["F2 - VNPAY Payment (Duy Trường)"])
 api_router.include_router(stories.router, prefix="/stories", tags=["F4 - Stories & Novel Management (Yến Nhi)"])
 api_router.include_router(chapters.router, prefix="/chapters", tags=["F4 - Interactive WS Editor (Yến Nhi)"])
+api_router.include_router(chapters.author_router, prefix="/author/chapters", tags=["F4 - Author Studio Autosave (Yến Nhi)"])
 api_router.include_router(ai.router, prefix="/ai", tags=["F3 - AI Smart Novel Engine (Hương Trà)"])
 api_router.include_router(admin.router, prefix="/admin", tags=["F5 - Async Moderation & Admin (Phú Thọ)"])

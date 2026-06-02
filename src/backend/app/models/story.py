@@ -35,8 +35,17 @@ class Story(Base):
     publish_schedules = relationship("PublishSchedule", back_populates="story", cascade="all, delete-orphan")
     reviews = relationship("Review", back_populates="story", cascade="all, delete-orphan")
 
+    @property
+    def chapter_count(self) -> int:
+        return len(self.chapters)
+
+    @property
+    def rating_count(self) -> int:
+        return len(self.reviews)
+
     __table_args__ = (
         CheckConstraint("status IN ('ongoing', 'completed', 'paused')", name="chk_stories_status"),
         CheckConstraint("view_count >= 0", name="chk_stories_view_count_non_negative"),
         CheckConstraint("rating_avg >= 0.00 AND rating_avg <= 5.00", name="chk_stories_rating_avg_range"),
     )
+

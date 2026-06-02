@@ -35,14 +35,14 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   const token = options.token ?? getAccessToken();
 
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  if (options.body !== undefined && !headers.has("Content-Type")) {
+  if (options.body !== undefined && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
   try {
     const response = await fetch(resolveApiUrl(path), {
       ...options,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body === undefined ? undefined : (options.body instanceof FormData ? options.body : JSON.stringify(options.body)),
       credentials: "include",
       headers,
       signal: options.signal ?? controller.signal,
@@ -127,6 +127,19 @@ export const yagApi = {
   },
 
   author: {
+    getStories: () => apiFetch("/api/v1/stories/my-stories"),
+    createStory: (body: FormData) => 
+      apiFetch("/api/v1/stories/", {
+        method: "POST",
+        body,
+        headers: new Headers(), // Let the browser set multipart/form-data boundary
+      }),
+    updateStory: (storyId: string, body: any) =>
+      apiFetch(`/api/v1/stories/${storyId}`, {
+        method: "PUT",
+        body,
+      }),
+    getChapters: (storyId: string) => apiFetch(`/api/v1/stories/author/${storyId}/chapters`),
     saveDraft: (chapterId: string, body: { title: string; content: string }) =>
       apiFetch(`/api/v1/author/chapters/${chapterId}/draft`, {
         method: "PUT",

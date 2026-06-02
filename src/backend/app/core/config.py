@@ -41,6 +41,7 @@ class Settings(BaseSettings):
 
     # AI Engine
     GEMINI_API_KEY: str = ""
+    AI_CONTEXT_WORD_LIMIT: int = 1000
     class Config:
         case_sensitive = True
         env_file = ".env"

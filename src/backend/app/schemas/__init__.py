@@ -69,6 +69,9 @@ from app.schemas.ai import (
     AISuggestResponse,
     AIRecommendRequest,
     AIRecommendResponse,
+    AISuggestionItem,
+    AISuggestionRequest,
+    AISuggestionResponse,
 )
 from app.schemas.auth import (
     UserRegister,
@@ -135,5 +138,7 @@ __all__ = [
     "AISuggestResponse",
     "AIRecommendRequest",
     "AIRecommendResponse",
+    "AISuggestionItem",
+    "AISuggestionRequest",
+    "AISuggestionResponse",
 ]
-

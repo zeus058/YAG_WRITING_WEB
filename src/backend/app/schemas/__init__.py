@@ -76,6 +76,7 @@ from app.schemas.ai import (
     AISemanticSearchRequest,
     AISemanticSearchResponse,
     AIRecommendationItem,
+    AIRecommendationResponse,
 )
 from app.schemas.auth import (
     UserRegister,
@@ -149,5 +150,6 @@ __all__ = [
     "AISemanticSearchRequest",
     "AISemanticSearchResponse",
     "AIRecommendationItem",
+    "AIRecommendationResponse",
 ]
 

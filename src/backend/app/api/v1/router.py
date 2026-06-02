@@ -3,7 +3,7 @@ Main Router Hub for API v1.
 Registers and exposes route handlers to the main FastAPI app.
 """
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, stories, chapters, payment, ai, admin
+from app.api.v1.endpoints import auth, stories, chapters, payment, ai, admin, recommendations
 
 api_router = APIRouter()
 
@@ -16,3 +16,5 @@ api_router.include_router(chapters.router, prefix="/chapters", tags=["F4 - Inter
 api_router.include_router(chapters.author_router, prefix="/author/chapters", tags=["F4 - Author Studio Autosave (Yến Nhi)"])
 api_router.include_router(ai.router, prefix="/ai", tags=["F3 - AI Smart Novel Engine (Hương Trà)"])
 api_router.include_router(admin.router, prefix="/admin", tags=["F5 - Async Moderation & Admin (Phú Thọ)"])
+api_router.include_router(recommendations.router, prefix="/recommendations", tags=["F3 - AI Recommendations (Hương Trà)"])
+

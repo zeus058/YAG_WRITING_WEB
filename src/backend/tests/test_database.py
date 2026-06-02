@@ -29,6 +29,21 @@ DATABASE_URL = os.getenv(
 
 @pytest.fixture(scope="session")
 def engine():
+    # Pre-check database connectivity with a 2-second timeout to avoid long hangs in local/CI environments
+    try:
+        check_engine = create_engine(
+            DATABASE_URL,
+            connect_args={"connect_timeout": 2}
+        )
+        with check_engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        check_engine.dispose()
+    except Exception as exc:
+        pytest.skip(
+            f"Skipping database integration tests: PostgreSQL server at {DATABASE_URL} is unreachable. "
+            f"Details: {exc}"
+        )
+
     eng = create_engine(DATABASE_URL, pool_pre_ping=True)
     yield eng
     eng.dispose()
@@ -39,8 +54,6 @@ def session(engine):
     sess = SessionLocal()
     yield sess
     sess.close()
-
-
 # =============================================================================
 # 1. Connectivity & Extension
 # =============================================================================

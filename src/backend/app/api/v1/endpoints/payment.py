@@ -29,8 +29,9 @@ from app.schemas.payment import (
     TransactionStatusResponse,
     VNPAYIPNResponse,
 )
-from app.services import membership as membership_svc
-from app.services import payment as payment_svc
+from app.services import membership_service as membership_svc
+from app.services import payment_service as payment_svc
+
 
 router = APIRouter()
 membership_router = APIRouter()

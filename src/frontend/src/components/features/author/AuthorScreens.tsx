@@ -219,6 +219,7 @@ export function AuthorStudioScreen() {
 
   const wsRef = useRef<any>(null);
   const debounceTimerRef = useRef<any>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const loadStudioData = async () => {
     try {
@@ -338,6 +339,35 @@ export function AuthorStudioScreen() {
     triggerAutosave(editorTitle, e.target.value);
   };
 
+  const insertSuggestion = (text: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setEditorContent(prev => {
+        const updated = prev ? `${prev}\n\n${text}` : text;
+        triggerAutosave(editorTitle, updated);
+        return updated;
+      });
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = textarea.value;
+
+    const before = value.substring(0, start);
+    const after = value.substring(end);
+    const updated = `${before}${text}${after}`;
+
+    setEditorContent(updated);
+    triggerAutosave(editorTitle, updated);
+
+    // Set focus and cursor position after the inserted text
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + text.length, start + text.length);
+    }, 50);
+  };
+
   // Request AI Plot Suggestions
   const handleAiSuggest = async () => {
     if (!editorContent.trim() || aiLoading) return;
@@ -453,7 +483,7 @@ export function AuthorStudioScreen() {
                 <span>Tự động lưu kích hoạt</span>
               </div>
               <input className="editor-title" value={editorTitle} onChange={handleTitleChange} />
-              <textarea className="editor-body" value={editorContent} onChange={handleContentChange} />
+              <textarea ref={textareaRef} className="editor-body" value={editorContent} onChange={handleContentChange} />
               <div className="editor-footer-row">
                 <span>{editorContent.split(/\s+/).length} từ · {savingStatus}</span>
               </div>
@@ -480,9 +510,18 @@ export function AuthorStudioScreen() {
               <strong>Chọn tông giọng và gợi ý tình tiết tiếp theo:</strong>
             </div>
             {aiSuggestions.map((item, idx) => (
-              <div className="agent-action" key={idx} style={{ background: "rgba(255, 255, 255, 0.05)", borderLeft: "4px solid var(--crimson)", padding: 8, borderRadius: 4 }}>
-                <strong>{item.title || `Gợi ý ${idx + 1}`} ({item.style || "AI"})</strong>
-                <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>{item.content || item.text}</p>
+              <div className="agent-action" key={idx} style={{ background: "rgba(255, 255, 255, 0.05)", borderLeft: "4px solid var(--crimson)", padding: 8, borderRadius: 4, display: "flex", flexDirection: "column", gap: 8 }}>
+                <div>
+                  <strong>{item.title || `Gợi ý ${idx + 1}`} ({item.style || "AI"})</strong>
+                  <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>{item.content || item.text}</p>
+                </div>
+                <button
+                  className="button button-soft"
+                  style={{ width: "fit-content", padding: "4px 8px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}
+                  onClick={() => insertSuggestion(item.content || item.text || "")}
+                >
+                  <Icon name="edit" /> Chèn vào truyện
+                </button>
               </div>
             ))}
             <div className="agent-compose" style={{ marginTop: "auto" }}>

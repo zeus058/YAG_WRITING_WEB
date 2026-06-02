@@ -1,0 +1,222 @@
+services:
+  # --- CORE DATABASES (Started by default on 'docker-compose up -d') ---
+  postgres:
+    image: pgvector/pgvector:15
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-yag_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yag_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-yag_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-yag_user} -d $${POSTGRES_DB:-yag_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command: >
+      sh -c '
+      if [ -n "$$REDIS_PASSWORD" ]; then
+        exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
+      else
+        exec redis-server --appendonly yes
+      fi
+      '
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: >
+        sh -c '
+        if [ -n "$$REDIS_PASSWORD" ]; then
+          redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG
+        else
+          redis-cli ping | grep PONG
+        fi
+        '
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_DASHBOARD_PORT:-15672}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-yag_mq}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-yag_mq_secret}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # --- APPLICATION SERVICES (Started only under 'app' or 'prod' profile) ---
+  migrate:
+    profiles:
+      - app
+      - prod
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    restart: "no"
+    command: ["python", "-m", "app.manage_migrations"]
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SERVICE_ROLE: migrate
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_key}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-yag_user}:${POSTGRES_PASSWORD:-yag_secret}@postgres:5432/${POSTGRES_DB:-yag_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-yag_mq}:${RABBITMQ_PASSWORD:-yag_mq_secret}@rabbitmq:5672/
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      VNP_TMN_CODE: ${VNP_TMN_CODE:-}
+      VNP_HASH_SECRET: ${VNP_HASH_SECRET:-}
+      VNP_URL: ${VNP_URL:-}
+      VNP_RETURN_URL: ${VNP_RETURN_URL:-}
+      VNP_API_URL: ${VNP_API_URL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      ALLOW_WEBSOCKET_QUERY_TOKEN: "false"
+      SCHEDULER_ENABLED: "false"
+      VIEW_COUNT_FLUSH_ENABLED: "false"
+      AUTO_CREATE_TABLES: "false"
+      APPLY_MIGRATIONS_ON_STARTUP: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    profiles:
+      - app
+      - prod
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SERVICE_ROLE: api
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_key}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-yag_user}:${POSTGRES_PASSWORD:-yag_secret}@postgres:5432/${POSTGRES_DB:-yag_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-yag_mq}:${RABBITMQ_PASSWORD:-yag_mq_secret}@rabbitmq:5672/
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      VNP_TMN_CODE: ${VNP_TMN_CODE:-}
+      VNP_HASH_SECRET: ${VNP_HASH_SECRET:-}
+      VNP_URL: ${VNP_URL:-}
+      VNP_RETURN_URL: ${VNP_RETURN_URL:-}
+      VNP_API_URL: ${VNP_API_URL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      ALLOW_WEBSOCKET_QUERY_TOKEN: "false"
+      SCHEDULER_ENABLED: "false"
+      VIEW_COUNT_FLUSH_ENABLED: "false"
+      AUTO_CREATE_TABLES: "false"
+      APPLY_MIGRATIONS_ON_STARTUP: "false"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  moderation-worker:
+    profiles:
+      - app
+      - prod
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["python", "worker.py"]
+    healthcheck:
+      disable: true
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SERVICE_ROLE: worker
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_key}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-yag_user}:${POSTGRES_PASSWORD:-yag_secret}@postgres:5432/${POSTGRES_DB:-yag_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-yag_mq}:${RABBITMQ_PASSWORD:-yag_mq_secret}@rabbitmq:5672/
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      VNP_TMN_CODE: ${VNP_TMN_CODE:-}
+      VNP_HASH_SECRET: ${VNP_HASH_SECRET:-}
+      VNP_URL: ${VNP_URL:-}
+      VNP_RETURN_URL: ${VNP_RETURN_URL:-}
+      VNP_API_URL: ${VNP_API_URL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      ALLOW_WEBSOCKET_QUERY_TOKEN: "false"
+      SCHEDULER_ENABLED: "false"
+      VIEW_COUNT_FLUSH_ENABLED: "false"
+      AUTO_CREATE_TABLES: "false"
+      APPLY_MIGRATIONS_ON_STARTUP: "false"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  frontend:
+    profiles:
+      - app
+      - prod
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_DEPLOY_ENV: ${ENVIRONMENT:-production}
+        NEXT_PUBLIC_APP_URL: ${FRONTEND_PUBLIC_URL:-http://localhost}
+        NEXT_PUBLIC_API_BASE_URL: ${API_PUBLIC_URL:-http://localhost/api}
+        NEXT_PUBLIC_WS_BASE_URL: ${WS_PUBLIC_URL:-ws://localhost/ws}
+        NEXT_PUBLIC_USE_MOCKS: "false"
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  nginx:
+    profiles:
+      - app
+      - prod
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

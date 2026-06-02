@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon, BrandLogo as ProductLogo } from "@/components/ui";
-import { AuthBackdrop, AuthProductFooter } from "../_auth-chrome";
+import { AuthBackdrop, AuthProductFooter } from "../AuthChrome";
 import { appEnv, yagApi } from "@/lib";
 
 export default function PasswordRecoveryPage() {

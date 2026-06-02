@@ -8,6 +8,7 @@ from pydantic import model_validator
 
 
 LOCAL_URL_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")
+VALID_SERVICE_ROLES = {"api", "worker", "migrate", "scheduler"}
 
 
 def _looks_local(value: str) -> bool:
@@ -32,6 +33,10 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "yag"
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE_SECONDS: int = 1800
 
     # Redis Settings
     REDIS_URL: Optional[str] = None
@@ -89,6 +94,8 @@ class Settings(BaseSettings):
     def validate_production_settings(self) -> "Settings":
         if self.ENVIRONMENT not in {"development", "staging", "production"}:
             raise ValueError(f"Invalid ENVIRONMENT: {self.ENVIRONMENT}")
+        if self.SERVICE_ROLE not in VALID_SERVICE_ROLES:
+            raise ValueError(f"Invalid SERVICE_ROLE: {self.SERVICE_ROLE}")
 
         if self.ENVIRONMENT == "production":
             required_prod_vars = {
@@ -118,6 +125,16 @@ class Settings(BaseSettings):
                 if not val:
                     raise ValueError(
                         f"Field '{uri_name}' must be explicitly set in production environment"
+                    )
+
+            for cloudinary_name in (
+                "CLOUDINARY_CLOUD_NAME",
+                "CLOUDINARY_API_KEY",
+                "CLOUDINARY_API_SECRET",
+            ):
+                if not getattr(self, cloudinary_name):
+                    raise ValueError(
+                        f"Field '{cloudinary_name}' must be explicitly set in production environment"
                     )
 
             if self.ALLOW_WEBSOCKET_QUERY_TOKEN:

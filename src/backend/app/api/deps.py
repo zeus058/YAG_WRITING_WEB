@@ -87,6 +87,8 @@ def get_current_author(current_user: User = Depends(get_current_user)) -> User:
         )
     return current_user
 
+require_author_role = get_current_author
+
 def check_premium_access(chapter: Chapter, user: Optional[User]) -> None:
     """
     Validate that a user may read a premium chapter.

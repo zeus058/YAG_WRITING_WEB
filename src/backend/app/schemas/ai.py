@@ -1,17 +1,15 @@
 """
 AI schemas — Gợi ý tình tiết & đề xuất truyện cá nhân hóa.
 
-Phục vụ Use Cases: U006 (Gợi ý tình tiết AI), U009 (Đề xuất truyện).
-Screen: S16 (Author Studio — AI Sidebar), S04 (Home Feed).
+Phục vụ Use Cases: U006 (Gợi ý tình tiết AI), U008 (AI Tìm kiếm ngữ nghĩa), U009 (Đề xuất truyện).
 """
 
 import uuid
 from typing import List, Optional
-
-from pydantic import BaseModel, Field
-
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 from app.schemas.story import StoryListItem
 
+AiMode = str
 
 # ---------------------------------------------------------------------------
 # AI Suggest (U006)
@@ -51,6 +49,33 @@ class AISuggestResponse(BaseModel):
     context_words_used: int = Field(
         ..., description="Số từ context đã sử dụng để tạo gợi ý"
     )
+
+
+# U006 actual endpoints schemas
+class AISuggestionRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    chapter_id: str = Field(
+        validation_alias=AliasChoices("chapter_id", "chapterId"),
+        min_length=1,
+    )
+    context: str = Field(min_length=1, description="Recent draft context for Gemini.")
+    mode: AiMode = Field(default="kịch tính")
+
+
+class AISuggestionItem(BaseModel):
+    title: str
+    content: str
+    reason: str | None = None
+
+
+class AISuggestionResponse(BaseModel):
+    chapter_id: str
+    mode: AiMode
+    provider: str = "gemini"
+    fallback: bool = False
+    suggestions: list[AISuggestionItem]
+    message: str | None = None
 
 
 # ---------------------------------------------------------------------------

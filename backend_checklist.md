@@ -84,8 +84,8 @@ Tài liệu này lưu trữ tiến độ phát triển các tính năng Backend 
 ### C. [U008] AI Tìm kiếm ngữ nghĩa (pgvector)
 - [x] Tích hợp `pgvector` extension vào Database. -> *Đã cấu hình tại `migrations/V1__initial_schema.sql`*
 - [x] Thiết kế cấu trúc bảng `story_embeddings` (vector 1536 chiều tương thích với Gemini Embedding). -> *Đã định nghĩa trong `app/models/story_embedding.py`*
-- [ ] Cơ chế đồng bộ hóa Vector: Khi tạo/cập nhật truyện, gọi Gemini Embedding API tạo vector từ description, lưu vào `story_embeddings`. -> *Chưa được triển khai*
-- [ ] API Tìm kiếm ngữ nghĩa (`POST /api/v1/stories/search`): Nhận câu hỏi tự nhiên, vector hóa qua Gemini Embedding, truy vấn bằng toán tử khoảng cách Cosine `<=>` để trả về top truyện tương đồng nhất. -> *Hiện tại là placeholder tại `app/api/v1/endpoints/ai.py`*
+- [x] Cơ chế đồng bộ hóa Vector: Khi tạo/cập nhật truyện, gọi Gemini Embedding API tạo vector từ description, lưu vào `story_embeddings`. -> *Đã hoàn thành tại `app/api/v1/endpoints/stories.py` & `app/services/ai_service.py`*
+- [x] API Tìm kiếm ngữ nghĩa (`POST /api/v1/stories/search`): Nhận câu hỏi tự nhiên, vector hóa qua Gemini Embedding, truy vấn bằng toán tử khoảng cách Cosine `<=>` để trả về top truyện tương đồng nhất. -> *Đã hoàn thành tại `app/api/v1/endpoints/stories.py` & `app/services/ai_service.py`*
 
 ### D. [U009] AI Đề xuất truyện (AI Recommendation)
 - [ ] API Gợi ý cá nhân hóa (`GET /api/v1/recommendations`): Dựng vector sở thích từ `reading_histories` và `libraries` của độc giả, so khớp Cosine với `story_embeddings`, trả top 5 truyện đề xuất. -> *Hiện tại là placeholder tại `app/api/v1/endpoints/ai.py`*

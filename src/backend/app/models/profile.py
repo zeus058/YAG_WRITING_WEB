@@ -24,3 +24,4 @@ class Profile(Base):
     __table_args__ = (
         CheckConstraint("reputation_score >= 0 AND reputation_score <= 100", name="chk_profiles_reputation_score"),
     )
+

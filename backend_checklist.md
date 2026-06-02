@@ -21,8 +21,9 @@ Tài liệu này lưu trữ tiến độ phát triển các tính năng Backend 
   - [x] Xác nhận khôi phục (`POST /api/v1/auth/password-reset/confirm`): Xác thực OTP trong Redis, cập nhật password hash mới vào Postgres. -> *Đã hoàn thành tại `app/api/v1/endpoints/auth.py` & `app/services/auth_service.py`*
 
 ### C. [U002] Quản lý hồ sơ
-- [ ] API Cập nhật Profile (`PUT /api/v1/profiles/me`): Cho phép chỉnh sửa `display_name`, `bio`. -> *Hiện tại là placeholder tại `app/api/v1/endpoints/auth.py`*
-- [ ] API Tải ảnh đại diện (`POST /api/v1/profiles/avatar`): Nhận Multipart File, validate định dạng & kích thước (< 2MB), upload qua Cloudinary SDK, tự động resize 250x250 WebP, lưu CDN URL. -> *Chưa được khai báo route*
+- [x] API Cập nhật Profile (`PUT /api/v1/profiles/me`): Cho phép chỉnh sửa `display_name`, `bio`. -> *Đã hoàn thành tại `app/api/v1/endpoints/auth.py` & `app/schemas/auth.py`*
+- [x] API Tải ảnh đại diện (`POST /api/v1/profiles/avatar`): Nhận Multipart File, validate định dạng & kích thước (< 2MB), upload qua Cloudinary SDK, tự động resize 250x250 WebP, lưu CDN URL. -> *Đã hoàn thành tại `app/api/v1/endpoints/auth.py` & `app/services/cloudinary_service.py`*
+
 
 ---
 

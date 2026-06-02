@@ -1,6 +1,6 @@
 """
 Security Utilities Module.
-Handlespassword hashing (Bcrypt - TC-001) and JWT authentication tokens (TC-002).
+Handles password hashing (Bcrypt - TC-001) and JWT authentication tokens (TC-002).
 """
 from datetime import datetime, timedelta, timezone
 from typing import Any, Union
@@ -18,6 +18,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 def get_password_hash(password: str) -> str:
+    # Use standard default rounds = 12
     salt = bcrypt.gensalt(rounds=12)
     hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
     return hashed.decode("utf-8")
@@ -31,3 +32,4 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     to_encode = {"exp": expire, "sub": str(subject)}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
     return encoded_jwt
+

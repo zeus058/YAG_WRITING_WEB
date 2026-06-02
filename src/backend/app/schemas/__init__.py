@@ -70,6 +70,10 @@ from app.schemas.ai import (
     AIRecommendRequest,
     AIRecommendResponse,
 )
+from app.schemas.auth import (
+    UserRegister,
+    PasswordResetRequest,
+)
 
 __all__ = [
     # Common
@@ -86,6 +90,8 @@ __all__ = [
     "PasswordReset",
     "PasswordResetConfirm",
     "PasswordChange",
+    "UserRegister",
+    "PasswordResetRequest",
     # Profile
     "ProfileResponse",
     "ProfileUpdate",
@@ -129,3 +135,4 @@ __all__ = [
     "AIRecommendRequest",
     "AIRecommendResponse",
 ]
+

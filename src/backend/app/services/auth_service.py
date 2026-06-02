@@ -17,10 +17,17 @@ logger = logging.getLogger("auth_service")
 
 def get_redis_client():
     """Initializes and returns a Redis client."""
+    if settings.REDIS_URL:
+        return redis.Redis.from_url(
+            settings.REDIS_URL,
+            decode_responses=True,
+            socket_timeout=2.0,
+        )
+
     # Use standard host and default port 6379
     return redis.Redis(
         host=settings.REDIS_HOST,
-        port=6379,
+        port=settings.REDIS_PORT,
         db=0,
         decode_responses=True,
         socket_timeout=2.0
@@ -120,12 +127,18 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="INVALID_CREDENTIALS"
             )
-            
+
         # 2. Verify hashed password
         if not verify_password(login_in.password, db_user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="INVALID_CREDENTIALS"
+            )
+
+        if db_user.is_locked:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="ACCOUNT_LOCKED",
             )
             
         return db_user

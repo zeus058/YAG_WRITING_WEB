@@ -15,10 +15,12 @@ from app.models.comment import Comment
 from app.models.review import Review
 from app.models.membership_plan import MembershipPlan
 from app.models.transaction import Transaction
-from app.models.ai_moderation_log import AiModerationLog
+from app.models.ai_moderation_log import AiModerationLog, AIModerationLog
 from app.models.publish_schedule import PublishSchedule
 from app.models.reading_history import ReadingHistory
 from app.models.library import Library
+from app.models.admin_alert import AdminAlert
+from app.models.admin_audit_log import AdminAuditLog
 
 __all__ = [
     "User",
@@ -31,8 +33,11 @@ __all__ = [
     "MembershipPlan",
     "Transaction",
     "AiModerationLog",
+    "AIModerationLog",
     "PublishSchedule",
     "ReadingHistory",
     "Library",
+    "AdminAlert",
+    "AdminAuditLog",
 ]
 

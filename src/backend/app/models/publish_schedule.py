@@ -18,8 +18,9 @@ class PublishSchedule(Base):
         UUID(as_uuid=True),
         ForeignKey("stories.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
-    scheduled_time = Column(DateTime(timezone=True), nullable=False)
+    scheduled_time = Column(DateTime(timezone=True), nullable=False, index=True)
     status = Column(
         String(20),
         nullable=False,
@@ -34,3 +35,4 @@ class PublishSchedule(Base):
     __table_args__ = (
         CheckConstraint("status IN ('scheduled', 'published', 'missed')", name="chk_publish_schedules_status_valid"),
     )
+

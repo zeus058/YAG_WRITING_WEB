@@ -1,7 +1,3 @@
-"""
-FastAPI Route Dependency Injection Modules.
-Provides database sessions, authenticated current user states, and RBAC filters.
-"""
 from typing import Generator, Optional
 import uuid
 from datetime import datetime, timezone
@@ -21,6 +17,7 @@ oauth2_scheme = OAuth2PasswordBearer(
     auto_error=False  # Make it graceful so we can raise custom clear exception details
 )
 
+
 def get_db() -> Generator:
     """Dependency injector for database sessions."""
     try:
@@ -28,6 +25,7 @@ def get_db() -> Generator:
         yield db
     finally:
         db.close()
+
 
 def get_current_user(
     db: Session = Depends(get_db),
@@ -57,7 +55,14 @@ def get_current_user(
     if user is None:
         raise credentials_exception
         
+    if user.is_locked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ACCOUNT_LOCKED",
+        )
+        
     return user
+
 
 def get_current_user_optional(
     db: Session = Depends(get_db),
@@ -74,9 +79,13 @@ def get_current_user_optional(
         user_id: str | None = payload.get("sub")
         if user_id is None:
             return None
-        return db.query(User).filter(User.id == user_id).first()
+        user = db.query(User).filter(User.id == user_id).first()
+        if user and user.is_locked:
+            return None
+        return user
     except JWTError:
         return None
+
 
 def get_current_author(current_user: User = Depends(get_current_user)) -> User:
     """Enforces that the authenticated user has the 'author' or 'admin' role."""
@@ -87,7 +96,9 @@ def get_current_author(current_user: User = Depends(get_current_user)) -> User:
         )
     return current_user
 
+
 require_author_role = get_current_author
+
 
 def check_premium_access(chapter: Chapter, user: Optional[User]) -> None:
     """
@@ -125,6 +136,7 @@ def check_premium_access(chapter: Chapter, user: Optional[User]) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Chương này dành cho thành viên Premium. Vui lòng nâng cấp gói hội viên.",
         )
+
 
 def require_role(required_role: str):
     """

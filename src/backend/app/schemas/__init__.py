@@ -54,6 +54,7 @@ from app.schemas.membership import (
 from app.schemas.payment import (
     VNPAYIPNResponse,
     PaymentResultResponse,
+    TransactionHistoryItem,
 )
 from app.schemas.search import (
     SearchResultItem,
@@ -121,6 +122,7 @@ __all__ = [
     # Payment
     "VNPAYIPNResponse",
     "PaymentResultResponse",
+    "TransactionHistoryItem",
     # Search
     "SearchResultItem",
     "SearchResponse",

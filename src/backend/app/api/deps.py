@@ -139,3 +139,25 @@ def require_role(required_role: str):
             )
         return current_user
     return _check
+
+
+def require_authenticated_user(token: Optional[str] = Depends(oauth2_scheme)) -> dict:
+    """
+    Decodes the JWT token and returns the payload dict containing user identity ('sub', etc.).
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="INVALID_OR_EXPIRED_TOKEN",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if not token:
+        raise credentials_exception
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+        return payload
+    except JWTError:
+        raise credentials_exception
+

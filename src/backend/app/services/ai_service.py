@@ -15,6 +15,7 @@ from sqlalchemy import text
 from app.core.config import settings
 from app.schemas.ai import (
     AIRecommendationItem,
+    AIRecommendationResponse,
     AISemanticSearchItem,
     AISemanticSearchRequest,
     AISemanticSearchResponse,
@@ -427,8 +428,6 @@ async def search_stories_semantic(db: Any, request: AISemanticSearchRequest) -> 
             results=[_build_search_item(row, None) for row in fallback_rows[:limit]],
             message=str(exc),
         )
-
-
 def _average_vectors(vectors: list[list[float]]) -> list[float]:
     if not vectors:
         return []
@@ -453,6 +452,144 @@ def _build_recommendation_item(row: dict[str, Any]) -> AIRecommendationItem:
     )
 
 
+async def recommend_stories_for_user(db: Any, user_id: str, limit: int = 5) -> AIRecommendationResponse:
+    try:
+        preference_result = db.execute(
+            text(
+                """
+                SELECT DISTINCT
+                    s.id AS story_id,
+                    s.title,
+                    se.plot_summary,
+                    se.embedding
+                FROM reading_histories AS rh
+                JOIN chapters AS c ON c.id = rh.chapter_id
+                JOIN stories AS s ON s.id = c.story_id
+                JOIN story_embeddings AS se ON se.story_id = s.id
+                WHERE rh.user_id = :user_id
+
+                UNION
+
+                SELECT DISTINCT
+                    s.id AS story_id,
+                    s.title,
+                    se.plot_summary,
+                    se.embedding
+                FROM libraries AS l
+                JOIN stories AS s ON s.id = l.story_id
+                JOIN story_embeddings AS se ON se.story_id = s.id
+                WHERE l.user_id = :user_id
+                """
+            ),
+            {"user_id": user_id},
+        )
+        preference_rows = _result_rows(preference_result)
+        preference_vectors = [
+            [float(value) for value in row.get("embedding", [])]
+            for row in preference_rows
+            if isinstance(row.get("embedding"), list) and row.get("embedding")
+        ]
+        preference_vector = _average_vectors(preference_vectors)
+        seen_story_ids = {
+            str(row.get("story_id"))
+            for row in preference_rows
+            if row.get("story_id")
+        }
+
+        if preference_vector:
+            query_vector_literal = _format_vector_literal(preference_vector)
+            result = db.execute(
+                text(
+                    """
+                    SELECT
+                        se.story_id,
+                        s.title,
+                        se.plot_summary,
+                        (se.embedding <=> CAST(:query_vector AS vector)) AS distance
+                    FROM story_embeddings AS se
+                    LEFT JOIN stories AS s ON s.id = se.story_id
+                    ORDER BY distance ASC
+                    LIMIT :limit
+                    """
+                ),
+                {"query_vector": query_vector_literal, "limit": max(limit * 4, limit)},
+            )
+            candidate_rows = _result_rows(result)
+            filtered_rows = [
+                row for row in candidate_rows if str(row.get("story_id")) not in seen_story_ids
+            ]
+            if not filtered_rows:
+                result = db.execute(
+                    text(
+                        """
+                        SELECT
+                            se.story_id,
+                            s.title,
+                            se.plot_summary,
+                            0.0 AS distance
+                        FROM story_embeddings AS se
+                        LEFT JOIN stories AS s ON s.id = se.story_id
+                        ORDER BY COALESCE(s.rating_avg, 0) DESC, COALESCE(s.view_count, 0) DESC
+                        LIMIT :limit
+                        """
+                    ),
+                    {"limit": max(limit * 4, limit)},
+                )
+                candidate_rows = _result_rows(result)
+                filtered_rows = [
+                    row for row in candidate_rows if str(row.get("story_id")) not in seen_story_ids
+                ]
+
+            return AIRecommendationResponse(
+                user_id=user_id,
+                provider="gemini",
+                fallback=False,
+                recommendations=[_build_recommendation_item(row) for row in filtered_rows[:limit]],
+            )
+
+        result = db.execute(
+            text(
+                """
+                SELECT
+                    se.story_id,
+                    s.title,
+                    se.plot_summary,
+                    0.0 AS distance
+                FROM story_embeddings AS se
+                LEFT JOIN stories AS s ON s.id = se.story_id
+                ORDER BY COALESCE(s.rating_avg, 0) DESC, COALESCE(s.view_count, 0) DESC
+                LIMIT :limit
+                """
+            ),
+            {"limit": limit * 4 if limit > 0 else limit},
+        )
+        rows = _result_rows(result)
+        filtered_rows = [row for row in rows if str(row.get("story_id")) not in seen_story_ids]
+        return AIRecommendationResponse(
+            user_id=user_id,
+            provider="fallback",
+            fallback=True,
+            recommendations=[_build_recommendation_item(row) for row in filtered_rows[:limit]],
+            message="No preference history was found, so popular stories were used.",
+        )
+    except Exception as exc:
+        logger.exception("Recommendation generation failed")
+        return AIRecommendationResponse(
+            user_id=user_id,
+            provider="fallback",
+            fallback=True,
+            recommendations=[
+                AIRecommendationItem(
+                    story_id=f"fallback-{index + 1}",
+                    title=f"Fallback story {index + 1}",
+                    plot_summary="Recommendation fallback because the database query failed.",
+                    distance=float(index) / 10.0,
+                    similarity=_clamp_similarity(float(index) / 10.0),
+                )
+                for index in range(min(5, limit))
+            ],
+            message=str(exc),
+        )
 async def sync_story_embedding(db: Any, story_id: str, description: str) -> dict[str, Any]:
     embedding = await _generate_text_embedding(description)
     vector_literal = _format_vector_literal(embedding)

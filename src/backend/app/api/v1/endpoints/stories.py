@@ -1,7 +1,3 @@
-"""
-Stories & Novel Creation Routing Handler.
-Assigned Member: Huỳnh Yến Nhi (U003 - TC-018).
-"""
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, status, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -23,6 +19,11 @@ from app.schemas.story import (
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
+from app.schemas.ai import AISemanticSearchRequest, AISemanticSearchResponse
+from app.services.ai_service import search_stories_semantic, sync_story_embedding
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -35,7 +36,7 @@ def get_story_or_404(db: Session, story_id: UUID) -> Story:
 
 
 @router.post("/", response_model=StoryResponse, summary="U003 - Khởi tạo bộ truyện mới")
-def create_story(
+async def create_story(
     request: Request,
     title: str = Form(...),
     description: str = Form(...),
@@ -67,6 +68,13 @@ def create_story(
     db.add(new_story)
     db.commit()
     db.refresh(new_story)
+
+    # Sync embedding
+    try:
+        await sync_story_embedding(db, story_id=str(new_story.id), description=new_story.description)
+    except Exception as e:
+        logger.exception("Failed to sync story embedding during creation")
+
     return new_story
 
 
@@ -316,7 +324,7 @@ def delete_my_review(
 
 
 @router.put("/{story_id}", response_model=StoryResponse, summary="U003 - Cập nhật thông tin chung của bộ truyện")
-def update_story(
+async def update_story(
     story_id: UUID,
     title: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
@@ -357,6 +365,14 @@ def update_story(
 
     db.commit()
     db.refresh(story)
+
+    # Sync embedding if description was updated
+    if description:
+        try:
+            await sync_story_embedding(db, story_id=str(story.id), description=story.description)
+        except Exception as e:
+            logger.exception("Failed to sync story embedding during update")
+
     return story
 
 
@@ -376,3 +392,15 @@ def get_public_chapters(
         .order_by(Chapter.chapter_number.asc())
         .all()
     )
+
+
+@router.post(
+    "/search",
+    response_model=AISemanticSearchResponse,
+    summary="U008 - Tìm kiếm cốt truyện nguyên nghĩa bằng ngôn ngữ tự nhiên (pgvector)",
+)
+async def semantic_search(
+    payload: AISemanticSearchRequest,
+    db: Session = Depends(deps.get_db),
+):
+    return await search_stories_semantic(db, payload)

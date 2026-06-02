@@ -14,6 +14,10 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.schemas.ai import (
+    AIRecommendationItem,
+    AISemanticSearchItem,
+    AISemanticSearchRequest,
+    AISemanticSearchResponse,
     AISuggestionItem,
     AISuggestionRequest,
     AISuggestionResponse,
@@ -332,8 +336,6 @@ async def generate_ai_suggestions(request: AISuggestionRequest) -> AISuggestionR
     except (IndexError, AttributeError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         logger.exception("Gemini response parsing failed")
         return build_fallback_response(sanitized_request, str(exc))
-
-
 def _build_search_item(row: dict[str, Any], query_vector: list[float] | None = None) -> AISemanticSearchItem:
     distance = float(row.get("distance", 0.0) or 0.0)
     if "similarity" in row:
@@ -352,3 +354,124 @@ def _build_search_item(row: dict[str, Any], query_vector: list[float] | None = N
     )
 
 
+async def search_stories_semantic(db: Any, request: AISemanticSearchRequest) -> AISemanticSearchResponse:
+    query = request.query.strip()
+    limit = request.limit
+
+    try:
+        query_vector = await _generate_text_embedding(query)
+        query_vector_literal = _format_vector_literal(query_vector)
+        result = db.execute(
+            text(
+                """
+                SELECT
+                    se.story_id,
+                    s.title,
+                    se.plot_summary,
+                    (se.embedding <=> CAST(:query_vector AS vector)) AS distance
+                FROM story_embeddings AS se
+                LEFT JOIN stories AS s ON s.id = se.story_id
+                ORDER BY distance ASC
+                LIMIT :limit
+                """
+            ),
+            {"query_vector": query_vector_literal, "limit": limit},
+        )
+        rows = _result_rows(result)
+        items = [_build_search_item(row, query_vector) for row in rows[:limit]]
+        return AISemanticSearchResponse(
+            query=query,
+            provider="gemini",
+            fallback=False,
+            results=items,
+        )
+    except Exception as exc:
+        logger.exception("Semantic search failed")
+        fallback_rows = []
+        try:
+            result = db.execute(
+                text(
+                    """
+                    SELECT
+                        se.story_id,
+                        s.title,
+                        se.plot_summary,
+                        0.0 AS distance
+                    FROM story_embeddings AS se
+                    LEFT JOIN stories AS s ON s.id = se.story_id
+                    ORDER BY se.story_id ASC
+                    LIMIT :limit
+                    """
+                ),
+                {"limit": limit},
+            )
+            fallback_rows = _result_rows(result)
+        except Exception:  # pragma: no cover - defensive fallback
+            fallback_rows = []
+
+        if not fallback_rows:
+            fallback_rows = [
+                {
+                    "story_id": f"fallback-{index + 1}",
+                    "title": f"Fallback story {index + 1}",
+                    "plot_summary": f"Semantic search fallback for query: {query}",
+                    "distance": float(index) / 10.0,
+                }
+                for index in range(min(3, limit))
+            ]
+
+        return AISemanticSearchResponse(
+            query=query,
+            provider="fallback",
+            fallback=True,
+            results=[_build_search_item(row, None) for row in fallback_rows[:limit]],
+            message=str(exc),
+        )
+
+
+def _average_vectors(vectors: list[list[float]]) -> list[float]:
+    if not vectors:
+        return []
+    dimension = min(len(vector) for vector in vectors)
+    if dimension == 0:
+        return []
+
+    averaged = []
+    for index in range(dimension):
+        averaged.append(sum(vector[index] for vector in vectors) / len(vectors))
+    return averaged
+
+
+def _build_recommendation_item(row: dict[str, Any]) -> AIRecommendationItem:
+    distance = float(row.get("distance", 0.0) or 0.0)
+    return AIRecommendationItem(
+        story_id=str(row.get("story_id", "")),
+        title=str(row.get("title")) if row.get("title") is not None else None,
+        plot_summary=str(row.get("plot_summary", "")),
+        distance=distance,
+        similarity=_clamp_similarity(distance),
+    )
+
+
+async def sync_story_embedding(db: Any, story_id: str, description: str) -> dict[str, Any]:
+    embedding = await _generate_text_embedding(description)
+    vector_literal = _format_vector_literal(embedding)
+    db.execute(
+        text(
+            """
+            INSERT INTO story_embeddings (story_id, embedding, plot_summary)
+            VALUES (:story_id, CAST(:embedding AS vector), :plot_summary)
+            ON CONFLICT (story_id) DO UPDATE
+            SET embedding = EXCLUDED.embedding,
+                plot_summary = EXCLUDED.plot_summary
+            """
+        ),
+        {
+            "story_id": story_id,
+            "embedding": vector_literal,
+            "plot_summary": description,
+        },
+    )
+    if hasattr(db, "commit"):
+        db.commit()
+    return {"story_id": story_id, "embedding": embedding}

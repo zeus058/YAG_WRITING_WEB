@@ -17,7 +17,7 @@ from starlette.websockets import WebSocketState
 from app.api import deps
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.models.story import Chapter, Comment, ReadingHistory, Story
+from app.models import Chapter, Comment, ReadingHistory, Story
 from app.schemas.story import (
     ChapterCreate,
     ChapterReadResponse,

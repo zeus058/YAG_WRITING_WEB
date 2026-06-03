@@ -1,7 +1,7 @@
 services:
   # --- CORE DATABASES (Started by default on 'docker-compose up -d') ---
   postgres:
-    image: pgvector/pgvector:15
+    image: pgvector/pgvector:pg15
     restart: unless-stopped
     ports:
       - "${POSTGRES_PORT:-5432}:5432"

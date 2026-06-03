@@ -40,10 +40,10 @@ def send_otp_email(email: str, otp: str):
     body = f"Mã OTP khôi phục mật khẩu của bạn là: {otp}\nHiệu lực trong 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai."
     
     # We always print to terminal first so local testing is extremely simple
-    print(f"\n========================================================")
+    print("\n========================================================")
     print(f" GỬI EMAIL KHÔI PHỤC MẬT KHẨU CHO: {email}")
     print(f" MÃ OTP CỦA BẠN LÀ: {otp}")
-    print(f"========================================================\n")
+    print("========================================================\n")
     
     # Get SMTP configs from environment if present, else fallback graceful
     import os
@@ -74,7 +74,7 @@ class AuthService:
         existing_email = db.query(User).filter(User.email == user_in.email).first()
         if existing_email:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="EMAIL_EXISTS"
             )
             
@@ -82,7 +82,7 @@ class AuthService:
         existing_username = db.query(User).filter(User.username == user_in.username).first()
         if existing_username:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="USERNAME_EXISTS"
             )
 
@@ -93,7 +93,7 @@ class AuthService:
                 username=user_in.username,
                 email=user_in.email,
                 password_hash=get_password_hash(user_in.password),
-                role=user_in.role or "reader",
+                role="reader",
             )
             db.add(db_user)
             db.flush()  # Populates db_user.id for profile matching

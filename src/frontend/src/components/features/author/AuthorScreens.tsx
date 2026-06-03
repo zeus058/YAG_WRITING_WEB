@@ -211,6 +211,7 @@ export function AuthorStudioScreen() {
   const [editorContent, setEditorContent] = useState("");
   const [savingStatus, setSavingStatus] = useState("Đã lưu");
   const [isLoading, setIsLoading] = useState(true);
+  const [offlineDraft, setOfflineDraft] = useState<{ title: string; content: string; id: string } | null>(null);
 
   // AI Suggestion state
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
@@ -274,6 +275,34 @@ export function AuthorStudioScreen() {
     void loadStudioData();
   }, [storyId]);
 
+  // Check for offline draft when activeChapter changes
+  useEffect(() => {
+    if (typeof window !== "undefined" && activeChapter?.id) {
+      const stored = localStorage.getItem(`yag_offline_draft:${activeChapter.id}`);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && (parsed.content !== activeChapter.content || parsed.title !== activeChapter.title)) {
+            setOfflineDraft({
+              id: activeChapter.id,
+              title: parsed.title,
+              content: parsed.content
+            });
+          } else {
+            setOfflineDraft(null);
+          }
+        } catch (e) {
+          console.error("Failed to parse offline draft:", e);
+          setOfflineDraft(null);
+        }
+      } else {
+        setOfflineDraft(null);
+      }
+    } else {
+      setOfflineDraft(null);
+    }
+  }, [activeChapter]);
+
   // Setup WebSocket Autosave
   useEffect(() => {
     if (!activeChapter?.id || appEnv.useMocks) return;
@@ -289,6 +318,9 @@ export function AuthorStudioScreen() {
       onMessage: (msg: any) => {
         if (msg.type === "autosave" && msg.status === "success") {
           setSavingStatus("Đã lưu (WS)");
+          if (typeof window !== "undefined" && activeChapter?.id) {
+            localStorage.removeItem(`yag_offline_draft:${activeChapter.id}`);
+          }
         }
       },
       onClose: () => {
@@ -314,16 +346,45 @@ export function AuthorStudioScreen() {
         return;
       }
 
+      const saveLocally = () => {
+        if (typeof window !== "undefined" && activeChapter?.id) {
+          const draftData = {
+            title: newTitle,
+            content: newBody,
+            updatedAt: Date.now()
+          };
+          localStorage.setItem(`yag_offline_draft:${activeChapter.id}`, JSON.stringify(draftData));
+          setSavingStatus("Ngoại tuyến - Đã lưu tạm cục bộ");
+        }
+      };
+
+      if (typeof window !== "undefined" && !navigator.onLine) {
+        saveLocally();
+        return;
+      }
+
       if (wsRef.current && wsRef.current.socket.readyState === WebSocket.OPEN) {
-        wsRef.current.sendDraftPatch({ title: newTitle, content: newBody });
+        try {
+          wsRef.current.sendDraftPatch({ title: newTitle, content: newBody });
+          if (typeof window !== "undefined" && activeChapter?.id) {
+            localStorage.removeItem(`yag_offline_draft:${activeChapter.id}`);
+          }
+          setSavingStatus("Đã lưu (WS)");
+        } catch (err) {
+          console.error("WS autosave failed, saving offline:", err);
+          saveLocally();
+        }
       } else {
         // Fallback REST autosave
         try {
           await yagApi.author.saveDraft(activeChapter.id, { title: newTitle, content: newBody });
+          if (typeof window !== "undefined" && activeChapter?.id) {
+            localStorage.removeItem(`yag_offline_draft:${activeChapter.id}`);
+          }
           setSavingStatus("Đã lưu (REST)");
         } catch (err) {
-          console.error("Autosave failed:", err);
-          setSavingStatus("Lưu thất bại!");
+          console.error("Autosave failed, saving offline:", err);
+          saveLocally();
         }
       }
     }, 3000);
@@ -450,6 +511,25 @@ export function AuthorStudioScreen() {
           </Link>
         </div>
       </header>
+      {offlineDraft && (
+        <div className="offline-recovery-banner" style={{ background: "rgba(230, 57, 70, 0.15)", borderLeft: "4px solid var(--crimson)", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+          <span style={{ color: "var(--foreground)", fontSize: 14 }}>Phát hiện bản nháp lưu ngoại tuyến mới hơn cho chương này. Bạn có muốn khôi phục không?</span>
+          <div className="inline-actions" style={{ gap: 12 }}>
+            <button className="button button-primary" onClick={() => {
+              setEditorTitle(offlineDraft.title);
+              setEditorContent(offlineDraft.content);
+              triggerAutosave(offlineDraft.title, offlineDraft.content);
+              setOfflineDraft(null);
+            }}>Khôi phục</button>
+            <button className="button" onClick={() => {
+              if (typeof window !== "undefined" && activeChapter?.id) {
+                localStorage.removeItem(`yag_offline_draft:${activeChapter.id}`);
+              }
+              setOfflineDraft(null);
+            }}>Bỏ qua</button>
+          </div>
+        </div>
+      )}
       <main className="studio-grid">
         <section className="editor-area">
           <div className="writing-workspace">

@@ -19,7 +19,7 @@ from app.api.v1.endpoints.chapters import (
     websocket_editor,
 )
 from app.core.database import engine, SessionLocal
-import app.models  # Ensure models are loaded before creating tables
+import app.models as _models  # noqa: F401  # Ensure models are loaded before creating tables
 from app.services.notification_service import stream_user_notifications
 from app.services.publish_service import get_rabbitmq_connection
 from app.services.schedule_service import shutdown_schedule_scheduler, start_schedule_scheduler
@@ -81,7 +81,7 @@ async def request_context_middleware(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID") or uuid4().hex
     try:
         response = await call_next(request)
-    except Exception as exc:
+    except Exception:
         if settings.ENVIRONMENT == "development":
             raise
         return JSONResponse(

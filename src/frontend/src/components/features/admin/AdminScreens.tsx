@@ -123,7 +123,7 @@ export function ModerationScreen() {
     try {
       if (appEnv.useMocks) {
         const mockQueue = [
-          { id: "c1", title: "Bóng Đêm Sau Cửa Sổ", story: { title: "Mưa Trên Thành Cũ" }, author: { username: "Linh An" }, moderation_status: "flagged", reason: "Bạo lực mô tả chi tiết" }
+          { id: "c1", title: "Bóng Đêm Sau Cửa Sổ", story: { title: "Mưa Trên Thành Cũ" }, author: { username: "Linh An" }, moderation_status: "flagged", reason: "Bạo lực mô tả chi tiết", content: "Đêm đó, mưa rơi dữ dội trên mái tôn của ga Bắc. An đứng nép dưới mái che, đôi vai run lên vì lạnh và vì sự sợ hãi tột cùng. Phía sau cô, bước chân nặng nề kia đang ngày một gần hơn. Hắn cầm trên tay một chiếc kéo rỉ sét, lưỡi kéo loang lổ những vết màu nâu sẫm ghê rợn..." }
         ];
         setQueue(mockQueue);
         setSelectedItem(mockQueue[0]);
@@ -234,6 +234,12 @@ export function ModerationScreen() {
             <>
               <span className="badge badge-red">Gắn cờ: {selectedItem.reason || "Cần đánh giá nội dung"}</span>
               <p className="section-subtitle">Chương: {selectedItem.title}</p>
+              <div className="field" style={{ marginTop: 12 }}>
+                <label>Nội dung chương truyện</label>
+                <div style={{ maxHeight: 200, overflowY: "auto", padding: 12, background: "rgba(255, 255, 255, 0.05)", borderRadius: 4, fontSize: 13, whiteSpace: "pre-wrap", color: "var(--foreground)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  {selectedItem.content || "Không có nội dung."}
+                </div>
+              </div>
               <div className="field" style={{ marginTop: 12 }}>
                 <label>Lý do quyết định (gửi cho tác giả)</label>
                 <textarea className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Nhập lý do duyệt/từ chối..." required />

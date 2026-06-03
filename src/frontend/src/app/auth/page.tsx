@@ -1,14 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Icon, BrandLogo as ProductLogo } from "@/components/ui";
 import { AuthBackdrop, AuthProductFooter } from "./AuthChrome";
-import { appEnv, yagApi } from "@/lib";
+import { appEnv, useAuth, yagApi } from "@/lib";
 
-export default function AuthPage() {
+function AuthPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams?.get("redirect");
+  const { login: setAuthSession } = useAuth();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
   // State đăng nhập
@@ -57,12 +60,32 @@ export default function AuthPage() {
     }
 
     try {
-      if (!appEnv.useMocks) {
-        await yagApi.auth.login({ email: loginEmail, password: loginPassword });
+      let userObj: any;
+      if (appEnv.useMocks) {
+        userObj = {
+          id: loginEmail.includes("admin") ? "admin-id" : "reader-id",
+          email: loginEmail,
+          username: loginEmail.split("@")[0],
+          role: loginEmail.includes("admin") ? "admin" : "reader",
+          profile: {
+            display_name: loginEmail.includes("admin") ? "Admin YAG" : "Minh Nguyệt",
+          }
+        };
+        setAuthSession({ accessToken: "mock-token", user: userObj });
+      } else {
+        const result = await yagApi.auth.login({ email: loginEmail, password: loginPassword });
+        userObj = result.data.user;
+        if (result.data.accessToken && result.data.user) {
+          setAuthSession({ accessToken: result.data.accessToken, user: result.data.user });
+        }
       }
-      triggerToast("Đăng nhập thành công. Đang chuyển hướng về trang chủ...", "success");
+      
+      const defaultDest = userObj.role === "admin" ? "/admin" : "/home";
+      const finalDest = redirect ? decodeURIComponent(redirect) : defaultDest;
+
+      triggerToast("Đăng nhập thành công. Đang chuyển hướng...", "success");
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push(finalDest);
       }, 700);
     } catch {
       triggerToast("Không thể đăng nhập. Vui lòng kiểm tra email, mật khẩu hoặc kết nối API.", "warning");
@@ -88,16 +111,36 @@ export default function AuthPage() {
       return;
     }
     try {
-      if (!appEnv.useMocks) {
-        await yagApi.auth.register({
+      let userObj: any;
+      if (appEnv.useMocks) {
+        userObj = {
+          id: "reader-id",
+          email: registerEmail,
+          username: registerUsername,
+          role: "reader",
+          profile: {
+            display_name: registerUsername,
+          }
+        };
+        setAuthSession({ accessToken: "mock-token", user: userObj });
+      } else {
+        const result = await yagApi.auth.register({
           email: registerEmail,
           username: registerUsername,
           password: registerPassword,
         });
+        userObj = result.data.user;
+        if (result.data.accessToken && result.data.user) {
+          setAuthSession({ accessToken: result.data.accessToken, user: result.data.user });
+        }
       }
+
+      const defaultDest = userObj.role === "admin" ? "/admin" : "/home";
+      const finalDest = redirect ? decodeURIComponent(redirect) : defaultDest;
+
       triggerToast("Tài khoản đã được tạo thành công. Đang đăng nhập...", "success");
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push(finalDest);
       }, 700);
     } catch {
       triggerToast("Không thể tạo tài khoản. Vui lòng kiểm tra email hoặc trạng thái API.", "warning");
@@ -318,5 +361,22 @@ export default function AuthPage() {
         </div>
       )}
     </>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <main className="auth-page auth-page-centered" style={{ background: "var(--bg)" }}>
+        <div className="stack" style={{ alignItems: "center", gap: 16 }}>
+          <div className="brand-logo spinner" style={{ background: "var(--crimson)", color: "#fff", width: 48, height: 48, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", fontWeight: "bold" }}>
+            YAG
+          </div>
+          <h1 style={{ color: "var(--muted)", fontSize: 16, fontWeight: "normal" }}>Đang tải trang xác thực...</h1>
+        </div>
+      </main>
+    }>
+      <AuthPageInner />
+    </Suspense>
   );
 }

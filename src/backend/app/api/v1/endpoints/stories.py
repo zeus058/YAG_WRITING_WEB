@@ -47,9 +47,6 @@ async def create_story(
     db: Session = Depends(deps.get_db),
     current_author=Depends(deps.get_current_author)
 ):
-    if current_author.role != "author":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only authors can create stories")
-
     existing_story = db.query(Story).filter(Story.title == title).first()
     if existing_story:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Story title already exists")
@@ -73,7 +70,7 @@ async def create_story(
     # Sync embedding
     try:
         await sync_story_embedding(db, story_id=str(new_story.id), description=new_story.description)
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to sync story embedding during creation")
 
     return new_story
@@ -186,6 +183,11 @@ def toggle_bookmark(
     db: Session = Depends(deps.get_db),
     current_user=Depends(deps.get_current_user),
 ):
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không thể thực hiện hành động này.",
+        )
     get_story_or_404(db, story_id)
     bookmark = (
         db.query(Library)
@@ -216,6 +218,11 @@ def get_my_library(
     db: Session = Depends(deps.get_db),
     current_user=Depends(deps.get_current_user),
 ):
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không có thư viện truyện.",
+        )
     return (
         db.query(Story)
         .join(Library, Library.story_id == Story.id)
@@ -241,6 +248,11 @@ def submit_review(
     db: Session = Depends(deps.get_db),
     current_user=Depends(deps.get_current_user),
 ):
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không thể đánh giá truyện.",
+        )
     story = get_story_or_404(db, story_id)
     content = review_in.content.strip() if review_in.content else None
 
@@ -296,6 +308,11 @@ def update_my_review(
     db: Session = Depends(deps.get_db),
     current_user=Depends(deps.get_current_user),
 ):
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không thể đánh giá truyện.",
+        )
     story = get_story_or_404(db, story_id)
     review = (
         db.query(Review)
@@ -324,6 +341,11 @@ def delete_my_review(
     db: Session = Depends(deps.get_db),
     current_user=Depends(deps.get_current_user),
 ):
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không thể xóa đánh giá truyện.",
+        )
     story = get_story_or_404(db, story_id)
     review = (
         db.query(Review)
@@ -397,7 +419,7 @@ async def update_story(
     if description:
         try:
             await sync_story_embedding(db, story_id=str(story.id), description=story.description)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to sync story embedding during update")
 
     return story

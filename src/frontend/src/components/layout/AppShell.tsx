@@ -2,7 +2,6 @@
 
 import React, { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   getPageById,
   getRoleForPage,
@@ -70,9 +69,8 @@ const triggerLiveToast = (message: string) => {
 
 export function AppShell({ activeId, actions, children }: AppShellProps) {
   const { user: authUser, logout } = useAuth();
-  const router = useRouter();
 
-  const role = authUser ? authUser.role : getRoleForPage(activeId);
+  const role = authUser?.role === "admin" ? "admin" : getRoleForPage(activeId);
   const isPremium = authUser?.premium_until ? new Date(authUser.premium_until) > new Date() : false;
 
   const userDisp = authUser
@@ -80,7 +78,7 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
         name: authUser.profile?.display_name || authUser.username,
         avatar: (authUser.profile?.display_name || authUser.username).slice(0, 2).toUpperCase(),
         avatarUrl: authUser.profile?.avatar_url || null,
-        label: authUser.role === "admin" ? "Admin" : authUser.role === "author" ? "Tác giả" : "Độc giả",
+        label: role === "admin" ? "Admin" : role === "author" ? "Tác giả" : "Độc giả",
       }
     : {
         ...roleInfo[role],
@@ -130,10 +128,8 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
     };
   }, [authUser]);
 
-  const handleLogout = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleLogout = () => {
     logout();
-    router.push("/auth");
   };
 
   return (
@@ -147,14 +143,16 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
             <Icon name="close" />
           </button>
         </div>
-        <div className="role-switcher" aria-label="Chuyển giữa Reader và Author">
-          {roleSwitchItems.map((item) => (
-            <Link key={item.role} className={`role-switch-link ${role === item.role ? "active" : ""}`} href={item.href}>
-              <Icon name={item.icon} />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </div>
+        {authUser?.role !== "admin" && (
+          <div className="role-switcher" aria-label="Chuyển giữa Reader và Author">
+            {roleSwitchItems.map((item) => (
+              <Link key={item.role} className={`role-switch-link ${role === item.role ? "active" : ""}`} href={item.href}>
+                <Icon name={item.icon} />
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </div>
+        )}
         <div className="sidebar-section">
           <div className="sidebar-label">{navLabel}</div>
           {navItems.map((item) => {
@@ -190,10 +188,10 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
             <>
               <strong>Trợ giúp & Hỗ trợ</strong>
               <span>Gặp sự cố thanh toán hay lỗi chương? Hãy liên hệ với chúng tôi.</span>
-              <button className="button admin-test-link" onClick={handleLogout}>
+              <Link className="button admin-test-link" href="/auth" onClick={handleLogout}>
                 <Icon name="close" />
                 Đăng xuất tài khoản
-              </button>
+              </Link>
             </>
           )}
         </div>

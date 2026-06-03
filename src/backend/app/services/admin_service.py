@@ -256,6 +256,7 @@ class AdminService:
                 "story_id": str(chapter.story_id),
                 "chapter_number": chapter.chapter_number,
                 "title": chapter.title,
+                "content": chapter.content,
                 "moderation_status": chapter.moderation_status,
                 "updated_at": chapter.updated_at,
             }

@@ -6,7 +6,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 
 export default function PublishChapterPage() {
   return (
-    <RequireAuth allowedRoles={["author", "admin"]}>
+    <RequireAuth allowedRoles={["author"]}>
       <PublishScreen />
     </RequireAuth>
   );

@@ -4,7 +4,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 
 export default function LibraryPage() {
   return (
-    <RequireAuth allowedRoles={["reader", "author", "admin"]}>
+    <RequireAuth allowedRoles={["reader", "author"]}>
       <LibraryScreen />
     </RequireAuth>
   );

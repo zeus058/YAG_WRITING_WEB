@@ -10,31 +10,43 @@ Covers:
 - GET  /api/v1/chapters/{id} (premium RBAC)
 - VNPAY checksum generation & verification
 - IPN RspCode mapping (00, 02, 04, 97)
+- verify_payment_result (mock checkout + real transaction flows)
 """
 import hashlib
 import hmac
 import uuid
-from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
 from urllib.parse import urlencode
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.main import app
-from app.api.deps import get_db, get_current_user
-from app.models.chapter import Chapter
-from app.models.membership_plan import MembershipPlan
-from app.models.story import Story
-from app.models.transaction import Transaction
-from app.models.user import User
 from app.services import payment_service as payment_svc
 
-
 client = TestClient(app)
+
+# Override VNPAY configurations for unit tests to ensure strict signature verification is active
+settings.VNP_HASH_SECRET = "YAGDEVSECRETKEY12345678"
+
+
+def _db_available() -> bool:
+    """Check if PostgreSQL is reachable for integration tests."""
+    try:
+        from app.core.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
+
+
+_skip_no_db = pytest.mark.skipif(
+    not _db_available(),
+    reason="PostgreSQL is not available (Docker not running?)"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -129,12 +141,14 @@ class TestVNPAYService:
 class TestMembershipPlansEndpoint:
     """Test GET /api/v1/payment/plans."""
 
+    @_skip_no_db
     def test_get_plans_returns_200(self):
         """Plans endpoint should return 200 even if no plans in DB."""
         response = client.get(f"{settings.API_V1_STR}/payment/plans")
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
+    @_skip_no_db
     def test_get_plans_returns_list(self):
         """Response should be a JSON array."""
         response = client.get(f"{settings.API_V1_STR}/payment/plans")
@@ -249,3 +263,101 @@ class TestIPNProcessLogic:
 
         code, msg = payment_svc.process_ipn(MockDB(), params)
         assert code == "02"
+
+
+# ---------------------------------------------------------------------------
+# 4. verify_payment_result service logic (mocked DB)
+# ---------------------------------------------------------------------------
+
+class TestVerifyPaymentResultLogic:
+    """Test verify_payment_result function."""
+
+    def _sign_params(self, params: dict) -> str:
+        """Helper: compute HMAC-SHA512 hash for VNPAY params."""
+        filtered = {k: v for k, v in params.items() if k not in ("vnp_SecureHash", "vnp_SecureHashType")}
+        sorted_params = sorted(filtered.items())
+        query_string = urlencode(sorted_params)
+        return hmac.new(
+            settings.VNP_HASH_SECRET.encode("utf-8"),
+            query_string.encode("utf-8"),
+            hashlib.sha512,
+        ).hexdigest()
+
+    def test_verify_result_invalid_checksum(self):
+        """Invalid checksum in verify returns success=False."""
+        params = {"vnp_TxnRef": "X", "vnp_SecureHash": "bad"}
+
+        class MockDB:
+            pass
+
+        result = payment_svc.verify_payment_result(MockDB(), params)
+        assert result["success"] is False
+        assert "checksum" in result["message"]
+
+    def test_verify_result_transaction_not_found(self):
+        """Valid checksum but missing transaction returns success=False."""
+        params = {
+            "vnp_TxnRef": "NONEXISTENT",
+            "vnp_Amount": "100",
+        }
+        params["vnp_SecureHash"] = self._sign_params(params)
+
+        class MockQuery:
+            def filter(self, *args): return self
+            def first(self): return None
+
+        class MockDB:
+            def query(self, model): return MockQuery()
+
+        result = payment_svc.verify_payment_result(MockDB(), params)
+        assert result["success"] is False
+        assert "Không tìm thấy" in result["message"]
+
+    def test_verify_result_mock_checkout_extension(self):
+        """Mock checkout extends current user premium subscription."""
+        params = {
+            "vnp_TxnRef": "MOCK_TXN_REF",
+            "vnp_Amount": "4900000",
+        }
+
+        class MockUser:
+            def __init__(self):
+                self.premium_until = None
+
+        class MockDB:
+            def commit(self):
+                pass
+
+        user = MockUser()
+        result = payment_svc.verify_payment_result(MockDB(), params, current_user=user)
+        assert result["success"] is True
+        assert result["plan_name"] == "Gói Tháng Premium"
+        assert user.premium_until is not None
+
+        # Test extending an already active membership
+        initial_expiry = user.premium_until
+        result2 = payment_svc.verify_payment_result(MockDB(), params, current_user=user)
+        assert result2["success"] is True
+        assert user.premium_until > initial_expiry
+
+    def test_verify_result_mock_checkout_yearly(self):
+        """Mock checkout for yearly package adds 365 days."""
+        params = {
+            "vnp_TxnRef": "MOCK_TXN_REF",
+            "vnp_Amount": "39900000",  # 399,000 VND
+        }
+
+        class MockUser:
+            def __init__(self):
+                self.premium_until = None
+
+        class MockDB:
+            def commit(self):
+                pass
+
+        user = MockUser()
+        result = payment_svc.verify_payment_result(MockDB(), params, current_user=user)
+        assert result["success"] is True
+        assert result["plan_name"] == "Gói Năm Premium"
+        assert result["amount"] == 399000.0
+

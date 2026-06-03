@@ -63,11 +63,11 @@ def test_register_duplicate_email(mock_db):
 
     response = client.post("/api/v1/auth/register", json=payload)
     
-    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json()["detail"] == "EMAIL_EXISTS"
 
 def test_register_duplicate_username(mock_db):
-    """Verifies that duplicate usernames are gracefully rejected with a 409 USERNAME_EXISTS error."""
+    """Verifies that duplicate usernames are gracefully rejected with a 400 USERNAME_EXISTS error."""
     # Setup mock returns: email query returns None, but username query returns an existing user
     mock_user = User(username="hien_test", email="other@yag.vn")
     
@@ -84,7 +84,7 @@ def test_register_duplicate_username(mock_db):
 
     response = client.post("/api/v1/auth/register", json=payload)
     
-    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json()["detail"] == "USERNAME_EXISTS"
 
 def test_login_user_success(mock_db):

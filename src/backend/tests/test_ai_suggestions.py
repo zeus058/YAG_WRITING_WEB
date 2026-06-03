@@ -121,3 +121,21 @@ def test_fallback_library_has_three_items():
         suggestions=items,
     )
     assert response.fallback is True
+
+
+def test_ai_suggestion_context_exceeds_limit():
+    context = "word " * 1001
+    app.dependency_overrides[deps.require_author_role] = _override_author_token
+    try:
+        response = client.post(
+            "/api/v1/ai/suggestions",
+            json={
+                "chapter_id": "chapter-1",
+                "context": context,
+                "mode": "kịch tính"
+            }
+        )
+        assert response.status_code == 422
+        assert "Context length cannot exceed 1000 words" in response.text
+    finally:
+        app.dependency_overrides.clear()

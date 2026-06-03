@@ -6,7 +6,7 @@ Phục vụ Use Cases: U006 (Gợi ý tình tiết AI), U008 (AI Tìm kiếm ng�
 
 import uuid
 from typing import List, Optional
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 from app.schemas.story import StoryListItem
 
 AiMode = str
@@ -28,6 +28,13 @@ class AISuggestRequest(BaseModel):
     genre: Optional[str] = Field(
         default=None, description="Thể loại để AI điều chỉnh phong cách gợi ý"
     )
+
+    @field_validator("context")
+    @classmethod
+    def validate_context_limit(cls, v: str) -> str:
+        if len(v.split()) > 1000:
+            raise ValueError("Context length cannot exceed 1000 words")
+        return v
 
 
 class SuggestionItem(BaseModel):
@@ -61,6 +68,13 @@ class AISuggestionRequest(BaseModel):
     )
     context: str = Field(min_length=1, description="Recent draft context for Gemini.")
     mode: AiMode = Field(default="kịch tính")
+
+    @field_validator("context")
+    @classmethod
+    def validate_context_limit(cls, v: str) -> str:
+        if len(v.split()) > 1000:
+            raise ValueError("Context length cannot exceed 1000 words")
+        return v
 
 
 class AISuggestionItem(BaseModel):

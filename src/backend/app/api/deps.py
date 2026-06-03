@@ -1,5 +1,4 @@
 from typing import Generator, Optional
-import uuid
 from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -88,11 +87,11 @@ def get_current_user_optional(
 
 
 def get_current_author(current_user: User = Depends(get_current_user)) -> User:
-    """Enforces that the authenticated user has the 'author' or 'admin' role."""
-    if current_user.role not in ["author", "admin"]:
+    """Allows any authenticated reader/author account to enter author mode."""
+    if current_user.role not in ["reader", "author"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Tài khoản không có quyền tác giả"
+            detail="Tài khoản không có quyền truy cập không gian tác giả"
         )
     return current_user
 

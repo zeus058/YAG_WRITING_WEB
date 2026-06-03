@@ -6,7 +6,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 
 export default function ReaderModePage() {
   return (
-    <RequireAuth allowedRoles={["reader", "author", "admin"]}>
+    <RequireAuth allowedRoles={["reader", "author"]}>
       <ReaderScreen />
     </RequireAuth>
   );

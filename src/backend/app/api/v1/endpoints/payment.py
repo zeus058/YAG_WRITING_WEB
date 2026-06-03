@@ -25,6 +25,7 @@ from app.schemas.membership import (
     MembershipStatusResponse,
 )
 from app.schemas.payment import (
+    PaymentResultResponse,
     TransactionHistoryItem,
     TransactionStatusResponse,
     VNPAYIPNResponse,
@@ -63,6 +64,7 @@ def get_plans(db: Session = Depends(deps.get_db)):
     summary="U011 - Trạng thái Membership hiện tại",
 )
 def get_membership_status(
+    db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
     """
@@ -70,8 +72,25 @@ def get_membership_status(
     Được sử dụng trên S13 (Cài đặt tài khoản) để hiển thị gói hiện tại.
     """
     is_active = membership_svc.is_premium_active(current_user)
+    plan_name = None
+    if is_active:
+        # Get the latest successful transaction for this user to retrieve the active plan name
+        last_txn = (
+            db.query(Transaction)
+            .filter(
+                Transaction.user_id == current_user.id,
+                Transaction.status == "success"
+            )
+            .order_by(Transaction.created_at.desc())
+            .first()
+        )
+        if last_txn and last_txn.membership_plan:
+            plan_name = last_txn.membership_plan.name
+        else:
+            plan_name = "Premium Member"
+
     return MembershipStatusResponse(
-        plan_name=None,  # Could be enhanced to track the last active plan
+        plan_name=plan_name,
         premium_until=current_user.premium_until,
         is_active=is_active,
     )
@@ -104,6 +123,11 @@ def checkout(
     Tạo giao dịch mới (pending) và sinh URL thanh toán VNPAY.
     Frontend sẽ redirect user sang VNPAY gateway.
     """
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không thể thực hiện giao dịch thanh toán."
+        )
     # Validate plan exists
     plan = membership_svc.get_plan_by_id(db, body.plan_id)
     if plan is None:
@@ -170,6 +194,23 @@ def ipn_callback(
     query_params = dict(request.query_params)
     rsp_code, message = payment_svc.process_ipn(db, query_params)
     return VNPAYIPNResponse(RspCode=rsp_code, Message=message)
+
+
+@router.post(
+    "/vnpay/verify",
+    response_model=PaymentResultResponse,
+    summary="U012 - Xác thực kết quả thanh toán cho Frontend",
+)
+def verify_checkout(
+    query_params: dict,
+    db: Session = Depends(deps.get_db),
+    current_user: Optional[User] = Depends(deps.get_current_user_optional),
+):
+    """
+    Nhận tham số chuyển hướng từ VNPAY, kiểm tra chữ ký và trả về trạng thái chi tiết cho S10.
+    """
+    result = payment_svc.verify_payment_result(db, query_params, current_user=current_user)
+    return result
 
 
 @router.get(

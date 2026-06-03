@@ -10,7 +10,7 @@ import json
 from typing import Any, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 import redis
 from sqlalchemy.orm import Session
@@ -30,7 +30,6 @@ from app.schemas.story import (
     CommentListResponse,
     CommentResponse,
     CommentTreeListResponse,
-    CommentTreeResponse,
     CommentUpdate,
 )
 
@@ -166,7 +165,7 @@ def get_websocket_author(websocket: WebSocket, db: Session) -> User:
             detail="ACCOUNT_LOCKED",
         )
 
-    if user.role not in ["author", "admin"]:
+    if user.role not in ["reader", "author"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Tài khoản không có quyền tác giả",
@@ -282,12 +281,16 @@ def update_reading_history(db: Session, user_id: UUID, chapter_id: UUID) -> None
         db.add(ReadingHistory(user_id=user_id, chapter_id=chapter_id))
 
 
-def increment_story_view(redis_client, story_id: UUID | str) -> bool:
+def increment_story_view(redis_client, story_id: UUID | str, identifier: str) -> bool:
     if not redis_client:
         return False
     try:
-        redis_client.incr(story_views_key(story_id))
-        return True
+        dedup_key = f"story:view_dedup:{story_id}:{identifier}"
+        is_new = redis_client.set(dedup_key, "1", ex=86400, nx=True)
+        if is_new:
+            redis_client.incr(story_views_key(story_id))
+            return True
+        return False
     except redis.RedisError:
         return False
 
@@ -459,9 +462,15 @@ def flush_views(db: Session = Depends(deps.get_db)):
 @router.get("/{chapter_id}", response_model=ChapterReadResponse, summary="U007 - Đọc nội dung chương truyện với Redis cache")
 def get_chapter(
     chapter_id: UUID,
+    request: Request,
     db: Session = Depends(deps.get_db),
     current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ):
+    if current_user and current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không thể đọc hoặc viết truyện.",
+        )
     redis_client = get_redis_client()
     chapter_data = get_cached_chapter(redis_client, chapter_id)
     cache_status = "hit" if chapter_data else "miss"
@@ -481,7 +490,10 @@ def get_chapter(
 
     ensure_chapter_is_available(chapter_data, current_user)
     ensure_reader_can_read(chapter_data, current_user)
-    view_count_buffered = increment_story_view(redis_client, chapter_data["story_id"])
+    
+    identifier = str(current_user.id) if current_user else (request.client.host if (request.client and request.client.host) else "unknown_ip")
+    view_count_buffered = increment_story_view(redis_client, chapter_data["story_id"], identifier)
+    
     if current_user:
         update_reading_history(db, current_user.id, chapter_id)
     db.commit()
@@ -566,6 +578,11 @@ async def add_comment(
     db: Session = Depends(deps.get_db),
     current_user=Depends(deps.get_current_user),
 ):
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không thể bình luận.",
+        )
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
@@ -609,6 +626,11 @@ async def update_comment(
     db: Session = Depends(deps.get_db),
     current_user=Depends(deps.get_current_user),
 ):
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không thể sửa bình luận.",
+        )
     comment = (
         db.query(Comment)
         .filter(Comment.id == comment_id, Comment.chapter_id == chapter_id)
@@ -643,6 +665,11 @@ def delete_comment(
     db: Session = Depends(deps.get_db),
     current_user=Depends(deps.get_current_user),
 ):
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không thể xóa bình luận.",
+        )
     comment = (
         db.query(Comment)
         .filter(Comment.id == comment_id, Comment.chapter_id == chapter_id)

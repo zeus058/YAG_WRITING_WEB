@@ -274,7 +274,7 @@ async def _generate_text_embedding(text: str) -> list[float]:
         f"https://generativelanguage.googleapis.com/v1beta/models/"
         f"{settings.GEMINI_EMBEDDING_MODEL}:embedContent?key={settings.GEMINI_API_KEY}"
     )
-    payload = {"content": {"parts": [{"text": text}]} }
+    payload = {"content": {"parts": [{"text": text}]}}
     data = await _gemini_post(url, payload)
     embedding = data.get("embedding") or {}
     values = embedding.get("values") or embedding.get("vector") or embedding.get("embedding")

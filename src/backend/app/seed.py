@@ -118,7 +118,7 @@ def seed_database():
                 role="admin"
             )
             db.add(admin_user)
-            db.flush() # Populate ID
+            db.flush()  # Populate ID
             
             admin_profile = Profile(
                 user_id=admin_user.id,

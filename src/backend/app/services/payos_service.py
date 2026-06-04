@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 import httpx
 
 from app.core.config import settings
@@ -30,7 +30,7 @@ def compute_payos_signature(data: Dict[str, Any], checksum_key: str) -> str:
             # PayOS nested arrays are joined or ignored depending on API, but we usually serialize
             v = json.dumps(v, separators=(",", ":"), ensure_ascii=False)
         parts.append(f"{k}={v}")
-    
+
     sign_content = "&".join(parts)
     return hmac.new(
         checksum_key.encode("utf-8"),

@@ -61,6 +61,7 @@ def _clear_login_failures(identifier: str) -> None:
     except Exception as exc:
         logger.warning("Login failure cleanup skipped because Redis is unavailable: %s", exc)
 
+
 def get_redis_client():
     """Initializes and returns a Redis client."""
     if settings.REDIS_URL:
@@ -79,29 +80,30 @@ def get_redis_client():
         socket_timeout=2.0
     )
 
+
 def send_otp_email(email: str, otp: str):
     """Sends OTP email via SMTP or fallback logs to terminal."""
     subject = "[YAG] Yêu cầu khôi phục mật khẩu"
     body = f"Mã OTP khôi phục mật khẩu của bạn là: {otp}\nHiệu lực trong 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai."
-    
+
     # We always print to terminal first so local testing is extremely simple
     print("\n========================================================")
     print(f" GỬI EMAIL KHÔI PHỤC MẬT KHẨU CHO: {email}")
     print(f" MÃ OTP CỦA BẠN LÀ: {otp}")
     print("========================================================\n")
-    
+
     # Get SMTP configs from environment if present, else fallback graceful
     import os
     smtp_user = os.getenv("SMTP_USER")
     smtp_password = os.getenv("SMTP_PASSWORD")
-    
+
     if smtp_user and smtp_password:
         try:
             msg = MIMEText(body, "plain", "utf-8")
             msg["Subject"] = subject
             msg["From"] = f"YAG Platform <{smtp_user}>"
             msg["To"] = email
-            
+
             with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=5.0) as server:
                 server.login(smtp_user, smtp_password)
                 server.sendmail(smtp_user, email, msg.as_string())
@@ -110,6 +112,7 @@ def send_otp_email(email: str, otp: str):
             logger.error(f"Failed to send email via SMTP: {e}. Fallback console logging.")
     else:
         logger.info("SMTP credentials not configured. Email logged to console.")
+
 
 class AuthService:
     @staticmethod
@@ -122,7 +125,7 @@ class AuthService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="EMAIL_EXISTS"
             )
-            
+
         # 2. Check if username already registered
         existing_username = db.query(User).filter(User.username == user_in.username).first()
         if existing_username:
@@ -142,7 +145,7 @@ class AuthService:
             )
             db.add(db_user)
             db.flush()  # Populates db_user.id for profile matching
-            
+
             db_profile = Profile(
                 user_id=db_user.id,
                 display_name=db_user.username,
@@ -170,7 +173,7 @@ class AuthService:
         db_user = db.query(User).filter(
             (User.email == login_in.email) | (User.username == login_in.email)
         ).first()
-        
+
         if not db_user:
             _record_login_failure(identifier)
             raise HTTPException(
@@ -204,7 +207,7 @@ class AuthService:
         """Generates a 6-digit OTP, caches in Redis, and dispatches an email background task."""
         # Check if email exists in database
         db_user = db.query(User).filter(User.email == email).first()
-        
+
         # We always return 200 message to prevent account harvesting
         response_msg = {"message": "Email khôi phục đã được gửi nếu tài khoản tồn tại"}
         if not db_user:
@@ -212,7 +215,7 @@ class AuthService:
 
         # Generate 6-digit numeric OTP
         otp = f"{random.randint(100000, 999999)}"
-        
+
         # Save in Redis with 5 minutes (300 seconds) expiration
         try:
             r = get_redis_client()
@@ -244,7 +247,7 @@ class AuthService:
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="REDIS_OFFLINE_ERROR"
             )
-            
+
         # 2. Match OTP
         if not cached_otp or cached_otp != confirm_in.otp:
             raise HTTPException(
@@ -259,12 +262,12 @@ class AuthService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="USER_NOT_FOUND"
             )
-            
+
         try:
             db_user.password_hash = get_password_hash(confirm_in.new_password)
             db.add(db_user)
             db.commit()
-            
+
             # Delete OTP from Redis immediately to prevent reuse
             r.delete(f"otp:{confirm_in.email}")
             return {"message": "Mật khẩu đã được cập nhật"}

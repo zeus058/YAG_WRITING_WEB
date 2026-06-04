@@ -74,7 +74,7 @@ def push_publish_task_to_queue(payload: PublishTaskPayload) -> bool:
             import asyncio
             import threading
             from app.worker.main import handle_publish_chapter
-            
+
             payload_dict = payload.to_dict()
             try:
                 loop = asyncio.get_running_loop()

@@ -24,6 +24,7 @@ from app.services.notification_service import stream_user_notifications
 from app.services.publish_service import get_rabbitmq_connection
 from app.services.schedule_service import shutdown_schedule_scheduler, start_schedule_scheduler
 
+
 async def periodic_view_count_flush() -> None:
     while True:
         await asyncio.sleep(600)
@@ -35,12 +36,13 @@ async def periodic_view_count_flush() -> None:
         finally:
             db.close()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Schema lifecycle is owned by versioned SQL migrations. Startup only starts
     # configured background tasks and checks are exposed through /health/ready.
     start_schedule_scheduler()
-    
+
     flush_task = None
     if settings.VIEW_COUNT_FLUSH_ENABLED:
         flush_task = asyncio.create_task(periodic_view_count_flush())
@@ -51,7 +53,7 @@ async def lifespan(app: FastAPI):
             await flush_task
         except asyncio.CancelledError:
             pass
-    
+
     # Shutdown scheduler
     shutdown_schedule_scheduler()
 
@@ -106,6 +108,7 @@ if settings.ENVIRONMENT != "production":
     uploads_dir = Path(__file__).resolve().parents[1] / "uploads"
     uploads_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/media", StaticFiles(directory=str(uploads_dir)), name="media")
+
 
 @app.get("/", tags=["Main"])
 def read_root():
@@ -182,4 +185,3 @@ async def websocket_notifications_v1(websocket: WebSocket, user_id: str):
 async def websocket_story_chapter_draft(websocket: WebSocket, story_id: str, chapter_id: str):
     _ = story_id
     await websocket_editor(websocket, UUID(chapter_id))
-

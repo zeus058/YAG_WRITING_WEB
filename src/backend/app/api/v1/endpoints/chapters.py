@@ -488,7 +488,7 @@ def get_chapter(
         chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
         if not chapter:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
-        
+
         is_author = current_user and chapter.story.author_id == current_user.id
         if chapter.moderation_status != "approved" and not is_author:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not available")
@@ -499,10 +499,11 @@ def get_chapter(
 
     ensure_chapter_is_available(chapter_data, current_user)
     ensure_reader_can_read(chapter_data, current_user)
-    
-    identifier = str(current_user.id) if current_user else (request.client.host if (request.client and request.client.host) else "unknown_ip")
+
+    identifier = str(current_user.id) if current_user else (
+        request.client.host if (request.client and request.client.host) else "unknown_ip")
     view_count_buffered = increment_story_view(redis_client, chapter_data["story_id"], identifier)
-    
+
     if current_user:
         update_reading_history(db, current_user.id, chapter_id)
     db.commit()

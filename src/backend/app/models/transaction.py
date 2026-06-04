@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
+
 class Transaction(Base):
     __tablename__ = "transactions"
 

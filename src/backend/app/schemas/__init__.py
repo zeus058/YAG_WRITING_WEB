@@ -152,4 +152,3 @@ __all__ = [
     "AIRecommendationItem",
     "AIRecommendationResponse",
 ]
-

@@ -38,15 +38,15 @@ def seed_database():
             conn.execute(text("DROP TABLE IF EXISTS schema_migrations"))
     else:
         print("Preparing development database without destructive reset...")
-    
+
     # Apply all SQL migration files through the versioned migration runner.
     current_dir = os.path.dirname(os.path.abspath(__file__))
     migrations_dir = os.path.join(current_dir, "..", "migrations")
     print(f"Applying schema migrations from {migrations_dir}...")
     apply_migrations(migrations_dir)
-        
+
     print("Database tables and custom indexes created successfully from migration script!")
-    
+
     db = SessionLocal()
     try:
         if not allow_reset and (
@@ -110,10 +110,14 @@ def seed_database():
         db.add_all([demo_reader, demo_author, demo_admin, demo_admin_dev])
         db.flush()
 
-        db.add(Profile(user_id=demo_reader.id, display_name="Độc giả Demo", bio="Tài khoản độc giả demo hệ thống YAG.", reputation_score=100))
-        db.add(Profile(user_id=demo_author.id, display_name="Tác giả Demo", bio="Tài khoản tác giả demo hệ thống YAG.", reputation_score=100))
-        db.add(Profile(user_id=demo_admin.id, display_name="Admin Demo", bio="Tài khoản admin demo hệ thống YAG.", reputation_score=100))
-        db.add(Profile(user_id=demo_admin_dev.id, display_name="Admin Dev", bio="Tài khoản admin dev hệ thống YAG.", reputation_score=100))
+        db.add(Profile(user_id=demo_reader.id, display_name="Độc giả Demo",
+               bio="Tài khoản độc giả demo hệ thống YAG.", reputation_score=100))
+        db.add(Profile(user_id=demo_author.id, display_name="Tác giả Demo",
+               bio="Tài khoản tác giả demo hệ thống YAG.", reputation_score=100))
+        db.add(Profile(user_id=demo_admin.id, display_name="Admin Demo",
+               bio="Tài khoản admin demo hệ thống YAG.", reputation_score=100))
+        db.add(Profile(user_id=demo_admin_dev.id, display_name="Admin Dev",
+               bio="Tài khoản admin dev hệ thống YAG.", reputation_score=100))
 
         # 2 Admins
         admins = [demo_admin]
@@ -126,7 +130,7 @@ def seed_database():
             )
             db.add(admin_user)
             db.flush()  # Populate ID
-            
+
             admin_profile = Profile(
                 user_id=admin_user.id,
                 display_name=f"Quản trị viên {i}",
@@ -155,7 +159,7 @@ def seed_database():
             )
             db.add(author_user)
             db.flush()
-            
+
             author_profile = Profile(
                 user_id=author_user.id,
                 display_name=name,
@@ -176,7 +180,7 @@ def seed_database():
             )
             db.add(reader_user)
             db.flush()
-            
+
             reader_profile = Profile(
                 user_id=reader_user.id,
                 display_name=f"Độc giả {i}",
@@ -199,7 +203,7 @@ def seed_database():
             )
             db.add(premium_user)
             db.flush()
-            
+
             premium_profile = Profile(
                 user_id=premium_user.id,
                 display_name=f"Hội viên Vàng {i}",
@@ -208,7 +212,7 @@ def seed_database():
             )
             db.add(premium_profile)
             premium_readers.append(premium_user)
-            
+
         db.commit()
 
         # 3. Seed Stories (3 main stories created by first 3 authors)
@@ -220,7 +224,7 @@ def seed_database():
             "Hàn Lập - một thiếu niên bình thường tình cờ bước chân vào giang hồ và thế giới tu tiên rộng lớn vô tận.",
             "Câu chuyện tình duyên trắc trở và đầy sóng gió giữa Dương Quá và Tiểu Long Nữ thời Nam Tống."
         ]
-        
+
         stories = []
         for i, (title, cat, desc) in enumerate(zip(story_titles, story_categories, story_descs)):
             story = Story(
@@ -289,7 +293,7 @@ def seed_database():
             parent_id=comment1.id
         )
         db.add(reply1)
-        
+
         # Another single comment on Chapter 1 of Story 2
         comment2 = Comment(
             user_id=premium_readers[0].id,
@@ -435,13 +439,14 @@ def seed_database():
         print(" - 3 Reading Progress histories")
         print(" - 3 Library bookmarks")
         print("All tables contain realistic, validated production-ready seed data.")
-        
+
     except Exception as e:
         db.rollback()
         print(f"\n[ERROR] Database seeding failed: {e}", file=sys.stderr)
         raise e
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     seed_database()

@@ -17,6 +17,7 @@ if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.C
 else:
     logger.warning("Cloudinary credentials are not configured. Running in local mock upload mode.")
 
+
 class CloudinaryService:
     @staticmethod
     def upload_avatar(file: UploadFile) -> str:

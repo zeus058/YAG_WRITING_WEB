@@ -161,7 +161,8 @@ class Settings(BaseSettings):
                 raise ValueError("Database schema mutation on app startup is disabled in production")
 
             if self.SCHEDULER_ENABLED and self.SERVICE_ROLE == "api":
-                raise ValueError("SCHEDULER_ENABLED must be false in production API replicas; run scheduler as a separate job")
+                raise ValueError(
+                    "SCHEDULER_ENABLED must be false in production API replicas; run scheduler as a separate job")
 
             if _looks_local(self.DATABASE_URL or ""):
                 raise ValueError("DATABASE_URL must not point to localhost in production")

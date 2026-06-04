@@ -205,7 +205,7 @@ def extract_json_object(raw_text: str) -> dict[str, Any]:
     start = candidate_text.find("{")
     end = candidate_text.rfind("}")
     if start >= 0 and end > start:
-        candidate_text = candidate_text[start : end + 1]
+        candidate_text = candidate_text[start: end + 1]
 
     data = json.loads(candidate_text)
     if not isinstance(data, dict):
@@ -242,7 +242,7 @@ def normalize_suggestions(data: dict[str, Any], mode: AiMode) -> list[AISuggesti
             break
 
     if len(suggestions) < 3:
-        suggestions.extend(build_fallback_items(mode)[len(suggestions) : 3])
+        suggestions.extend(build_fallback_items(mode)[len(suggestions): 3])
 
     return suggestions[:3]
 
@@ -337,6 +337,8 @@ async def generate_ai_suggestions(request: AISuggestionRequest) -> AISuggestionR
     except (IndexError, AttributeError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         logger.exception("Gemini response parsing failed")
         return build_fallback_response(sanitized_request, str(exc))
+
+
 def _build_search_item(row: dict[str, Any], query_vector: list[float] | None = None) -> AISemanticSearchItem:
     distance = float(row.get("distance", 0.0) or 0.0)
     if "similarity" in row:
@@ -462,6 +464,8 @@ async def search_stories_semantic(db: Any, request: AISemanticSearchRequest) -> 
             results=[_build_search_item(row, None) for row in fallback_rows[:limit]],
             message=str(exc),
         )
+
+
 def _average_vectors(vectors: list[list[float]]) -> list[float]:
     if not vectors:
         return []
@@ -624,6 +628,8 @@ async def recommend_stories_for_user(db: Any, user_id: str, limit: int = 5) -> A
             ],
             message=str(exc),
         )
+
+
 async def sync_story_embedding(db: Any, story_id: str, description: str) -> dict[str, Any]:
     embedding = await _generate_text_embedding(description)
     vector_literal = _format_vector_literal(embedding)

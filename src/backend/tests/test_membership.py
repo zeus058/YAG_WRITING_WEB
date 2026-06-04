@@ -9,10 +9,12 @@ from app.models.membership_plan import MembershipPlan
 
 client = TestClient(app)
 
+
 @pytest.fixture
 def mock_db():
     """Generates a mock database session."""
     return MagicMock()
+
 
 @pytest.fixture(autouse=True)
 def override_db(mock_db):
@@ -23,17 +25,18 @@ def override_db(mock_db):
     yield
     app.dependency_overrides.pop(deps.get_db, None)
 
+
 def test_get_membership_plans_success(mock_db):
     """Verifies that listing membership plans retrieves plans sorted by price ascending."""
     mock_plans = [
         MembershipPlan(id="MONTHLY", name="Gói tháng", duration_days=30, price=99000.0, description="Hạn 1 tháng"),
         MembershipPlan(id="YEARLY", name="Gói năm", duration_days=365, price=999000.0, description="Hạn 1 năm")
     ]
-    
+
     mock_db.query.return_value.order_by.return_value.all.return_value = mock_plans
 
     response = client.get("/api/v1/membership/plans")
-    
+
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert len(data) == 2

@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
+
 class Profile(Base):
     __tablename__ = "profiles"
 
@@ -24,4 +25,3 @@ class Profile(Base):
     __table_args__ = (
         CheckConstraint("reputation_score >= 0 AND reputation_score <= 100", name="chk_profiles_reputation_score"),
     )
-

@@ -71,7 +71,7 @@ def _extract_json(text: str) -> dict:
     start = stripped.find("{")
     end = stripped.rfind("}")
     if start != -1 and end != -1:
-        stripped = stripped[start : end + 1]
+        stripped = stripped[start: end + 1]
 
     return json.loads(stripped)
 

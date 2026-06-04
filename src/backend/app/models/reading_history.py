@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
+
 class ReadingHistory(Base):
     __tablename__ = "reading_histories"
 

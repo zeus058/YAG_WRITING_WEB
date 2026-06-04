@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -54,5 +55,3 @@ class User(Base):
     @property
     def reputation_score(self) -> int:
         return self.profile.reputation_score if self.profile else 100
-
-

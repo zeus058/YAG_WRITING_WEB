@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
+
 class PublishSchedule(Base):
     __tablename__ = "publish_schedules"
 
@@ -39,6 +40,6 @@ class PublishSchedule(Base):
     story = relationship("Story", back_populates="publish_schedules")
 
     __table_args__ = (
-        CheckConstraint("status IN ('scheduled', 'published', 'missed', 'cancelled')", name="chk_publish_schedules_status_valid"),
+        CheckConstraint("status IN ('scheduled', 'published', 'missed', 'cancelled')",
+                        name="chk_publish_schedules_status_valid"),
     )
-

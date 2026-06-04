@@ -146,6 +146,8 @@ class AISemanticSearchResponse(BaseModel):
     fallback: bool = False
     results: list[AISemanticSearchItem]
     message: str | None = None
+
+
 class AIRecommendationItem(BaseModel):
     story_id: str
     title: str | None = None
@@ -160,4 +162,3 @@ class AIRecommendationResponse(BaseModel):
     fallback: bool = False
     recommendations: list[AIRecommendationItem]
     message: str | None = None
-

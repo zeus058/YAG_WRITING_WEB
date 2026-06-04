@@ -16,6 +16,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.api import deps
+from app.core.config import settings
+from app.models.membership_plan import MembershipPlan
 from app.models.transaction import Transaction
 from app.models.user import User
 from app.schemas.membership import (

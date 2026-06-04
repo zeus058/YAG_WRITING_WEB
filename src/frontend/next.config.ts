@@ -40,7 +40,7 @@ if (normalizedDeployEnvironment === "production") {
 }
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
   devIndicators: false,
   poweredByHeader: false,
   async headers() {

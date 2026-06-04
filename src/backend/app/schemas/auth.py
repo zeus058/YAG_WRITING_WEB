@@ -3,9 +3,11 @@ from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
+
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_]+$")
     email: EmailStr
+
 
 class UserRegister(UserBase):
     password: str = Field(..., min_length=8)
@@ -17,6 +19,7 @@ class UserRegister(UserBase):
         if v not in ["reader", "author"]:
             raise ValueError("Role must be reader or author")
         return v
+
 
 class UserResponse(BaseModel):
     id: UUID
@@ -30,9 +33,11 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class UserLogin(BaseModel):
     email: str  # Can be email or username
     password: str
+
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -43,8 +48,10 @@ class TokenResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class PasswordResetRequest(BaseModel):
     email: EmailStr
+
 
 class PasswordResetConfirm(BaseModel):
     email: EmailStr
@@ -61,9 +68,11 @@ class PasswordResetConfirm(BaseModel):
 # U002 — Profile Management Schemas
 # ==========================================
 
+
 class ProfileUpdate(BaseModel):
     display_name: Optional[str] = Field(None, min_length=1, max_length=100)
     bio: Optional[str] = Field(None, max_length=500)
+
 
 class ProfileResponse(BaseModel):
     user_id: UUID
@@ -90,4 +99,3 @@ class CurrentUserProfile(BaseModel):
 
 class CurrentUserResponse(UserResponse):
     profile: Optional[CurrentUserProfile] = None
-

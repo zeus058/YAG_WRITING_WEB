@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
+
 class MembershipPlan(Base):
     __tablename__ = "membership_plans"
 

@@ -16,7 +16,6 @@ Run from project root (SE_Writing_Web/src/backend/):
 import os
 import uuid
 import pytest
-from decimal import Decimal
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
@@ -26,6 +25,7 @@ DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
     os.getenv("DATABASE_URL", "postgresql://yag_user:yag_secret@localhost:5432/yag_db"),
 )
+
 
 @pytest.fixture(scope="session")
 def engine():
@@ -48,6 +48,7 @@ def engine():
     yield eng
     eng.dispose()
 
+
 @pytest.fixture(scope="session")
 def session(engine):
     SessionLocal = sessionmaker(bind=engine)
@@ -57,6 +58,7 @@ def session(engine):
 # =============================================================================
 # 1. Connectivity & Extension
 # =============================================================================
+
 
 class TestConnectivity:
     def test_postgres_connection(self, engine):
@@ -87,6 +89,7 @@ EXPECTED_TABLES = [
     "reading_histories", "libraries",
     "membership_plans", "transactions",
 ]
+
 
 class TestTablesExist:
     @pytest.mark.parametrize("table_name", EXPECTED_TABLES)
@@ -153,6 +156,7 @@ EXPECTED_INDEXES = {
     "transactions":     ["uidx_transactions_vnp_txn_ref"],
     "story_embeddings": ["idx_story_embeddings_embedding"],
 }
+
 
 class TestIndexes:
     @pytest.mark.parametrize("table,index_names", EXPECTED_INDEXES.items())
@@ -243,7 +247,7 @@ class TestCheckConstraints:
     def test_chapters_invalid_moderation_status(self, session):
         """chapters.moderation_status must be pending/approved/rejected/flagged."""
         author_id = self._make_user(session)
-        story_id  = self._make_story(session, author_id)
+        story_id = self._make_story(session, author_id)
         cid = uuid.uuid4()
         with pytest.raises(IntegrityError):
             session.execute(text("""
@@ -257,7 +261,7 @@ class TestCheckConstraints:
     def test_chapters_zero_chapter_number(self, session):
         """chapters.chapter_number must be > 0."""
         author_id = self._make_user(session)
-        story_id  = self._make_story(session, author_id)
+        story_id = self._make_story(session, author_id)
         cid = uuid.uuid4()
         with pytest.raises(IntegrityError):
             session.execute(text("""

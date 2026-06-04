@@ -363,7 +363,8 @@ async def payos_webhook(
             plan = db.query(MembershipPlan).filter(MembershipPlan.id == transaction.plan_id).first()
             if plan:
                 if user.premium_until and user.premium_until.replace(tzinfo=timezone.utc) > now:
-                    user.premium_until = user.premium_until.replace(tzinfo=timezone.utc) + timedelta(days=plan.duration_days)
+                    user.premium_until = user.premium_until.replace(
+                        tzinfo=timezone.utc) + timedelta(days=plan.duration_days)
                 else:
                     user.premium_until = now + timedelta(days=plan.duration_days)
     else:
@@ -425,7 +426,8 @@ def verify_payos_checkout(
         user = db.query(User).filter(User.id == transaction.user_id).first()
         if user and plan:
             if user.premium_until and user.premium_until.replace(tzinfo=timezone.utc) > now:
-                user.premium_until = user.premium_until.replace(tzinfo=timezone.utc) + timedelta(days=plan.duration_days)
+                user.premium_until = user.premium_until.replace(
+                    tzinfo=timezone.utc) + timedelta(days=plan.duration_days)
             else:
                 user.premium_until = now + timedelta(days=plan.duration_days)
         db.commit()

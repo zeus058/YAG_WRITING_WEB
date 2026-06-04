@@ -118,4 +118,3 @@ def test_recommendations_filter_seen_stories(monkeypatch):
         assert body["recommendations"][0]["story_id"] != "seen-1"
     finally:
         app.dependency_overrides.clear()
-

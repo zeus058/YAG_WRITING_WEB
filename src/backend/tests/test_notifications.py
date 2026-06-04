@@ -12,9 +12,11 @@ from app.models.notification import Notification
 
 client = TestClient(app)
 
+
 @pytest.fixture
 def mock_db():
     return MagicMock()
+
 
 @pytest.fixture
 def mock_user():
@@ -24,6 +26,7 @@ def mock_user():
         email="hien@yag.vn",
         role="reader"
     )
+
 
 @pytest.fixture(autouse=True)
 def override_db(mock_db):
@@ -47,7 +50,8 @@ def test_list_notifications(mock_db, mock_user):
         read_at=None,
         created_at=datetime.now(timezone.utc)
     )
-    mock_db.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [mock_notification]
+    mock_db.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [
+        mock_notification]
 
     response = client.get("/api/v1/notifications/", headers={"Authorization": "Bearer mock-token"})
     assert response.status_code == status.HTTP_200_OK

@@ -180,7 +180,6 @@ class TestCheckoutEndpoint:
         """Checkout with non-existent plan should return 404 (if authenticated)."""
         # This test requires a valid user in DB — skip if no DB
         # The 401 check above covers the auth layer
-        pass
 
 
 class TestIPNEndpoint:
@@ -360,4 +359,3 @@ class TestVerifyPaymentResultLogic:
         assert result["success"] is True
         assert result["plan_name"] == "Gói Năm Premium"
         assert result["amount"] == 399000.0
-

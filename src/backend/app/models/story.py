@@ -6,6 +6,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 
+
 class Story(Base):
     __tablename__ = "stories"
 
@@ -33,7 +34,8 @@ class Story(Base):
 
     author = relationship("User", back_populates="stories")
     chapters = relationship("Chapter", back_populates="story", cascade="all, delete-orphan")
-    embedding_record = relationship("StoryEmbedding", back_populates="story", uselist=False, cascade="all, delete-orphan")
+    embedding_record = relationship("StoryEmbedding", back_populates="story",
+                                    uselist=False, cascade="all, delete-orphan")
     publish_schedules = relationship("PublishSchedule", back_populates="story", cascade="all, delete-orphan")
     reviews = relationship("Review", back_populates="story", cascade="all, delete-orphan")
 
@@ -55,4 +57,3 @@ class Story(Base):
         CheckConstraint("view_count >= 0", name="chk_stories_view_count_non_negative"),
         CheckConstraint("rating_avg >= 0.00 AND rating_avg <= 5.00", name="chk_stories_rating_avg_range"),
     )
-

@@ -36,10 +36,10 @@ def get_current_user(
         detail="INVALID_OR_EXPIRED_TOKEN",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
     if not token:
         raise credentials_exception
-        
+
     try:
         # Decode using HS256 algorithm and the core system secret key
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
@@ -53,13 +53,13 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise credentials_exception
-        
+
     if user.is_locked:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="ACCOUNT_LOCKED",
         )
-        
+
     return user
 
 
@@ -171,4 +171,3 @@ def require_authenticated_user(token: Optional[str] = Depends(oauth2_scheme)) ->
         return payload
     except JWTError:
         raise credentials_exception
-

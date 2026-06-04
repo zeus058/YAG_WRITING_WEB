@@ -23,6 +23,7 @@ from app.core.security import create_access_token
 
 router = APIRouter()
 
+
 @router.post(
     "/register",
     response_model=TokenResponse,
@@ -64,6 +65,7 @@ def login(login_in: UserLogin, db: Session = Depends(deps.get_db)):
 def get_me(current_user: User = Depends(deps.get_current_user)):
     return current_user
 
+
 @router.post(
     "/password-reset/request",
     summary="U001 - Yêu cầu khôi phục mật khẩu qua OTP"
@@ -74,6 +76,7 @@ def reset_request(
     db: Session = Depends(deps.get_db)
 ):
     return AuthService.request_password_reset(db, reset_in.email, background_tasks)
+
 
 @router.post(
     "/password-reset/confirm",
@@ -88,6 +91,7 @@ def reset_confirm(
 # ========================================================
 # U002 — Profile Endpoints
 # ========================================================
+
 
 @router.put(
     "/profiles/me",
@@ -105,12 +109,12 @@ def update_profile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="PROFILE_NOT_FOUND"
         )
-        
+
     if profile_in.display_name is not None:
         profile.display_name = profile_in.display_name
     if profile_in.bio is not None:
         profile.bio = profile_in.bio
-        
+
     try:
         db.add(profile)
         db.commit()
@@ -122,6 +126,7 @@ def update_profile(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Cập nhật profile thất bại: {str(e)}"
         )
+
 
 @router.post(
     "/profiles/avatar",
@@ -139,7 +144,7 @@ def upload_avatar(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="INVALID_IMAGE_FORMAT"
         )
-        
+
     # 2. Validate file size (2MB max)
     try:
         file.file.seek(0, 2)
@@ -158,12 +163,12 @@ def upload_avatar(
 
     # 3. Upload to Cloudinary
     avatar_url = CloudinaryService.upload_avatar(file)
-    
+
     # 4. Update database
     profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
     if not profile:
         profile = Profile(user_id=current_user.id, display_name=current_user.username)
-        
+
     try:
         profile.avatar_url = avatar_url
         db.add(profile)

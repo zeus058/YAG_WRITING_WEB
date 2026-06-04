@@ -1,3 +1,14 @@
+from app.services.publish_service import PUBLISH_QUEUE_NAME, get_rabbitmq_connection
+from app.services.notification_service import create_notification
+from app.services.moderation_service import (
+    ModerationResult,
+    apply_moderation_result,
+    moderate_content,
+)
+from app.models.story import Story
+from app.models.chapter import Chapter
+from app.core.database import SessionLocal
+from app.core.config import settings
 import json
 import logging
 import sys
@@ -9,17 +20,6 @@ import pika
 
 sys.path.append("/app")
 
-from app.core.config import settings
-from app.core.database import SessionLocal
-from app.models.chapter import Chapter
-from app.models.story import Story
-from app.services.moderation_service import (
-    ModerationResult,
-    apply_moderation_result,
-    moderate_content,
-)
-from app.services.notification_service import create_notification
-from app.services.publish_service import PUBLISH_QUEUE_NAME, get_rabbitmq_connection
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,7 +71,8 @@ def _publish_retry(channel, payload: dict, properties, reason: str) -> bool:
         target_queue = settings.RABBITMQ_MODERATION_DLQ
         logger.error("Moving moderation task to DLQ after %s retries: %s", retry_count - 1, reason)
     else:
-        logger.warning("Retrying moderation task in %ss (attempt %s/%s): %s", REQUEUE_DELAY_SECONDS, retry_count, settings.RABBITMQ_MODERATION_MAX_RETRIES, reason)
+        logger.warning("Retrying moderation task in %ss (attempt %s/%s): %s", REQUEUE_DELAY_SECONDS,
+                       retry_count, settings.RABBITMQ_MODERATION_MAX_RETRIES, reason)
 
     channel.basic_publish(
         exchange="",

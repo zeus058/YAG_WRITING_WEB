@@ -12,10 +12,12 @@ from app.models.profile import Profile
 # Create test client
 client = TestClient(app)
 
+
 @pytest.fixture
 def mock_db():
     """Generates a mock database session."""
     return MagicMock()
+
 
 @pytest.fixture
 def mock_user():
@@ -27,6 +29,7 @@ def mock_user():
         role="reader"
     )
 
+
 @pytest.fixture(autouse=True)
 def override_db(mock_db):
     """Automatically overrides deps.get_db with mock database session."""
@@ -35,6 +38,7 @@ def override_db(mock_db):
     app.dependency_overrides[deps.get_db] = _override
     yield
     app.dependency_overrides.pop(deps.get_db, None)
+
 
 def test_update_profile_success(mock_db, mock_user):
     """Verifies that an authorized user can successfully edit display name and biography."""
@@ -66,9 +70,10 @@ def test_update_profile_success(mock_db, mock_user):
     assert data["display_name"] == "Gia Hiển"
     assert data["bio"] == "Bút danh viết truyện mới"
     assert mock_db.commit.called
-    
+
     # Clean overrides
     app.dependency_overrides.pop(deps.get_current_user, None)
+
 
 def test_update_profile_unauthorized(mock_db):
     """Verifies that update profile requests are blocked with a 401 status when not authenticated."""
@@ -77,17 +82,18 @@ def test_update_profile_unauthorized(mock_db):
         "display_name": "New Name",
         "bio": "New Bio"
     }
-    
+
     response = client.put("/api/v1/auth/profiles/me", json=payload)
-    
+
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json()["detail"] == "INVALID_OR_EXPIRED_TOKEN"
+
 
 @patch("app.api.v1.endpoints.auth.CloudinaryService.upload_avatar")
 def test_upload_avatar_success(mock_upload, mock_db, mock_user):
     """Verifies that uploading a valid small image successfully writes the avatar_url to the database."""
     app.dependency_overrides[deps.get_current_user] = lambda: mock_user
-    
+
     # Mock Cloudinary return URL
     mock_upload.return_value = "https://res.cloudinary.com/yag/image/upload/v1/yag/avatars/avatar.webp"
 
@@ -113,8 +119,9 @@ def test_upload_avatar_success(mock_upload, mock_db, mock_user):
     data = response.json()
     assert data["avatar_url"] == "https://res.cloudinary.com/yag/image/upload/v1/yag/avatars/avatar.webp"
     assert mock_db.commit.called
-    
+
     app.dependency_overrides.pop(deps.get_current_user, None)
+
 
 def test_upload_avatar_invalid_format(mock_db, mock_user):
     """Verifies that non-image formats (e.g. plain text files) are blocked with a 400 INVALID_IMAGE_FORMAT error."""
@@ -130,8 +137,9 @@ def test_upload_avatar_invalid_format(mock_db, mock_user):
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json()["detail"] == "INVALID_IMAGE_FORMAT"
-    
+
     app.dependency_overrides.pop(deps.get_current_user, None)
+
 
 def test_upload_avatar_too_large(mock_db, mock_user):
     """Verifies that files exceeding 2MB size constraints are blocked with an IMAGE_TOO_LARGE error."""
@@ -149,5 +157,5 @@ def test_upload_avatar_too_large(mock_db, mock_user):
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json()["detail"] == "IMAGE_TOO_LARGE"
-    
+
     app.dependency_overrides.pop(deps.get_current_user, None)

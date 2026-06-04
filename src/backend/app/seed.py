@@ -101,12 +101,19 @@ def seed_database():
             password_hash=demo_hashed_password,
             role="admin"
         )
-        db.add_all([demo_reader, demo_author, demo_admin])
+        demo_admin_dev = User(
+            username="admin_dev",
+            email="admin@yag.dev",
+            password_hash=get_password_hash("Admin@YAG2026"),
+            role="admin"
+        )
+        db.add_all([demo_reader, demo_author, demo_admin, demo_admin_dev])
         db.flush()
 
         db.add(Profile(user_id=demo_reader.id, display_name="Độc giả Demo", bio="Tài khoản độc giả demo hệ thống YAG.", reputation_score=100))
         db.add(Profile(user_id=demo_author.id, display_name="Tác giả Demo", bio="Tài khoản tác giả demo hệ thống YAG.", reputation_score=100))
         db.add(Profile(user_id=demo_admin.id, display_name="Admin Demo", bio="Tài khoản admin demo hệ thống YAG.", reputation_score=100))
+        db.add(Profile(user_id=demo_admin_dev.id, display_name="Admin Dev", bio="Tài khoản admin dev hệ thống YAG.", reputation_score=100))
 
         # 2 Admins
         admins = [demo_admin]

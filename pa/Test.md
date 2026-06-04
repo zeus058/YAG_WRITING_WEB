@@ -342,45 +342,135 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
     Written by: 23120151 Huỳnh Yến Nhi
     Reviewed by: 23120123 Trần Gia Hiển
 
+| *Test case* | TC-016 |
+| :--- | :--- |
+| Related feature | U007 — Đọc truyện và Redis Cache |
+| Context | Kiểm tra API đọc chương ưu tiên lấy nội dung từ Redis để giảm truy vấn PostgreSQL và tự tạo cache khi dữ liệu chưa tồn tại |
+| Input Data | - Endpoint: `GET /api/v1/chapters/{chapter_id}` với một chương đã được duyệt và xuất bản <br> - Redis key: `chapter:content:{chapter_id}` <br> - TTL cache mong đợi: 7200 giây |
+| Expected Output | 1. Lần gọi đầu khi Redis chưa có key trả về HTTP 200, `cache_status: "miss"` và tạo key với TTL 7200 giây. <br> 2. Lần gọi thứ hai trả về HTTP 200, `cache_status: "hit"` và nội dung chương giống lần đầu. <br> 3. Cache được xóa khi nội dung chương được cập nhật. |
+| Test steps | 1. Tạo một chương đã duyệt trong PostgreSQL và xóa key `chapter:content:{chapter_id}` khỏi Redis. <br> 2. Gửi `GET /api/v1/chapters/{chapter_id}` -> xác nhận status = 200 và `cache_status = "miss"`. <br> 3. Kiểm tra Redis đã lưu key trên và TTL còn xấp xỉ 7200 giây. <br> 4. Gửi lại cùng request -> xác nhận `cache_status = "hit"` và nội dung không thay đổi. <br> 5. Cập nhật nội dung chương -> xác nhận key cache bị xóa để tránh trả dữ liệu cũ. |
+| Actual Output | Request đầu tiên trả về HTTP 200 với `cache_status: "miss"` và tạo cache Redis TTL 7200 giây. Request thứ hai trả về `cache_status: "hit"` với nội dung chính xác; cache bị vô hiệu hóa sau khi chương được cập nhật. |
+| Result | Passed |
+
 #### 3.2.17. TC-017: Bookmark + reading history update
 
     Written by: 23120151 Huỳnh Yến Nhi
     Reviewed by: 23120123 Trần Gia Hiển
+
+| *Test case* | TC-017 |
+| :--- | :--- |
+| Related feature | U007 — Lưu thư viện và lịch sử đọc |
+| Context | Độc giả lưu một truyện vào thư viện cá nhân và hệ thống tự động ghi nhận chương đã đọc gần nhất khi mở nội dung chương |
+| Input Data | - JWT của tài khoản reader <br> - `POST /api/v1/stories/{story_id}/bookmark` <br> - `GET /api/v1/chapters/{chapter_id}` với chương thuộc truyện trên |
+| Expected Output | 1. Lần bookmark đầu trả về `bookmarked: true` và tạo bản ghi trong bảng `libraries`. <br> 2. Truyện vừa lưu xuất hiện trong `GET /api/v1/stories/library/me`. <br> 3. Khi đọc chương thành công, bảng `reading_histories` có bản ghi theo cặp `user_id`, `chapter_id`; lần đọc lại chỉ cập nhật `read_at`, không tạo bản ghi trùng. <br> 4. Lần bookmark tiếp theo trả về `bookmarked: false` và xóa truyện khỏi thư viện. |
+| Test steps | 1. Đăng nhập tài khoản reader và lấy JWT. <br> 2. Gửi `POST /api/v1/stories/{story_id}/bookmark` -> xác nhận `bookmarked = true` và kiểm tra bản ghi `libraries`. <br> 3. Gọi `GET /api/v1/stories/library/me` -> xác nhận danh sách chứa `story_id`. <br> 4. Gửi `GET /api/v1/chapters/{chapter_id}` -> xác nhận HTTP 200 và có bản ghi `reading_histories`. <br> 5. Đọc lại chương -> xác nhận `read_at` được cập nhật và không có bản ghi trùng. <br> 6. Gửi lại API bookmark -> xác nhận `bookmarked = false` và bản ghi thư viện bị xóa. |
+| Actual Output | Truyện được thêm vào rồi xóa khỏi thư viện đúng theo cơ chế toggle. Mỗi lần đọc chương thành công đều ghi nhận hoặc cập nhật `read_at` trong `reading_histories` mà không tạo dữ liệu trùng lặp. |
+| Result | Passed |
 
 #### 3.2.18. TC-018: Create story + cover upload
 
     Written by: 23120151 Huỳnh Yến Nhi
     Reviewed by: 23120123 Trần Gia Hiển
 
+| *Test case* | TC-018 |
+| :--- | :--- |
+| Related feature | U003 — Tạo và quản lý tác phẩm |
+| Context | Tác giả tạo một bộ truyện mới bằng form multipart và tải ảnh bìa hợp lệ lên Cloudinary để lưu URL vào PostgreSQL |
+| Input Data | - Endpoint: `POST /api/v1/stories/` với JWT role author <br> - Form fields: `title = "Mùa Hạ Không Quên"`, `description`, `category = "Ngôn tình"`, `status = "ongoing"` <br> - File hợp lệ: `cover.webp`, content type `image/webp` <br> - File không hợp lệ: `cover.pdf`, content type `application/pdf` |
+| Expected Output | 1. Dữ liệu hợp lệ trả về HTTP 200, tạo truyện thuộc đúng tác giả và `cover_url` là secure URL từ Cloudinary. <br> 2. Cloudinary tối ưu ảnh trong thư mục cấu hình `yag/covers`, giới hạn kích thước 1200x1600 và tự chọn chất lượng/định dạng. <br> 3. Tiêu đề trùng hoặc file không thuộc JPG/PNG/WEBP bị từ chối với HTTP 400. |
+| Test steps | 1. Đăng nhập tài khoản author và chuẩn bị multipart/form-data cùng `cover.webp`. <br> 2. Gửi `POST /api/v1/stories/` -> xác nhận HTTP 200, response có `id`, `status = "ongoing"` và `cover_url` HTTPS. <br> 3. Kiểm tra bảng `stories` đã lưu đúng `author_id`, metadata và `cover_url`. <br> 4. Gửi lại request với cùng tiêu đề -> xác nhận HTTP 400 `"Story title already exists"`. <br> 5. Gửi request với `cover.pdf` -> xác nhận HTTP 400 và không tạo truyện mới. |
+| Actual Output | Tạo truyện với ảnh WEBP thành công, Cloudinary trả về secure URL và PostgreSQL lưu đúng thông tin tác phẩm. Tiêu đề trùng và file PDF đều bị chặn với HTTP 400. |
+| Result | Passed |
+
 #### 3.2.19. TC-019: WebSocket autosave 5s trigger
 
     Written by: 23120151 Huỳnh Yến Nhi
     Reviewed by: 23120123 Trần Gia Hiển
+
+| *Test case* | TC-019 |
+| :--- | :--- |
+| Related feature | U004 — Soạn thảo chương truyện |
+| Context | Tác giả dừng nhập nội dung trong Author Studio; frontend gửi bản nháp qua WebSocket và backend cập nhật chương trong PostgreSQL |
+| Input Data | - WebSocket: `/ws/stories/{story_id}/chapters/{chapter_id}` với phiên đăng nhập author sở hữu truyện <br> - Payload: `{ "type": "draft.patch", "payload": { "title": "Chương 2: Cuộc gặp", "content": "Nội dung bản nháp mới..." } }` |
+| Expected Output | 1. Sau khi tác giả dừng gõ và chờ tối đa 5 giây, client gửi payload autosave qua WebSocket. <br> 2. Backend cập nhật `title`, `content`, `moderation_status = "draft"` và `updated_at` trong bảng `chapters`. <br> 3. Server phản hồi `{ "type": "autosave", "status": "success", "message": "Autosave success" }` và xóa cache chương cũ. |
+| Test steps | 1. Đăng nhập author sở hữu chương và mở Author Studio. <br> 2. Mở WebSocket, xác nhận nhận message `type = "connected"`. <br> 3. Thay đổi tiêu đề và nội dung chương rồi dừng gõ trong 5 giây. <br> 4. Xác nhận WebSocket gửi payload `draft.patch` và nhận phản hồi autosave thành công. <br> 5. Truy vấn PostgreSQL -> xác nhận nội dung mới, trạng thái `draft` và `updated_at` đã thay đổi. <br> 6. Kiểm tra key `chapter:content:{chapter_id}` không còn trong Redis. |
+| Actual Output | Sau khi dừng gõ, WebSocket gửi bản nháp và nhận phản hồi `"Autosave success"`. PostgreSQL cập nhật đúng tiêu đề, nội dung, trạng thái draft và cache chương cũ được xóa. |
+| Result | Passed |
 
 #### 3.2.20. TC-020: Comment broadcast real-time
 
     Written by: 23120151 Huỳnh Yến Nhi
     Reviewed by: 23120123 Trần Gia Hiển
 
+| *Test case* | TC-020 |
+| :--- | :--- |
+| Related feature | U010 — Bình luận và tương tác thời gian thực |
+| Context | Nhiều độc giả cùng mở một chương; khi một người đăng bình luận, hệ thống lưu vào PostgreSQL và phát bình luận mới qua Redis Pub/Sub cùng WebSocket |
+| Input Data | - Hai WebSocket client kết nối `/api/v1/chapters/{chapter_id}/comments/ws` <br> - JWT của reader A <br> - `POST /api/v1/chapters/{chapter_id}/comments` body: `{ "content": "Chương này rất cảm động!" }` |
+| Expected Output | 1. API đăng bình luận trả về HTTP 201 và tạo bản ghi trong bảng `comments`. <br> 2. Redis publish lên channel `chapter:comments:{chapter_id}`. <br> 3. Cả hai WebSocket client nhận event `type: "comment.created"` chứa đúng `chapter_id`, nội dung, người gửi và thời điểm tạo mà không cần tải lại trang. <br> 4. Bình luận trống bị từ chối với HTTP 400. |
+| Test steps | 1. Mở hai WebSocket client vào cùng `chapter_id` và xác nhận cả hai nhận event `type = "connected"`. <br> 2. Dùng JWT reader A gửi API tạo bình luận hợp lệ. <br> 3. Xác nhận response HTTP 201 và PostgreSQL có bản ghi bình luận mới. <br> 4. Xác nhận cả hai client nhận event `comment.created` với payload trùng response. <br> 5. Gửi bình luận chỉ chứa khoảng trắng -> xác nhận HTTP 400. |
+| Actual Output | Bình luận hợp lệ được lưu thành công (HTTP 201) và broadcast tức thời đến cả hai WebSocket client qua channel đúng của chương. Bình luận trống bị chặn với HTTP 400. |
+| Result | Passed |
+
 #### 3.2.21. TC-021: Responsive Mobile <768px (5 core pages)
 
     Written by: 23120151 Huỳnh Yến Nhi
     Reviewed by: 23120123 Trần Gia Hiển
+
+| *Test case* | TC-021 |
+| :--- | :--- |
+| Related feature | F4 — Responsive UI/UX trên thiết bị di động |
+| Context | Kiểm tra khả năng sử dụng của 5 trang cốt lõi S05 Discover, S06 Story Detail, S07 Reader Mode, S16 Author Studio và S17 Publish Chapter ở viewport nhỏ hơn 768px |
+| Input Data | Chrome DevTools responsive mode tại các viewport 375x667, 390x844 và 767x1024; dữ liệu truyện, chương và tài khoản test hợp lệ |
+| Expected Output | 1. Không xuất hiện thanh cuộn ngang, chữ hoặc nút bị che/cắt. <br> 2. Bố cục nhiều cột chuyển thành một cột; sidebar và thành phần phụ được ẩn hoặc chuyển xuống dưới hợp lý. <br> 3. Thanh tìm kiếm, form, editor, Reader Mode và nút điều hướng vẫn thao tác được; nút quan trọng có vùng bấm tối thiểu khoảng 38x38px. |
+| Test steps | 1. Mở lần lượt S05, S06, S07, S16 và S17 tại từng viewport mobile. <br> 2. Kiểm tra header/menu, nội dung chính, modal, form và footer không tràn ngang. <br> 3. Thử tìm truyện, lưu thư viện, chuyển chương, nhập nội dung editor và mở form xuất bản. <br> 4. Kiểm tra Reader Mode ẩn metadata dài, nút topbar chuyển dạng icon và nội dung đọc vẫn rõ ràng. <br> 5. Ghi nhận lỗi hiển thị hoặc thao tác nếu có. |
+| Actual Output | Cả 5 trang core hiển thị theo bố cục một cột, không tràn ngang và các thao tác chính vẫn sử dụng được tại các viewport dưới 768px. Reader topbar được thu gọn và các nút quan trọng có vùng bấm phù hợp. |
+| Result | Passed |
 
 #### 3.2.22. TC-022: Responsive Tablet 768-1023px
 
     Written by: 23120151 Huỳnh Yến Nhi
     Reviewed by: 23120123 Trần Gia Hiển
 
+| *Test case* | TC-022 |
+| :--- | :--- |
+| Related feature | F4 — Responsive UI/UX trên máy tính bảng |
+| Context | Kiểm tra bố cục và khả năng thao tác của 5 trang cốt lõi trên màn hình tablet từ 768px đến 1023px ở cả chiều dọc và chiều ngang |
+| Input Data | Chrome DevTools tại viewport 768x1024, 820x1180 và 1023x768; dữ liệu truyện, chương và tài khoản test hợp lệ |
+| Expected Output | 1. Không có nội dung tràn ngang hoặc chồng lấn tại toàn bộ viewport tablet. <br> 2. Sidebar phụ được ẩn/chuyển vị trí phù hợp; các grid và workspace tự co về một hoặc hai cột theo breakpoint. <br> 3. Reader Mode, Author Studio, form tạo/xuất bản truyện và các nút điều hướng vẫn đọc rõ, bấm được và giữ đúng thứ tự nội dung. |
+| Test steps | 1. Mở S05, S06, S07, S16 và S17 tại ba viewport tablet. <br> 2. Xoay mô phỏng giữa portrait và landscape, quan sát quá trình đổi bố cục. <br> 3. Kiểm tra sidebar, grid truyện, Reader Mode, editor workspace, form và modal. <br> 4. Thực hiện các thao tác chính trên từng trang và xác nhận không có thành phần bị che hoặc mất chức năng. |
+| Actual Output | Cả 5 trang core thích ứng đúng trên dải 768-1023px; grid, sidebar và workspace chuyển bố cục hợp lý, không xuất hiện tràn ngang hay chồng lấn và các thao tác chính hoạt động bình thường. |
+| Result | Passed |
+
 #### 3.2.23. TC-023: A11y color contrast Light/Dark/Sepia
 
     Written by: 23120151 Huỳnh Yến Nhi
     Reviewed by: 23120123 Trần Gia Hiển
 
+| *Test case* | TC-023 |
+| :--- | :--- |
+| Related feature | U007 — Accessibility của Reader Mode |
+| Context | Kiểm tra độ tương phản màu chữ, nút và thành phần điều hướng trong Reader Mode trên ba chế độ Light, Dark và Sepia/Petal để đảm bảo nội dung dễ đọc |
+| Input Data | Trang S07 Reader Mode với nội dung chương mẫu; ba chế độ màu Light, Dark và Sepia/Petal; công cụ Lighthouse và axe DevTools |
+| Expected Output | 1. Văn bản thường đạt tỷ lệ tương phản tối thiểu 4.5:1 và chữ lớn đạt tối thiểu 3:1 theo WCAG 2.1 AA. <br> 2. Tiêu đề, nội dung chương, metadata, nút, badge và trạng thái focus đều đọc rõ trên cả ba nền. <br> 3. Lighthouse/axe không báo lỗi color contrast nghiêm trọng tại Reader Mode. |
+| Test steps | 1. Mở S07 và chạy axe DevTools/Lighthouse ở chế độ Light. <br> 2. Chuyển sang nền Sepia/Petal và lặp lại phép đo cho nội dung, metadata, nút điều hướng và sidebar. <br> 3. Chuyển sang Dark Mode và lặp lại phép đo. <br> 4. Kiểm tra thủ công trạng thái hover, active, focus-visible và disabled. <br> 5. Tổng hợp các cặp màu không đạt chuẩn nếu có. |
+| Actual Output | Nội dung chính, tiêu đề và các điều khiển Reader Mode trên Light, Dark và Sepia/Petal đều đạt ngưỡng WCAG 2.1 AA; Lighthouse và axe DevTools không phát hiện lỗi tương phản màu nghiêm trọng. |
+| Result | Passed |
+
 #### 3.2.24. TC-024: Cross-browser compatibility 4 browsers
 
     Written by: 23120151 Huỳnh Yến Nhi
     Reviewed by: 23120123 Trần Gia Hiển
+
+| *Test case* | TC-024 |
+| :--- | :--- |
+| Related feature | F4 — Tương thích trình duyệt |
+| Context | Kiểm tra các luồng cốt lõi của website hoạt động nhất quán trên Chrome, Microsoft Edge, Mozilla Firefox và Safari |
+| Input Data | Phiên bản ổn định mới nhất của Chrome, Edge, Firefox và Safari; tài khoản reader/author; dữ liệu truyện và chương test |
+| Expected Output | 1. Giao diện, font, màu sắc và responsive layout hiển thị nhất quán, không có lỗi vỡ bố cục nghiêm trọng. <br> 2. Các luồng đăng nhập, tìm truyện, lưu thư viện, đọc/chuyển chương, tạo truyện, upload cover và autosave hoạt động trên cả bốn trình duyệt. <br> 3. WebSocket, LocalStorage, multipart upload và các điều khiển form hoạt động ổn định; không có lỗi JavaScript chặn chức năng. |
+| Test steps | 1. Mở website lần lượt trên Chrome, Edge, Firefox và Safari. <br> 2. Thực hiện đăng nhập, tìm kiếm truyện, mở Story Detail, bookmark và đọc/chuyển chương. <br> 3. Dùng tài khoản author tạo truyện kèm ảnh bìa, mở Studio, nhập nội dung và xác nhận autosave. <br> 4. Kiểm tra responsive ở mobile/tablet và chuyển Light/Dark Reader Mode trên từng trình duyệt. <br> 5. Theo dõi Console/Network và ghi nhận khác biệt hiển thị hoặc chức năng. |
+| Actual Output | Các luồng cốt lõi và giao diện hoạt động nhất quán trên Chrome, Edge, Firefox và Safari; WebSocket autosave, LocalStorage, upload ảnh và responsive layout không xuất hiện lỗi chặn chức năng. |
+| Result | Passed |
 
 #### 3.2.25. TC-025: Publish -> RabbitMQ -> Worker -> Approved
 

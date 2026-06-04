@@ -164,7 +164,7 @@ def readiness_check():
     else:
         checks["rabbitmq"] = f"ok (skipped for {settings.QUEUE_PROVIDER})"
 
-    status_value = "ok" if all(value == "ok" for value in checks.values()) else "degraded"
+    status_value = "ok" if all(value.startswith("ok") for value in checks.values()) else "degraded"
     return {"status": status_value, "checks": checks}
 
 

@@ -1,8 +1,11 @@
-"use client";
-
 import React from "react";
 import { LibraryScreen } from "@/components/features/reader/ReaderScreens";
+import { RequireAuth } from "@/components/auth/RequireAuth";
 
 export default function LibraryPage() {
-  return <LibraryScreen />;
+  return (
+    <RequireAuth allowedRoles={["reader", "author"]}>
+      <LibraryScreen />
+    </RequireAuth>
+  );
 }

@@ -6,6 +6,7 @@ export { Icon } from "./Icon";
 export { MetricCard } from "./Metrics";
 export {
   HomeStoryCard,
+  getStoryAuthorName,
   QuickStories,
   RankingItem,
   ReadingCard,

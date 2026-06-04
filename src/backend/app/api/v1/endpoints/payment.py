@@ -32,6 +32,7 @@ from app.schemas.payment import (
 )
 from app.services import membership_service as membership_svc
 from app.services import payment_service as payment_svc
+from app.services import payos_service as payos_svc
 
 
 router = APIRouter()
@@ -113,15 +114,15 @@ def get_membership_status(
     status_code=status.HTTP_201_CREATED,
     summary="U011/U012 - Khởi tạo checkout Membership",
 )
-def checkout(
+async def checkout(
     body: CheckoutRequest,
     request: Request,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
     """
-    Tạo giao dịch mới (pending) và sinh URL thanh toán VNPAY.
-    Frontend sẽ redirect user sang VNPAY gateway.
+    Tạo giao dịch mới (pending) và sinh URL thanh toán (VNPAY hoặc PayOS).
+    Frontend sẽ redirect user sang payment gateway tương ứng.
     """
     if current_user.role == "admin":
         raise HTTPException(
@@ -134,6 +135,39 @@ def checkout(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Gói cước '{body.plan_id}' không tồn tại.",
+        )
+
+    if settings.PAYMENT_PROVIDER == "payos":
+        import time
+        import random
+        order_code = int(time.time() * 100) + random.randint(10, 99)
+
+        transaction = Transaction(
+            id=uuid.uuid4(),
+            user_id=current_user.id,
+            plan_id=plan.id,
+            amount=float(plan.price),
+            vnp_txn_ref=str(order_code),
+            status="pending",
+        )
+        db.add(transaction)
+        db.commit()
+
+        order_info = f"YAG Premium {plan.id}"
+        cancel_url = body.return_url.split("?")[0] + "?status=cancel"
+        payment_url, _ = await payos_svc.create_payos_payment_link(
+            order_code=order_code,
+            amount=int(plan.price),
+            description=order_info,
+            return_url=body.return_url,
+            cancel_url=cancel_url
+        )
+
+        return CheckoutResponse(
+            payment_url=payment_url,
+            vnp_txn_ref=str(order_code),
+            paymentUrl=payment_url,
+            transactionId=str(order_code),
         )
 
     # Generate unique transaction reference
@@ -207,10 +241,204 @@ def verify_checkout(
     current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ):
     """
-    Nhận tham số chuyển hướng từ VNPAY, kiểm tra chữ ký và trả về trạng thái chi tiết cho S10.
+    Nhận tham số chuyển hướng từ VNPAY hoặc PayOS, kiểm tra chữ ký và trả về trạng thái chi tiết cho S10.
     """
+    if settings.PAYMENT_PROVIDER == "payos" or "orderCode" in query_params:
+        return verify_payos_checkout(query_params, db, current_user)
+
     result = payment_svc.verify_payment_result(db, query_params, current_user=current_user)
     return result
+
+
+@router.post(
+    "/payos/checkout",
+    response_model=CheckoutResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Khởi tạo hóa đơn và sinh checkout URL PayOS",
+)
+@membership_router.post(
+    "/payos/checkout",
+    response_model=CheckoutResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Khởi tạo checkout Membership qua PayOS",
+)
+async def checkout_payos(
+    body: CheckoutRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản quản trị viên không thể thực hiện giao dịch thanh toán."
+        )
+    plan = membership_svc.get_plan_by_id(db, body.plan_id)
+    if plan is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Gói cước '{body.plan_id}' không tồn tại.",
+        )
+
+    import time
+    import random
+    order_code = int(time.time() * 100) + random.randint(10, 99)
+
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        plan_id=plan.id,
+        amount=float(plan.price),
+        vnp_txn_ref=str(order_code),
+        status="pending",
+    )
+    db.add(transaction)
+    db.commit()
+
+    order_info = f"YAG Premium {plan.id}"
+    cancel_url = body.return_url.split("?")[0] + "?status=cancel"
+    payment_url, _ = await payos_svc.create_payos_payment_link(
+        order_code=order_code,
+        amount=int(plan.price),
+        description=order_info,
+        return_url=body.return_url,
+        cancel_url=cancel_url
+    )
+
+    return CheckoutResponse(
+        payment_url=payment_url,
+        vnp_txn_ref=str(order_code),
+        paymentUrl=payment_url,
+        transactionId=str(order_code),
+    )
+
+
+@router.post(
+    "/payos/webhook",
+    summary="Webhook nhận callback từ PayOS",
+)
+async def payos_webhook(
+    request: Request,
+    db: Session = Depends(deps.get_db),
+):
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    if not payos_svc.verify_payos_webhook_signature(payload):
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    data = payload.get("data", {})
+    order_code = data.get("orderCode")
+    if not order_code:
+        return {"status": "ok", "message": "No orderCode in webhook data"}
+
+    transaction = (
+        db.query(Transaction)
+        .filter(Transaction.vnp_txn_ref == str(order_code))
+        .first()
+    )
+    if not transaction:
+        return {"status": "ok", "message": "Transaction not found"}
+
+    if transaction.status != "pending":
+        return {"status": "ok", "message": "Transaction already processed"}
+
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    transaction.ipn_received_at = now
+    transaction.raw_ipn_payload = {k: str(v) for k, v in payload.items()}
+
+    if payload.get("code") == "00":
+        transaction.status = "success"
+        transaction.paid_at = now
+        transaction.vnp_transaction_no = str(data.get("reference", ""))
+        transaction.vnp_response_code = "00"
+        transaction.vnp_transaction_status = "00"
+
+        user = db.query(User).filter(User.id == transaction.user_id).first()
+        if user:
+            plan = db.query(MembershipPlan).filter(MembershipPlan.id == transaction.plan_id).first()
+            if plan:
+                if user.premium_until and user.premium_until.replace(tzinfo=timezone.utc) > now:
+                    user.premium_until = user.premium_until.replace(tzinfo=timezone.utc) + timedelta(days=plan.duration_days)
+                else:
+                    user.premium_until = now + timedelta(days=plan.duration_days)
+    else:
+        transaction.status = "failed"
+        transaction.failed_at = now
+
+    db.commit()
+    return {"status": "ok", "message": "Confirm Success"}
+
+
+@router.post(
+    "/payos/verify",
+    response_model=PaymentResultResponse,
+    summary="Xác thực kết quả thanh toán PayOS cho Frontend",
+)
+def verify_payos_checkout(
+    query_params: dict,
+    db: Session = Depends(deps.get_db),
+    current_user: Optional[User] = Depends(deps.get_current_user_optional),
+):
+    order_code = query_params.get("orderCode")
+    status_param = query_params.get("status")
+
+    if not order_code:
+        return {
+            "success": False,
+            "message": "Không tìm thấy mã hóa đơn đối soát PayOS."
+        }
+
+    transaction = (
+        db.query(Transaction)
+        .filter(Transaction.vnp_txn_ref == str(order_code))
+        .first()
+    )
+    if not transaction:
+        return {
+            "success": False,
+            "message": "Giao dịch không tồn tại trên hệ thống."
+        }
+
+    plan = db.query(MembershipPlan).filter(MembershipPlan.id == transaction.plan_id).first()
+    plan_name = plan.name if plan else "Gói Membership"
+
+    is_success = transaction.status == "success" or status_param == "success" or status_param == "PAID"
+
+    if not is_success and status_param == "cancel":
+        transaction.status = "failed"
+        db.commit()
+        return {
+            "success": False,
+            "message": "Người dùng đã hủy thanh toán giao dịch."
+        }
+
+    if is_success and transaction.status == "pending":
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        transaction.status = "success"
+        transaction.paid_at = now
+        user = db.query(User).filter(User.id == transaction.user_id).first()
+        if user and plan:
+            if user.premium_until and user.premium_until.replace(tzinfo=timezone.utc) > now:
+                user.premium_until = user.premium_until.replace(tzinfo=timezone.utc) + timedelta(days=plan.duration_days)
+            else:
+                user.premium_until = now + timedelta(days=plan.duration_days)
+        db.commit()
+
+    user = db.query(User).filter(User.id == transaction.user_id).first()
+    premium_until = user.premium_until if user else None
+
+    return {
+        "success": transaction.status == "success",
+        "transaction_id": transaction.id,
+        "plan_name": plan_name,
+        "amount": float(transaction.amount),
+        "premium_until": premium_until,
+        "message": "Thanh toán thành công qua PayOS" if transaction.status == "success" else "Giao dịch chưa hoàn tất hoặc thất bại."
+    }
 
 
 @router.get(

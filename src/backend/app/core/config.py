@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
     ENVIRONMENT: str = "development"
     SERVICE_ROLE: str = "api"
+    QUEUE_PROVIDER: str = "rabbitmq"
+    PAYMENT_PROVIDER: str = "vnpay"
+
+    # PayOS Settings
+    PAYOS_CLIENT_ID: Optional[str] = None
+    PAYOS_API_KEY: Optional[str] = None
+    PAYOS_CHECKSUM_KEY: Optional[str] = None
+    PAYOS_RETURN_URL: Optional[str] = None
 
     # Database Settings
     DATABASE_URL: Optional[str] = None
@@ -100,9 +108,15 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT == "production":
             required_prod_vars = {
                 "SECRET_KEY": "yag_development_secret_key_change_in_production",
-                "VNP_HASH_SECRET": "YAGDEVSECRETKEY12345678",
-                "VNP_TMN_CODE": "YAGTEST1",
             }
+            if self.PAYMENT_PROVIDER == "vnpay":
+                required_prod_vars["VNP_HASH_SECRET"] = "YAGDEVSECRETKEY12345678"
+                required_prod_vars["VNP_TMN_CODE"] = "YAGTEST1"
+            elif self.PAYMENT_PROVIDER == "payos":
+                required_prod_vars["PAYOS_CLIENT_ID"] = None
+                required_prod_vars["PAYOS_API_KEY"] = None
+                required_prod_vars["PAYOS_CHECKSUM_KEY"] = None
+
             for var_name, default_val in required_prod_vars.items():
                 val = getattr(self, var_name)
                 if not val or val == default_val:
@@ -114,12 +128,15 @@ class Settings(BaseSettings):
                 "CORS_ORIGINS",
                 "DATABASE_URL",
                 "REDIS_URL",
-                "RABBITMQ_URL",
                 "GEMINI_API_KEY",
-                "VNP_URL",
-                "VNP_RETURN_URL",
-                "VNP_API_URL",
             }
+            if self.QUEUE_PROVIDER == "rabbitmq":
+                essential_uris.add("RABBITMQ_URL")
+            if self.PAYMENT_PROVIDER == "vnpay":
+                essential_uris.add("VNP_URL")
+                essential_uris.add("VNP_RETURN_URL")
+                essential_uris.add("VNP_API_URL")
+
             for uri_name in essential_uris:
                 val = getattr(self, uri_name)
                 if not val:
@@ -150,14 +167,15 @@ class Settings(BaseSettings):
                 raise ValueError("DATABASE_URL must not point to localhost in production")
             if _looks_local(self.REDIS_URL or ""):
                 raise ValueError("REDIS_URL must not point to localhost in production")
-            if _looks_local(self.RABBITMQ_URL or ""):
+            if self.QUEUE_PROVIDER == "rabbitmq" and _looks_local(self.RABBITMQ_URL or ""):
                 raise ValueError("RABBITMQ_URL must not point to localhost in production")
-            if _looks_local(self.VNP_RETURN_URL):
-                raise ValueError("VNP_RETURN_URL must not point to localhost in production")
-            if not self.VNP_RETURN_URL.startswith("https://"):
-                raise ValueError("VNP_RETURN_URL must be HTTPS in production")
-            if "sandbox" in self.VNP_URL.lower() or "sandbox" in self.VNP_API_URL.lower():
-                raise ValueError("Production VNPAY URLs must not point to sandbox endpoints")
+            if self.PAYMENT_PROVIDER == "vnpay":
+                if _looks_local(self.VNP_RETURN_URL):
+                    raise ValueError("VNP_RETURN_URL must not point to localhost in production")
+                if not self.VNP_RETURN_URL.startswith("https://"):
+                    raise ValueError("VNP_RETURN_URL must be HTTPS in production")
+                if "sandbox" in self.VNP_URL.lower() or "sandbox" in self.VNP_API_URL.lower():
+                    raise ValueError("Production VNPAY URLs must not point to sandbox endpoints")
 
             origins = _split_csv(self.CORS_ORIGINS)
             if not origins:

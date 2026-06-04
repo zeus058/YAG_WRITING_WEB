@@ -4833,3 +4833,368 @@ svg {
     min-height: 420px;
   }
 }
+
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-toolbar-actions-only {
+  justify-content: flex-end;
+}
+
+.admin-metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-health-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid rgba(65, 80, 61, 0.12);
+  border-radius: 8px;
+  background: #FFFFFF;
+  box-shadow: var(--shadow-soft);
+}
+
+.admin-health-strip strong,
+.admin-health-strip span {
+  display: block;
+}
+
+.admin-health-strip strong {
+  color: var(--jungle-dark);
+  font-size: 16px;
+}
+
+.admin-health-strip span {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.admin-health-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.admin-wide-panel {
+  grid-column: 1 / -1;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-trend-grid {
+  height: 260px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  align-items: end;
+  gap: 14px;
+  padding: 16px 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.admin-trend-item {
+  min-width: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  justify-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-trend-column {
+  width: 100%;
+  max-width: 52px;
+  align-self: end;
+  border-radius: 8px 8px 2px 2px;
+  background: linear-gradient(180deg, var(--crimson), var(--coral));
+  box-shadow: 0 12px 22px rgba(200, 28, 48, 0.16);
+}
+
+.admin-trend-item strong {
+  color: var(--jungle-dark);
+}
+
+.admin-alert-list .list-item {
+  transform: none;
+}
+
+.admin-compact-table {
+  min-width: 0;
+}
+
+.admin-moderation-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 24px;
+  align-items: start;
+}
+
+.admin-filter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.admin-filter-row .tabs {
+  width: 100%;
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: visible;
+}
+
+.admin-filter-row .tab-button {
+  min-width: 0;
+  width: 100%;
+  padding-inline: 8px;
+}
+
+.admin-filter-row .tab-button span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-moderation-table tr {
+  cursor: pointer;
+}
+
+.admin-moderation-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.admin-moderation-table th:nth-child(1),
+.admin-moderation-table td:nth-child(1) {
+  width: 42%;
+}
+
+.admin-moderation-table th:nth-child(2),
+.admin-moderation-table td:nth-child(2) {
+  width: 38%;
+}
+
+.admin-moderation-table th:nth-child(3),
+.admin-moderation-table td:nth-child(3) {
+  width: 20%;
+}
+
+.admin-moderation-table td {
+  overflow-wrap: anywhere;
+}
+
+.admin-moderation-table tr:hover td,
+.admin-moderation-table tr.selected-row td {
+  background: #FFF7F4;
+}
+
+.admin-decision-panel {
+  position: sticky;
+  top: 88px;
+}
+
+.admin-selected-summary {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(65, 80, 61, 0.12);
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.admin-selected-summary h3,
+.admin-selected-summary p {
+  margin: 0;
+}
+
+.admin-selected-summary h3 {
+  color: var(--jungle-dark);
+  font-size: 18px;
+}
+
+.admin-selected-summary p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.admin-content-preview {
+  max-height: 280px;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid rgba(65, 80, 61, 0.12);
+  border-radius: 8px;
+  background: rgba(65, 80, 61, 0.04);
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.admin-decision-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-report-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.admin-date-controls {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-date-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-report-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.admin-report-grid .data-table,
+.admin-compact-table {
+  min-width: 0;
+}
+
+.admin-report-chart-panel {
+  border: 1px solid rgba(65, 80, 61, 0.12);
+}
+
+.admin-bars {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-bar-row {
+  display: grid;
+  grid-template-columns: minmax(82px, 0.4fr) minmax(0, 1fr) minmax(86px, auto);
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.admin-bar-row strong {
+  color: var(--jungle-dark);
+  text-align: right;
+}
+
+.admin-bar-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(65, 80, 61, 0.08);
+}
+
+.admin-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--crimson), var(--coral));
+}
+
+.form-message {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.form-message.error {
+  border: 1px solid rgba(200, 28, 48, 0.22);
+  background: #FFF1F2;
+  color: var(--red);
+}
+
+@media (max-width: 1180px) {
+  .admin-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-dashboard-grid,
+  .admin-moderation-layout,
+  .admin-report-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-decision-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-toolbar,
+  .admin-health-strip,
+  .admin-report-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-filter-row .tabs {
+    width: 100%;
+    overflow: visible;
+  }
+
+  .admin-filter-row .tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-metric-grid,
+  .admin-filter-row,
+  .admin-decision-actions,
+  .admin-bar-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-health-pills,
+  .admin-date-controls {
+    justify-content: flex-start;
+  }
+
+  .admin-bar-row strong {
+    text-align: left;
+  }
+}

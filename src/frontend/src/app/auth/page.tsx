@@ -373,7 +373,7 @@ function AuthPageInner() {
 
   if (isLoading || isAuthenticated) {
     return (
-      <main className="auth-page auth-page-centered" style={{ background: "var(--bg)" }}>
+      <main className="auth-page auth-page-centered" style={{ background: "var(--background)" }}>
         <div className="stack" style={{ alignItems: "center", gap: 16 }}>
           <div className="brand-logo spinner" style={{ background: "var(--crimson)", color: "#fff", width: 48, height: 48, fontSize: 20 }}>
             YAG
@@ -634,7 +634,7 @@ export default function AuthPage() {
   return (
     <Suspense
       fallback={
-        <main className="auth-page auth-page-centered" style={{ background: "var(--bg)" }}>
+        <main className="auth-page auth-page-centered" style={{ background: "var(--background)" }}>
           <div className="stack" style={{ alignItems: "center", gap: 16 }}>
             <div className="brand-logo spinner" style={{ background: "var(--crimson)", color: "#fff", width: 48, height: 48, fontSize: 20 }}>
               YAG

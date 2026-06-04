@@ -210,7 +210,9 @@ def serialize_chapter(chapter: Chapter) -> dict[str, Any]:
         "content": chapter.content,
         "moderation_status": chapter.moderation_status,
         "is_premium": chapter.is_premium,
-        "publish_at": chapter.publish_at.isoformat(),
+        "publish_at": chapter.publish_at.isoformat() if chapter.publish_at else None,
+        "created_at": chapter.created_at.isoformat() if chapter.created_at else None,
+        "updated_at": chapter.updated_at.isoformat() if chapter.updated_at else None,
     }
 
 
@@ -324,9 +326,14 @@ def cache_chapter(redis_client, chapter_data: dict[str, Any]) -> None:
 
 
 def serialize_comment(comment: Comment) -> dict[str, Any]:
+    user = comment.user
+    profile = user.profile if user else None
     return {
         "id": str(comment.id),
         "user_id": str(comment.user_id),
+        "username": user.username if user else "unknown",
+        "display_name": profile.display_name if profile else (user.username if user else "Người dùng"),
+        "avatar_url": profile.avatar_url if profile else None,
         "chapter_id": str(comment.chapter_id),
         "content": comment.content,
         "parent_id": str(comment.parent_id) if comment.parent_id else None,
@@ -473,6 +480,8 @@ def get_chapter(
         )
     redis_client = get_redis_client()
     chapter_data = get_cached_chapter(redis_client, chapter_id)
+    if chapter_data and not {"created_at", "updated_at"}.issubset(chapter_data):
+        chapter_data = None
     cache_status = "hit" if chapter_data else "miss"
 
     if not chapter_data:
@@ -507,6 +516,8 @@ def get_chapter(
         "moderation_status": chapter_data["moderation_status"],
         "is_premium": chapter_data["is_premium"],
         "publish_at": chapter_data["publish_at"],
+        "created_at": chapter_data["created_at"],
+        "updated_at": chapter_data["updated_at"],
         "cache_status": cache_status,
         "view_count_buffered": view_count_buffered,
     }
@@ -536,7 +547,7 @@ def get_comments(
         .limit(limit)
         .all()
     )
-    return {"comments": comments}
+    return {"comments": [serialize_comment(comment) for comment in comments]}
 
 
 @router.get(
@@ -611,7 +622,7 @@ async def add_comment(
     db.refresh(comment)
 
     await publish_comment(get_redis_client(), chapter_id, comment)
-    return comment
+    return serialize_comment(comment)
 
 
 @router.put(
@@ -651,7 +662,7 @@ async def update_comment(
     db.refresh(comment)
 
     await publish_comment(get_redis_client(), chapter_id, comment)
-    return comment
+    return serialize_comment(comment)
 
 
 @router.delete(

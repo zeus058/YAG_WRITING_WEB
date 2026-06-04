@@ -1645,10 +1645,10 @@ export default function LandingPage() {
                   <Link href="/author/stories">Tác phẩm của tôi</Link>
                 </li>
                 <li>
-                  <Link href="/author/stories/d6a2f7c0-2f9b-449e-ba23-9502e6c7d5bd/edit">Không gian viết</Link>
+                  <Link href="/author/stories">Không gian viết</Link>
                 </li>
                 <li>
-                  <Link href="/author/stories/d6a2f7c0-2f9b-449e-ba23-9502e6c7d5bd/publish">Xuất bản chương</Link>
+                  <Link href="/author/stories">Xuất bản chương</Link>
                 </li>
                 <li>
                   <Link href="/author/schedule">Lịch đăng & cam kết</Link>

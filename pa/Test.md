@@ -327,15 +327,45 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
     Written by: 23120177 Phạm Hương Trà
     Reviewed by: 23120169 Nguyễn Phú Thọ
 
+| *Test case* | TC-013 |
+| :--- | :--- |
+| Related feature | F3 - AI Semantic Search & Vector Similarity |
+| Context | Kiểm thử đơn vị hàm tính cosine distance trên pgvector để bảo đảm công thức tính khoảng cách và thứ tự xếp hạng vector ổn định trước khi dùng cho semantic search |
+| Input Data | - Các vector kiểm thử có sẵn: <br> &nbsp; 1. Hai vector giống hệt nhau <br> &nbsp; 2. Hai vector trực giao nhau <br> &nbsp; 3. Một cặp vector đã biết trước kết quả khoảng cách cosine <br> - Hàm kiểm thử: `ai.search.compute_cosine_distance()` hoặc câu lệnh pgvector tương đương |
+| Expected Output | 1. Hai vector giống hệt nhau trả về cosine distance xấp xỉ 0. <br> 2. Hai vector trực giao trả về cosine distance xấp xỉ 1. <br> 3. Với cặp vector đã biết trước, kết quả trả về khớp giá trị kỳ vọng trong sai số cho phép (`epsilon`) rất nhỏ. <br> 4. Khi sắp xếp danh sách vector theo khoảng cách tăng dần, vector tương đồng nhất đứng đầu. |
+| Test steps | 1. Chuẩn bị các vector đầu vào có giá trị đã xác định. <br> 2. Gọi `compute_cosine_distance()` hoặc truy vấn pgvector để tính khoảng cách. <br> 3. So sánh kết quả trả về với giá trị kỳ vọng theo công thức cosine distance. <br> 4. Kiểm tra thứ tự ranking của các vector khi sort theo distance tăng dần. <br> 5. Ghi nhận sai lệch nếu có và đối chiếu với ngưỡng sai số chấp nhận được. |
+| Actual Output | Hàm cosine distance trả về đúng theo kỳ vọng: vector giống nhau cho kết quả xấp xỉ 0, vector trực giao xấp xỉ 1 và thứ tự ranking theo độ tương đồng được giữ chính xác. |
+| Result | Passed |
+
 #### 3.2.14. TC-014: AI semantic search end-to-end
 
     Written by: 23120177 Phạm Hương Trà
     Reviewed by: 23120169 Nguyễn Phú Thọ
 
+| *Test case* | TC-014 |
+| :--- | :--- |
+| Related feature | F3 - AI Novel Assistant & Semantic Search |
+| Context | Kiểm thử luồng tìm kiếm ngữ nghĩa end-to-end từ giao diện khám phá truyện đến API backend, bảo đảm truy vấn ngôn ngữ tự nhiên trả về kết quả liên quan dựa trên embedding/pgvector |
+| Input Data | - Giao diện Discover/Search tại `S05` <br> - Request `POST /api/v1/stories/search` với body: `{ "query": "cô gái chờ tàu trong mưa", "semantic": true, "genre": "Ngôn tình" }` <br> - Dữ liệu test gồm nhiều truyện có nội dung gần nghĩa nhưng không trùng từ khóa |
+| Expected Output | 1. API trả về HTTP 200 với danh sách truyện phù hợp ngữ nghĩa. <br> 2. Những truyện có nội dung gần nghĩa được xếp hạng cao hơn truyện chỉ khớp từ khóa bề mặt. <br> 3. UI hiển thị danh sách kết quả, ảnh bìa, tên truyện và thông tin liên quan mà không lỗi render. <br> 4. Khi không có kết quả phù hợp, hệ thống trả về danh sách rỗng thay vì lỗi. |
+| Test steps | 1. Mở trang Discover (`S05`). <br> 2. Nhập một truy vấn tự nhiên mang tính mô tả nội dung truyện. <br> 3. Gửi tìm kiếm với chế độ semantic bật. <br> 4. Kiểm tra response API có status 200 và dữ liệu trả về đúng schema. <br> 5. Đối chiếu thứ tự kết quả trên UI với độ liên quan ngữ nghĩa của truy vấn. <br> 6. Thử thêm một truy vấn không có match rõ ràng để xác nhận hệ thống xử lý danh sách rỗng an toàn. |
+| Actual Output | Truy vấn semantic trả về HTTP 200, danh sách truyện liên quan được xếp hạng đúng theo mức độ tương đồng ngữ nghĩa; UI Discover hiển thị kết quả ổn định và không phát sinh lỗi khi không có match. |
+| Result | Passed |
+
 #### 3.2.15. TC-015: Miu AI suggestion 3 options JSON
 
     Written by: 23120177 Phạm Hương Trà
     Reviewed by: 23120169 Nguyễn Phú Thọ
+
+| *Test case* | TC-015 |
+| :--- | :--- |
+| Related feature | F3 - AI Novel Assistant & Author Studio |
+| Context | Kiểm thử tính năng Miu AI trong Author Studio khi tác giả yêu cầu gợi ý tình tiết tiếp theo và hệ thống phải trả về JSON hợp lệ gồm đúng 3 phương án để frontend có thể render lựa chọn |
+| Input Data | - Request `POST /api/v1/ai/suggestions` <br> - Body mẫu: `{ "chapterId": "ch_013", "context": "Nhân vật chính vừa phát hiện manh mối mới ở sân ga", "mode": "plot" }` <br> - Yêu cầu: trả về đúng 3 gợi ý khác nhau |
+| Expected Output | 1. API trả về HTTP 200 với payload JSON parse được. <br> 2. Payload chứa một danh sách/thuộc tính `options` gồm đúng 3 phần tử. <br> 3. Ba phương án không trùng nhau và đều phù hợp với ngữ cảnh chương đang viết. <br> 4. Frontend có thể hiển thị 3 lựa chọn mà không cần xử lý lỗi bổ sung. |
+| Test steps | 1. Mở trang Author Studio (`S16`). <br> 2. Gửi nội dung ngữ cảnh và chế độ gợi ý tới `POST /api/v1/ai/suggestions`. <br> 3. Xác nhận response status = 200. <br> 4. Parse JSON và kiểm tra số lượng phần tử trong danh sách gợi ý bằng 3. <br> 5. Đối chiếu nội dung 3 gợi ý có khác nhau và bám sát ngữ cảnh đầu vào. <br> 6. Kiểm tra UI/Miu sidebar render được đủ 3 option để tác giả chọn. |
+| Actual Output | Miu AI trả về JSON hợp lệ với đúng 3 phương án gợi ý; các option khác nhau về nội dung nhưng vẫn phù hợp với ngữ cảnh chương và có thể hiển thị trực tiếp trên giao diện Author Studio. |
+| Result | Passed |
 
 #### 3.2.16. TC-016: Redis chapter cache hit/miss
 

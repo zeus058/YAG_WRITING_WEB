@@ -262,6 +262,12 @@ def verify_payment_result(
 
     # 2. Handle mock transactions for development
     if vnp_txn_ref == "MOCK_TXN_REF" or (vnp_txn_ref and vnp_txn_ref.startswith("MOCK_")):
+        vnp_response_code = query_params.get("vnp_ResponseCode", "00")
+        if vnp_response_code != "00":
+            return {
+                "success": False,
+                "message": f"Mô phỏng thanh toán thất bại (vnp_ResponseCode={vnp_response_code})"
+            }
         now = datetime.now(timezone.utc)
         vnp_amount_str = query_params.get("vnp_Amount", "4900000")
         try:

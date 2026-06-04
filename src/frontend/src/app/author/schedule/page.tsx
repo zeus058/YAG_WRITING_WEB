@@ -6,7 +6,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 
 export default function ScheduleCommitmentPage() {
   return (
-    <RequireAuth allowedRoles={["author"]}>
+    <RequireAuth allowedRoles={["reader", "author"]}>
       <ScheduleScreen />
     </RequireAuth>
   );

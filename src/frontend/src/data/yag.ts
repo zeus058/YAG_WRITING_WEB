@@ -84,7 +84,7 @@ export const pages: PageInfo[] = [
 
 export const roleNav: Record<Role, ScreenId[]> = {
   reader: ["s04", "s05", "s11", "s08", "s09", "s14", "s12", "s13"],
-  author: ["s15", "s16", "s17", "s18", "s14", "s12", "s13"],
+  author: ["s15", "s18", "s14", "s12", "s13"],
   admin: ["s19", "s20", "s21", "s14", "s13"],
 };
 
@@ -122,11 +122,14 @@ export const screenRouteMap: Record<string, ScreenId> = {
   "s12-profile": "s12",
   "/profile/me": "s12",
   "/profile": "s12",
+  "/author/profile": "s12",
   "s13-account-settings": "s13",
   "/settings": "s13",
   "/account-settings": "s13",
+  "/author/settings": "s13",
   "s14-notifications": "s14",
   "/notifications": "s14",
+  "/author/notifications": "s14",
   "s15-author-works": "s15",
   "/author/stories": "s15",
   "/author-works": "s15",

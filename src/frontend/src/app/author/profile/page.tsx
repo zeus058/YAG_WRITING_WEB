@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import { PublishScreen } from "@/components/features/author/AuthorScreens";
+import { ProfileScreen } from "@/components/features/reader/ReaderScreens";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 
-export default function PublishChapterPage() {
+export default function AuthorProfilePage() {
   return (
     <RequireAuth allowedRoles={["reader", "author"]}>
-      <PublishScreen />
+      <ProfileScreen modeOverride="author" />
     </RequireAuth>
   );
 }

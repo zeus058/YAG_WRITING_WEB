@@ -19,6 +19,7 @@ type AppShellProps = {
   activeId: ScreenId;
   actions?: ReactNode;
   children: ReactNode;
+  modeOverride?: "reader" | "author" | "admin";
 };
 
 function topbarContext(role: Role, isPremium: boolean = false) {
@@ -67,12 +68,36 @@ const triggerLiveToast = (message: string) => {
   }, 4000);
 };
 
-export function AppShell({ activeId, actions, children }: AppShellProps) {
+export function AppShell({ activeId, actions, children, modeOverride }: AppShellProps) {
   const { user: authUser, logout } = useAuth();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
-  const role = authUser?.role === "admin" ? "admin" : getRoleForPage(activeId);
-  const isPremium = authUser?.premium_until ? new Date(authUser.premium_until) > new Date() : false;
+  const role = modeOverride || (authUser?.role === "admin" ? "admin" : getRoleForPage(activeId));
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    if (authUser?.premium_until) {
+      setIsPremium(new Date(authUser.premium_until) > new Date());
+    } else if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("yag.mockMembership");
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.is_active && parsed.premium_until) {
+            setIsPremium(new Date(parsed.premium_until) > new Date());
+          } else {
+            setIsPremium(false);
+          }
+        } catch (e) {
+          setIsPremium(false);
+        }
+      } else {
+        setIsPremium(false);
+      }
+    } else {
+      setIsPremium(false);
+    }
+  }, [authUser]);
 
   const userDisp = authUser
     ? {
@@ -180,6 +205,12 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
             if (targetHref === "/account-settings") targetHref = "/settings";
             if (targetHref === "/schedule-commitment") targetHref = "/author/schedule";
 
+            if (role === "author") {
+              if (item.id === "s14") targetHref = "/author/notifications";
+              if (item.id === "s12") targetHref = "/author/profile";
+              if (item.id === "s13") targetHref = "/author/settings";
+            }
+
             return (
               <Link key={item.id} className={`sidebar-link ${item.id === activeId ? "active" : ""}`} href={targetHref ?? "#"}>
                 <Icon name={item.icon} />
@@ -224,7 +255,7 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
                 )
               ))}
             </div>
-            <Link className="button icon-button" href="/notifications" aria-label="Thông báo" style={{ position: "relative" }}>
+            <Link className="button icon-button" href={role === "author" ? "/author/notifications" : "/notifications"} aria-label="Thông báo" style={{ position: "relative" }}>
               <Icon name="bell" />
               {unreadCount > 0 && (
                 <span className="badge badge-crimson" style={{ position: "absolute", top: -4, right: -4, padding: "2px 6px", fontSize: 10, borderRadius: "50%" }}>
@@ -266,12 +297,12 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
                     </div>
                   </div>
                   
-                  <Link className="account-dropdown-item" href="/profile/me" onClick={() => setIsAccountMenuOpen(false)}>
+                  <Link className="account-dropdown-item" href={role === "author" ? "/author/profile" : "/profile/me"} onClick={() => setIsAccountMenuOpen(false)}>
                     <Icon name="user" />
                     Hồ sơ của tôi
                   </Link>
                   
-                  <Link className="account-dropdown-item" href="/settings" onClick={() => setIsAccountMenuOpen(false)}>
+                  <Link className="account-dropdown-item" href={role === "author" ? "/author/settings" : "/settings"} onClick={() => setIsAccountMenuOpen(false)}>
                     <Icon name="settings" />
                     Cài đặt tài khoản
                   </Link>

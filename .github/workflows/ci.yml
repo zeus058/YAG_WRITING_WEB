@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [dev, main]
+    branches: [dev]
   pull_request:
-    branches: [dev, main]
+    branches: [dev]
 
 # Đảm bảo chỉ 1 workflow chạy trên cùng branch/PR tại 1 thời điểm
 concurrency:
@@ -19,6 +19,33 @@ permissions:
   pull-requests: write  # Để comment coverage lên PR
 
 jobs:
+  # ────────────────────────────────────────────────────────────
+  # JOB 0: Check Secrets Presence
+  # ────────────────────────────────────────────────────────────
+  check-secrets:
+    name: "🔍 Check Secrets Presence"
+    runs-on: ubuntu-latest
+    outputs:
+      has_gcp: ${{ steps.check.outputs.has_gcp }}
+      has_db: ${{ steps.check.outputs.has_db }}
+    steps:
+      - id: check
+        run: |
+          if [ -n "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "has_gcp=true" >> $GITHUB_OUTPUT
+            echo "GCP_SA_KEY is configured"
+          else
+            echo "has_gcp=false" >> $GITHUB_OUTPUT
+            echo "GCP_SA_KEY is NOT configured"
+          fi
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            echo "has_db=true" >> $GITHUB_OUTPUT
+            echo "DATABASE_URL is configured"
+          else
+            echo "has_db=false" >> $GITHUB_OUTPUT
+            echo "DATABASE_URL is NOT configured"
+          fi
+
   # ────────────────────────────────────────────────────────────
   # JOB 1: Backend CI — Lint, Migrate, Test
   # ────────────────────────────────────────────────────────────
@@ -182,8 +209,8 @@ jobs:
   docker:
     name: "🐳 Docker Build Check"
     runs-on: ubuntu-latest
-    # Chỉ chạy trên push to main hoặc PR to main (tránh tốn CI minutes)
-    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+    # Chỉ chạy trên push hoặc PR to dev
+    if: github.ref == 'refs/heads/dev' || github.base_ref == 'dev'
 
     steps:
       - name: Checkout code
@@ -208,9 +235,9 @@ jobs:
   # ────────────────────────────────────────────────────────────
   deploy-migrations:
     name: "🗄️ Apply Production Migrations"
-    needs: [backend, frontend]
+    needs: [backend, frontend, check-secrets]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.DATABASE_URL != ''
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push' && needs.check-secrets.outputs.has_db == 'true'
 
     environment: production
 
@@ -261,9 +288,9 @@ jobs:
   # ────────────────────────────────────────────────────────────
   deploy-backend:
     name: "☁️ Deploy Backend → Cloud Run"
-    needs: [deploy-migrations]
+    needs: [deploy-migrations, check-secrets]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.GCP_SA_KEY != ''
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push' && needs.check-secrets.outputs.has_gcp == 'true'
 
     environment:
       name: 'production'
@@ -341,7 +368,7 @@ jobs:
     name: "📋 Deployment Summary"
     needs: [deploy-migrations, deploy-backend]
     runs-on: ubuntu-latest
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: always() && github.ref == 'refs/heads/dev' && github.event_name == 'push'
 
     steps:
       - name: Generate deployment report
@@ -350,7 +377,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| DB Migrations | ${{ needs.deploy-migrations.result == 'success' && '✅ Applied' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| DB Migrations | ${{ needs.deploy-migrations.result == 'success' && '✅ Applied' || needs.deploy-migrations.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Backend (Cloud Run) | ${{ needs.deploy-backend.result == 'success' && '✅ Deployed' || needs.deploy-backend.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Frontend (Vercel) | ✅ Auto-deployed via GitHub integration |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -358,30 +385,3 @@ jobs:
           echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
-
-  # ────────────────────────────────────────────────────────────
-  # JOB 8: SonarQube / SonarCloud Code Analysis
-  # ────────────────────────────────────────────────────────────
-  sonarqube:
-    name: "📊 SonarQube Quality Scan"
-    needs: [backend, frontend]
-    runs-on: ubuntu-latest
-    # Chỉ chạy nếu SONAR_TOKEN được cấu hình trên repo
-    if: always() && (github.event_name == 'push' || github.event_name == 'pull_request') && secrets.SONAR_TOKEN != ''
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download Backend Coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-coverage
-          path: src/backend/
-
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}

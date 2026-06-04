@@ -15,6 +15,51 @@ from app.models.profile import Profile
 from app.schemas.auth import UserRegister, UserLogin, PasswordResetConfirm
 
 logger = logging.getLogger("auth_service")
+AUTH_LOCKOUT_MAX_ATTEMPTS = 5
+AUTH_LOCKOUT_SECONDS = 15 * 60
+
+
+def _auth_attempt_key(identifier: str) -> str:
+    return f"auth:login:attempts:{identifier.strip().lower() or 'unknown'}"
+
+
+def _auth_lock_key(identifier: str) -> str:
+    return f"auth:login:lock:{identifier.strip().lower() or 'unknown'}"
+
+
+def _check_login_lock(identifier: str) -> None:
+    try:
+        r = get_redis_client()
+        if r.get(_auth_lock_key(identifier)):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="ACCOUNT_TEMP_LOCKED",
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("Login lockout check skipped because Redis is unavailable: %s", exc)
+
+
+def _record_login_failure(identifier: str) -> None:
+    try:
+        r = get_redis_client()
+        attempts = r.incr(_auth_attempt_key(identifier))
+        r.expire(_auth_attempt_key(identifier), AUTH_LOCKOUT_SECONDS)
+        if attempts >= AUTH_LOCKOUT_MAX_ATTEMPTS:
+            r.setex(_auth_lock_key(identifier), AUTH_LOCKOUT_SECONDS, "1")
+            r.delete(_auth_attempt_key(identifier))
+    except Exception as exc:
+        logger.warning("Login failure counter skipped because Redis is unavailable: %s", exc)
+
+
+def _clear_login_failures(identifier: str) -> None:
+    try:
+        r = get_redis_client()
+        r.delete(_auth_attempt_key(identifier))
+        r.delete(_auth_lock_key(identifier))
+    except Exception as exc:
+        logger.warning("Login failure cleanup skipped because Redis is unavailable: %s", exc)
 
 def get_redis_client():
     """Initializes and returns a Redis client."""
@@ -118,12 +163,16 @@ class AuthService:
     @staticmethod
     def login(db: Session, login_in: UserLogin) -> User:
         """Verifies credentials mapping email/username against PostgreSQL."""
+        identifier = login_in.email.strip().lower()
+        _check_login_lock(identifier)
+
         # 1. Locate user via email or username
         db_user = db.query(User).filter(
             (User.email == login_in.email) | (User.username == login_in.email)
         ).first()
         
         if not db_user:
+            _record_login_failure(identifier)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="INVALID_CREDENTIALS"
@@ -131,6 +180,7 @@ class AuthService:
 
         # 2. Verify hashed password
         if not verify_password(login_in.password, db_user.password_hash):
+            _record_login_failure(identifier)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="INVALID_CREDENTIALS"
@@ -146,6 +196,7 @@ class AuthService:
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
+        _clear_login_failures(identifier)
         return db_user
 
     @staticmethod

@@ -211,20 +211,7 @@ export default function LandingPage() {
         <Link className="logo" href="/">
           Y<span className="logo-accent">A</span>G<div className="logo-dot"></div>
         </Link>
-        <ul className="nav-links">
-          <li>
-            <Link href="/discover">Khám phá</Link>
-          </li>
-          <li>
-            <Link href="/discover">Thể loại</Link>
-          </li>
-          <li>
-            <Link href="/forum">Diễn đàn</Link>
-          </li>
-          <li>
-            <Link href="/author-studio">Tác giả</Link>
-          </li>
-        </ul>
+        {/* Nav links removed for Landing Page per BUG-LP-001 */}
         <div className="nav-actions">
           <Link className="btn-nav-ghost" href="/auth?tab=login">Đăng nhập</Link>
           <Link className="btn-nav-cta" href="/auth?tab=register">Đăng ký miễn phí</Link>
@@ -345,8 +332,8 @@ export default function LandingPage() {
                   />
                 </svg>
                 <div className="book-meta">
-                  <div className="book-title-sm">Biển Sâu XXII</div>
-                  <div className="book-author-sm">Ngân Hà</div>
+                  <div className="book-title-sm">Cánh Cửa Sau Sao Băng</div>
+                  <div className="book-author-sm">Minh Khôi</div>
                 </div>
               </div>
               {/* Book 2 */}
@@ -394,8 +381,8 @@ export default function LandingPage() {
                   />
                 </svg>
                 <div className="book-meta">
-                  <div className="book-title-sm">Mùa Hạ Năm Ấy</div>
-                  <div className="book-author-sm">Hạ Linh</div>
+                  <div className="book-title-sm">Hồ Sơ Ánh Trăng</div>
+                  <div className="book-author-sm">Lam Tử</div>
                 </div>
               </div>
               {/* Book 1 (front) */}
@@ -471,7 +458,7 @@ export default function LandingPage() {
                     fill="rgba(255,236,206,.9)"
                     fontStyle="italic"
                   >
-                    Thiên Kiếm Vô Danh
+                    Mưa Trên Thành Cũ
                   </text>
                   <text
                     x="100"
@@ -482,7 +469,7 @@ export default function LandingPage() {
                     fill="rgba(255,255,255,.4)"
                     letterSpacing="1"
                   >
-                    Mộc Vân
+                    Linh An
                   </text>
                 </svg>
               </div>
@@ -557,150 +544,21 @@ export default function LandingPage() {
                       background: "linear-gradient(135deg,#FFECCE,#f5dba8)",
                     }}
                   >
-                    <svg viewBox="0 0 120 100" style={{ width: "110px" }}>
-                      <rect
-                        x="10"
-                        y="20"
-                        width="45"
-                        height="60"
-                        rx="3"
-                        fill="#41503D"
-                        opacity=".15"
-                      />
-                      <rect
-                        x="65"
-                        y="20"
-                        width="45"
-                        height="60"
-                        rx="3"
-                        fill="#41503D"
-                        opacity=".15"
-                      />
-                      <rect
-                        x="12"
-                        y="22"
-                        width="41"
-                        height="56"
-                        rx="2"
-                        fill="#fff"
-                        opacity=".9"
-                      />
-                      <rect
-                        x="67"
-                        y="22"
-                        width="41"
-                        height="56"
-                        rx="2"
-                        fill="#fff"
-                        opacity=".9"
-                      />
-                      <rect
-                        x="18"
-                        y="32"
-                        width="29"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".25"
-                      />
-                      <rect
-                        x="18"
-                        y="38"
-                        width="25"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".18"
-                      />
-                      <rect
-                        x="18"
-                        y="44"
-                        width="27"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".18"
-                      />
-                      <rect
-                        x="18"
-                        y="50"
-                        width="22"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".18"
-                      />
-                      <rect
-                        x="18"
-                        y="56"
-                        width="26"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".18"
-                      />
-                      <rect
-                        x="73"
-                        y="32"
-                        width="29"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".25"
-                      />
-                      <rect
-                        x="73"
-                        y="38"
-                        width="25"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".18"
-                      />
-                      <rect
-                        x="73"
-                        y="44"
-                        width="27"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".18"
-                      />
-                      <rect
-                        x="73"
-                        y="50"
-                        width="22"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".18"
-                      />
-                      <rect
-                        x="73"
-                        y="56"
-                        width="26"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".18"
-                      />
-                      <rect
-                        x="57"
-                        y="20"
-                        width="6"
-                        height="60"
-                        fill="#41503D"
-                        opacity=".12"
-                      />
-                      <circle
-                        cx="87"
-                        cy="72"
-                        r="8"
-                        fill="#FFECCE"
-                        stroke="#f5dba8"
-                        strokeWidth="1.5"
-                      />
-                      <circle cx="87" cy="72" r="5" fill="#F59E0B" opacity=".7" />
+                    {/* Hand-drawn open book styling */}
+                    <svg viewBox="0 0 100 100" style={{ width: "90px", height: "90px" }} fill="none" stroke="#41503D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M50,85 C35,80 20,85 10,85 L10,25 C20,25 35,20 50,25 Z" fill="rgba(255,255,255,0.7)" />
+                      <path d="M50,85 C65,80 80,85 90,85 L90,25 C80,25 65,20 50,25 Z" fill="rgba(255,255,255,0.7)" />
+                      <line x1="50" y1="25" x2="50" y2="85" />
+                      <line x1="20" y1="40" x2="40" y2="40" strokeWidth="1.5" />
+                      <line x1="20" y1="52" x2="35" y2="52" strokeWidth="1.5" />
+                      <line x1="20" y1="64" x2="40" y2="64" strokeWidth="1.5" />
+                      <line x1="60" y1="40" x2="80" y2="40" strokeWidth="1.5" />
+                      <line x1="60" y1="52" x2="75" y2="52" strokeWidth="1.5" />
+                      <line x1="60" y1="64" x2="80" y2="64" strokeWidth="1.5" />
+                      <circle cx="50" cy="15" r="6" fill="#F59E0B" stroke="#41503D" strokeWidth="1.5" />
+                      <line x1="50" y1="5" x2="50" y2="8" strokeWidth="1.5" />
+                      <line x1="43" y1="10" x2="40" y2="8" strokeWidth="1.5" />
+                      <line x1="57" y1="10" x2="60" y2="8" strokeWidth="1.5" />
                     </svg>
                   </div>
                   <div className="feat-title">Reader Mode</div>
@@ -732,130 +590,19 @@ export default function LandingPage() {
                       background: "linear-gradient(135deg,#f0f4ff,#dbe8ff)",
                     }}
                   >
-                    <svg viewBox="0 0 120 100" style={{ width: "110px" }}>
-                      <rect
-                        x="10"
-                        y="15"
-                        width="70"
-                        height="70"
-                        rx="6"
-                        fill="#fff"
-                        stroke="#e0e8f0"
-                        strokeWidth="1"
-                      />
-                      <rect x="10" y="15" width="70" height="18" rx="6" fill="#f0f4ff" />
-                      <rect x="10" y="27" width="70" height="6" rx="0" fill="#f0f4ff" />
-                      <circle cx="20" cy="24" r="3" fill="#EF4444" opacity=".6" />
-                      <circle cx="30" cy="24" r="3" fill="#F59E0B" opacity=".6" />
-                      <circle cx="40" cy="24" r="3" fill="#22C55E" opacity=".6" />
-                      <rect
-                        x="18"
-                        y="42"
-                        width="52"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".2"
-                      />
-                      <rect
-                        x="18"
-                        y="49"
-                        width="44"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".15"
-                      />
-                      <rect
-                        x="18"
-                        y="56"
-                        width="50"
-                        height="2"
-                        rx="1"
-                        fill="#41503D"
-                        opacity=".15"
-                      />
-                      <rect
-                        x="18"
-                        y="63"
-                        width="35"
-                        height="2"
-                        rx="1"
-                        fill="#C81C30"
-                        opacity=".4"
-                      />
-                      <rect x="53" y="60" width="2" height="8" rx="1" fill="#3B82F6" opacity=".8">
-                        <animate
-                          attributeName="opacity"
-                          values="0.8;0;0.8"
-                          dur="1.2s"
-                          repeatCount="indefinite"
-                        />
-                      </rect>
-                      <rect
-                        x="84"
-                        y="15"
-                        width="28"
-                        height="70"
-                        rx="6"
-                        fill="#3B82F6"
-                        opacity=".08"
-                        stroke="#3B82F6"
-                        strokeWidth=".5"
-                        strokeOpacity=".3"
-                      />
-                      <text
-                        x="98"
-                        y="42"
-                        textAnchor="middle"
-                        fontSize="7"
-                        fill="#3B82F6"
-                        fontFamily="sans-serif"
-                        fontWeight="bold"
-                      >
-                        AI
-                      </text>
-                      <rect
-                        x="88"
-                        y="48"
-                        width="20"
-                        height="2"
-                        rx="1"
-                        fill="#3B82F6"
-                        opacity=".3"
-                      />
-                      <rect
-                        x="88"
-                        y="53"
-                        width="16"
-                        height="2"
-                        rx="1"
-                        fill="#3B82F6"
-                        opacity=".2"
-                      />
-                      <rect
-                        x="88"
-                        y="58"
-                        width="18"
-                        height="2"
-                        rx="1"
-                        fill="#3B82F6"
-                        opacity=".2"
-                      />
-                      <path
-                        d="M98,22 L99.5,26 L103.5,27.5 L99.5,29 L98,33 L96.5,29 L92.5,27.5 L96.5,26Z"
-                        fill="#F59E0B"
-                        opacity=".8"
-                      >
-                        <animateTransform
-                          attributeName="transform"
-                          type="rotate"
-                          from="0 98 27.5"
-                          to="360 98 27.5"
-                          dur="4s"
-                          repeatCount="indefinite"
-                        />
-                      </path>
+                    {/* Hand-drawn pencil and paper */}
+                    <svg viewBox="0 0 100 100" style={{ width: "90px", height: "90px" }} fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="25" y="15" width="50" height="70" rx="4" fill="rgba(255,255,255,0.7)" />
+                      <line x1="35" y1="30" x2="65" y2="30" strokeWidth="1.5" opacity="0.6" />
+                      <line x1="35" y1="42" x2="65" y2="42" strokeWidth="1.5" opacity="0.6" />
+                      <line x1="35" y1="54" x2="55" y2="54" strokeWidth="1.5" opacity="0.6" />
+                      <g transform="rotate(-30 65 65)">
+                        <path d="M55,30 L65,30 L65,80 L55,80 Z" fill="#F59E0B" stroke="#3B82F6" />
+                        <polygon points="55,80 65,80 60,90" fill="#FFECCE" stroke="#3B82F6" />
+                        <polygon points="58,86 62,86 60,90" fill="#3B82F6" />
+                      </g>
+                      <path d="M15,25 Q20,25 20,20 Q20,25 25,25 Q20,25 20,30 Q20,25 15,25 Z" fill="#F59E0B" stroke="none" />
+                      <path d="M80,45 Q83,45 83,42 Q83,45 86,45 Q83,45 83,48 Q83,45 80,45 Z" fill="#F59E0B" stroke="none" />
                     </svg>
                   </div>
                   <div className="feat-title">AI Đồng hành viết</div>
@@ -890,97 +637,16 @@ export default function LandingPage() {
                       background: "linear-gradient(135deg,#fff0f5,#ffd6e0)",
                     }}
                   >
-                    <svg viewBox="0 0 120 100" style={{ width: "110px" }}>
-                      <rect
-                        x="15"
-                        y="15"
-                        width="90"
-                        height="22"
-                        rx="11"
-                        fill="#fff"
-                        stroke="#FEBDB2"
-                        strokeWidth="1.5"
-                      />
-                      <circle
-                        cx="32"
-                        cy="26"
-                        r="6"
-                        fill="none"
-                        stroke="#C81C30"
-                        strokeWidth="1.5"
-                      />
-                      <path
-                        d="M36,30 L40,34"
-                        stroke="#C81C30"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                      <rect
-                        x="45"
-                        y="22"
-                        width="50"
-                        height="8"
-                        rx="4"
-                        fill="#FFECCE"
-                        opacity=".7"
-                      />
-                      <circle cx="30" cy="60" r="6" fill="#C81C30" opacity=".7" />
-                      <circle cx="60" cy="48" r="8" fill="#C81C30" opacity=".9" />
-                      <circle cx="90" cy="65" r="5" fill="#FEBDB2" opacity=".8" />
-                      <circle cx="50" cy="75" r="4" fill="#C81C30" opacity=".5" />
-                      <circle cx="78" cy="78" r="6" fill="#FEBDB2" opacity=".6" />
-                      <line
-                        x1="30"
-                        y1="60"
-                        x2="60"
-                        y2="48"
-                        stroke="#C81C30"
-                        strokeWidth=".8"
-                        opacity=".35"
-                        strokeDasharray="3,2"
-                      />
-                      <line
-                        x1="60"
-                        y1="48"
-                        x2="90"
-                        y2="65"
-                        stroke="#C81C30"
-                        strokeWidth=".8"
-                        opacity=".35"
-                        strokeDasharray="3,2"
-                      />
-                      <line
-                        x1="60"
-                        y1="48"
-                        x2="50"
-                        y2="75"
-                        stroke="#C81C30"
-                        strokeWidth=".8"
-                        opacity=".25"
-                        strokeDasharray="3,2"
-                      />
-                      <line
-                        x1="90"
-                        y1="65"
-                        x2="78"
-                        y2="78"
-                        stroke="#FEBDB2"
-                        strokeWidth=".8"
-                        opacity=".35"
-                        strokeDasharray="3,2"
-                      />
-                      <rect x="52" y="40" width="20" height="10" rx="5" fill="#C81C30" />
-                      <text
-                        x="62"
-                        y="48"
-                        textAnchor="middle"
-                        fontSize="7"
-                        fill="white"
-                        fontFamily="sans-serif"
-                        fontWeight="bold"
-                      >
-                        AI
-                      </text>
+                    {/* Hand-drawn magnifying glass and nodes */}
+                    <svg viewBox="0 0 100 100" style={{ width: "90px", height: "90px" }} fill="none" stroke="#C81C30" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="25" cy="25" r="5" fill="#FFECCE" stroke="#C81C30" />
+                      <circle cx="75" cy="30" r="5" fill="#FFECCE" stroke="#C81C30" />
+                      <circle cx="35" cy="70" r="5" fill="#FFECCE" stroke="#C81C30" />
+                      <line x1="29" y1="26" x2="71" y2="29" strokeWidth="1.5" strokeDasharray="3,3" opacity="0.6" />
+                      <line x1="27" y1="29" x2="33" y2="66" strokeWidth="1.5" strokeDasharray="3,3" opacity="0.6" />
+                      <circle cx="55" cy="45" r="16" fill="rgba(255,255,255,0.7)" stroke="#C81C30" />
+                      <line x1="66" y1="56" x2="85" y2="75" strokeWidth="4" />
+                      <path d="M48,40 L50,42 L48,44 L46,42 Z" fill="#C81C30" stroke="none" />
                     </svg>
                   </div>
                   <div className="feat-title">Tìm kiếm ngữ nghĩa</div>
@@ -1012,96 +678,16 @@ export default function LandingPage() {
                       background: "linear-gradient(135deg,#f0fff4,#d1fae5)",
                     }}
                   >
-                    <svg viewBox="0 0 120 100" style={{ width: "110px" }}>
-                      <rect
-                        x="15"
-                        y="18"
-                        width="65"
-                        height="30"
-                        rx="10"
-                        fill="#41503D"
-                        opacity=".15"
-                      />
-                      <rect
-                        x="17"
-                        y="20"
-                        width="61"
-                        height="26"
-                        rx="8"
-                        fill="#22C55E"
-                        opacity=".25"
-                      />
-                      <polygon points="25,48 15,56 35,48" fill="#22C55E" opacity=".2" />
-                      <rect
-                        x="22"
-                        y="28"
-                        width="40"
-                        height="3"
-                        rx="1.5"
-                        fill="#41503D"
-                        opacity=".3"
-                      />
-                      <rect
-                        x="22"
-                        y="36"
-                        width="30"
-                        height="3"
-                        rx="1.5"
-                        fill="#41503D"
-                        opacity=".2"
-                      />
-                      <rect
-                        x="40"
-                        y="55"
-                        width="65"
-                        height="28"
-                        rx="10"
-                        fill="#41503D"
-                        opacity=".1"
-                      />
-                      <rect
-                        x="42"
-                        y="57"
-                        width="61"
-                        height="24"
-                        rx="8"
-                        fill="#3B82F6"
-                        opacity=".2"
-                      />
-                      <polygon points="95,83 105,90 85,83" fill="#3B82F6" opacity=".15" />
-                      <rect
-                        x="48"
-                        y="64"
-                        width="44"
-                        height="3"
-                        rx="1.5"
-                        fill="#41503D"
-                        opacity=".25"
-                      />
-                      <rect
-                        x="48"
-                        y="72"
-                        width="35"
-                        height="3"
-                        rx="1.5"
-                        fill="#41503D"
-                        opacity=".15"
-                      />
-                      <circle cx="100" cy="22" r="5" fill="#22C55E">
-                        <animate
-                          attributeName="r"
-                          values="5;7;5"
-                          dur="1.5s"
-                          repeatCount="indefinite"
-                        />
-                        <animate
-                          attributeName="opacity"
-                          values="1;0.5;1"
-                          dur="1.5s"
-                          repeatCount="indefinite"
-                        />
+                    {/* Hand-drawn chat bubbles */}
+                    <svg viewBox="0 0 100 100" style={{ width: "90px", height: "90px" }} fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20,50 C20,35 35,25 50,25 C65,25 75,32 75,45 C75,55 65,65 55,65 C52,65 48,68 45,71 L45,65 C30,65 20,60 20,50 Z" fill="rgba(255,255,255,0.7)" />
+                      <path d="M45,65 C45,58 52,53 62,53 C72,53 80,58 80,65 C80,72 72,77 67,77 L67,82 C65,80 62,77 60,77 C50,77 45,72 45,65 Z" fill="#D1FAE5" />
+                      <circle cx="40" cy="45" r="2" fill="#22C55E" stroke="none" />
+                      <circle cx="50" cy="45" r="2" fill="#22C55E" stroke="none" />
+                      <circle cx="60" cy="45" r="2" fill="#22C55E" stroke="none" />
+                      <circle cx="85" cy="20" r="5" fill="#EF4444" stroke="#FFF" strokeWidth="1.5">
+                        <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite" />
                       </circle>
-                      <circle cx="100" cy="22" r="3" fill="#22C55E" />
                     </svg>
                   </div>
                   <div className="feat-title">Diễn đàn Real-time</div>
@@ -1136,55 +722,11 @@ export default function LandingPage() {
                       background: "linear-gradient(135deg,#fff8f0,#fde8cc)",
                     }}
                   >
-                    <svg viewBox="0 0 120 100" style={{ width: "110px" }}>
-                      <path
-                        d="M60,15 L90,28 L90,52 Q90,72 60,85 Q30,72 30,52 L30,28Z"
-                        fill="none"
-                        stroke="#C81C30"
-                        strokeWidth="2"
-                        strokeLinejoin="round"
-                        opacity=".4"
-                      />
-                      <path
-                        d="M60,22 L84,33 L84,52 Q84,68 60,79 Q36,68 36,52 L36,33Z"
-                        fill="none"
-                        stroke="#C81C30"
-                        strokeWidth="1.5"
-                        strokeLinejoin="round"
-                        opacity=".25"
-                      />
-                      <path
-                        d="M60,30 L76,39 L76,52 Q76,63 60,72 Q44,63 44,52 L44,39Z"
-                        fill="#C81C30"
-                        opacity=".1"
-                      />
-                      <path
-                        d="M50,52 L57,59 L72,44"
-                        stroke="#22C55E"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fill="none"
-                      />
-                      <line
-                        x1="30"
-                        y1="48"
-                        x2="90"
-                        y2="48"
-                        stroke="#C81C30"
-                        strokeWidth=".8"
-                        opacity=".3"
-                        strokeDasharray="4,3"
-                      >
-                        <animateTransform
-                          attributeName="transform"
-                          type="translate"
-                          from="0,-15"
-                          to="0,15"
-                          dur="2s"
-                          repeatCount="indefinite"
-                        />
-                      </line>
+                    {/* Hand-drawn shield and checkmark */}
+                    <svg viewBox="0 0 100 100" style={{ width: "90px", height: "90px" }} fill="none" stroke="#C81C30" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M50,15 L80,25 L80,55 C80,75 50,85 50,85 C50,85 20,75 20,55 L20,25 Z" fill="rgba(255,255,255,0.7)" />
+                      <path d="M38,48 L46,56 L62,38" stroke="#22C55E" strokeWidth="4" />
+                      <path d="M50,10 L52,15 L57,15 L53,18 L55,23 L50,20 L45,23 L47,18 L43,15 L48,15 Z" fill="#F59E0B" stroke="none" />
                     </svg>
                   </div>
                   <div className="feat-title">AI Kiểm duyệt</div>
@@ -1219,56 +761,16 @@ export default function LandingPage() {
                       background: "linear-gradient(135deg,#fdf4ff,#ede0ff)",
                     }}
                   >
-                    <svg viewBox="0 0 120 100" style={{ width: "110px" }}>
-                      <polygon
-                        points="60,20 75,45 90,35 85,65 35,65 30,35 45,45"
-                        fill="none"
-                        stroke="#C81C30"
-                        strokeWidth="2"
-                        strokeLinejoin="round"
-                        opacity=".5"
-                      />
-                      <polygon
-                        points="60,25 73,47 87,37 83,62 37,62 33,37 47,47"
-                        fill="#C81C30"
-                        opacity=".15"
-                      />
-                      <circle cx="60" cy="20" r="4" fill="#C81C30" opacity=".8" />
-                      <circle cx="90" cy="35" r="3" fill="#F59E0B" opacity=".8" />
-                      <circle cx="30" cy="35" r="3" fill="#F59E0B" opacity=".8" />
-                      <rect
-                        x="55"
-                        y="48"
-                        width="10"
-                        height="8"
-                        rx="2"
-                        fill="#C81C30"
-                        opacity=".6"
-                      />
-                      <rect
-                        x="25"
-                        y="72"
-                        width="70"
-                        height="18"
-                        rx="6"
-                        fill="#C81C30"
-                        opacity=".12"
-                        stroke="#C81C30"
-                        strokeWidth=".8"
-                        strokeOpacity=".3"
-                      />
-                      <text
-                        x="60"
-                        y="84"
-                        textAnchor="middle"
-                        fontSize="8"
-                        fill="#C81C30"
-                        fontFamily="sans-serif"
-                        fontWeight="bold"
-                        opacity=".7"
-                      >
-                        VNPAY
-                      </text>
+                    {/* Hand-drawn crown and VNPAY card */}
+                    <svg viewBox="0 0 100 100" style={{ width: "90px", height: "90px" }} fill="none" stroke="#8B5CF6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="18" y="32" width="64" height="42" rx="6" fill="rgba(255,255,255,0.7)" />
+                      <line x1="26" y1="42" x2="38" y2="42" strokeWidth="3" opacity="0.7" />
+                      <rect x="26" y="52" width="48" height="12" rx="2" fill="#EDE0FF" stroke="#8B5CF6" strokeWidth="1.5" />
+                      <text x="50" y="61" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#8B5CF6" stroke="none" fontFamily="sans-serif">VNPAY</text>
+                      <path d="M35,32 L40,20 L50,28 L60,20 L65,32 Z" fill="#F59E0B" stroke="#8B5CF6" />
+                      <circle cx="40" cy="18" r="2" fill="#8B5CF6" stroke="none" />
+                      <circle cx="50" cy="26" r="2" fill="#8B5CF6" stroke="none" />
+                      <circle cx="60" cy="18" r="2" fill="#8B5CF6" stroke="none" />
                     </svg>
                   </div>
                   <div className="feat-title">Membership</div>
@@ -1374,7 +876,7 @@ export default function LandingPage() {
               onMouseUp={handleStoriesMouseUpOrLeave}
               onMouseLeave={handleStoriesMouseUpOrLeave}
             >
-              {/* Card 1: Kiếm hiệp */}
+              {/* Card 1: Ngôn tình lịch sử */}
               <div className="s-card">
                 <div className="s-cover">
                   <div className="s-badge hot">Hot</div>
@@ -1385,157 +887,39 @@ export default function LandingPage() {
                   >
                     <defs>
                       <linearGradient id="sc1" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#12023a" }} />
-                        <stop offset="100%" style={{ stopColor: "#4a1080" }} />
+                        <stop offset="0%" style={{ stopColor: "#2b1055" }} />
+                        <stop offset="100%" style={{ stopColor: "#7597de" }} />
                       </linearGradient>
                     </defs>
                     <rect width="190" height="130" fill="url(#sc1)" />
-                    <circle
-                      cx="95"
-                      cy="60"
-                      r="40"
-                      fill="none"
-                      stroke="rgba(254,189,178,.15)"
-                      strokeWidth="1"
-                    />
-                    <circle
-                      cx="95"
-                      cy="60"
-                      r="25"
-                      fill="rgba(200,28,48,.1)"
-                      stroke="rgba(200,28,48,.25)"
-                      strokeWidth=".8"
-                    />
-                    <rect
-                      x="93"
-                      y="20"
-                      width="4"
-                      height="80"
-                      rx="2"
-                      fill="rgba(255,236,206,.6)"
-                    />
-                    <rect
-                      x="75"
-                      y="62"
-                      width="40"
-                      height="3"
-                      rx="1.5"
-                      fill="rgba(254,189,178,.5)"
-                    />
-                    <polygon
-                      points="95,15 91,27 99,27"
-                      fill="rgba(255,236,206,.85)"
-                    />
-                    <circle cx="30" cy="25" r="1.2" fill="rgba(255,255,255,.5)" />
-                    <circle cx="160" cy="35" r="1" fill="rgba(255,255,255,.4)" />
-                    <circle cx="20" cy="100" r="1.5" fill="rgba(255,255,255,.3)" />
-                    <circle cx="170" cy="95" r="1" fill="rgba(255,255,255,.4)" />
+                    {/* Stylized moon */}
+                    <circle cx="140" cy="40" r="16" fill="rgba(255, 236, 206, 0.4)" />
+                    <circle cx="146" cy="36" r="14" fill="#2b1055" />
+                    {/* Raindrops / stars */}
+                    <line x1="40" y1="20" x2="35" y2="40" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    <line x1="80" y1="30" x2="75" y2="50" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    <line x1="120" y1="25" x2="115" y2="45" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    <line x1="60" y1="70" x2="55" y2="90" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    <line x1="100" y1="80" x2="95" y2="100" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    <line x1="150" y1="75" x2="145" y2="95" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    {/* Ancient wall/gate silhouette sketch */}
+                    <path d="M20,130 L20,110 L40,110 L40,105 L60,105 L60,110 L130,110 L130,105 L150,105 L150,110 L170,110 L170,130 Z" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+                    <path d="M80,130 L80,115 Q95,100 110,115 L110,130 Z" fill="#2b1055" stroke="rgba(255,255,255,0.2)" />
                   </svg>
                 </div>
                 <div className="s-info">
-                  <div className="s-genre">Kiếm hiệp</div>
-                  <div className="s-name">Thiên Kiếm Vô Danh</div>
-                  <div className="s-author">Mộc Vân</div>
+                  <div className="s-genre">Ngôn tình lịch sử</div>
+                  <div className="s-name">Mưa Trên Thành Cũ</div>
+                  <div className="s-author">Linh An</div>
                   <div className="s-stats">
-                    <span className="s-stat">👁 2.4M</span>
+                    <span className="s-stat">👁 1.2M</span>
                     <span className="s-stat">⭐ 4.9</span>
-                    <span className="s-stat">📚 312 ch.</span>
+                    <span className="s-stat">📚 72 ch.</span>
                   </div>
                 </div>
               </div>
 
-              {/* Card 2: Ngôn tình */}
-              <div className="s-card">
-                <div className="s-cover">
-                  <div className="s-badge" style={{ background: "rgba(34,197,94,.7)" }}>
-                    Mới
-                  </div>
-                  <svg
-                    viewBox="0 0 190 130"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ width: "100%", height: "100%" }}
-                  >
-                    <defs>
-                      <linearGradient id="sc2" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#051a0a" }} />
-                        <stop offset="100%" style={{ stopColor: "#1a6b3a" }} />
-                      </linearGradient>
-                    </defs>
-                    <rect width="190" height="130" fill="url(#sc2)" />
-                    <ellipse
-                      cx="95"
-                      cy="65"
-                      rx="35"
-                      ry="45"
-                      fill="none"
-                      stroke="rgba(34,197,94,.2)"
-                      strokeWidth="1"
-                    />
-                    <path
-                      d="M65,50 Q95,25 125,50 Q95,85 65,50Z"
-                      fill="rgba(34,197,94,.2)"
-                    />
-                    <circle cx="95" cy="55" r="8" fill="rgba(254,189,178,.3)" />
-                    <circle cx="108" cy="48" r="5" fill="rgba(254,189,178,.2)" />
-                    <circle cx="82" cy="48" r="5" fill="rgba(254,189,178,.2)" />
-                  </svg>
-                </div>
-                <div className="s-info">
-                  <div className="s-genre">Ngôn tình</div>
-                  <div className="s-name">Mùa Hạ Năm Ấy</div>
-                  <div className="s-author">Hạ Linh</div>
-                  <div className="s-stats">
-                    <span className="s-stat">👁 1.8M</span>
-                    <span className="s-stat">⭐ 4.8</span>
-                    <span className="s-stat">📚 88 ch.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Huyền huyễn */}
-              <div className="s-card">
-                <div className="s-cover">
-                  <div className="s-badge hot">🔥 Hot</div>
-                  <svg
-                    viewBox="0 0 190 130"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ width: "100%", height: "100%" }}
-                  >
-                    <defs>
-                      <linearGradient id="sc3" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#2a0a0a" }} />
-                        <stop offset="100%" style={{ stopColor: "#8b2200" }} />
-                      </linearGradient>
-                    </defs>
-                    <rect width="190" height="130" fill="url(#sc3)" />
-                    <path
-                      d="M95,20 Q120,45 110,65 Q130,50 125,80 Q100,60 105,90 Q80,65 90,85 Q60,60 85,40 Q70,30 95,20Z"
-                      fill="rgba(245,158,11,.4)"
-                    />
-                    <circle
-                      cx="95"
-                      cy="55"
-                      r="12"
-                      fill="rgba(245,158,11,.25)"
-                      stroke="rgba(245,158,11,.4)"
-                      strokeWidth="1"
-                    />
-                    <circle cx="95" cy="55" r="5" fill="rgba(245,158,11,.6)" />
-                  </svg>
-                </div>
-                <div className="s-info">
-                  <div className="s-genre">Huyền huyễn</div>
-                  <div className="s-name">Hoả Linh Chi Chủ</div>
-                  <div className="s-author">Phong Vũ</div>
-                  <div className="s-stats">
-                    <span className="s-stat">👁 3.1M</span>
-                    <span className="s-stat">⭐ 4.7</span>
-                    <span className="s-stat">📚 540 ch.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 4: Sci-Fi */}
+              {/* Card 2: Khoa học viễn tưởng */}
               <div className="s-card">
                 <div className="s-cover">
                   <div className="s-badge ai">AI Pick</div>
@@ -1545,40 +929,35 @@ export default function LandingPage() {
                     style={{ width: "100%", height: "100%" }}
                   >
                     <defs>
-                      <linearGradient id="sc4" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#02111e" }} />
-                        <stop offset="100%" style={{ stopColor: "#1a4a7a" }} />
+                      <linearGradient id="sc2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: "#0a1128" }} />
+                        <stop offset="100%" style={{ stopColor: "#001f3f" }} />
                       </linearGradient>
                     </defs>
-                    <rect width="190" height="130" fill="url(#sc4)" />
-                    <path
-                      d="M0,70 Q47,55 95,70 Q142,85 190,70 L190,130 L0,130Z"
-                      fill="rgba(59,130,246,.15)"
-                    />
-                    <ellipse
-                      cx="95"
-                      cy="62"
-                      rx="30"
-                      ry="10"
-                      fill="rgba(59,130,246,.3)"
-                      stroke="rgba(59,130,246,.5)"
-                      strokeWidth="1"
-                    />
+                    <rect width="190" height="130" fill="url(#sc2)" />
+                    {/* Shooting star lines */}
+                    <line x1="20" y1="20" x2="80" y2="50" stroke="rgba(59,130,246,0.4)" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="80" y1="10" x2="150" y2="45" stroke="rgba(254,189,178,0.4)" strokeWidth="1.5" strokeLinecap="round" />
+                    <line x1="10" y1="60" x2="50" y2="80" stroke="rgba(59,130,246,0.3)" strokeWidth="1" />
+                    {/* Portal circle */}
+                    <circle cx="95" cy="65" r="30" fill="none" stroke="rgba(59,130,246,0.2)" strokeWidth="4" />
+                    <circle cx="95" cy="65" r="25" fill="none" stroke="rgba(254,189,178,0.3)" strokeWidth="2" strokeDasharray="5,5" />
+                    <circle cx="95" cy="65" r="8" fill="#FFF" opacity="0.8" />
                   </svg>
                 </div>
                 <div className="s-info">
                   <div className="s-genre">Khoa học viễn tưởng</div>
-                  <div className="s-name">Biển Sâu Thế Kỷ XXII</div>
-                  <div className="s-author">Ngân Hà</div>
+                  <div className="s-name">Cánh Cửa Sau Sao Băng</div>
+                  <div className="s-author">Minh Khôi</div>
                   <div className="s-stats">
-                    <span className="s-stat">👁 980K</span>
-                    <span className="s-stat">⭐ 4.9</span>
-                    <span className="s-stat">📚 160 ch.</span>
+                    <span className="s-stat">👁 850K</span>
+                    <span className="s-stat">⭐ 4.7</span>
+                    <span className="s-stat">📚 48 ch.</span>
                   </div>
                 </div>
               </div>
 
-              {/* Card 5: Kinh dị */}
+              {/* Card 3: Trinh thám */}
               <div className="s-card">
                 <div className="s-cover">
                   <div className="s-badge done">Hoàn thành</div>
@@ -1588,39 +967,35 @@ export default function LandingPage() {
                     style={{ width: "100%", height: "100%" }}
                   >
                     <defs>
-                      <linearGradient id="sc5" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#0d0d0d" }} />
-                        <stop offset="100%" style={{ stopColor: "#2d1b00" }} />
+                      <linearGradient id="sc3" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: "#0d1b2a" }} />
+                        <stop offset="100%" style={{ stopColor: "#1b4931" }} />
                       </linearGradient>
                     </defs>
-                    <rect width="190" height="130" fill="url(#sc5)" />
-                    <circle
-                      cx="140"
-                      cy="30"
-                      r="20"
-                      fill="rgba(255,236,206,.12)"
-                      stroke="rgba(255,236,206,.15)"
-                      strokeWidth="1"
-                    />
-                    <circle cx="148" cy="25" r="14" fill="#0d0d0d" />
-                    <circle cx="95" cy="52" r="12" fill="rgba(30,30,30,.9)" />
-                    <circle cx="91" cy="51" r="2" fill="rgba(200,28,48,.8)" />
-                    <circle cx="99" cy="51" r="2" fill="rgba(200,28,48,.8)" />
+                    <rect width="190" height="130" fill="url(#sc3)" />
+                    {/* Full glowing moon */}
+                    <circle cx="95" cy="65" r="35" fill="rgba(255, 255, 255, 0.05)" />
+                    <circle cx="95" cy="65" r="28" fill="rgba(255, 255, 255, 0.1)" />
+                    <circle cx="95" cy="65" r="20" fill="#FFECCE" opacity="0.9" />
+                    {/* Barren tree branch silhouette */}
+                    <path d="M0,130 Q40,110 70,100 T120,95" fill="none" stroke="#0d1b2a" strokeWidth="3" />
+                    <path d="M70,100 Q90,80 110,85" fill="none" stroke="#0d1b2a" strokeWidth="2" />
+                    <path d="M90,92 Q105,75 125,80" fill="none" stroke="#0d1b2a" strokeWidth="1.5" />
                   </svg>
                 </div>
                 <div className="s-info">
-                  <div className="s-genre">Kinh dị tâm lý</div>
-                  <div className="s-name">Bóng Tối Thứ Ba</div>
-                  <div className="s-author">Đêm Khuya</div>
+                  <div className="s-genre">Trinh thám</div>
+                  <div className="s-name">Hồ Sơ Ánh Trăng</div>
+                  <div className="s-author">Lam Tử</div>
                   <div className="s-stats">
-                    <span className="s-stat">👁 1.2M</span>
-                    <span className="s-stat">⭐ 4.6</span>
-                    <span className="s-stat">📚 200 ch.</span>
+                    <span className="s-stat">👁 940K</span>
+                    <span className="s-stat">⭐ 4.8</span>
+                    <span className="s-stat">📚 64 ch.</span>
                   </div>
                 </div>
               </div>
 
-              {/* Card 6: Cổ trang */}
+              {/* Card 4: Đời thường */}
               <div className="s-card">
                 <div className="s-cover">
                   <div className="s-badge hot">Hot</div>
@@ -1630,31 +1005,107 @@ export default function LandingPage() {
                     style={{ width: "100%", height: "100%" }}
                   >
                     <defs>
-                      <linearGradient id="sc6" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#1a0a0a" }} />
-                        <stop offset="100%" style={{ stopColor: "#6b2f00" }} />
+                      <linearGradient id="sc4" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: "#2d5a27" }} />
+                        <stop offset="100%" style={{ stopColor: "#8fbc8f" }} />
                       </linearGradient>
                     </defs>
-                    <rect width="190" height="130" fill="url(#sc6)" />
-                    <circle
-                      cx="95"
-                      cy="55"
-                      r="22"
-                      fill="none"
-                      stroke="rgba(254,189,178,.2)"
-                      strokeWidth="1"
-                    />
-                    <circle cx="95" cy="55" r="5" fill="rgba(245,158,11,.5)" />
+                    <rect width="190" height="130" fill="url(#sc4)" />
+                    {/* Sketchy leaf design */}
+                    <path d="M50,90 Q95,65 140,40 M50,90 Q95,115 140,40" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                    <path d="M70,78 Q95,70 120,52" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    <path d="M85,85 Q110,80 130,68" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    <path d="M95,45 Q70,55 60,72" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+                    {/* Little coffee/tea cup */}
+                    <rect x="140" y="95" width="25" height="18" rx="3" fill="#FFECCE" stroke="#2d5a27" strokeWidth="1.5" />
+                    <path d="M165,99 Q172,104 165,109" fill="none" stroke="#2d5a27" strokeWidth="1.5" />
+                    <path d="M148,90 Q150,85 152,90" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+                    <path d="M153,90 Q155,85 157,90" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
                   </svg>
                 </div>
                 <div className="s-info">
-                  <div className="s-genre">Cổ trang</div>
-                  <div className="s-name">Độc Bộ Thiên Hạ</div>
-                  <div className="s-author">Tuyết Băng</div>
+                  <div className="s-genre">Đời thường</div>
+                  <div className="s-name">Vườn Ký Ức</div>
+                  <div className="s-author">Ngọc Hà</div>
                   <div className="s-stats">
-                    <span className="s-stat">👁 2.0M</span>
-                    <span className="s-stat">⭐ 4.8</span>
-                    <span className="s-stat">📚 420 ch.</span>
+                    <span className="s-stat">👁 620K</span>
+                    <span className="s-stat">⭐ 4.6</span>
+                    <span className="s-stat">📚 36 ch.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 5: Huyền huyễn */}
+              <div className="s-card">
+                <div className="s-cover">
+                  <div className="s-badge ai">AI Pick</div>
+                  <svg
+                    viewBox="0 0 190 130"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ width: "100%", height: "100%" }}
+                  >
+                    <defs>
+                      <linearGradient id="sc5" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: "#3a0606" }} />
+                        <stop offset="100%" style={{ stopColor: "#d94e34" }} />
+                      </linearGradient>
+                    </defs>
+                    <rect width="190" height="130" fill="url(#sc5)" />
+                    {/* Phoenix flight path / flame shape */}
+                    <path
+                      d="M95,15 Q120,40 110,60 Q135,45 130,80 Q100,55 105,95 Q75,65 85,85 Q50,60 80,35 Q65,25 95,15 Z"
+                      fill="rgba(245,158,11,0.5)"
+                      stroke="#FFECCE"
+                      strokeWidth="1"
+                    />
+                    <circle cx="95" cy="50" r="10" fill="rgba(217,78,52,0.6)" />
+                    <circle cx="95" cy="50" r="4" fill="#FFECCE" />
+                  </svg>
+                </div>
+                <div className="s-info">
+                  <div className="s-genre">Huyền huyễn</div>
+                  <div className="s-name">Tàn Tro Phượng Hoàng</div>
+                  <div className="s-author">Hải Đăng</div>
+                  <div className="s-stats">
+                    <span className="s-stat">👁 2.1M</span>
+                    <span className="s-stat">⭐ 4.9</span>
+                    <span className="s-stat">📚 82 ch.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 6: Tâm lý */}
+              <div className="s-card">
+                <div className="s-cover">
+                  <div className="s-badge done">Hoàn thành</div>
+                  <svg
+                    viewBox="0 0 190 130"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ width: "100%", height: "100%" }}
+                  >
+                    <defs>
+                      <linearGradient id="sc6" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: "#0f2027" }} />
+                        <stop offset="100%" style={{ stopColor: "#203a43" }} />
+                      </linearGradient>
+                    </defs>
+                    <rect width="190" height="130" fill="url(#sc6)" />
+                    {/* Ocean wave paths */}
+                    <path d="M0,90 Q47,70 95,90 Q142,110 190,90 L190,130 L0,130 Z" fill="rgba(32,58,67,0.8)" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
+                    <path d="M0,105 Q47,90 95,105 Q142,120 190,105 L190,130 L0,130 Z" fill="rgba(44,119,143,0.5)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                    {/* Lonely sailboat */}
+                    <path d="M120,80 L128,60 L132,80 Z" fill="#FFECCE" />
+                    <rect x="115" y="80" width="22" height="3" rx="1.5" fill="#C81C30" />
+                  </svg>
+                </div>
+                <div className="s-info">
+                  <div className="s-genre">Tâm lý</div>
+                  <div className="s-name">Đường Về Phía Biển</div>
+                  <div className="s-author">Phương Nam</div>
+                  <div className="s-stats">
+                    <span className="s-stat">👁 510K</span>
+                    <span className="s-stat">⭐ 4.5</span>
+                    <span className="s-stat">📚 28 ch.</span>
                   </div>
                 </div>
               </div>
@@ -1695,14 +1146,41 @@ export default function LandingPage() {
                 <br />
                 <em style={{ color: "var(--coral)" }}>hành trình</em> của bạn
               </h2>
-              <p className="sec-desc" style={{ color: "rgba(255,255,255,.5)" }}>
+              <p className="sec-desc">
                 Đơn giản, nhanh chóng và hoàn toàn miễn phí để bắt đầu.
               </p>
             </div>
           </RevealOnScroll>
 
           <div className="how-grid">
-            <div className="how-connector"></div>
+            {/* Custom animated SVG journey line connector */}
+            <div className="how-connector" style={{ background: "none", height: "auto", top: "24px" }}>
+              <svg width="100%" height="20" viewBox="0 0 600 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: "visible" }}>
+                <defs>
+                  <linearGradient id="arrowGrad" x1="0" y1="0" x2="600" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="rgba(254, 189, 178, 0.1)" />
+                    <stop offset="30%" stopColor="rgba(254, 189, 178, 0.8)" />
+                    <stop offset="70%" stopColor="rgba(254, 189, 178, 0.8)" />
+                    <stop offset="100%" stopColor="rgba(254, 189, 178, 0.1)" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M 10,10 Q 150,0 300,10 T 590,10"
+                  stroke="url(#arrowGrad)"
+                  strokeWidth="2"
+                  strokeDasharray="6,6"
+                  strokeLinecap="round"
+                  fill="none"
+                >
+                  <animate
+                    attributeName="stroke-dashoffset"
+                    values="120;0"
+                    dur="6s"
+                    repeatCount="indefinite"
+                  />
+                </path>
+              </svg>
+            </div>
             <div className="how-step">
               <RevealOnScroll delayClass="reveal-delay-1">
                 <div className="step-circle">
@@ -1931,15 +1409,15 @@ export default function LandingPage() {
               </div>
             </RevealOnScroll>
 
-            {/* Theo quý - Popular */}
+            {/* Gói Tháng Premium - Popular */}
             <RevealOnScroll delayClass="reveal-delay-2">
               <div className="plan-card popular">
                 <div className="popular-badge">⭐ Phổ biến nhất</div>
-                <div className="plan-name">Theo quý</div>
+                <div className="plan-name">Tháng Premium</div>
                 <div className="plan-price">
-                  79K<span>đ</span>
+                  50K<span>đ</span>
                 </div>
-                <div className="plan-period">/ 3 tháng</div>
+                <div className="plan-period">/ 30 ngày</div>
                 <ul className="plan-features">
                   <li className="plan-feat-item yes">
                     <svg
@@ -2006,14 +1484,14 @@ export default function LandingPage() {
               </div>
             </RevealOnScroll>
 
-            {/* Theo năm */}
+            {/* Gói Năm Premium */}
             <RevealOnScroll delayClass="reveal-delay-3">
               <div className="plan-card">
-                <div className="plan-name">Theo năm</div>
+                <div className="plan-name">Năm Premium</div>
                 <div className="plan-price">
-                  199K<span>đ</span>
+                  500K<span>đ</span>
                 </div>
-                <div className="plan-period">/ 12 tháng · tiết kiệm 40%</div>
+                <div className="plan-period">/ 365 ngày · tiết kiệm 20%</div>
                 <ul className="plan-features">
                   <li className="plan-feat-item yes">
                     <svg
@@ -2025,7 +1503,7 @@ export default function LandingPage() {
                     >
                       <path d="m2 8 4 4 8-8" />
                     </svg>
-                    Tất cả quyền lợi Quý
+                    Tất cả quyền lợi gói Tháng
                   </li>
                   <li className="plan-feat-item yes">
                     <svg
@@ -2073,7 +1551,7 @@ export default function LandingPage() {
                     >
                       <path d="m2 8 4 4 8-8" />
                     </svg>
-                    Tiết kiệm 40% so với tháng
+                    Tiết kiệm 20% so với gói tháng
                   </li>
                 </ul>
                 <Link className="btn-plan btn-plan-outline" href="/membership">
@@ -2120,13 +1598,6 @@ export default function LandingPage() {
                 style={{ fontSize: "15px", padding: "16px 36px" }}
               >
                 ✦ Đăng ký miễn phí
-              </Link>
-              <Link
-                className="btn-ghost"
-                href="/discover"
-                style={{ fontSize: "15px", padding: "16px 32px" }}
-              >
-                Khám phá truyện
               </Link>
             </div>
             <p className="cta-note">

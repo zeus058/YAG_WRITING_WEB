@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { getAccessToken, clearAuthTokens } from "./auth";
+import { getAccessToken, clearAuthTokens, setAuthTokens } from "./auth";
 import { yagApi } from "./api";
 import { appEnv } from "./env";
 
@@ -82,7 +82,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshUser();
   }, []);
 
+  useEffect(() => {
+    const handleExpiredSession = () => {
+      setUser(null);
+      setAccessToken(null);
+    };
+    window.addEventListener("yag:auth-expired", handleExpiredSession);
+    return () => window.removeEventListener("yag:auth-expired", handleExpiredSession);
+  }, []);
+
   const login = (payload: { accessToken: string; user: AuthUser }) => {
+    setAuthTokens({ accessToken: payload.accessToken });
     setAccessToken(payload.accessToken);
     setUser(payload.user);
   };

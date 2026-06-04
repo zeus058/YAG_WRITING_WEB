@@ -660,6 +660,26 @@ svg {
   opacity: 0.48;
 }
 
+.button[aria-busy="true"] {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.link-button {
+  border: 0;
+  background: transparent;
+  color: var(--crimson);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+}
+
+.link-button:hover {
+  color: var(--crimson-dark);
+  text-decoration: underline;
+}
+
 .button-primary {
   border-color: var(--crimson);
   background: var(--crimson);
@@ -865,9 +885,23 @@ svg {
   border-color: rgba(254, 189, 178, 0.9);
 }
 
+.input-invalid,
+.input[aria-invalid="true"],
+.textarea[aria-invalid="true"],
+.select[aria-invalid="true"] {
+  border-color: var(--red);
+  background: #FFF5F5;
+}
+
 .field-note {
   color: var(--muted);
   font-size: 12px;
+}
+
+.field-help {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .field-error {
@@ -2225,6 +2259,23 @@ svg {
 .password-rule .icon {
   width: 18px;
   height: 18px;
+}
+
+.recovery-progress {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0 24px;
+}
+
+.recovery-dot {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(65, 80, 61, 0.18);
+}
+
+.recovery-dot.active {
+  background: var(--crimson);
 }
 
 .recovery-step {

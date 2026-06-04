@@ -2,6 +2,7 @@
 
 > **Đọc file này trước tiên.** Đây là bản đồ kỹ thuật toàn bộ dự án YAG dành cho AI Agent.
 > Khi nhận bất kỳ task nào, agent phải tham chiếu file này thay vì scan raw codebase.
+> Cập nhật lần cuối: 2026-06-04
 
 ---
 
@@ -18,93 +19,337 @@
 - Kiểm duyệt nội dung tự động bằng Gemini API qua RabbitMQ pipeline
 - Thanh toán Membership qua VNPAY để đọc chương Premium
 
+### Thành viên nhóm & phân công module
+| Thành viên | Module chính | API prefix |
+|---|---|---|
+| Gia Hiển | F1 — Authentication | `/api/v1/auth` |
+| Duy Trường | F2 — VNPAY Payment & Membership | `/api/v1/payment`, `/api/v1/membership` |
+| Hương Trà | F3 — AI Engine (Search, Suggest, Recommend) | `/api/v1/ai`, `/api/v1/recommendations` |
+| Yến Nhi | F4 — Stories, Chapters, Editor | `/api/v1/stories`, `/api/v1/chapters` |
+| Phú Thọ | F5 — Admin, Moderation | `/api/v1/admin` |
+
 ---
 
 ## 2. Tech Stack
 
-| Layer | Technology | Ghi chú |
-|---|---|---|
-| Frontend | Next.js (SPA/SSR) | TypeScript, TailwindCSS |
-| Backend | FastAPI (Python 3.10+) | Modular Monolith, sẵn sàng tách Microservice |
-| Database | PostgreSQL | pgvector extension cho AI search |
-| Cache | Redis (Upstash Serverless) | Session, view count, pub/sub cho WebSocket |
-| Message Queue | RabbitMQ | Async AI moderation pipeline |
-| AI Engine | Google Gemini API | Free tier: 15 RPM / 1M token/phút |
-| Media CDN | Cloudinary | Lưu ảnh bìa truyện, avatar |
-| Payment | VNPAY Sandbox | IPN backend-to-backend |
-| Proxy | Nginx | Reverse proxy, Rate Limiting, Anti-crawling |
-| Deployment | GCP + Docker | docker-compose cho local dev |
+| Layer | Technology | Version | Ghi chú |
+|---|---|---|---|
+| Frontend | Next.js (App Router) | 16.x | TypeScript, TailwindCSS v4 |
+| UI Framework | React | 19.x | Server Components + Client Components |
+| Backend | FastAPI | ≥0.110 | Modular Monolith, sẵn sàng tách Microservice |
+| ASGI Server | Gunicorn + Uvicorn | ≥22.0 / ≥0.28 | Production: gunicorn với UvicornWorker |
+| ORM | SQLAlchemy | ≥2.0 | Declarative mapping |
+| Database | PostgreSQL | 16 | pgvector extension cho AI search |
+| Cache | Redis | 7 (Alpine) | Session, view count, pub/sub cho WebSocket |
+| Message Queue | RabbitMQ | 3.13 | Async AI moderation pipeline |
+| AI Engine | Google Gemini API | gemini-1.5-flash | text-embedding-004 cho embeddings |
+| Media CDN | Cloudinary | ≥1.41 | Lưu ảnh bìa truyện, avatar |
+| Payment | VNPAY Sandbox | — | IPN backend-to-backend |
+| Reverse Proxy | Nginx | 1.27 (Alpine) | SSL termination, Rate Limiting, Anti-crawling |
+| Scheduler | APScheduler | ≥3.10 | Cron jobs cho schedule scan, view count flush |
+| Containerization | Docker | Multi-stage builds | Separate images cho frontend & backend |
+| CI/CD | GitHub Actions | — | Lint → Test → Build → Deploy |
+| Realtime | WebSocket (native) | — | Autosave, Notifications, Comments |
 
-### Cài đặt môi trường local
-```bash
-# Prerequisites: Node.js v18+, Python 3.10+, Docker Desktop, Git
-docker-compose up -d          # Khởi chạy PostgreSQL, Redis, RabbitMQ
-pip install -r requirements.txt --break-system-packages
-npm install                   # Trong thư mục frontend
-# Cấu hình .env: DATABASE_URL, GEMINI_API_KEY, VNPAY_CONFIG, JWT_SECRET
+### Python Dependencies chính (`requirements.txt`)
+```
+fastapi, gunicorn, uvicorn, sqlalchemy, psycopg2-binary, pgvector,
+pydantic, pydantic-settings, python-jose (JWT), passlib[bcrypt],
+python-multipart, redis, pika (RabbitMQ), apscheduler,
+pytest, httpx, email-validator, cloudinary, google-genai
+```
+
+### Frontend Dependencies chính (`package.json`)
+```
+next@16.x, react@19.x, react-dom@19.x, socket.io-client@4.x
+tailwindcss@4.x (devDep), typescript@5.x (devDep)
 ```
 
 ---
 
-## 3. Cấu trúc thư mục repo
+## 3. Cấu trúc thư mục repo (Thực tế)
 
 ```
 SE_Writing_Web/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                    # GitHub Actions CI/CD pipeline
+├── nginx/
+│   ├── nginx.conf                    # Reverse proxy config (SSL, rate limiting)
+│   └── certs/                        # SSL certificates (mounted read-only)
+│       ├── fullchain.pem
+│       └── privkey.pem
 ├── src/
-│   ├── frontend/             # Next.js app
-│   │   ├── src/              # Next.js source code
-│   │   │   ├── app/          # App Router pages (21 screens)
-│   │   │   ├── components/   # React components
-│   │   │   ├── data/         # Mock data / JSON metadata
-│   │   │   └── lib/          # API client, hooks, utils
-│   │   ├── package.json      # Frontend package details
-│   │   └── tsconfig.json     # TypeScript configuration
-│   └── backend/              # FastAPI app
-│       ├── app/              # FastAPI application package
-│       │   ├── api/          # Route handlers (v1/endpoints/...)
-│       │   ├── core/         # Config, security (JWT, Bcrypt), DB session setup
-│       │   ├── models/       # SQLAlchemy ORM models
-│       │   ├── schemas/      # Pydantic request/response schemas
-│       │   ├── services/     # Business logic services (Auth, Payment, Story, AI)
-│       │   ├── worker/       # RabbitMQ Background Workers
-│       │   └── main.py       # FastAPI application entry point
-│       ├── tests/            # Automated test suite (pytest)
-│       ├── requirements.txt  # Python package dependencies
-│       └── README.md         # FastAPI developer guidelines
+│   ├── frontend/                     # ── Next.js App ──
+│   │   ├── Dockerfile                # Multi-stage: deps → builder → runtime (node:20-alpine)
+│   │   ├── .env.example              # Template biến môi trường frontend
+│   │   ├── package.json
+│   │   ├── next.config.ts            # Next.js config (standalone output)
+│   │   ├── tsconfig.json
+│   │   ├── postcss.config.mjs        # TailwindCSS PostCSS plugin
+│   │   ├── eslint.config.mjs
+│   │   └── src/
+│   │       ├── app/                  # App Router — 21 screens
+│   │       │   ├── layout.tsx        # Root layout (metadata, fonts)
+│   │       │   ├── page.tsx          # S01: Landing Page
+│   │       │   ├── globals.css       # Global styles + TailwindCSS
+│   │       │   ├── prototype.css     # Prototype styles
+│   │       │   ├── auth/             # S02: Đăng nhập/Đăng ký
+│   │       │   ├── about/            # Giới thiệu
+│   │       │   ├── admin/            # S19-S21: Admin Dashboard, Moderation, Stats
+│   │       │   ├── author/           # S15-S18: Author Studio, Publish, Schedule
+│   │       │   ├── contact/          # Liên hệ
+│   │       │   ├── discover/         # S05: Khám phá & Tìm kiếm
+│   │       │   ├── forum/            # S08: Diễn đàn
+│   │       │   ├── home/             # S04: Home Feed
+│   │       │   ├── library/          # S11: Thư viện cá nhân
+│   │       │   ├── membership/       # S09: Membership
+│   │       │   ├── notifications/    # S14: Trung tâm thông báo
+│   │       │   ├── payment/          # S10: Kết quả thanh toán
+│   │       │   ├── privacy/          # Chính sách bảo mật
+│   │       │   ├── profile/          # S12: Hồ sơ cá nhân
+│   │       │   ├── settings/         # S13: Cài đặt tài khoản
+│   │       │   ├── stories/          # S06-S07: Chi tiết truyện, Reader Mode
+│   │       │   └── terms/            # Điều khoản sử dụng
+│   │       ├── components/           # React components
+│   │       │   ├── auth/             # AuthGuard, LoginForm, RegisterForm
+│   │       │   ├── features/         # Domain-specific components
+│   │       │   ├── layout/           # Navbar, Footer, Sidebar
+│   │       │   ├── runtime/          # Runtime utilities
+│   │       │   └── ui/               # Reusable UI primitives (Button, Modal, Card...)
+│   │       ├── data/                 # Mock data / JSON metadata
+│   │       └── lib/                  # Shared utilities
+│   │           ├── api.ts            # HTTP client (fetch wrapper, interceptors)
+│   │           ├── auth.ts           # JWT token helpers
+│   │           ├── auth-context.tsx  # React AuthContext provider
+│   │           ├── env.ts            # Environment config (NEXT_PUBLIC_*)
+│   │           ├── realtime.ts       # WebSocket connection manager
+│   │           └── index.ts          # Re-exports
+│   └── backend/                      # ── FastAPI App ──
+│       ├── Dockerfile                # Multi-stage: builder → runtime (python:3.11-slim)
+│       ├── .env.example              # Template biến môi trường backend (70 vars)
+│       ├── requirements.txt          # Python dependencies
+│       ├── worker.py                 # Entry point cho RabbitMQ worker container
+│       ├── migrations/               # Versioned SQL migrations
+│       │   ├── V1__initial_schema.sql
+│       │   ├── V2__hotfix_users_lock_columns.sql
+│       │   └── V3__p1_schema_alignment.sql
+│       ├── uploads/                  # Local file uploads (dev only, .gitignored)
+│       ├── tests/                    # pytest test suite
+│       │   ├── test_auth.py
+│       │   ├── test_database.py
+│       │   ├── test_payment.py
+│       │   ├── test_moderation.py
+│       │   ├── test_publish.py
+│       │   ├── test_admin.py
+│       │   ├── test_ai_search_and_recommendations.py
+│       │   ├── test_ai_suggestions.py
+│       │   ├── test_membership.py
+│       │   ├── test_notifications.py
+│       │   ├── test_profile.py
+│       │   ├── test_schedule.py
+│       │   ├── test_role_separation.py
+│       │   └── test_main.py
+│       └── app/                      # FastAPI application package
+│           ├── __init__.py
+│           ├── main.py               # FastAPI entry point, lifespan, middleware, WebSocket routes
+│           ├── manage_migrations.py  # Versioned SQL migration runner
+│           ├── seed.py               # Database seeder (dev data)
+│           ├── reset_dev_db.py       # Dev DB reset utility
+│           ├── api/                  # Route handlers
+│           │   ├── deps.py           # Dependency injection (get_db, get_current_user, role checks)
+│           │   └── v1/
+│           │       ├── router.py     # API router hub — registers all endpoint modules
+│           │       └── endpoints/
+│           │           ├── auth.py           # F1: Register, Login, Reset Password
+│           │           ├── stories.py        # F4: CRUD Stories, Chapters listing, Reviews
+│           │           ├── chapters.py       # F4: CRUD Chapters, Comments, Autosave WS, Search
+│           │           ├── payment.py        # F2: VNPAY checkout, IPN, Membership plans
+│           │           ├── ai.py             # F3: AI suggest (plot suggestions)
+│           │           ├── recommendations.py # F3: AI recommendations
+│           │           ├── admin.py          # F5: Moderation queue, Stats, User/Story management
+│           │           ├── publish.py        # Publishing: submit chapter for moderation
+│           │           └── notifications.py  # Notification listing, mark read
+│           ├── core/                 # Infrastructure
+│           │   ├── config.py         # Pydantic Settings + production validator
+│           │   ├── database.py       # SQLAlchemy engine & SessionLocal factory
+│           │   └── security.py       # JWT encode/decode, Bcrypt hash/verify
+│           ├── models/               # SQLAlchemy ORM models (16 models)
+│           │   ├── user.py           # User
+│           │   ├── profile.py        # Profile
+│           │   ├── story.py          # Story
+│           │   ├── chapter.py        # Chapter
+│           │   ├── story_embedding.py # StoryEmbedding (pgvector)
+│           │   ├── comment.py        # Comment
+│           │   ├── review.py         # Review
+│           │   ├── membership_plan.py # MembershipPlan
+│           │   ├── transaction.py    # Transaction
+│           │   ├── ai_moderation_log.py # AIModerationLog
+│           │   ├── publish_schedule.py # PublishSchedule
+│           │   ├── reading_history.py # ReadingHistory
+│           │   ├── library.py        # Library (bookmark)
+│           │   ├── notification.py   # Notification (NEW)
+│           │   ├── admin_alert.py    # AdminAlert (NEW)
+│           │   └── admin_audit_log.py # AdminAuditLog (NEW)
+│           ├── schemas/              # Pydantic request/response schemas
+│           │   ├── auth.py, user.py, profile.py
+│           │   ├── story.py, chapter.py, comment.py, review.py
+│           │   ├── search.py, ai.py
+│           │   ├── membership.py, payment.py
+│           │   ├── publish.py, admin.py, notification.py
+│           │   └── common.py         # Shared schemas (pagination, error responses)
+│           ├── services/             # Business logic layer
+│           │   ├── auth_service.py   # Register, login, password reset, profile CRUD
+│           │   ├── ai_service.py     # Gemini API calls (suggest, embed, moderate, recommend)
+│           │   ├── moderation_service.py # Content moderation logic
+│           │   ├── payment_service.py # VNPAY payment processing, IPN handling
+│           │   ├── membership_service.py # Membership plan queries
+│           │   ├── publish_service.py # Chapter publish → RabbitMQ, connection factory
+│           │   ├── schedule_service.py # APScheduler cron: schedule scan, reminders
+│           │   ├── notification_service.py # Create, stream, mark-read notifications
+│           │   ├── admin_service.py  # Admin dashboard, moderation queue, audit logs
+│           │   ├── cloudinary_service.py # Image upload to Cloudinary
+│           │   └── media_service.py  # Local media serving (dev fallback)
+│           └── worker/               # RabbitMQ Background Worker
+│               ├── __init__.py
+│               └── main.py           # Consumer: moderation → Gemini → update DB → notify
 ├── docs/
-│   ├── requirements/         # Requirement.md
-│   ├── analysis and design/  # Design.md
-│   └── management/           # Sprint logs, weekly reports
-├── pa/                       # Submission artifacts (Proposal.md, etc.)
-├── docker-compose.yml
-└── AGENTS.md                 # ← File này
+│   ├── fix/                          # Bug fix documentation
+│   └── task/                         # Task documentation
+├── docker-compose.yml                # Full orchestration (6 services + 3 profiles)
+├── .gitignore
+├── README.md
+└── AGENTS.md                         # ← File này
 ```
 
 ---
 
-## 4. Database Schema — 13 bảng PostgreSQL
+## 4. Kiến trúc Docker & Container
+
+### 4.1. Docker Compose Profiles
+
+File `docker-compose.yml` sử dụng **Docker Compose profiles** để tách biệt môi trường:
+
+| Profile | Services khởi chạy | Mục đích |
+|---|---|---|
+| *(default — không profile)* | `postgres`, `redis`, `rabbitmq` | Local dev: chỉ chạy infrastructure, app chạy native |
+| `app` | Tất cả 7 services | Full-stack local testing trong Docker |
+| `prod` | Tất cả 7 services | Production deployment |
+
+```bash
+# Chỉ infrastructure (dev mode — chạy backend/frontend bằng terminal)
+docker-compose up -d
+
+# Full-stack trong Docker
+docker-compose --profile app up -d
+
+# Production
+docker-compose --profile prod up -d
+```
+
+### 4.2. Service Map (7 services)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        NGINX (:80/:443)                        │
+│  SSL termination · Rate Limiting · Reverse Proxy               │
+├──────────────────────┬──────────────────────────────────────────┤
+│                      │                                          │
+│  /api/*, /ws/*  ─────┤──────▶  BACKEND (:8000)                 │
+│                      │         FastAPI + Gunicorn/Uvicorn       │
+│                      │         SERVICE_ROLE=api                 │
+│  /*  ────────────────┤──────▶  FRONTEND (:3000)                │
+│                      │         Next.js standalone               │
+│                      │                                          │
+└──────────────────────┴──────────────────────────────────────────┘
+                                    │
+       ┌────────────────────────────┼────────────────────────┐
+       │                           │                         │
+       ▼                           ▼                         ▼
+  POSTGRESQL (:5432)          REDIS (:6379)           RABBITMQ (:5672)
+  pgvector/pgvector:pg16      redis:7-alpine          rabbitmq:3.13-alpine
+  Data: postgres_data         Data: redis_data         Data: rabbitmq_data
+                                                            │
+                                                            ▼
+                                                   MODERATION-WORKER
+                                                   SERVICE_ROLE=worker
+                                                   (same Docker image as backend)
+                                                            │
+                                                   MIGRATE (init container)
+                                                   SERVICE_ROLE=migrate
+                                                   (runs once, then exits)
+```
+
+### 4.3. SERVICE_ROLE — Phân vai container
+
+Backend sử dụng **cùng một Docker image** nhưng phân biệt behavior qua biến `SERVICE_ROLE`:
+
+| Role | Command | Chức năng |
+|---|---|---|
+| `api` | `gunicorn app.main:app -k uvicorn.workers.UvicornWorker` | API server chính |
+| `worker` | `python worker.py` | RabbitMQ consumer (moderation) |
+| `migrate` | `python -m app.manage_migrations` | Apply SQL migrations rồi exit |
+| `scheduler` | (reserved) | Cron jobs riêng biệt (future) |
+
+> **Thứ tự khởi chạy:** `postgres` (healthy) → `migrate` (completed) → `backend` + `moderation-worker` + `frontend` → `nginx`
+
+### 4.4. Dockerfile — Backend (Multi-stage)
+
+```dockerfile
+# Stage 1: Builder — cài dependencies
+FROM python:3.11-slim AS builder
+# Stage 2: Runtime — copy site-packages + source code
+FROM python:3.11-slim AS runtime
+# Non-root user: appuser
+# HEALTHCHECK: /health/live (cho api), skip cho worker/migrate
+# CMD: phân nhánh theo SERVICE_ROLE
+```
+
+### 4.5. Dockerfile — Frontend (Multi-stage)
+
+```dockerfile
+# Stage 1: deps — npm ci (production only)
+FROM node:20-alpine AS deps
+# Stage 2: builder — npm ci (full) + next build
+FROM node:20-alpine AS builder
+# Build-time args: NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_API_BASE_URL, NEXT_PUBLIC_WS_BASE_URL
+# Stage 3: runtime — standalone output
+FROM node:20-alpine AS runtime
+# Non-root user: nextjs:nodejs
+# CMD: node server.js
+```
+
+> **Quan trọng:** Biến `NEXT_PUBLIC_*` được inject lúc **build time** (Docker build args), không phải runtime. Thay đổi URL production cần **rebuild image**.
+
+---
+
+## 5. Database Schema — 16 bảng PostgreSQL
 
 > Tất cả bảng dùng UUID làm PK. Timestamps: `created_at`, `updated_at` DEFAULT NOW().
+> Schema được quản lý bởi versioned SQL migrations (xem mục 6).
 
-### 4.1. Sơ đồ quan hệ nhanh
+### 5.1. Sơ đồ quan hệ nhanh
 
 ```
 users (1) ──────── (1) profiles
-users (1) ──────── (N) stories          [author_id → users.id]
-stories (1) ─────── (N) chapters        [story_id → stories.id]
-stories (1) ─────── (1) story_embeddings [story_id → stories.id]
-stories (1) ─────── (N) reviews         [story_id → stories.id]
-stories (1) ─────── (N) publish_schedules
-chapters (1) ──────── (N) comments      [chapter_id → chapters.id]
-chapters (1) ──────── (1) ai_moderation_logs
-comments (N) ──────── (1) comments      [parent_id → comments.id] (self-ref)
-users (N) ─────── (N) stories           via libraries (bookmarks)
-users (N) ─────── (N) chapters          via reading_histories
-users (1) ──────── (N) transactions     [user_id → users.id]
-membership_plans (1) ── (N) transactions [plan_id → membership_plans.id]
+users (1) ──────── (N) stories              [author_id → users.id]
+users (1) ──────── (N) notifications        [user_id → users.id]
+stories (1) ─────── (N) chapters            [story_id → stories.id]
+stories (1) ─────── (1) story_embeddings    [story_id → stories.id]
+stories (1) ─────── (N) reviews             [story_id → stories.id]
+stories (1) ─────── (N) publish_schedules   [story_id → stories.id]
+chapters (1) ──────── (N) comments          [chapter_id → chapters.id]
+chapters (1) ──────── (N) ai_moderation_logs [chapter_id → chapters.id]
+comments (N) ──────── (1) comments          [parent_id → comments.id] (self-ref)
+users (N) ─────── (N) stories               via libraries (bookmarks)
+users (N) ─────── (N) chapters              via reading_histories
+users (1) ──────── (N) transactions         [user_id → users.id]
+membership_plans (1) ── (N) transactions    [plan_id → membership_plans.id]
+admin_alerts (standalone)                   [Cảnh báo admin]
+admin_audit_logs (standalone)               [Nhật ký hành động admin]
 ```
 
-### 4.2. Đặc tả chi tiết từng bảng
+### 5.2. Đặc tả chi tiết từng bảng
 
 #### `users` — Tài khoản & phân quyền
 | Column | Type | Constraint | Mô tả |
@@ -228,50 +473,285 @@ membership_plans (1) ── (N) transactions [plan_id → membership_plans.id]
 | `story_id` | UUID | PK, FK → stories.id |
 | `bookmarked_at` | TIMESTAMP | DEFAULT NOW() |
 
+#### `notifications` — Thông báo người dùng *(MỚI)*
+| Column | Type | Mô tả |
+|---|---|---|
+| `id` | UUID | PK |
+| `user_id` | UUID | FK → users.id |
+| `type` | VARCHAR(50) | Loại thông báo (chapter_moderation_result, schedule_reminder...) |
+| `title` | VARCHAR(255) | Tiêu đề |
+| `message` | TEXT | Nội dung |
+| `payload` | JSONB | NULLABLE, dữ liệu bổ sung |
+| `is_read` | BOOLEAN | DEFAULT FALSE |
+
+#### `admin_alerts` — Cảnh báo admin *(MỚI)*
+| Column | Type | Mô tả |
+|---|---|---|
+| `id` | UUID | PK |
+| `type` | VARCHAR(50) | Loại cảnh báo |
+| `title` | VARCHAR(255) | Tiêu đề |
+| `message` | TEXT | Chi tiết |
+| `severity` | VARCHAR(20) | Mức độ (info, warning, critical) |
+| `is_resolved` | BOOLEAN | DEFAULT FALSE |
+
+#### `admin_audit_logs` — Nhật ký hành động admin *(MỚI)*
+| Column | Type | Mô tả |
+|---|---|---|
+| `id` | UUID | PK |
+| `admin_id` | UUID | FK → users.id |
+| `action` | VARCHAR(100) | Hành động (approve_chapter, reject_chapter, ban_user...) |
+| `target_type` | VARCHAR(50) | Đối tượng (chapter, user, story) |
+| `target_id` | UUID | ID đối tượng |
+| `details` | JSONB | NULLABLE, chi tiết hành động |
+
+#### `schema_migrations` — Migration tracking *(hệ thống)*
+| Column | Type | Mô tả |
+|---|---|---|
+| `version` | VARCHAR(100) | PK (VD: 'V1', 'V2') |
+| `filename` | VARCHAR(255) | Tên file SQL |
+| `checksum` | VARCHAR(64) | SHA-256 của nội dung SQL |
+| `applied_at` | TIMESTAMPTZ | DEFAULT NOW() |
+
 ---
 
-## 5. Luồng nghiệp vụ quan trọng (Business Flows)
+## 6. Hệ thống Migration
 
-### 5.1. Luồng xuất bản chương & kiểm duyệt AI (U005 → U013)
+### 6.1. Cơ chế hoạt động
+
+YAG sử dụng **versioned SQL migration** tự xây (không dùng Alembic) tại `app/manage_migrations.py`:
+
+1. Quét thư mục `migrations/` tìm file `*.sql`, sắp xếp theo tên
+2. So sánh với bảng `schema_migrations` trong DB
+3. File chưa apply → execute SQL → ghi checksum vào `schema_migrations`
+4. File đã apply nhưng checksum khác → **FAIL** (không cho sửa migration đã apply)
+
+### 6.2. Quy tắc viết migration
+
+```bash
+# Naming convention: V{number}__{description}.sql
+migrations/
+├── V1__initial_schema.sql              # Schema ban đầu (21KB)
+├── V2__hotfix_users_lock_columns.sql   # Hotfix
+├── V3__p1_schema_alignment.sql         # Phase 1 alignment
+└── V4__add_new_feature.sql             # ← Thêm migration mới ở đây
+```
+
+**Rules:**
+- **KHÔNG BAO GIỜ** sửa file migration đã apply (checksum mismatch → crash)
+- Luôn tạo file MỚI cho thay đổi schema
+- File phải idempotent khi có thể (dùng `IF NOT EXISTS`, `IF EXISTS`)
+- Prefix `V{N}__` để đảm bảo thứ tự apply
+
+### 6.3. Commands
+
+```bash
+# Apply migrations (dùng trong CI/CD và docker-compose migrate service)
+python -m app.manage_migrations
+
+# Kiểm tra có migration pending không (dùng trong CI check)
+python -m app.manage_migrations --check
+```
+
+---
+
+## 7. Biến môi trường (Environment Variables)
+
+### 7.1. Backend (`.env` — 70+ biến)
+
+#### Application
+| Biến | Default | Production | Mô tả |
+|---|---|---|---|
+| `ENVIRONMENT` | `development` | `production` | Bật production validators |
+| `SERVICE_ROLE` | `api` | `api`/`worker`/`migrate`/`scheduler` | Phân vai container |
+| `SECRET_KEY` | `yag_development_...` | **BẮT BUỘC thay đổi** | JWT signing key |
+| `API_V1_STR` | `/api/v1` | `/api/v1` | API prefix |
+| `CORS_ORIGINS` | `http://localhost:3000` | **HTTPS domain** | Comma-separated origins |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | `60` | JWT expiry |
+| `ALLOW_WEBSOCKET_QUERY_TOKEN` | `true` | **`false`** (bắt buộc) | Cho phép token qua query param |
+
+#### Database
+| Biến | Default | Mô tả |
+|---|---|---|
+| `DATABASE_URL` | *(auto-build từ components)* | Connection string đầy đủ (ưu tiên hơn components) |
+| `POSTGRES_SERVER` | `localhost` | Host |
+| `POSTGRES_USER` | `postgres` | User |
+| `POSTGRES_PASSWORD` | `postgres` | Password |
+| `POSTGRES_DB` | `yag` | Database name |
+| `DB_POOL_SIZE` | `5` | Connection pool |
+| `DB_MAX_OVERFLOW` | `10` | Max overflow connections |
+| `DB_POOL_TIMEOUT` | `30` | Pool timeout (seconds) |
+| `DB_POOL_RECYCLE_SECONDS` | `1800` | Connection recycle interval |
+
+#### Redis
+| Biến | Default | Mô tả |
+|---|---|---|
+| `REDIS_URL` | *(auto-build)* | Full URL (ưu tiên). Production: `rediss://...` (TLS) |
+| `REDIS_HOST` | `localhost` | Host |
+| `REDIS_PORT` | `6379` | Port |
+
+#### RabbitMQ
+| Biến | Default | Mô tả |
+|---|---|---|
+| `RABBITMQ_URL` | *(auto-build)* | Full URL. Production: `amqps://...` (TLS) |
+| `RABBITMQ_HOST` | `localhost` | Host |
+| `RABBITMQ_PORT` | `5672` | Port |
+| `RABBITMQ_USER` | `guest` | User |
+| `RABBITMQ_PASSWORD` | `guest` | Password |
+| `RABBITMQ_MODERATION_QUEUE` | `ai.moderation` | Queue chính |
+| `RABBITMQ_MODERATION_RETRY_QUEUE` | `ai.moderation.retry` | Retry queue (TTL 60s) |
+| `RABBITMQ_MODERATION_DLQ` | `ai.moderation.dlq` | Dead letter queue |
+| `RABBITMQ_MODERATION_MAX_RETRIES` | `5` | Max retries trước khi vào DLQ |
+
+#### AI Engine
+| Biến | Default | Mô tả |
+|---|---|---|
+| `GEMINI_API_KEY` | *(empty)* | **BẮT BUỘC** cho AI features |
+| `GEMINI_MODEL` | `gemini-1.5-flash` | Model cho suggest/moderate |
+| `GEMINI_EMBEDDING_MODEL` | `text-embedding-004` | Model cho embeddings |
+| `GEMINI_MAX_OUTPUT_TOKENS` | `1024` | Max output tokens |
+| `GEMINI_TIMEOUT_SECONDS` | `10.0` | API timeout |
+| `AI_CONTEXT_WORD_LIMIT` | `1000` | Giới hạn context cho AI suggest |
+
+#### Cloudinary
+| Biến | Default | Mô tả |
+|---|---|---|
+| `CLOUDINARY_CLOUD_NAME` | — | **BẮT BUỘC** production |
+| `CLOUDINARY_API_KEY` | — | **BẮT BUỘC** production |
+| `CLOUDINARY_API_SECRET` | — | **BẮT BUỘC** production |
+| `CLOUDINARY_COVER_FOLDER` | `yag/covers` | Folder trên Cloudinary |
+
+#### VNPAY
+| Biến | Default | Mô tả |
+|---|---|---|
+| `VNP_TMN_CODE` | `YAGTEST1` | Merchant code. **Thay đổi** cho production |
+| `VNP_HASH_SECRET` | `YAGDEVSECRETKEY...` | HMAC secret. **Thay đổi** cho production |
+| `VNP_URL` | `https://sandbox.vnpayment.vn/...` | Payment URL. Production: **không sandbox** |
+| `VNP_RETURN_URL` | `http://localhost:3000/...` | Return URL. Production: **HTTPS** |
+| `VNP_API_URL` | `https://sandbox.vnpayment.vn/...` | API URL. Production: **không sandbox** |
+
+#### Background Jobs
+| Biến | Default | Mô tả |
+|---|---|---|
+| `SCHEDULER_ENABLED` | `false` | Bật schedule scan cron |
+| `SCHEDULE_SCAN_HOUR_UTC` | `17` | Giờ quét schedule (UTC) |
+| `SCHEDULE_SCAN_MINUTE_UTC` | `5` | Phút quét schedule |
+| `VIEW_COUNT_FLUSH_ENABLED` | `false` | Bật flush view count Redis → PG |
+| `AUTO_CREATE_TABLES` | `false` | **KHÔNG bật** cho production |
+| `APPLY_MIGRATIONS_ON_STARTUP` | `false` | **KHÔNG bật** cho production |
+
+### 7.2. Frontend (`.env`)
+
+| Biến | Default | Mô tả |
+|---|---|---|
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | Frontend public URL |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000` | Backend API URL |
+| `NEXT_PUBLIC_WS_BASE_URL` | `ws://localhost:8000` | WebSocket URL |
+| `NEXT_PUBLIC_DEPLOY_ENV` | `development` | Environment tag |
+| `NEXT_PUBLIC_API_TIMEOUT_MS` | `12000` | API request timeout |
+| `NEXT_PUBLIC_USE_MOCKS` | `false` | Mock mode (UI demo without backend) |
+
+> **⚠ QUAN TRỌNG:** Tất cả biến `NEXT_PUBLIC_*` được inject lúc **build time** vào JavaScript bundle. Khi deploy Docker, chúng phải được truyền qua Docker build args, KHÔNG phải runtime env.
+
+### 7.3. Docker Compose Variables
+
+Các biến dùng trong `docker-compose.yml` (truyền qua `.env` tại root hoặc shell):
+
+| Biến | Default | Mô tả |
+|---|---|---|
+| `POSTGRES_PORT` | `5432` | Host port cho PostgreSQL |
+| `POSTGRES_USER` | `yag_user` | DB user |
+| `POSTGRES_PASSWORD` | `yag_secret` | DB password |
+| `POSTGRES_DB` | `yag_db` | DB name |
+| `REDIS_PORT` | `6379` | Host port cho Redis |
+| `REDIS_PASSWORD` | *(empty)* | Redis password |
+| `RABBITMQ_PORT` | `5672` | Host port cho RabbitMQ |
+| `RABBITMQ_DASHBOARD_PORT` | `15672` | RabbitMQ Management UI |
+| `RABBITMQ_USER` | `yag_mq` | RabbitMQ user |
+| `RABBITMQ_PASSWORD` | `yag_mq_secret` | RabbitMQ password |
+| `NGINX_HTTP_PORT` | `80` | Nginx HTTP port |
+| `NGINX_HTTPS_PORT` | `443` | Nginx HTTPS port |
+| `FRONTEND_PUBLIC_URL` | `http://localhost` | Next.js public URL (build arg) |
+| `API_PUBLIC_URL` | `http://localhost/api` | API public URL (build arg) |
+| `WS_PUBLIC_URL` | `ws://localhost/ws` | WebSocket public URL (build arg) |
+
+---
+
+## 8. Production Safeguards (config.py validator)
+
+Khi `ENVIRONMENT=production`, class `Settings` tự động validate và **từ chối khởi chạy** nếu:
+
+| Check | Mô tả |
+|---|---|
+| `SECRET_KEY` = default | JWT secret chưa thay đổi |
+| `VNP_HASH_SECRET` = default | VNPAY secret chưa thay đổi |
+| `VNP_TMN_CODE` = default | VNPAY merchant code chưa thay đổi |
+| Missing essential URIs | `DATABASE_URL`, `REDIS_URL`, `RABBITMQ_URL`, `GEMINI_API_KEY` phải có |
+| Missing Cloudinary config | 3 biến Cloudinary phải có |
+| `ALLOW_WEBSOCKET_QUERY_TOKEN` = true | Phải tắt trong production |
+| `AUTO_CREATE_TABLES` = true | Không cho auto-create schema |
+| `APPLY_MIGRATIONS_ON_STARTUP` = true | Không cho auto-migrate |
+| `SCHEDULER_ENABLED` = true + role=api | Scheduler phải chạy riêng, không cùng API |
+| `DATABASE_URL` → localhost | DB không được local |
+| `REDIS_URL` → localhost | Redis không được local |
+| `RABBITMQ_URL` → localhost | RabbitMQ không được local |
+| `VNP_RETURN_URL` → localhost | Return URL phải remote |
+| `VNP_RETURN_URL` không HTTPS | Phải HTTPS |
+| `VNP_URL` chứa "sandbox" | Production không dùng sandbox |
+| `CORS_ORIGINS` chứa `*` hoặc localhost | Phải explicit HTTPS origins |
+| `CORS_ORIGINS` không HTTPS | Tất cả origins phải HTTPS |
+
+---
+
+## 9. Luồng nghiệp vụ quan trọng (Business Flows)
+
+### 9.1. Luồng xuất bản chương & kiểm duyệt AI (U005 → U013)
 
 ```
 [Author nhấn "Xuất bản" trên S17]
         │
         ▼
-[FastAPI] POST /api/chapters/{id}/publish
+[FastAPI] POST /api/v1/chapters/{story_id}/chapters/{chapter_id}/publish
         │  → Lưu chapter với moderation_status = 'pending'
         │  → Trả HTTP 202 NGAY (< 500ms, không chờ AI)
         │
         ▼
 [RabbitMQ] Queue: ai.moderation
-        │  → Push message: { chapter_id, content, story_id }
+        │  → Push message: { task_type: "publish_chapter", chapter_id, content, requested_by }
         │
         ▼
-[Background Worker: moderation_worker.py]
-        │  → Gọi Gemini API (prompt: phân tích NSFW, bạo lực)
+[Background Worker: worker/main.py]
+        │  → Gọi Gemini API (moderate_content → phân tích NSFW, bạo lực)
         │  → Nếu APPROVED:
         │       - UPDATE chapters SET moderation_status='approved'
         │       - Gọi Gemini Embeddings API → vector(1536)
-        │       - UPSERT story_embeddings
+        │       - UPSERT story_embeddings (sync_story_embedding)
         │       - INSERT ai_moderation_logs (is_violation=false)
+        │       - INSERT notifications (user_id=author, type=chapter_moderation_result)
         │  → Nếu REJECTED/FLAGGED:
         │       - UPDATE chapters SET moderation_status='rejected'/'flagged'
         │       - INSERT ai_moderation_logs (is_violation=true, reason=...)
+        │       - INSERT notifications
         │       - Đẩy lên Admin Dashboard (U015)
+        │  → Nếu ERROR (Gemini 429/timeout):
+        │       - Push vào retry queue (TTL 60s → tự quay lại main queue)
+        │       - Max 5 retries → Dead Letter Queue (DLQ)
         │
         ▼
-[WebSocket / In-app] → Thông báo kết quả cho Author (S14)
+[WebSocket /ws/notifications/{user_id}] → Push real-time notification cho Author
 
-⚠ Fallback: Nếu Gemini Rate Limit → Task ở lại RabbitMQ, retry sau 60s.
+⚠ Queue topology:
+   ai.moderation ← main consumer
+   ai.moderation.retry ← TTL 60s, dead-letter back to ai.moderation
+   ai.moderation.dlq ← after 5 retries, manual inspection required
 ```
 
-### 5.2. Luồng AI Semantic Search (U008)
+### 9.2. Luồng AI Semantic Search (U008)
 
 ```
 [Reader nhập mô tả trên S05] "nam chính là hacker"
         │
         ▼
-[FastAPI] POST /api/search/semantic
+[FastAPI] POST /api/v1/search/semantic (trong chapters.py)
         │  → Gọi Gemini text-embedding-004 → vector query
         │
         ▼
@@ -288,13 +768,13 @@ membership_plans (1) ── (N) transactions [plan_id → membership_plans.id]
            → Trả về trong < 1.5 giây
 ```
 
-### 5.3. Luồng thanh toán VNPAY (U011 → U012)
+### 9.3. Luồng thanh toán VNPAY (U011 → U012)
 
 ```
 [Reader chọn gói Membership trên S09]
         │
         ▼
-[FastAPI] POST /api/membership/checkout
+[FastAPI] POST /api/v1/membership/checkout
         │  → Tạo Transaction (status='pending', vnp_txn_ref=UUID)
         │  → Gọi VNPAY API → lấy payment URL
         │  → Trả URL cho Frontend redirect
@@ -303,7 +783,7 @@ membership_plans (1) ── (N) transactions [plan_id → membership_plans.id]
 [VNPAY xử lý thanh toán]
         │
         ├─ Thành công:
-        │   [VNPAY] POST /api/payment/vnpay-ipn  (backend-to-backend)
+        │   [VNPAY] POST /api/v1/payment/vnpay-ipn  (backend-to-backend)
         │       → Verify checksum (HMAC-SHA512)
         │       → UPDATE transactions SET status='success', vnp_transaction_no=...
         │       → UPDATE users SET premium_until = NOW() + interval 'N days'
@@ -313,36 +793,49 @@ membership_plans (1) ── (N) transactions [plan_id → membership_plans.id]
                 → UPDATE transactions SET status='failed'
 ```
 
-### 5.4. Luồng Autosave soạn thảo (U004 — FR-05)
+### 9.4. Luồng Autosave soạn thảo (U004 — FR-05)
 
 ```
 [Author gõ trong S16 Author Studio]
         │
         ▼ (debounce 3 giây)
-[WebSocket] WS /ws/draft/{chapter_id}
+[WebSocket] WS /ws/stories/{story_id}/chapters/{chapter_id}
         │  → FastAPI nhận delta, lưu vào Redis (key: draft:{chapter_id})
         │  → Định kỳ flush từ Redis → PostgreSQL (chapters.content)
         │  → Độ trễ < 200ms
 ```
 
-### 5.5. Scheduler giám sát lộ trình (U014)
+### 9.5. Scheduler giám sát lộ trình (U014)
 
 ```
-[Cron Job — mỗi 1 giờ]
+[APScheduler Cron Job — cấu hình qua SCHEDULE_SCAN_HOUR_UTC/MINUTE_UTC]
         │
         ▼
 SELECT * FROM publish_schedules
 WHERE status = 'scheduled' AND scheduled_time <= NOW()
 
         ├─ Tác giả đúng hạn → UPDATE status='published', tăng reputation_score
-        ├─ Còn ≤ 24h → Gửi reminder notification (WebSocket/in-app)
+        ├─ Còn ≤ 24h → Gửi reminder notification (INSERT notifications + WebSocket push)
         └─ Trễ hạn → UPDATE status='missed', trừ reputation_score
                    → Gắn cờ cho Admin Dashboard (U015)
 ```
 
+### 9.6. Luồng View Count Flush
+
+```
+[Reader mở chương → GET /api/v1/chapters/{id}]
+        │  → INCR Redis key "story:{story_id}:views"
+        │  → Trả content ngay (không UPDATE PostgreSQL)
+        │
+[Periodic Task — mỗi 600s khi VIEW_COUNT_FLUSH_ENABLED=true]
+        │  → Scan Redis keys "story:*:views"
+        │  → UPDATE stories SET view_count = view_count + delta
+        │  → DELETE Redis keys đã flush
+```
+
 ---
 
-## 6. Use Cases — 15 Use Cases (U001–U015)
+## 10. Use Cases — 15 Use Cases (U001–U015)
 
 | ID | Use Case | Actor | Screen | FR |
 |---|---|---|---|---|
@@ -364,9 +857,9 @@ WHERE status = 'scheduled' AND scheduled_time <= NOW()
 
 ---
 
-## 7. Màn hình (21 Screens) — S01 đến S21
+## 11. Màn hình (21+ Screens) — S01 đến S21
 
-| ID | Tên màn hình | Route (gợi ý) | Actor | Use Case |
+| ID | Tên màn hình | Route (thực tế) | Actor | Use Case |
 |---|---|---|---|---|
 | S01 | Landing Page | `/` | Public | — |
 | S02 | Đăng nhập / Đăng ký | `/auth` | Public | U001 |
@@ -389,132 +882,280 @@ WHERE status = 'scheduled' AND scheduled_time <= NOW()
 | S19 | Admin Dashboard | `/admin` | Admin | U015 |
 | S20 | Kiểm duyệt nội dung | `/admin/moderation` | Admin | U013, U015 |
 | S21 | Thống kê & Báo cáo | `/admin/stats` | Admin | U015 |
+| — | Giới thiệu | `/about` | Public | — |
+| — | Liên hệ | `/contact` | Public | — |
+| — | Điều khoản | `/terms` | Public | — |
+| — | Chính sách bảo mật | `/privacy` | Public | — |
 
 ---
 
-## 8. API Backend — FastAPI Routes (theo module)
+## 12. API Backend — FastAPI Routes (Thực tế)
 
-### Auth (`/api/auth`)
-```
-POST /api/auth/register       → U001: Đăng ký, hash Bcrypt, lưu users+profiles
-POST /api/auth/login          → U001: Đăng nhập, trả JWT
-POST /api/auth/reset-password → U001: Gửi OTP qua email
-```
+> **Base URL:** Tất cả API endpoints có prefix `/api/v1/`.
+> Đăng ký tại `app/api/v1/router.py`.
 
-### Stories (`/api/stories`)
+### Auth (`/api/v1/auth`) — `endpoints/auth.py`
 ```
-GET    /api/stories                  → Danh sách (filter: category, status)
-POST   /api/stories                  → U003: Tạo tác phẩm mới (Author)
-GET    /api/stories/{id}             → Chi tiết tác phẩm
-PUT    /api/stories/{id}             → U003: Cập nhật thông tin
-GET    /api/stories/{id}/chapters    → Danh sách chương
+POST /api/v1/auth/register       → U001: Đăng ký, hash Bcrypt, tạo users+profiles
+POST /api/v1/auth/login          → U001: Đăng nhập, trả JWT access token
+POST /api/v1/auth/reset-password → U001: Gửi OTP qua email
+GET  /api/v1/auth/me             → Lấy thông tin user hiện tại từ JWT
+PUT  /api/v1/auth/me/profile     → U002: Cập nhật profile (display_name, bio, avatar)
 ```
 
-### Chapters (`/api/chapters`)
+### Stories (`/api/v1/stories`) — `endpoints/stories.py`
 ```
-POST   /api/chapters                 → U004: Tạo chương mới (draft)
-PUT    /api/chapters/{id}            → U004: Lưu nháp / autosave
-POST   /api/chapters/{id}/publish   → U005: Xuất bản → push RabbitMQ
-GET    /api/chapters/{id}            → U007: Đọc nội dung chương
-```
-
-### Search (`/api/search`)
-```
-GET    /api/search?q=...             → Tìm kiếm theo từ khóa
-POST   /api/search/semantic          → U008: AI semantic search qua pgvector
+GET    /api/v1/stories                     → Danh sách (filter: category, status, search)
+POST   /api/v1/stories                     → U003: Tạo tác phẩm mới (Author)
+GET    /api/v1/stories/{id}                → Chi tiết tác phẩm + metadata
+PUT    /api/v1/stories/{id}                → U003: Cập nhật thông tin
+DELETE /api/v1/stories/{id}                → U003: Xóa tác phẩm
+GET    /api/v1/stories/{id}/chapters       → Danh sách chương
+POST   /api/v1/stories/{id}/reviews        → U010: Đánh giá tác phẩm
+GET    /api/v1/stories/{id}/reviews        → Danh sách reviews
 ```
 
-### AI (`/api/ai`)
+### Chapters (`/api/v1/chapters`) — `endpoints/chapters.py`
 ```
-POST   /api/ai/suggest              → U006: Gợi ý tình tiết (context ≤ 1000 từ)
-POST   /api/ai/recommend            → U009: Đề xuất truyện cá nhân hóa
-```
-
-### Comments & Reviews (`/api`)
-```
-GET    /api/chapters/{id}/comments   → Danh sách bình luận
-POST   /api/chapters/{id}/comments   → U010: Đăng bình luận
-POST   /api/stories/{id}/reviews     → U010: Đánh giá tác phẩm
-```
-
-### Membership & Payment (`/api`)
-```
-GET    /api/membership/plans         → Danh sách gói
-POST   /api/membership/checkout      → U011+U012: Tạo transaction + VNPAY URL
-POST   /api/payment/vnpay-ipn        → U012: IPN callback từ VNPAY (verify checksum)
+POST   /api/v1/chapters                    → U004: Tạo chương mới (draft)
+GET    /api/v1/chapters/{id}               → U007: Đọc nội dung chương (+ incr view_count)
+PUT    /api/v1/chapters/{id}               → U004: Cập nhật chương
+DELETE /api/v1/chapters/{id}               → Xóa chương
+GET    /api/v1/chapters/{id}/comments      → Danh sách bình luận
+POST   /api/v1/chapters/{id}/comments      → U010: Đăng bình luận
+GET    /api/v1/search?q=...                → Tìm kiếm theo từ khóa
+POST   /api/v1/search/semantic             → U008: AI semantic search qua pgvector
 ```
 
-### Admin (`/api/admin`)
+### Author Chapters (`/api/v1/author/chapters`) — `endpoints/chapters.py`
 ```
-GET    /api/admin/moderation-queue   → U015: Danh sách chương flagged/pending
-POST   /api/admin/moderation/{id}/approve  → U013: Admin duyệt
-POST   /api/admin/moderation/{id}/reject   → U013: Admin từ chối
-GET    /api/admin/stats              → U015: Số liệu tổng quan
+PUT    /api/v1/author/chapters/{id}/autosave → U004: REST autosave endpoint
 ```
 
-### WebSocket
+### Publishing — `endpoints/publish.py`
 ```
-WS /ws/draft/{chapter_id}           → U004: Autosave real-time (< 200ms)
-WS /ws/notifications/{user_id}      → U013, U014: Push kết quả duyệt, nhắc lịch
-WS /ws/comments/{chapter_id}        → U010: Real-time comments
+POST   /api/v1/stories/{story_id}/chapters/{chapter_id}/publish → U005: Xuất bản → RabbitMQ
+GET    /api/v1/stories/{story_id}/chapters/{chapter_id}/status  → Kiểm tra moderation status
+```
+
+### AI (`/api/v1/ai`) — `endpoints/ai.py`
+```
+POST   /api/v1/ai/suggest              → U006: Gợi ý tình tiết (context ≤ 1000 từ)
+```
+
+### Recommendations (`/api/v1/recommendations`) — `endpoints/recommendations.py`
+```
+POST   /api/v1/recommendations         → U009: Đề xuất truyện cá nhân hóa
+```
+
+### Payment (`/api/v1/payment`, `/api/v1/payments`) — `endpoints/payment.py`
+```
+POST   /api/v1/payment/vnpay-ipn       → U012: IPN callback từ VNPAY (verify HMAC-SHA512)
+GET    /api/v1/payment/return           → VNPAY return URL handler
+GET    /api/v1/payment/transactions     → Lịch sử giao dịch (user)
+```
+
+### Membership (`/api/v1/membership`) — `endpoints/payment.py`
+```
+GET    /api/v1/membership/plans         → Danh sách gói
+POST   /api/v1/membership/checkout      → U011+U012: Tạo transaction + VNPAY URL
+GET    /api/v1/membership/status        → Kiểm tra trạng thái membership
+```
+
+### Notifications (`/api/v1/notifications`) — `endpoints/notifications.py`
+```
+GET    /api/v1/notifications            → Danh sách thông báo (user)
+PUT    /api/v1/notifications/{id}/read  → Đánh dấu đã đọc
+PUT    /api/v1/notifications/read-all   → Đánh dấu tất cả đã đọc
+```
+
+### Admin (`/api/v1/admin`) — `endpoints/admin.py`
+```
+GET    /api/v1/admin/moderation-queue              → U015: Danh sách chương flagged/pending
+POST   /api/v1/admin/moderation/{id}/approve       → U013: Admin duyệt
+POST   /api/v1/admin/moderation/{id}/reject        → U013: Admin từ chối
+GET    /api/v1/admin/stats                         → U015: Số liệu tổng quan
+GET    /api/v1/admin/users                         → Danh sách users
+PUT    /api/v1/admin/users/{id}/role               → Thay đổi role user
+GET    /api/v1/admin/audit-logs                    → Nhật ký hành động admin
+```
+
+### WebSocket (đăng ký trực tiếp trên app — `main.py`)
+```
+WS /ws/stories/{story_id}/chapters/{chapter_id}  → U004: Autosave real-time (< 200ms)
+WS /ws/notifications/{user_id}                   → U013, U014: Push kết quả duyệt, nhắc lịch
+WS /api/v1/ws/notifications/{user_id}            → Alias cho frontend flexibility
+```
+
+### Health Check (không cần auth — `main.py`)
+```
+GET /                    → Service info (project name, docs link)
+GET /health              → Basic health (status: ok)
+GET /health/live         → Liveness probe (cho Docker/K8s)
+GET /health/ready        → Readiness probe (kiểm tra DB + Redis + RabbitMQ)
 ```
 
 ---
 
-## 9. Class Model nhanh
+## 13. Worker & Message Queue Architecture
+
+### 13.1. Queue Topology
+
+```
+                    ┌─────────────────────┐
+                    │   ai.moderation     │ ← Main queue (durable)
+                    │   (consumer: worker)│
+                    └─────────┬───────────┘
+                              │
+                    ┌─────────▼───────────┐
+                    │  handle_publish_     │
+                    │  chapter()           │
+                    │  → moderate_content()│
+                    │  → apply_result()    │
+                    │  → sync_embedding()  │
+                    │  → create_notif()    │
+                    └────┬────────────┬────┘
+                         │            │
+                    success       RetryableModerationError
+                    (ACK)              │
+                              ┌───────▼───────────────┐
+                              │ ai.moderation.retry   │
+                              │ TTL=60s               │
+                              │ DLX → ai.moderation   │
+                              └───────┬───────────────┘
+                                      │ after 60s
+                                      ▼
+                              (quay lại ai.moderation)
+                                      │
+                              retry_count > 5?
+                              ┌───────▼───────────────┐
+                              │ ai.moderation.dlq     │
+                              │ (Dead Letter Queue)   │
+                              │ → Manual inspection   │
+                              └───────────────────────┘
+```
+
+### 13.2. Message Format
+
+```json
+{
+  "task_type": "publish_chapter",
+  "chapter_id": "uuid-string",
+  "content": "chapter content (optional, fallback to DB)",
+  "story_id": "uuid-string",
+  "requested_by": "author-user-id"
+}
+```
+
+### 13.3. Error Handling
+| Error Type | Class | Behavior |
+|---|---|---|
+| Gemini 429 / timeout | `RetryableModerationError` | Push vào retry queue (TTL 60s) |
+| Chapter not found | `PermanentWorkerError` | ACK & drop (log error) |
+| Empty content | `PermanentWorkerError` | ACK & drop |
+| Unknown exception | `Exception` | Push vào retry queue |
+| Max retries exceeded | — | Push vào DLQ |
+
+### 13.4. Worker Configuration
+
+```bash
+# Worker chạy với prefetch_count=1 (xử lý 1 message tại 1 thời điểm)
+# Auto-reconnect khi mất connection RabbitMQ (retry mỗi 5s)
+# Graceful shutdown khi nhận SIGINT (KeyboardInterrupt)
+```
+
+---
+
+## 14. Class Model nhanh
 
 ```python
-# Các class nghiệp vụ chính
-User          → login(), register()
-Story         → updateInfo()
-Chapter       → saveDraft(), publish()   # publish() → RabbitMQ
-Comment       → edit(), delete()
-Review        → submitReview()           # UNIQUE (user_id, story_id)
-MembershipPlan → getDetails()
-Transaction   → processPayment()         # Tạo VNPAY URL
-AIModerationLog → logResult()           # Ghi kết quả Gemini
-PublishSchedule → checkSchedule()       # Cron trigger
-StoryEmbedding → generateVector()       # Gọi Gemini Embeddings API
+# ── SQLAlchemy ORM Models (16 models) ──
+User              → login(), register()
+Profile           → update_profile()
+Story             → updateInfo(), delete()
+Chapter           → saveDraft(), publish()        # publish() → RabbitMQ
+Comment           → edit(), delete()
+Review            → submitReview()                # UNIQUE (user_id, story_id)
+MembershipPlan    → getDetails()
+Transaction       → processPayment()              # Tạo VNPAY URL
+AIModerationLog   → logResult()                   # Ghi kết quả Gemini
+PublishSchedule   → checkSchedule()               # Cron trigger
+StoryEmbedding    → generateVector()              # Gọi Gemini Embeddings API
+ReadingHistory    → trackRead()
+Library           → bookmark(), unbookmark()
+Notification      → create(), markRead(), stream() # WebSocket push
+AdminAlert        → create(), resolve()
+AdminAuditLog     → logAction()                    # Audit trail
+
+# ── Service Layer (11 services) ──
+AuthService       → register, login, verify_token, update_profile
+AIService         → suggest_plot, moderate_content, generate_embedding, semantic_search, recommend
+ModerationService → moderate_content, apply_moderation_result
+PaymentService    → create_checkout, verify_ipn, process_refund
+MembershipService → get_plans, check_status
+PublishService    → submit_for_moderation (→ RabbitMQ), get_rabbitmq_connection
+ScheduleService   → start_schedule_scheduler, scan_schedules, send_reminders
+NotificationService → create_notification, stream_user_notifications (WebSocket)
+AdminService      → get_moderation_queue, approve/reject, get_stats, audit_log
+CloudinaryService → upload_image, delete_image
+MediaService      → serve_local_file (dev only)
 ```
 
 ---
 
-## 10. Quy tắc quan trọng khi code
+## 15. Quy tắc quan trọng khi code
 
 ### Bảo mật
-- Mật khẩu: **luôn dùng Bcrypt**, không MD5/SHA1
+- Mật khẩu: **luôn dùng Bcrypt** (passlib), không MD5/SHA1
 - Auth: **JWT** — header `Authorization: Bearer <token>`
 - Payment: VNPAY IPN verify **HMAC-SHA512 checksum**, không tin Frontend
 - **Không lưu thông tin thẻ/tài khoản ngân hàng** vào DB
-- Rate Limiting tại Nginx cho tất cả `/api/` endpoints
+- Rate Limiting tại Nginx:
+  - `/api/v1/(auth|ai|payment|payments)/`: **5 req/phút** (zone: api_sensitive)
+  - `/api/*`: **10 req/giây** (zone: api_general)
+- Security headers (Nginx + FastAPI middleware):
+  - `Strict-Transport-Security` (HSTS 1 năm)
+  - `X-Frame-Options: DENY`
+  - `X-Content-Type-Options: nosniff`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- Non-root user trong Docker containers (`appuser` cho backend, `nextjs` cho frontend)
+- `X-Request-ID` tracking cho mọi HTTP request
 
 ### Hiệu năng
 - Gemini API call: **luôn qua RabbitMQ** cho moderation (async), không gọi trực tiếp trong request handler
-- AI suggest (U006): **giới hạn context ≤ 1000 từ** mỗi lần gọi
+- AI suggest (U006): **giới hạn context ≤ 1000 từ** mỗi lần gọi (config: `AI_CONTEXT_WORD_LIMIT`)
 - Chapter content: **ưu tiên Redis cache**, fallback PostgreSQL
-- `view_count`: tăng trong Redis, **flush về PostgreSQL định kỳ** (không UPDATE mỗi request)
+- `view_count`: tăng trong Redis, **flush về PostgreSQL mỗi 600s** (không UPDATE mỗi request)
 - WebSocket autosave: **debounce 3 giây** phía client trước khi gửi
+- DB connection pooling: `pool_size=5`, `max_overflow=10`, `pool_recycle=1800s`
+- Frontend: Next.js `standalone` output mode cho minimal Docker image
 
 ### Xử lý lỗi AI
-- Gemini Rate Limit (429): **giữ task trong RabbitMQ**, retry sau 60s — không mất task
-- Gemini timeout: fallback graceful, báo lỗi user-friendly
+- Gemini Rate Limit (429): **retry queue** (TTL 60s), max 5 retries → DLQ
+- Gemini timeout: `GEMINI_TIMEOUT_SECONDS=10.0`, fallback graceful
 - pgvector không có kết quả: fallback sang full-text search thông thường
+- `GEMINI_API_KEY` rỗng: AI features trả 503 Service Unavailable
 
 ### Frontend
 - `moderation_status = 'pending'`: hiển thị badge "Đang duyệt", không ẩn chương khỏi Author
 - Chapter Premium (`is_premium=true`) + user chưa có `premium_until`: hiển thị paywall S09
 - Reader Mode (S07): cấu hình đọc lưu `localStorage` (font size, dark mode, width)
 - Author Studio (S16): AI Sidebar dùng context 1000 từ gần nhất, hiển thị 3 gợi ý
+- Mock mode: `NEXT_PUBLIC_USE_MOCKS=true` cho demo UI không cần backend
+- API client (`lib/api.ts`): timeout `NEXT_PUBLIC_API_TIMEOUT_MS=12000`, auto-attach JWT
+- WebSocket (`lib/realtime.ts`): auto-reconnect, auth context
 
 ### Database
 - Dùng **`gen_random_uuid()`** cho tất cả PK (không auto-increment)
 - pgvector index: `ivfflat` với `vector_cosine_ops` cho bảng `story_embeddings`
 - `ON DELETE CASCADE` cho quan hệ parent-child (story→chapters, chapter→comments)
 - `ON DELETE SET NULL` cho `transactions.user_id` (giữ lịch sử dù xóa tài khoản)
+- Migrations: file-based versioned SQL, checksum validation, **không sửa file đã apply**
 
 ---
 
-## 11. Non-Functional Requirements (NFR) — Tham chiếu khi thiết kế
+## 16. Non-Functional Requirements (NFR) — Tham chiếu khi thiết kế
 
 | NFR | Yêu cầu | Giải pháp kỹ thuật |
 |---|---|---|
@@ -524,38 +1165,516 @@ StoryEmbedding → generateVector()       # Gọi Gemini Embeddings API
 | Publish response | < 500ms | HTTP 202 + async RabbitMQ |
 | AI Suggest | < 5 giây | Gemini API trực tiếp, context ≤ 1000 từ |
 | VNPAY update | < 2 giây | IPN backend-to-backend |
-| AI Moderation | < 5 phút | Background Worker |
-| Uptime | ≥ 99.5% | GCP + Daily backup GCS |
-| Schedule reminder | < 10 phút | Cron job mỗi 1 giờ |
+| AI Moderation | < 5 phút | Background Worker + retry queue |
+| Uptime | ≥ 99.5% | GCP + Docker + Health checks |
+| Schedule reminder | < 10 phút | APScheduler cron job |
 
 ---
 
-## 12. Hướng dẫn cho Agent khi nhận task
+## 17. CI/CD Pipeline
+
+### 17.1. GitHub Actions (`.github/workflows/ci.yml`)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                  ON: push/PR to dev, main                        │
+├──────────────────────┬───────────────────────────────────────────┤
+│                      │                                           │
+│  JOB 1: Backend CI   │  JOB 2: Frontend CI                      │
+│  ─────────────────   │  ──────────────────                       │
+│  Python 3.11         │  Node.js 20                               │
+│  Services:           │                                           │
+│    - pgvector:pg16   │  Steps:                                   │
+│    - redis:alpine    │    1. npm ci                               │
+│    - rabbitmq:3      │    2. npm run lint (ESLint)                │
+│  Steps:              │    3. npm run build                        │
+│    1. pip install     │                                           │
+│    2. flake8 lint    │                                           │
+│    3. Run migrations │                                           │
+│    4. pytest --cov   │                                           │
+│                      │                                           │
+├──────────────────────┴───────────────────────────────────────────┤
+│                                                                   │
+│  JOB 3: Deploy (chỉ khi push to main + cả 2 jobs CI pass)       │
+│  ──────────────────────────────────────────────────────────       │
+│  → Apply database migrations lên production DB                    │
+│  → Sử dụng GitHub Secret: DATABASE_URL                           │
+│                                                                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 17.2. GitHub Secrets cần cấu hình
+
+| Secret | Mô tả |
+|---|---|
+| `DATABASE_URL` | Production PostgreSQL connection string |
+
+### 17.3. Branch Strategy
+
+| Branch | Mục đích | CI | CD |
+|---|---|---|---|
+| `dev` | Development integration | ✅ Lint + Test + Build | ❌ |
+| `main` | Production release | ✅ Lint + Test + Build | ✅ Auto-deploy migrations |
+| Feature branches | PRs vào dev | ✅ (on PR) | ❌ |
+
+---
+
+## 18. Deployment Production — Hướng dẫn chi tiết
+
+### 18.1. Kiến trúc Production đề xuất (GCP)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Google Cloud Platform                      │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  GCE VM (hoặc Cloud Run)                             │   │
+│  │  docker-compose --profile prod up -d                  │   │
+│  │                                                       │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌──────────┐ ┌──────────┐  │   │
+│  │  │ Nginx   │ │ Frontend│ │ Backend  │ │ Worker   │  │   │
+│  │  │ :80/443 │ │ :3000   │ │ :8000    │ │          │  │   │
+│  │  └────┬────┘ └─────────┘ └────┬─────┘ └────┬─────┘  │   │
+│  │       │                        │             │        │   │
+│  └───────┼────────────────────────┼─────────────┼────────┘   │
+│          │                        │             │            │
+│  ┌───────▼────────┐  ┌───────────▼───────────┐ │            │
+│  │ Cloud DNS      │  │ Cloud SQL (PostgreSQL) │ │            │
+│  │ + SSL (Let's   │  │ pgvector extension     │ │            │
+│  │   Encrypt)     │  └───────────────────────┘ │            │
+│  └────────────────┘                             │            │
+│                      ┌──────────────────────────▼──────┐    │
+│                      │ CloudAMQP (Managed RabbitMQ)    │    │
+│                      └─────────────────────────────────┘    │
+│                      ┌─────────────────────────────────┐    │
+│                      │ Upstash Redis (Serverless)      │    │
+│                      └─────────────────────────────────┘    │
+│                                                              │
+│  External Services:                                          │
+│  ├── Cloudinary CDN (ảnh bìa, avatar)                       │
+│  ├── Google Gemini API (AI features)                         │
+│  └── VNPAY Production (thanh toán)                           │
+│                                                              │
+│  Backup: GCS daily backup cho PostgreSQL                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 18.2. Bước deploy chi tiết
+
+#### Bước 1: Chuẩn bị Infrastructure
+
+```bash
+# 1a. Tạo GCE VM (Ubuntu 22.04, e2-medium trở lên)
+gcloud compute instances create yag-prod \
+  --zone=asia-southeast1-a \
+  --machine-type=e2-medium \
+  --image-family=ubuntu-2204-lts \
+  --image-project=ubuntu-os-cloud \
+  --boot-disk-size=50GB
+
+# 1b. Cài Docker & Docker Compose trên VM
+sudo apt update && sudo apt install -y docker.io docker-compose-plugin
+sudo usermod -aG docker $USER
+
+# 1c. Hoặc dùng Managed Services:
+# - Cloud SQL for PostgreSQL (bật pgvector extension)
+# - Upstash Redis (free tier đủ dùng)
+# - CloudAMQP (free tier: 100 messages/ngày)
+```
+
+#### Bước 2: SSL Certificate
+
+```bash
+# Dùng Let's Encrypt (miễn phí)
+sudo apt install certbot
+sudo certbot certonly --standalone -d yourdomain.com
+
+# Copy certificates vào project
+cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem nginx/certs/
+cp /etc/letsencrypt/live/yourdomain.com/privkey.pem nginx/certs/
+
+# Auto-renew cron
+echo "0 0 1 * * certbot renew --quiet && docker-compose restart nginx" | crontab -
+```
+
+#### Bước 3: Cấu hình Environment
+
+```bash
+# Tạo file .env tại root project
+cat > .env << 'EOF'
+# ── Application ──
+ENVIRONMENT=production
+SECRET_KEY=$(openssl rand -hex 32)
+
+# ── Database ──
+POSTGRES_USER=yag_prod
+POSTGRES_PASSWORD=$(openssl rand -hex 16)
+POSTGRES_DB=yag_prod
+
+# ── Redis ──
+REDIS_PASSWORD=$(openssl rand -hex 16)
+
+# ── RabbitMQ ──
+RABBITMQ_USER=yag_prod_mq
+RABBITMQ_PASSWORD=$(openssl rand -hex 16)
+
+# ── CORS ──
+CORS_ORIGINS=https://yourdomain.com
+
+# ── Frontend Build Args ──
+FRONTEND_PUBLIC_URL=https://yourdomain.com
+API_PUBLIC_URL=https://yourdomain.com/api
+WS_PUBLIC_URL=wss://yourdomain.com/ws
+
+# ── VNPAY Production ──
+VNP_TMN_CODE=YOUR_PRODUCTION_MERCHANT_CODE
+VNP_HASH_SECRET=YOUR_PRODUCTION_HASH_SECRET
+VNP_URL=https://pay.vnpay.vn/vpcpay.html
+VNP_RETURN_URL=https://yourdomain.com/payment/result
+VNP_API_URL=https://merchant.vnpay.vn/merchant_webapi/api/transaction
+
+# ── Gemini AI ──
+GEMINI_API_KEY=your_production_gemini_api_key
+
+# ── Cloudinary ──
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+EOF
+```
+
+#### Bước 4: Deploy
+
+```bash
+# Clone repo
+git clone https://github.com/zeus058/SE_Writing_Web.git
+cd SE_Writing_Web
+
+# Đặt .env đã cấu hình ở bước 3
+
+# Build & Deploy (profile prod)
+docker-compose --profile prod up -d --build
+
+# Kiểm tra services
+docker-compose ps
+docker-compose logs -f backend
+docker-compose logs -f moderation-worker
+
+# Verify health
+curl https://yourdomain.com/health/ready
+```
+
+#### Bước 5: Database Seeding (lần đầu)
+
+```bash
+# Seed dữ liệu mẫu (membership plans, admin user...)
+docker-compose exec backend python -m app.seed
+```
+
+### 18.3. Cập nhật (Update/Redeploy)
+
+```bash
+# Pull code mới
+git pull origin main
+
+# Rebuild & restart (zero-downtime với rolling update)
+docker-compose --profile prod up -d --build
+
+# Chỉ rebuild specific service
+docker-compose --profile prod up -d --build backend moderation-worker
+
+# Kiểm tra migration đã apply
+docker-compose logs migrate
+```
+
+### 18.4. Backup & Recovery
+
+```bash
+# Backup PostgreSQL (daily cron)
+docker-compose exec postgres pg_dump -U yag_prod yag_prod > backup_$(date +%Y%m%d).sql
+
+# Upload to GCS
+gsutil cp backup_*.sql gs://yag-backups/daily/
+
+# Restore
+docker-compose exec -T postgres psql -U yag_prod yag_prod < backup_20260604.sql
+```
+
+### 18.5. Monitoring & Logs
+
+```bash
+# View logs theo service
+docker-compose logs -f --tail=100 backend
+docker-compose logs -f --tail=100 moderation-worker
+docker-compose logs -f --tail=100 nginx
+
+# Health check
+curl -s https://yourdomain.com/health/ready | python -m json.tool
+
+# RabbitMQ Management UI (nếu expose port 15672)
+# http://yourdomain.com:15672 (user: yag_prod_mq)
+```
+
+### 18.6. Alternatives: Deploy không dùng Docker Compose
+
+| Platform | Frontend | Backend | Database |
+|---|---|---|---|
+| **Vercel + Railway** | Vercel (free) | Railway (backend + worker) | Supabase (free, có pgvector) |
+| **Render** | Render Static | Render Web Service + Background Worker | Render PostgreSQL |
+| **Fly.io** | Fly.io | Fly.io (multi-process) | Fly.io PostgreSQL |
+
+Ví dụ **Vercel + Railway + Supabase**:
+```bash
+# Frontend → Vercel
+cd src/frontend
+vercel --prod
+
+# Backend → Railway
+# Cấu hình Dockerfile path: src/backend/Dockerfile
+# Env vars: DATABASE_URL=supabase_url, REDIS_URL=upstash_url, ...
+
+# Database → Supabase
+# Bật pgvector extension trong Supabase dashboard
+# Connection string: postgresql://postgres.xxx:xxx@aws-0-region.pooler.supabase.com:6543/postgres
+```
+
+---
+
+## 19. Nginx & Security Configuration
+
+### 19.1. Routing Rules (nginx.conf)
+
+| Location | Target | Rate Limit | Mô tả |
+|---|---|---|---|
+| `/health` | `backend:8000` | Không | Health check probe |
+| `/api/v1/(auth\|ai\|payment\|payments)/` | `backend:8000` | 5 req/phút | Sensitive endpoints |
+| `/api/` | `backend:8000` | 10 req/giây | General API |
+| `/ws/` | `backend:8000` | Không | WebSocket (upgrade) |
+| `/api/v1/ws/` | `backend:8000` | Không | WebSocket v1 alias |
+| `/media/` | `backend:8000` | Không | Local media (dev) |
+| `/` (catch-all) | `frontend:3000` | Không | Next.js pages |
+
+### 19.2. SSL & Security Headers
+
+```nginx
+# SSL
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers off;
+
+# Security Headers
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Limits
+client_max_body_size: 10m
+WebSocket proxy_read_timeout: 3600s
+
+# HTTP → HTTPS redirect (port 80 → 443)
+```
+
+---
+
+## 20. Testing
+
+### 20.1. Backend Test Suite (pytest)
+
+```bash
+cd src/backend
+
+# Chạy toàn bộ tests
+pytest --cov=app --cov-report=term-missing -v
+
+# Chạy test specific module
+pytest tests/test_auth.py -v
+pytest tests/test_payment.py -v
+```
+
+| Test File | Module | Mô tả |
+|---|---|---|
+| `test_auth.py` | F1 | Register, login, JWT, password reset |
+| `test_database.py` | Core | DB connection, models, relationships |
+| `test_payment.py` | F2 | VNPAY checkout, IPN verification |
+| `test_membership.py` | F2 | Membership plans, status |
+| `test_ai_suggestions.py` | F3 | AI suggest endpoint |
+| `test_ai_search_and_recommendations.py` | F3 | Semantic search, recommendations |
+| `test_moderation.py` | F5 | Content moderation pipeline |
+| `test_publish.py` | F4 | Chapter publish workflow |
+| `test_admin.py` | F5 | Admin dashboard, moderation queue |
+| `test_notifications.py` | — | Notification CRUD, WebSocket |
+| `test_profile.py` | F1 | Profile update, avatar |
+| `test_schedule.py` | F4 | Publish schedule, cron jobs |
+| `test_role_separation.py` | Core | RBAC role checks |
+| `test_main.py` | Core | App startup, health checks |
+
+### 20.2. Frontend Checks
+
+```bash
+cd src/frontend
+
+# Lint
+npm run lint          # ESLint
+
+# Build check (type-safe compilation)
+npm run build
+```
+
+---
+
+## 21. Cài đặt môi trường Local Development
+
+### 21.1. Prerequisites
+- **Node.js** v20+
+- **Python** 3.11+
+- **Docker Desktop** (cho PostgreSQL, Redis, RabbitMQ)
+- **Git**
+
+### 21.2. Setup từng bước
+
+```bash
+# 1. Clone repo
+git clone https://github.com/zeus058/SE_Writing_Web.git
+cd SE_Writing_Web
+
+# 2. Khởi chạy infrastructure (chỉ databases, không cần profile)
+docker-compose up -d
+# → PostgreSQL :5432, Redis :6379, RabbitMQ :5672 (Dashboard :15672)
+
+# 3. Setup Backend
+cd src/backend
+cp .env.example .env           # Điền GEMINI_API_KEY, các biến khác giữ default
+python -m venv .venv
+.venv/Scripts/activate         # Windows
+# source .venv/bin/activate    # Linux/Mac
+pip install -r requirements.txt
+
+# 4. Apply migrations
+python -m app.manage_migrations
+
+# 5. Seed data (optional)
+python -m app.seed
+
+# 6. Chạy backend API
+uvicorn app.main:app --reload --port 8000
+
+# 7. Chạy RabbitMQ Worker (terminal riêng)
+python worker.py
+
+# 8. Setup Frontend (terminal riêng)
+cd src/frontend
+cp .env.example .env           # Giữ default cho local dev
+npm install
+npm run dev                    # → http://localhost:3000
+
+# 9. Verify
+# Backend API docs: http://localhost:8000/docs
+# Frontend: http://localhost:3000
+# RabbitMQ Dashboard: http://localhost:15672 (yag_mq / yag_mq_secret)
+```
+
+### 21.3. Full-stack Docker (alternative)
+
+```bash
+# Chạy tất cả trong Docker (không cần install Node/Python)
+docker-compose --profile app up -d --build
+
+# → Nginx: http://localhost (port 80/443)
+# Cần self-signed cert hoặc comment SSL trong nginx.conf cho local
+```
+
+---
+
+## 22. Troubleshooting
+
+### Khi debug
+
+| Triệu chứng | Nguyên nhân có thể | Giải pháp |
+|---|---|---|
+| `moderation_status` không đổi | Worker không chạy hoặc không connect RabbitMQ | `docker-compose logs moderation-worker`, kiểm tra `RABBITMQ_URL` |
+| Semantic search không ra kết quả | `story_embeddings` chưa có data | Kiểm tra worker log, `GEMINI_API_KEY` có giá trị không |
+| VNPAY IPN không nhận | Checksum HMAC-SHA512 sai hoặc endpoint sai | Verify `VNP_HASH_SECRET`, check nginx routing `/api/v1/payment/vnpay-ipn` |
+| WebSocket ngắt liên tục | Redis pub/sub connection lost | Kiểm tra `REDIS_URL`, Redis container health |
+| `moderation_status` stuck ở `pending` | Message trong DLQ sau 5 retries | Kiểm tra queue `ai.moderation.dlq` trong RabbitMQ Dashboard |
+| Frontend API calls fail | CORS hoặc sai API URL | Kiểm tra `CORS_ORIGINS`, `NEXT_PUBLIC_API_BASE_URL` |
+| `422 Unprocessable Entity` | Schema validation fail | Xem Pydantic error detail trong response body |
+| Backend crash on startup (prod) | Production validator reject config | Đọc error message, fix biến trong `.env` theo mục 8 |
+| Migration checksum mismatch | File migration đã apply bị sửa | KHÔNG sửa file cũ, tạo migration MỚI |
+| Docker build fail (frontend) | Missing build args `NEXT_PUBLIC_*` | Truyền qua docker-compose env hoặc `.env` root |
+| Health check `degraded` | Một service infrastructure down | `curl /health/ready` → xem field nào `error` |
+
+### Logs quan trọng
+
+```bash
+# Backend API logs
+docker-compose logs -f backend
+
+# Worker logs (moderation pipeline)
+docker-compose logs -f moderation-worker
+
+# Migration logs
+docker-compose logs migrate
+
+# Nginx access/error logs
+docker-compose logs -f nginx
+
+# PostgreSQL logs
+docker-compose logs -f postgres
+```
+
+---
+
+## 23. Hướng dẫn cho Agent khi nhận task
 
 ### Khi viết Backend (FastAPI)
 1. Xác định Use Case ID (U001-U015) liên quan
-2. Tìm table cần thao tác trong mục 4.2
-3. Kiểm tra luồng nghiệp vụ ở mục 5 trước khi viết handler
+2. Tìm table cần thao tác trong mục 5.2
+3. Kiểm tra luồng nghiệp vụ ở mục 9 trước khi viết handler
 4. Với mọi task AI: đẩy RabbitMQ, không gọi Gemini trong request handler
 5. Với payment: xác minh checksum VNPAY trước khi cập nhật DB
+6. Endpoint mới: thêm vào file tương ứng trong `endpoints/`, đăng ký trong `router.py`
+7. Model mới: thêm vào `models/`, import trong `models/__init__.py`
+8. Schema mới: thêm vào `schemas/`, export trong `schemas/__init__.py`
+9. Service mới: thêm vào `services/`, inject qua `deps.py` nếu cần
+10. Database change: tạo file migration mới `V{N}__description.sql`, **KHÔNG sửa file cũ**
 
 ### Khi viết Frontend (Next.js)
-1. Xác định Screen ID (S01-S21) và route tương ứng (mục 7)
+1. Xác định Screen ID (S01-S21) và route tương ứng (mục 11)
 2. Kiểm tra actor/role có quyền truy cập screen này không
 3. S16 Author Studio: 3 cột (dàn ý | editor | AI sidebar)
 4. S07 Reader Mode: ẩn navbar, lưu config vào localStorage
+5. API calls: dùng `lib/api.ts` (có interceptor, timeout, JWT)
+6. Auth state: dùng `lib/auth-context.tsx` (React Context)
+7. WebSocket: dùng `lib/realtime.ts`
+8. Components: tổ chức theo `components/{auth|features|layout|runtime|ui}/`
+9. Styling: TailwindCSS v4
 
 ### Khi debug
 1. `moderation_status` không đổi → kiểm tra RabbitMQ consumer có đang chạy
 2. Semantic search không ra kết quả → kiểm tra `story_embeddings` đã có data chưa
 3. VNPAY IPN không nhận → kiểm tra checksum HMAC-SHA512 và endpoint đúng
 4. WebSocket ngắt → kiểm tra Redis pub/sub connection
+5. DLQ có messages → kiểm tra RabbitMQ Dashboard, xem `x-last-error` header
+6. Production startup fail → đọc error message từ `config.py` production validator
 
 ### Khi thêm tính năng mới
-1. Cập nhật Use Case table ở mục 6
+1. Cập nhật Use Case table ở mục 10
 2. Nếu cần bảng DB mới: tuân thủ UUID PK, timestamps, CASCADE rules
-3. Tính năng AI mới: luôn có fallback khi Gemini down
-4. Giữ nguyên pattern: Nginx → FastAPI → Service → Repository → PostgreSQL/Redis
+3. Tạo migration file mới: `V{N}__{description}.sql`
+4. Tính năng AI mới: luôn có fallback khi Gemini down
+5. Giữ nguyên pattern: Nginx → FastAPI → Service → Repository → PostgreSQL/Redis
+6. Thêm test: tạo `tests/test_{feature}.py`
+7. **Cập nhật AGENTS.md** với thay đổi mới
+
+### Khi deploy
+1. Đọc mục 18 (Deployment Production) để hiểu flow
+2. Kiểm tra mục 8 (Production Safeguards) — config.py sẽ reject nếu thiếu config
+3. SSL certificates phải có trong `nginx/certs/`
+4. `.env` production phải khác hoàn toàn với development defaults
+5. Luôn chạy `docker-compose --profile prod` (không phải profile mặc định)
+6. Sau deploy: verify `/health/ready` trả `status: ok`
+7. Kiểm tra logs: `docker-compose logs -f backend moderation-worker`
 
 ---
 

@@ -1,4 +1,4 @@
-import { getAccessToken, setAuthTokens } from "./auth";
+import { clearAuthTokens, getAccessToken, setAuthTokens } from "./auth";
 import { appEnv, resolveApiUrl } from "./env";
 
 export type ApiResult<T> = {
@@ -58,6 +58,12 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
         typeof payload === "object" && payload !== null && "detail" in payload
           ? String(payload.detail)
           : `API request failed with status ${response.status}`;
+      if (response.status === 401 && message === "INVALID_OR_EXPIRED_TOKEN") {
+        clearAuthTokens();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("yag:auth-expired"));
+        }
+      }
       throw new ApiError(message, response.status, payload);
     }
 
@@ -87,6 +93,7 @@ export const yagApi = {
       const result = await apiFetch<AuthResponse>("/api/v1/auth/login", {
         method: "POST",
         body: payload,
+        timeoutMs: 10000,
       });
       setAuthTokens(result.data);
       return result;
@@ -95,6 +102,7 @@ export const yagApi = {
       const result = await apiFetch<AuthResponse>("/api/v1/auth/register", {
         method: "POST",
         body: payload,
+        timeoutMs: 10000,
       });
       setAuthTokens(result.data);
       return result;
@@ -103,11 +111,13 @@ export const yagApi = {
       apiFetch<{ message: string }>("/api/v1/auth/password-reset/request", {
         method: "POST",
         body: payload,
+        timeoutMs: 10000,
       }),
     confirmPasswordReset: (payload: { email: string; otp: string; password: string }) =>
       apiFetch<{ message: string }>("/api/v1/auth/password-reset/confirm", {
         method: "POST",
         body: payload,
+        timeoutMs: 10000,
       }),
     me: () =>
       apiFetch<AuthResponse["user"] & { profile?: { display_name: string; avatar_url?: string | null; bio?: string | null; reputation_score?: number } }>("/api/v1/auth/me", {

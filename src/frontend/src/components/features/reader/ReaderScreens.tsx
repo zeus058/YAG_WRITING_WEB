@@ -1,3 +1,4 @@
+import React, { useEffect, useMemo, useState } from "react";
 import { stories, type IconName } from "@/data/yag";
 import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, RankingItem, ReadingCard, UpdateStoryRow } from "@/components/ui";
 import { AppShell } from "@/components/layout";
@@ -30,6 +31,118 @@ const readerNotes = [
   "Nhịp chương chậm, nên đọc ở nền giấy ấm để đỡ mỏi mắt.",
   "Phần premium bắt đầu sau cảnh sân ga phía bắc.",
 ];
+
+type DiscoverMode = "keyword" | "semantic";
+
+type DiscoverFilters = {
+  genre: string;
+  status: string;
+  chapters: string;
+  sort: string;
+};
+
+const discoverGenres = [
+  "Táº¥t cáº£",
+  "NgÃ´n tÃ¬nh",
+  "Trinh thÃ¡m",
+  "Huyá»n huyá»…n",
+  "Ká»³ áº£o",
+  "Hiá»‡n Ä‘áº¡i",
+  "PhiÃªu lÆ°u",
+  "Cá»• trang",
+];
+
+const discoverStatuses = ["Táº¥t cáº£", "ongoing", "completed", "paused"];
+
+const discoverChapterFilters = [
+  "Táº¥t cáº£",
+  "DÆ°á»›i 40 chÆ°Æ¡ng",
+  "40-70 chÆ°Æ¡ng",
+  "TrÃªn 70 chÆ°Æ¡ng",
+];
+
+const discoverSortOptions = [
+  "Äá»™ phá»§ há»£p",
+  "Nhiá»u chÆ°Æ¡ng nháº¥t",
+  "Äang hot",
+  "ÄÃ¡nh giÃ¡ cao",
+];
+
+const badgeToStatus: Record<string, string> = {
+  hot: "ongoing",
+  ai: "paused",
+  done: "completed",
+};
+
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function getStoryStatus(badge: (typeof stories)[number]["badge"]) {
+  return badgeToStatus[badge];
+}
+
+function getChapterLabel(chapters: number) {
+  if (chapters < 40) return "Dưới 40 chương";
+  if (chapters <= 70) return "40-70 chương";
+  return "Trên 70 chương";
+}
+
+function getScore(story: (typeof stories)[number], query: string, mode: DiscoverMode) {
+  const normalizedQuery = normalizeText(query.trim());
+  if (!normalizedQuery) return mode === "semantic" ? 0.72 : 0.54;
+
+  const title = normalizeText(story.title);
+  const author = normalizeText(story.author);
+  const genre = normalizeText(story.genre);
+  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+
+  let score = mode === "semantic" ? 0.58 : 0.44;
+
+  if (title.includes(normalizedQuery)) score += 0.24;
+  if (author.includes(normalizedQuery)) score += 0.14;
+  if (genre.includes(normalizedQuery)) score += 0.18;
+
+  tokens.forEach((token) => {
+    if (title.includes(token)) score += 0.06;
+    if (genre.includes(token)) score += 0.05;
+    if (author.includes(token)) score += 0.03;
+  });
+
+  if (mode === "semantic") {
+    score += 0.08;
+    if (
+      tokens.some((token) =>
+        ["buon", "day du", "bi an", "bi mat", "hoai niem"].some(
+          (phrase) => token === phrase || normalizedQuery.includes(phrase),
+        ),
+      )
+    ) {
+      score += 0.07;
+    }
+  }
+
+  if (story.badge === "hot") score += 0.02;
+  if (story.chapters > 60) score += 0.03;
+
+  return Math.min(0.98, Number(score.toFixed(2)));
+}
+
+function matchStory(story: (typeof stories)[number], filters: DiscoverFilters) {
+  const genreMatch =
+    filters.genre === "Táº¥t cáº£" || normalizeText(story.genre).includes(normalizeText(filters.genre));
+  const statusMatch = filters.status === "Táº¥t cáº£" || getStoryStatus(story.badge) === filters.status;
+  const chapterMatch =
+    filters.chapters === "Táº¥t cáº£" ||
+    (filters.chapters === "DÆ°á»›i 40 chÆ°Æ¡ng" && story.chapters < 40) ||
+    (filters.chapters === "40-70 chÆ°Æ¡ng" && story.chapters >= 40 && story.chapters <= 70) ||
+    (filters.chapters === "TrÃªn 70 chÆ°Æ¡ng" && story.chapters > 70);
+
+  return genreMatch && statusMatch && chapterMatch;
+}
 
 export function HomeFeedScreen() {
   return (

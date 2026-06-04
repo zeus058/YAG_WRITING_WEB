@@ -132,7 +132,7 @@ export const yagApi = {
         method: "PUT",
         body,
       }),
-    requestAiSuggestion: (body: { chapterId?: string; context: string; mode: string }) =>
+    requestAiSuggestion: (body: { chapterId: string; context: string; mode: string }) =>
       apiFetch("/api/v1/ai/suggestions", {
         method: "POST",
         body,

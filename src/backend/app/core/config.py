@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     # Security Settings
     SECRET_KEY: str = "yag_development_secret_key_change_in_production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+    # Gemini AI Settings
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
+    GEMINI_TIMEOUT_SECONDS: float = 20.0
+    GEMINI_MAX_OUTPUT_TOKENS: int = 800
+    AI_CONTEXT_WORD_LIMIT: int = 1000
     
     class Config:
         case_sensitive = True

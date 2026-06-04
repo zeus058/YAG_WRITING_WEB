@@ -210,7 +210,7 @@ jobs:
     name: "🗄️ Apply Production Migrations"
     needs: [backend, frontend]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.DATABASE_URL != ''
 
     environment: production
 
@@ -263,7 +263,7 @@ jobs:
     name: "☁️ Deploy Backend → Cloud Run"
     needs: [deploy-migrations]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.GCP_SA_KEY != ''
 
     environment:
       name: 'production'
@@ -358,3 +358,30 @@ jobs:
           echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 8: SonarQube / SonarCloud Code Analysis
+  # ────────────────────────────────────────────────────────────
+  sonarqube:
+    name: "📊 SonarQube Quality Scan"
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    # Chỉ chạy nếu SONAR_TOKEN được cấu hình trên repo
+    if: always() && (github.event_name == 'push' || github.event_name == 'pull_request') && secrets.SONAR_TOKEN != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Backend Coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage
+          path: src/backend/
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}

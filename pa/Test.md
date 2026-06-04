@@ -479,7 +479,7 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
 
 | *Test case* | TC-025 |
 | :--- | :--- |
-| Related feature | F5 — Xuất bản bất đồng bộ qua Message Queue |
+| Related feature | U005 — Xuất bản bất đồng bộ qua Message Queue |
 | Context | Kiểm tra luồng tích hợp đầy đủ: Tác giả nhấn Xuất Bản → API tạo Task RabbitMQ → Worker xử lý Task → Gọi API Gemini → Cập nhật trạng thái chương → Gửi thông báo cho tác giả |
 | Input Data | - JWT của tài khoản author sở hữu chương <br> - API request các chương truyện: `POST /api/v1/chapters/{chapter_id}/publish` body: `{ "publish_at": "2026-06-05T10:00:00Z" }` <br> - Nội dung chương: Văn bản an toàn, không vi phạm chính sách |
 | Expected Output | 1. API trả về HTTP 202 (Accepted) kèm response: `{ "status": "accepted", "chapter_id": "...", "message": "Publish request accepted and queued for AI moderation." }` và `moderation_status = "pending"`. <br> 2. Task được đẩy vào RabbitMQ hàng đợi `ai.moderation` với payload chứa `chapter_id`, `story_id`, `requested_by`, `publish_at`. <br> 3. Background Worker (trong vòng < 5 phút) lấy Task từ hàng đợi, gọi Gemini API để phân tích an toàn. <br> 4. Worker cập nhật `chapters.moderation_status = "approved"` trong PostgreSQL. <br> 5. Worker sinh Vector Embedding cho truyện và lưu/cập nhật vào bảng `story_embeddings` nếu nội dung được duyệt. <br> 6. Worker tạo notification cho tác giả với `type = "chapter_moderation_result"`, `title = "Ket qua kiem duyet chuong"` và `message = "Chuong '<chapter title>' da duoc cap nhat trang thai: approved."`. <br> 7. Bảng `ai_moderation_logs` ghi nhận log kiểm duyệt: chapter_id, result, reason, flagged_categories, confidence. |
@@ -494,7 +494,7 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
 
 | *Test case* | TC-026 |
 | :--- | :--- |
-| Related feature | F5 — Kiểm duyệt nội dung AI tự động |
+| Related feature | U013 — Kiểm duyệt nội dung AI tự động |
 | Context | Khi tác giả xuất bản chương chứa nội dung vi phạm chính sách (NSFW, bạo lực, spam), Worker AI phát hiện và gắn cờ nội dung để Admin xem xét |
 | Input Data | - JWT của tài khoản author <br> - API request: `POST /api/v1/chapters/{chapter_id}/publish` với nội dung vi phạm: <br> &nbsp; • Nội dung NSFW: "..." <br> &nbsp; • Nội dung bạo lực: "..." <br> &nbsp; • Spam/tự quảng cáo: "..." <br> - Gemini API được mock để trả về `result = "flagged"` hoặc `"rejected"`, có `flagged_categories`, `confidence`, `reason` |
 | Expected Output | 1. API trả về HTTP 202 (Accepted) với `status = "accepted"` và `message = "Publish request accepted and queued for AI moderation."`. <br> 2. Worker lấy Task từ RabbitMQ. <br> 3. Gọi Gemini API, phát hiện vi phạm và trả về `result = "flagged"` hoặc `"rejected"`, `flagged_categories`, `confidence`, `reason`. <br> 4. Worker cập nhật `chapters.moderation_status = "flagged"` hoặc `"rejected"`. <br> 5. Bảng `ai_moderation_logs` ghi: `chapter_id`, `is_violation`, `violation_category`, `confidence_score`, `reason`. <br> 6. Worker tạo notification cho tác giả với `type = "chapter_moderation_result"`, `title = "Ket qua kiem duyet chuong"` và message dạng `Chuong '<chapter title>' da duoc cap nhat trang thai: rejected.` hoặc `flagged.` <br> 7. Admin Dashboard hiển thị chương có trạng thái flagged/rejected trong hàng đợi kiểm duyệt hiện có. |
@@ -509,7 +509,7 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
 
 | *Test case* | TC-027 |
 | :--- | :--- |
-| Related feature | F5 — Giám sát cam kết lộ trình tự động |
+| Related feature | U014 — Giám sát cam kết lộ trình tự động |
 | Context | Hệ thống Scheduler chạy định kỳ (mỗi giờ) để kiểm tra cam kết xuất bản chương của tác giả; nếu trễ hạn sẽ tự động trừ điểm uy tín (reputation_score) |
 | Input Data | - Tác giả đã đăng ký cam kết xuất bản chương vào ngày 2026-06-04 10:00 AM <br> - Ngày hôm nay mô phỏng: 2026-06-04 23:00 PM (trễ quá 12 giờ) <br> - Hiện tại reputation_score của tác giả: 100 <br> - Điểm bị trừ mỗi lần trễ: -5 <br> - publish_schedules entry: `{ story_id, scheduled_time: "2026-06-04 10:00", status: "scheduled", author_id }` |
 | Expected Output | 1. Scheduler trigger chạy vào lúc 23:00, so sánh `publish_schedules.scheduled_time` với `NOW()`. <br> 2. Phát hiện `scheduled_time = "10:00"` đã qua, mà lịch vẫn ở trạng thái `status = "scheduled"`. <br> 3. Cập nhật `publish_schedules.status = "missed"`. <br> 4. Trừ `profiles.reputation_score` của tác giả từ 100 xuống 95 (100 - 5 = 95). <br> 5. Ghi cảnh báo vào bảng `admin_alerts` với `type = "schedule_missed"` và message dạng `Story '<story title>' missed publish schedule <scheduled_time> by <days_late> day(s). Reputation penalty: <penalty>.` <br> 6. Gửi notification/pubsub payload cho tác giả với `type = "schedule_missed"` và cùng message literal trên. <br> 7. Admin Dashboard bật cờ cảnh báo dựa trên bản ghi `admin_alerts`. |

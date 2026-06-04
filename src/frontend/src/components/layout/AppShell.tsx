@@ -33,7 +33,7 @@ function topbarContext(role: Role, isPremium: boolean = false) {
   if (role === "admin") {
     return [
       { icon: "shield" as IconName, text: "Bảng kiểm duyệt AI", href: "/admin/moderation" },
-      { icon: "chart" as IconName, text: "Realtime stats", href: "/admin" },
+      { icon: "chart" as IconName, text: "Báo cáo vận hành", href: "/admin/stats" },
     ];
   }
 
@@ -223,7 +223,7 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
           <div className="sidebar-footer">
             <strong>Ban quản trị YAG</strong>
             <span>Không gian dành riêng cho đội ngũ điều phối và kiểm duyệt.</span>
-            <Link className={`button admin-test-link active`} href="/admin">
+            <Link className="button admin-test-link" href="/admin">
               <Icon name="shield" />
               Trang quản trị viên
             </Link>

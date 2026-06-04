@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (appEnv.useMocks) {
       // Mock mode fallback user
       setUser({
-        id: "d6a2f7c0-2f9b-449e-ba23-9502e6c7d5bd",
+        id: "00000000-0000-4000-8000-000000000001",
         email: "reader@yag.vn",
         username: "reader_demo",
         role: "reader",

@@ -41,6 +41,13 @@ const triggerLiveToast = (message: string, type = "success") => {
   }, 4000);
 };
 
+const normalizeChapterTitle = (chapterNumber: number, title?: string) => {
+  const rawTitle = (title || "").trim();
+  if (!rawTitle) return `Chương ${chapterNumber}`;
+  const duplicatedPrefix = new RegExp(`^chương\\s*${chapterNumber}\\s*[:.\\-–]?\\s*`, "i");
+  return rawTitle.replace(duplicatedPrefix, "").trim() || rawTitle;
+};
+
 export function HomeFeedScreen() {
   const [storiesList, setStoriesList] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -486,7 +493,7 @@ export function DiscoverScreen() {
 export function StoryDetailScreen() {
   const params = useParams();
   const rawId = params?.id;
-  const storyId = typeof rawId === "string" ? rawId : "d6a2f7c0-2f9b-449e-ba23-9502e6c7d5bd";
+  const storyId = typeof rawId === "string" ? rawId : "422a2437-9e19-46d3-bcf0-2798ffffe3e7";
 
   const [story, setStory] = useState<any>(null);
   const [chapters, setChapters] = useState<any[]>([]);
@@ -501,7 +508,7 @@ export function StoryDetailScreen() {
   useEffect(() => {
     if (appEnv.useMocks) {
       setStory({
-        id: "d6a2f7c0-2f9b-449e-ba23-9502e6c7d5bd",
+        id: "422a2437-9e19-46d3-bcf0-2798ffffe3e7",
         title: "Mưa Trên Thành Cũ",
         description: "Giữa thành phố cũ sau chiến tranh, một người viết thư thuê và một nữ phóng viên cùng lần theo bí mật của những bức thư không người nhận.",
         category: "Ngôn tình lịch sử",
@@ -916,6 +923,7 @@ export function ReaderScreen() {
   const readingProgress = Math.min(100, Math.max(0, Math.round(((safeIndex + 1) / totalChapters) * 100)));
   const wordCount = paywall ? 0 : (chapter.content || "").split(/\s+/).filter(Boolean).length;
   const readingMinutes = Math.max(1, Math.ceil(wordCount / 250));
+  const displayChapterTitle = normalizeChapterTitle(chapterNum, chapter.title);
 
   return (
     <>
@@ -931,7 +939,7 @@ export function ReaderScreen() {
             </Link>
             <div>
               <strong>{story?.title}</strong>
-              <div className="story-meta">Chương {safeIndex + 1}/{totalChapters} · {chapter.title}</div>
+              <div className="story-meta">Chương {safeIndex + 1}/{totalChapters} · Chương {chapterNum}: {displayChapterTitle}</div>
             </div>
           </div>
           <div className="reader-topbar-center" aria-label="Tiến độ đọc">
@@ -961,7 +969,7 @@ export function ReaderScreen() {
                   key={c.id || c.chapter_number}
                 >
                   <span>{String(c.chapter_number).padStart(2, "0")}</span>
-                  <strong>{c.title}</strong>
+                  <strong>{normalizeChapterTitle(Number(c.chapter_number), c.title)}</strong>
                   {c.is_premium ? <Icon name="lock" /> : null}
                 </Link>
               ))}
@@ -970,7 +978,7 @@ export function ReaderScreen() {
 
           <article className="reader-content reader-paper" style={{ "--reader-font-size": `${fontSize}px` } as any}>
             <div className="reader-chapter-kicker">{story?.title}</div>
-            <h1>Chương {chapterNum}: {chapter.title}</h1>
+            <h1>Chương {chapterNum}: {displayChapterTitle}</h1>
             <div className="reader-meta-strip">
               <span><Icon name="book" />{wordCount} từ</span>
               <span><Icon name="calendar" />{readingMinutes} phút đọc</span>

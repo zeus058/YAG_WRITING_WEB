@@ -47,7 +47,7 @@ export function RequireAuth({ children, allowedRoles }: RequireAuthProps) {
 
   if (isLoading) {
     return (
-      <main className="auth-page auth-page-centered" style={{ background: "var(--bg)" }} id="authLoadingLandmark">
+      <main className="auth-page auth-page-centered" style={{ background: "var(--background)" }} id="authLoadingLandmark">
         <div className="stack" style={{ alignItems: "center", gap: 16 }}>
           <div className="brand-logo spinner" style={{ background: "var(--crimson)", color: "#fff", width: 48, height: 48, fontSize: 20 }}>
             YAG

@@ -67,7 +67,27 @@ def get_rabbitmq_connection() -> pika.BlockingConnection:
 
 
 def push_publish_task_to_queue(payload: PublishTaskPayload) -> bool:
-    """Publish the moderation task to RabbitMQ without blocking FastAPI directly."""
+    """Publish the moderation task to RabbitMQ, or run it asynchronously if not using RabbitMQ."""
+    if settings.QUEUE_PROVIDER != "rabbitmq":
+        logger.info("Using async local fallback for chapter %s", payload.chapter_id)
+        try:
+            import asyncio
+            import threading
+            from app.worker.main import handle_publish_chapter
+            
+            payload_dict = payload.to_dict()
+            try:
+                loop = asyncio.get_running_loop()
+                loop.run_in_executor(None, handle_publish_chapter, payload_dict)
+            except RuntimeError:
+                thread = threading.Thread(target=handle_publish_chapter, args=(payload_dict,))
+                thread.daemon = True
+                thread.start()
+            return True
+        except Exception as exc:
+            logger.error("Failed to run local async worker fallback: %s", exc)
+            return False
+
     connection = None
     try:
         connection = get_rabbitmq_connection()

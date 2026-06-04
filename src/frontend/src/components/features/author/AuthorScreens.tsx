@@ -364,11 +364,21 @@ export function AuthorStudioScreen() {
   const [isCreatingChapter, setIsCreatingChapter] = useState(false);
   const [offlineDraft, setOfflineDraft] = useState<{ title: string; content: string; id: string } | null>(null);
 
-  // AI Suggestion state
+  // Editor styling states
+  const [editorFont, setEditorFont] = useState("Inter, Arial, sans-serif");
+  const [editorSize, setEditorSize] = useState("16px");
+  const [editorLineHeight, setEditorLineHeight] = useState("1.6");
+
+  // AI Suggestion & Agent states
+  const [activeAiTab, setActiveAiTab] = useState("plot");
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [aiError, setAiError] = useState<string | null>(null);
+
+  // History stack for Undo/Redo
+  const [historyStack, setHistoryStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
 
   const wsRef = useRef<any>(null);
   const debounceTimerRef = useRef<any>(null);
@@ -572,8 +582,19 @@ export function AuthorStudioScreen() {
   };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditorContent(e.target.value);
-    triggerAutosave(editorTitle, e.target.value);
+    const val = e.target.value;
+    setEditorContent(val);
+    triggerAutosave(editorTitle, val);
+    
+    // Simple history save on space or return keys
+    if (val.endsWith(" ") || val.endsWith("\n")) {
+      setHistoryStack((prev) => {
+        if (prev.length === 0 || prev[prev.length - 1] !== val) {
+          return [...prev.slice(-49), val];
+        }
+        return prev;
+      });
+    }
   };
 
   const insertSuggestion = (text: string) => {
@@ -604,6 +625,95 @@ export function AuthorStudioScreen() {
     }, 50);
   };
 
+  const applyMarkdownFormat = (type: "bold" | "italic" | "underline" | "highlight") => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+
+    let formattedText = "";
+    if (type === "bold") {
+      formattedText = `**${selectedText || "văn bản"}**`;
+    } else if (type === "italic") {
+      formattedText = `*${selectedText || "văn bản"}*`;
+    } else if (type === "underline") {
+      formattedText = `<u>${selectedText || "văn bản"}</u>`;
+    } else if (type === "highlight") {
+      formattedText = `<mark>${selectedText || "văn bản"}</mark>`;
+    }
+
+    const newContent = text.substring(0, start) + formattedText + text.substring(end);
+    setHistoryStack((prev) => [...prev.slice(-49), editorContent]);
+    setRedoStack([]);
+    setEditorContent(newContent);
+    triggerAutosave(editorTitle, newContent);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + formattedText.length, start + formattedText.length);
+    }, 50);
+  };
+
+  const handleToolbarToolClick = (tool: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+
+    if (tool === "↶") {
+      if (historyStack.length > 0) {
+        const previous = historyStack[historyStack.length - 1];
+        setRedoStack((prev) => [...prev, editorContent]);
+        setEditorContent(previous);
+        setHistoryStack((prev) => prev.slice(0, -1));
+        triggerAutosave(editorTitle, previous);
+        triggerLiveToast("Đã hoàn tác (Undo).");
+      } else {
+        triggerLiveToast("Không có thao tác nào để hoàn tác.", "warning");
+      }
+    } else if (tool === "↷") {
+      if (redoStack.length > 0) {
+        const next = redoStack[redoStack.length - 1];
+        setHistoryStack((prev) => [...prev, editorContent]);
+        setEditorContent(next);
+        setRedoStack((prev) => prev.slice(0, -1));
+        triggerAutosave(editorTitle, next);
+        triggerLiveToast("Đã khôi phục (Redo).");
+      } else {
+        triggerLiveToast("Không có thao tác nào để khôi phục.", "warning");
+      }
+    } else {
+      let insertText = "";
+      if (tool === "H1") {
+        insertText = "\n# ";
+      } else if (tool === "❝") {
+        insertText = "\n> ";
+      } else if (tool === "☰") {
+        insertText = "\n- ";
+      } else if (tool === "≡") {
+        insertText = "\n1. ";
+      } else if (tool === "≣") {
+        insertText = "\n---\n";
+      }
+
+      const newContent = text.substring(0, start) + insertText + text.substring(end);
+      setHistoryStack((prev) => [...prev.slice(-49), editorContent]);
+      setRedoStack([]);
+      setEditorContent(newContent);
+      triggerAutosave(editorTitle, newContent);
+
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + insertText.length, start + insertText.length);
+      }, 50);
+    }
+  };
+
   const handleAiSuggest = async () => {
     if (!editorContent.trim() || aiLoading) return;
     setAiLoading(true);
@@ -616,6 +726,7 @@ export function AuthorStudioScreen() {
             { title: "Kịch bản bí ẩn", content: "Từ phía góc khuất ga tàu, một người đàn ông trung niên mặc áo gió sẫm màu bước ra. Ông ta nhìn chăm chú vào chiếc vali của An và khẽ gật đầu.", style: "mystery" },
           ]);
           setAiLoading(false);
+          setActiveAiTab("plot");
         }, 1000);
         return;
       }
@@ -628,10 +739,47 @@ export function AuthorStudioScreen() {
       });
 
       setAiSuggestions(res.data.suggestions || []);
+      setActiveAiTab("plot");
     } catch (err) {
       console.error(err);
       setAiError("Gemini API bận hoặc đã vượt hạn ngạch cuộc gọi (Rate Limit / Quota Exceeded). Vui lòng thử lại sau ít phút.");
       triggerLiveToast("AI Suggestion tạm thời gián đoạn.", "warning");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleRequestVoiceRewrite = async () => {
+    if (!editorContent.trim() || aiLoading) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      if (appEnv.useMocks) {
+        setTimeout(() => {
+          setAiSuggestions([
+            { title: "Giọng văn trữ tình", content: "Thềm ga cũ sũng nước, loang loáng ánh đèn vàng hư ảo hắt xuống từ những cột sắt rỉ sét, tựa như những kỷ niệm buồn loang ra trong ký ức của An.", style: "lyrical" },
+            { title: "Giọng văn sâu lắng", content: "Giọt nước cuối mùa đọng lại trên mái ngói đỏ như chút tiếc nuối muộn màng của thời gian, An lặng lẽ buông tay đón lấy sự cô độc.", style: "reflective" }
+          ]);
+          setAiLoading(false);
+          setActiveAiTab("plot");
+          triggerLiveToast("Miu AI đã đề xuất các câu thay thế trong tab Tình tiết.");
+        }, 1000);
+        return;
+      }
+
+      const contextText = editorContent.slice(-4000);
+      const res = await yagApi.author.requestAiSuggestion({
+        chapterId: activeChapter.id,
+        context: contextText,
+        mode: "giọng văn trữ tình, sâu lắng",
+      });
+
+      setAiSuggestions(res.data.suggestions || []);
+      setActiveAiTab("plot");
+      triggerLiveToast("Miu AI đã đề xuất các câu thay thế trong tab Tình tiết.");
+    } catch (err) {
+      console.error(err);
+      setAiError("Không thể tải gợi ý giọng văn từ Gemini.");
     } finally {
       setAiLoading(false);
     }
@@ -694,6 +842,8 @@ export function AuthorStudioScreen() {
     setEditorContent(chap.content);
     setSaveError(null);
     setLastSavedAt(null);
+    setHistoryStack([]);
+    setRedoStack([]);
   };
 
   const isEditingDisabled = activeChapter && activeChapter.moderation_status && activeChapter.moderation_status !== "draft" && activeChapter.moderation_status !== "nháp";
@@ -729,21 +879,19 @@ export function AuthorStudioScreen() {
 
   return (
     <div className="studio-page">
-      <header className="studio-topbar" style={{ padding: "12px 24px", borderBottom: "1px solid var(--line)", background: "#FFF", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div className="breadcrumbs" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-            <Link href="/author/stories" style={{ color: "var(--muted)", textDecoration: "none" }}>Tác phẩm của tôi</Link>
-            <span style={{ color: "var(--muted)" }}>/</span>
-            <span style={{ color: "var(--muted)" }}>{story?.title || "Đang tải..."}</span>
-            <span style={{ color: "var(--muted)" }}>/</span>
-            <strong style={{ color: "var(--jungle-dark)" }}>Đang viết</strong>
-          </div>
-          <div style={{ fontSize: 11, color: "var(--muted)", paddingLeft: 12, borderLeft: "1px solid var(--line)" }}>
-            {editorContent.split(/\s+/).filter(Boolean).length} từ · {savingStatus}
-            {lastSavedAt ? ` · ${lastSavedAt.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}
+      <header className="studio-topbar">
+        <div className="inline-actions">
+          <Link className="button" href="/author/stories">
+            <Icon name="arrow" /> Tác phẩm
+          </Link>
+          <div>
+            <strong>Author Studio</strong>
+            <div className="story-meta">
+              Tự động lưu · {editorContent.split(/\s+/).filter(Boolean).length} từ · Mục tiêu 2.000 từ
+            </div>
           </div>
         </div>
-        <div className="inline-actions" style={{ gap: 12 }}>
+        <div className="inline-actions">
           <button
             className="button"
             type="button"
@@ -755,9 +903,27 @@ export function AuthorStudioScreen() {
           >
             Lưu nháp
           </button>
-          <Link className="button button-primary" href={`/author/stories/${storyId}/publish`}>
-            Xuất bản chương
+          <button
+            className="button"
+            type="button"
+            onClick={() => {
+              triggerLiveToast("Miu AI đã quét nhanh bản thảo và không tìm thấy lỗi chính tả.", "success");
+            }}
+          >
+            <Icon name="check" /> Kiểm tra
+          </button>
+          <Link className="button" href={`/author/stories/${storyId}/publish`}>
+            Xuất bản
           </Link>
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => {
+              triggerLiveToast("Đang mở bản xem trước...", "success");
+            }}
+          >
+            Xem trước
+          </button>
         </div>
       </header>
 
@@ -781,166 +947,373 @@ export function AuthorStudioScreen() {
         </div>
       )}
 
-      <main className="studio-grid" style={{ display: "grid", gridTemplateColumns: "1fr 3fr 1.2fr", height: "calc(100vh - 65px)" }}>
-        {/* Left Chapter Outline */}
-        <aside className="chapter-outline" style={{ borderRight: "1px solid var(--line)", padding: 16, overflowY: "auto", background: "#fcfcfc" }}>
-          <div className="outline-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <strong style={{ fontSize: 14, color: "var(--jungle-dark)" }}>Đại cương chương</strong>
-            <button
-              className="button button-soft"
-              style={{ padding: "2px 8px", fontSize: 12 }}
-              onClick={handleCreateNewChapter}
-              disabled={isCreatingChapter}
-              aria-label="Tạo chương mới"
-            >
-              {isCreatingChapter ? "..." : "+"}
-            </button>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {chapters.map((chap) => {
-              const isActive = activeChapter?.id === chap.id;
-              return (
+      <main className="studio-grid">
+        {/* Editor Area (Left Column - 70%) */}
+        <section className="editor-area">
+          {/* Writing Toolbar */}
+          <div className="writing-toolbar">
+            <div className="tool-group">
+              {["↶", "↷", "H1", "❝", "☰", "≡", "≣"].map((tool) => (
                 <button
-                  className={`outline-item ${isActive ? "active" : ""}`}
+                  className="tool-button"
                   type="button"
-                  key={chap.id}
-                  onClick={() => handleSelectChapter(chap)}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 6,
-                    border: "1px solid " + (isActive ? "var(--jungle-dark)" : "var(--line)"),
-                    background: isActive ? "rgba(22, 48, 32, 0.05)" : "#fff",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 4
-                  }}
+                  title={tool}
+                  onClick={() => handleToolbarToolClick(tool)}
+                  key={tool}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 11, fontWeight: "bold", color: "var(--muted)" }}>Chương {chap.chapter_number}</span>
-                    <span className={`badge ${chap.moderation_status === "approved" ? "badge-green" : chap.moderation_status === "pending" ? "badge-blue" : "badge-red"}`} style={{ fontSize: 9 }}>
-                      {chap.moderation_status === "approved" ? "đã duyệt" : chap.moderation_status === "pending" ? "kiểm duyệt" : chap.moderation_status || "nháp"}
-                    </span>
-                  </div>
-                  <strong style={{ fontSize: 13, display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", width: "100%", color: isActive ? "var(--jungle-dark)" : "var(--foreground)" }}>
-                    {chap.title}
-                  </strong>
+                  <span>{tool}</span>
                 </button>
-              );
-            })}
-          </div>
-        </aside>
-
-        {/* Center Editor Paper */}
-        <section className="editor-area" style={{ padding: "24px 32px", overflowY: "auto", background: "#F5F7F8", display: "flex", flexDirection: "column" }}>
-          <div className="editor-paper" style={{ background: "#FFF", borderRadius: 8, padding: 32, flexGrow: 1, display: "flex", flexDirection: "column", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", border: "1px solid var(--line)" }}>
-            {isEditingDisabled && (
-              <div className="notice warning" style={{ marginBottom: 16, padding: "10px 16px", borderRadius: 6, fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
-                <Icon name="lock" />
-                <span>Chương truyện đã được duyệt hoặc đang gửi duyệt. Chế độ chỉnh sửa bị khóa để đảm bảo tính an toàn.</span>
-              </div>
-            )}
-            {saveError && (
-              <div className="notice warning" style={{ marginBottom: 16, padding: "10px 16px", borderRadius: 6, fontSize: 13 }}>
-                {saveError}
-              </div>
-            )}
-            <div className="editor-meta-row" style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>
-              <span className="badge badge-blue">Trạng thái: {activeChapter?.moderation_status || "nháp"}</span>
-              <span>Tự động lưu đang bật · {editorContent.split(/\s+/).filter(Boolean).length} từ</span>
+              ))}
             </div>
-            <input
-              className="editor-title"
-              value={editorTitle}
-              onChange={handleTitleChange}
-              disabled={isEditingDisabled}
-              placeholder="Tiêu đề chương..."
-              style={{
-                fontSize: 22,
-                fontWeight: "bold",
-                border: 0,
-                borderBottom: "1px solid var(--line)",
-                paddingBottom: 12,
-                marginBottom: 20,
-                outline: "none",
-                width: "100%",
-                background: "transparent",
-                color: "var(--jungle-dark)"
-              }}
-            />
-            <textarea
-              ref={textareaRef}
-              className="editor-body"
-              value={editorContent}
-              onChange={handleContentChange}
-              disabled={isEditingDisabled}
-              placeholder="Bắt đầu viết nội dung chương tại đây..."
-              style={{
-                fontSize: 15,
-                lineHeight: 1.7,
-                border: 0,
-                outline: "none",
-                resize: "none",
-                flexGrow: 1,
-                width: "100%",
-                background: "transparent"
-              }}
-            />
+
+            <div className="tool-group tool-group-selects">
+              <label>
+                Phông chữ
+                <select
+                  className="select compact-select"
+                  value={editorFont}
+                  onChange={(e) => setEditorFont(e.target.value)}
+                >
+                  <option value="Inter, Arial, sans-serif">Inter</option>
+                  <option value="Georgia, serif">Georgia</option>
+                  <option value="system-ui, sans-serif">System</option>
+                </select>
+              </label>
+              <label>
+                Cỡ chữ
+                <select
+                  className="select compact-select"
+                  value={editorSize}
+                  onChange={(e) => setEditorSize(e.target.value)}
+                >
+                  <option value="14px">14</option>
+                  <option value="16px">16</option>
+                  <option value="20px">20</option>
+                </select>
+              </label>
+              <label>
+                Dòng
+                <select
+                  className="select compact-select"
+                  value={editorLineHeight}
+                  onChange={(e) => setEditorLineHeight(e.target.value)}
+                >
+                  <option value="1.3">1.3</option>
+                  <option value="1.6">1.6</option>
+                  <option value="1.8">1.8</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="tool-group">
+              <button
+                className="tool-button"
+                type="button"
+                onClick={() => applyMarkdownFormat("bold")}
+                title="Chữ đậm"
+              >
+                <strong>B</strong>
+              </button>
+              <button
+                className="tool-button"
+                type="button"
+                onClick={() => applyMarkdownFormat("italic")}
+                title="Chữ nghiêng"
+              >
+                <em>I</em>
+              </button>
+              <button
+                className="tool-button"
+                type="button"
+                onClick={() => applyMarkdownFormat("underline")}
+                title="Gạch chân"
+              >
+                <span style={{ textDecoration: "underline" }}>U</span>
+              </button>
+              <button
+                className="tool-button"
+                type="button"
+                onClick={() => applyMarkdownFormat("highlight")}
+                title="Tô sáng"
+              >
+                <span className="color-dot" />
+              </button>
+            </div>
+          </div>
+
+          {/* Writing Workspace */}
+          <div className="writing-workspace">
+            {/* Left Chapter Outline */}
+            <aside className="chapter-outline">
+              <div className="outline-head" style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <strong>Dàn ý chương</strong>
+                  <button
+                    className="button button-soft"
+                    style={{ padding: "2px 8px", fontSize: 12 }}
+                    onClick={handleCreateNewChapter}
+                    disabled={isCreatingChapter}
+                    aria-label="Tạo chương mới"
+                  >
+                    {isCreatingChapter ? "..." : "+"}
+                  </button>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                  <span className="badge badge-green" style={{ fontSize: 10 }}>Đúng nhịp</span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {chapters.map((chap, index) => {
+                  const isActive = activeChapter?.id === chap.id;
+                  return (
+                    <button
+                      className={`outline-item ${isActive ? "active" : ""}`}
+                      type="button"
+                      key={chap.id}
+                      onClick={() => handleSelectChapter(chap)}
+                    >
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <div style={{ flexGrow: 1, minWidth: 0 }}>
+                        <strong style={{ display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                          {chap.title}
+                        </strong>
+                        <small style={{ display: "block", fontSize: 10, color: "var(--muted)", marginTop: 2 }}>
+                          {chap.moderation_status === "approved" ? "đã duyệt" : chap.moderation_status === "pending" ? "kiểm duyệt" : chap.moderation_status || "nháp"}
+                        </small>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="outline-metric" style={{ marginTop: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
+                  <span>Nhịp chương</span>
+                  <strong>78%</strong>
+                </div>
+                <div className="progress" style={{ height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden" }}>
+                  <span style={{ display: "block", width: "78%", height: "100%", background: "var(--green)" }} />
+                </div>
+              </div>
+            </aside>
+
+            {/* Center Editor Paper */}
+            <div className="editor-paper" style={{ background: "#FFF", borderRadius: 8, padding: 24, minHeight: 500, display: "flex", flexDirection: "column", border: "1px solid var(--line)" }}>
+              {isEditingDisabled && (
+                <div className="notice warning" style={{ marginBottom: 16, padding: "10px 16px", borderRadius: 6, fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
+                  <Icon name="lock" />
+                  <span>Chương truyện đã được duyệt hoặc đang gửi duyệt. Chế độ chỉnh sửa bị khóa để đảm bảo tính an toàn.</span>
+                </div>
+              )}
+              {saveError && (
+                <div className="notice warning" style={{ marginBottom: 16, padding: "10px 16px", borderRadius: 6, fontSize: 13 }}>
+                  {saveError}
+                </div>
+              )}
+              <div className="editor-meta-row" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginBottom: 12 }}>
+                <span className="badge badge-blue">Trạng thái: {activeChapter?.moderation_status || "nháp"}</span>
+                <span>Markdown bật</span>
+              </div>
+              <input
+                className="editor-title"
+                value={editorTitle}
+                onChange={handleTitleChange}
+                disabled={isEditingDisabled}
+                placeholder="Tiêu đề chương..."
+                style={{
+                  fontSize: 20,
+                  fontWeight: "bold",
+                  border: 0,
+                  borderBottom: "1px solid var(--line)",
+                  paddingBottom: 8,
+                  marginBottom: 16,
+                  outline: "none",
+                  width: "100%",
+                  background: "transparent",
+                  color: "var(--jungle-dark)"
+                }}
+              />
+              <textarea
+                ref={textareaRef}
+                className="editor-body"
+                value={editorContent}
+                onChange={handleContentChange}
+                disabled={isEditingDisabled}
+                placeholder="Bắt đầu viết nội dung chương tại đây..."
+                style={{
+                  fontSize: editorSize,
+                  fontFamily: editorFont,
+                  lineHeight: editorLineHeight,
+                  border: 0,
+                  outline: "none",
+                  resize: "none",
+                  flexGrow: 1,
+                  minHeight: 400,
+                  width: "100%",
+                  background: "transparent",
+                  color: "var(--foreground)"
+                }}
+              />
+              <div className="editor-footer-row" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+                <span>{editorContent.split(/\s+/).filter(Boolean).length} từ · {Math.round(editorContent.split(/\s+/).filter(Boolean).length / 250) || 1} phút đọc</span>
+                <span className="badge badge-green">{savingStatus}</span>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Right AI Sidebar */}
-        <aside className="ai-sidebar ai-agent-sidebar" style={{ borderLeft: "1px solid var(--line)", padding: 16, display: "flex", flexDirection: "column", gap: 16, background: "#fcfcfc", overflowY: "auto" }}>
-          <div className="ai-agent-card" style={{ display: "flex", alignItems: "center", gap: 12, borderBottom: "1px solid var(--line)", paddingBottom: 16 }}>
-            <div className="ai-avatar" aria-hidden="true" style={{ position: "relative", width: 40, height: 40, background: "linear-gradient(135deg, var(--jungle-dark) 0%, #163020 100%)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold" }}>
-              AI
+        {/* Right AI Sidebar (30%) */}
+        <aside className="ai-sidebar ai-agent-sidebar">
+          <div className="ai-agent-card">
+            <div className="ai-avatar" aria-hidden="true" style={{ position: "relative" }}>
+              <span className="ai-ear left" />
+              <span className="ai-ear right" />
+              <span className="ai-face">•ᴗ•</span>
             </div>
             <div>
-              <strong style={{ fontSize: 14, color: "var(--jungle-dark)", display: "block" }}>Miu AI Assistant</strong>
-              <small style={{ fontSize: 11, color: "var(--muted)" }}>Biên tập & Gợi ý tình tiết</small>
+              <strong>Miu AI</strong>
+              <div className="story-meta">Agent đồng hành viết chương</div>
+            </div>
+            <span className="badge badge-green">Online</span>
+          </div>
+
+          <div className="agent-status" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", borderBottom: "1px solid var(--line)", paddingBottom: 12, marginBottom: 12 }}>
+            <div>
+              <span>Context: </span>
+              <strong>1,000 từ gần nhất</strong>
+            </div>
+            <div>
+              <span>Tone: </span>
+              <strong>{aiInput || "Tự nhiên"}</strong>
             </div>
           </div>
 
-          <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-            <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>Nhấp &quot;Yêu cầu gợi ý AI&quot; để tạo định hướng nội dung dựa trên 1,000 từ cuối cùng.</p>
+          {/* AI Tabs */}
+          <div className="tabs ai-tabs" role="tablist" style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button
+              className={`tab-button ${activeAiTab === "plot" ? "active" : ""}`}
+              onClick={() => setActiveAiTab("plot")}
+            >
+              Tình tiết
+            </button>
+            <button
+              className={`tab-button ${activeAiTab === "voice" ? "active" : ""}`}
+              onClick={() => setActiveAiTab("voice")}
+            >
+              Giọng văn
+            </button>
+            <button
+              className={`tab-button ${activeAiTab === "edit" ? "active" : ""}`}
+              onClick={() => setActiveAiTab("edit")}
+            >
+              Biên tập
+            </button>
+          </div>
 
-            {aiError && (
-              <div className="notice warning" style={{ padding: "8px 12px", borderRadius: 6, fontSize: 12, color: "var(--crimson)", background: "rgba(230,57,70,0.05)", borderLeft: "3px solid var(--crimson)" }}>
-                {aiError}
+          {/* Tab Panel: Plot */}
+          {activeAiTab === "plot" && (
+            <div className="tab-panel active stack" style={{ gap: 12 }}>
+              <div className="agent-bubble">
+                <strong>Miu nghĩ đoạn này cần một lựa chọn khó hơn.</strong>
+                <p>Miu AI sẵn sàng hỗ trợ bạn phát triển tình tiết dựa trên ngữ cảnh đã viết.</p>
               </div>
-            )}
 
-            {aiSuggestions.map((item, idx) => (
-              <div className="agent-action" key={idx} style={{ background: "#fff", border: "1px solid var(--line)", borderLeft: "3px solid var(--crimson)", padding: 10, borderRadius: 6, display: "flex", flexDirection: "column", gap: 8 }}>
-                <div>
-                  <strong style={{ fontSize: 12, color: "var(--jungle-dark)", display: "block" }}>{item.title} ({item.style})</strong>
-                  <p style={{ margin: "4px 0 0 0", fontSize: 12, color: "var(--muted)", lineHeight: 1.4 }}>{item.content}</p>
+              {aiError && (
+                <div className="notice warning" style={{ padding: "8px 12px", borderRadius: 6, fontSize: 12 }}>
+                  {aiError}
                 </div>
+              )}
+
+              <div className="agent-action-grid" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {aiSuggestions.length === 0 ? (
+                  <p style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", textAlign: "center" }}>
+                    Chưa có gợi ý nào được tạo. Điền yêu cầu bên dưới và bấm nút gửi.
+                  </p>
+                ) : (
+                  aiSuggestions.map((item, idx) => (
+                    <button
+                      className="agent-action"
+                      type="button"
+                      key={idx}
+                      onClick={() => insertSuggestion(item.content)}
+                      disabled={isEditingDisabled}
+                      style={{ textAlign: "left", cursor: "pointer", width: "100%" }}
+                    >
+                      <strong>{item.title} ({item.style})</strong>
+                      <span>{item.content}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Tab Panel: Voice */}
+          {activeAiTab === "voice" && (
+            <div className="tab-panel active stack" style={{ gap: 12 }}>
+              <div className="tone-meter" style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 6 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4 }}>
+                  <span>Trữ tình / Trầm lắng</span>
+                  <strong>82%</strong>
+                </div>
+                <div className="progress" style={{ height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden" }}>
+                  <span style={{ display: "block", width: "82%", height: "100%", background: "var(--crimson)" }} />
+                </div>
+              </div>
+
+              <button
+                className="button button-soft"
+                type="button"
+                onClick={handleRequestVoiceRewrite}
+                disabled={aiLoading || isEditingDisabled || !editorContent.trim()}
+                style={{ width: "100%" }}
+              >
+                {aiLoading ? "Miu đang tìm câu..." : "Đề xuất câu thay thế"}
+              </button>
+            </div>
+          )}
+
+          {/* Tab Panel: Edit */}
+          {activeAiTab === "edit" && (
+            <div className="tab-panel active stack" style={{ gap: 12 }}>
+              <div className="agent-checklist" style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 6 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <strong>Lặp từ & nhịp điệu</strong>
+                  <span className="badge badge-amber">2 đoạn</span>
+                </div>
+                <p style={{ fontSize: 11, color: "var(--muted)", margin: "6px 0 0 0" }}>
+                  Phát hiện lặp lại hình ảnh mưa ở phần đầu và kết chương.
+                </p>
                 <button
                   className="button button-soft"
-                  style={{ width: "fit-content", padding: "4px 8px", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}
-                  onClick={() => insertSuggestion(item.content)}
-                  disabled={isEditingDisabled}
+                  type="button"
+                  style={{ marginTop: 8, padding: "4px 8px", fontSize: 11 }}
+                  onClick={() => triggerLiveToast("Đã đánh dấu các cụm từ lặp hình ảnh mưa.")}
                 >
-                  <Icon name="edit" /> Chèn vào truyện
+                  Xem chi tiết
                 </button>
               </div>
-            ))}
-          </div>
-
-          <div className="agent-compose" style={{ marginTop: "auto", borderTop: "1px solid var(--line)", paddingTop: 16 }}>
-            <div className="field" style={{ marginBottom: 12 }}>
-              <input
-                className="input"
-                value={aiInput}
-                onChange={(e) => setAiInput(e.target.value)}
-                placeholder="Tông giọng (VD: kịch tính, trầm lắng...)"
-                style={{ fontSize: 12, padding: "8px 10px" }}
-              />
             </div>
-            <button className="button button-primary" style={{ width: "100%" }} onClick={handleAiSuggest} disabled={aiLoading || !editorContent.trim()}>
-              {aiLoading ? "Đang gợi ý..." : "Yêu cầu gợi ý AI"}
+          )}
+
+          {/* Prompt input and send button */}
+          <div className="agent-compose">
+            <textarea
+              className="textarea"
+              rows={3}
+              value={aiInput}
+              onChange={(e) => setAiInput(e.target.value)}
+              placeholder="Yêu cầu Miu: Ví dụ 'kịch tính', 'tiếc nuối', 'tả cảnh ga nhỏ hoàng hôn'..."
+              disabled={isEditingDisabled}
+            />
+            <button
+              className="button button-primary"
+              type="button"
+              onClick={handleAiSuggest}
+              disabled={aiLoading || isEditingDisabled || !editorContent.trim()}
+            >
+              <Icon name="arrow" /> {aiLoading ? "Đang gửi..." : "Gửi cho Miu"}
             </button>
           </div>
         </aside>

@@ -149,17 +149,20 @@ def readiness_check():
     except Exception as exc:
         checks["redis"] = f"error: {exc.__class__.__name__}"
 
-    rabbit_connection = None
-    try:
-        rabbit_connection = get_rabbitmq_connection()
-        checks["rabbitmq"] = "ok"
-    except pika.exceptions.AMQPError as exc:
-        checks["rabbitmq"] = f"error: {exc.__class__.__name__}"
-    except Exception as exc:
-        checks["rabbitmq"] = f"error: {exc.__class__.__name__}"
-    finally:
-        if rabbit_connection and not rabbit_connection.is_closed:
-            rabbit_connection.close()
+    if settings.QUEUE_PROVIDER == "rabbitmq":
+        rabbit_connection = None
+        try:
+            rabbit_connection = get_rabbitmq_connection()
+            checks["rabbitmq"] = "ok"
+        except pika.exceptions.AMQPError as exc:
+            checks["rabbitmq"] = f"error: {exc.__class__.__name__}"
+        except Exception as exc:
+            checks["rabbitmq"] = f"error: {exc.__class__.__name__}"
+        finally:
+            if rabbit_connection and not rabbit_connection.is_closed:
+                rabbit_connection.close()
+    else:
+        checks["rabbitmq"] = f"ok (skipped for {settings.QUEUE_PROVIDER})"
 
     status_value = "ok" if all(value == "ok" for value in checks.values()) else "degraded"
     return {"status": status_value, "checks": checks}

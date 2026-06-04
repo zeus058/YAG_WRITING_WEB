@@ -237,7 +237,24 @@ export const yagApi = {
   },
 
   admin: {
+    stats: () => apiFetch("/api/v1/admin/stats"),
+    revenueSeries: (range: "week" | "month" | "quarter" = "month") =>
+      apiFetch<{ range: string; series: any[] }>(`/api/v1/admin/revenue-series?range=${range}`),
+    scheduleAlerts: () => apiFetch<any[]>("/api/v1/admin/schedule-alerts"),
+    runScheduleScan: () =>
+      apiFetch("/api/v1/admin/schedule-scan", {
+        method: "POST",
+      }),
+    auditLogs: () => apiFetch<any[]>("/api/v1/admin/audit-logs"),
     moderationQueue: () => apiFetch("/api/v1/admin/moderation"),
+    overrideModeration: (
+      chapterId: string,
+      body: { decision: "approved" | "rejected" | "flagged"; reason: string; violation_category?: string | null; confidence_score?: number }
+    ) =>
+      apiFetch(`/api/v1/admin/moderation/${chapterId}/override`, {
+        method: "POST",
+        body,
+      }),
     reviewContent: (reviewId: string, body: { decision: "approved" | "rejected"; reason: string }) =>
       apiFetch(`/api/v1/admin/moderation/${reviewId}`, {
         method: "POST",

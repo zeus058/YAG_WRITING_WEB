@@ -6,7 +6,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 
 export default function AuthorWorksPage() {
   return (
-    <RequireAuth allowedRoles={["author"]}>
+    <RequireAuth allowedRoles={["reader", "author"]}>
       <AuthorWorksScreen />
     </RequireAuth>
   );

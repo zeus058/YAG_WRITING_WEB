@@ -218,6 +218,22 @@ export const yagApi = {
       }>(`/api/v1/payments/transactions/${vnpTxnRef}`, {
         method: "GET",
       }),
+    verifyVnpay: (queryParams: Record<string, string>) =>
+      apiFetch<{
+        success: boolean;
+        transaction_id?: string;
+        plan_name?: string;
+        amount?: number;
+        premium_until?: string;
+        message: string;
+      }>("/api/v1/payments/vnpay/verify", {
+        method: "POST",
+        body: queryParams,
+      }),
+    getTransactionHistory: () =>
+      apiFetch<any[]>("/api/v1/payments/history", {
+        method: "GET",
+      }),
   },
 
   admin: {

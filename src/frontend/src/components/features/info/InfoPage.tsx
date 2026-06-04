@@ -42,7 +42,7 @@ const infoPages = {
     focusBody:
       "YAG định hình là không gian văn học mạng thế hệ mới, ứng dụng AI hỗ trợ viết lách thông minh, bảo vệ bản quyền tối đa và tối ưu hóa doanh thu chia sẻ bền vững cho tác giả.",
     facts: ["100K+ Độc giả", "Gợi ý AI thông minh", "Kết nối trực tiếp"],
-    primaryAction: { label: "Bắt đầu đọc", href: "/dashboard" },
+    primaryAction: { label: "Bắt đầu đọc", href: "/home" },
     sections: [
       {
         title: "Không gian Độc giả",
@@ -108,7 +108,7 @@ const infoPages = {
     focusBody:
       "Mọi dữ liệu cá nhân của người dùng trên YAG đều được mã hóa bằng chuẩn bảo mật tiên tiến nhất. Chúng tôi cam kết không bao giờ chia sẻ thông tin cá nhân, lịch sử đọc hay lịch sử thanh toán của bạn cho bất kỳ bên thứ ba nào.",
     facts: ["Mã hóa SSL/TLS", "Quyền kiểm soát dữ liệu", "Bảo mật tuyệt đối"],
-    primaryAction: { label: "Cài đặt tài khoản", href: "/account-settings" },
+    primaryAction: { label: "Cài đặt tài khoản", href: "/settings" },
     sections: [
       {
         title: "Thu thập Dữ liệu",

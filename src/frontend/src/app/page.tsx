@@ -267,7 +267,7 @@ export default function LandingPage() {
                 </svg>
                 Bắt đầu miễn phí
               </Link>
-              <Link className="btn-ghost" href="/author-studio">
+              <Link className="btn-ghost" href="/author/stories">
                 Tôi muốn viết truyện
                 <svg
                   style={{
@@ -1625,7 +1625,7 @@ export default function LandingPage() {
               <div className="footer-col-title">Khám phá</div>
               <ul className="footer-links">
                 <li>
-                  <Link href="/dashboard">Trang chủ đọc</Link>
+                  <Link href="/home">Trang chủ đọc</Link>
                 </li>
                 <li>
                   <Link href="/discover">Khám phá truyện</Link>
@@ -1642,16 +1642,16 @@ export default function LandingPage() {
               <div className="footer-col-title">Tác giả</div>
               <ul className="footer-links">
                 <li>
-                  <Link href="/author-works">Tác phẩm của tôi</Link>
+                  <Link href="/author/stories">Tác phẩm của tôi</Link>
                 </li>
                 <li>
-                  <Link href="/author-studio">Không gian viết</Link>
+                  <Link href="/author/stories/d6a2f7c0-2f9b-449e-ba23-9502e6c7d5bd/edit">Không gian viết</Link>
                 </li>
                 <li>
-                  <Link href="/publish-chapter">Xuất bản chương</Link>
+                  <Link href="/author/stories/d6a2f7c0-2f9b-449e-ba23-9502e6c7d5bd/publish">Xuất bản chương</Link>
                 </li>
                 <li>
-                  <Link href="/schedule-commitment">Lịch đăng & cam kết</Link>
+                  <Link href="/author/schedule">Lịch đăng & cam kết</Link>
                 </li>
               </ul>
             </div>
@@ -1678,7 +1678,7 @@ export default function LandingPage() {
               © 2026 YAG Writing Web · HCMUS Intro2SE · Nhóm 1 · Prototype học thuật
             </div>
             <div className="footer-socials">
-              <Link className="social-btn" href="/profile" aria-label="Hồ sơ mẫu">
+              <Link className="social-btn" href="/profile/me" aria-label="Hồ sơ cá nhân">
                 <svg viewBox="0 0 24 24">
                   <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
                 </svg>

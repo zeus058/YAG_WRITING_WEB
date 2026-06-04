@@ -399,7 +399,7 @@ function AuthPageInner() {
               </div>
             </div>
 
-            <div className="tabs" role="tablist" aria-label="Chọn hình thức xác thực">
+            <div className="tabs auth-tabs" role="tablist" aria-label="Chọn hình thức xác thực">
               <button
                 className={`tab-button ${activeTab === "login" ? "active" : ""}`}
                 type="button"
@@ -473,7 +473,7 @@ function AuthPageInner() {
                     Lưu thông tin đăng nhập trên thiết bị này
                   </label>
 
-                  <div className="inline-actions" style={{ justifyContent: "space-between" }}>
+                  <div className="inline-actions auth-action-row" style={{ justifyContent: "space-between" }}>
                     <Link className="button" href="/auth/recovery">
                       Quên mật khẩu
                     </Link>
@@ -586,7 +586,7 @@ function AuthPageInner() {
                   />
                   <ErrorLine id="registerConfirmPasswordError" message={registerTouched.registerConfirmPassword ? registerErrors.registerConfirmPassword : undefined} />
 
-                  <label className={`pill ${registerTouched.terms && registerErrors.terms ? "input-invalid" : ""}`}>
+                  <label className={`auth-terms-row ${registerTouched.terms && registerErrors.terms ? "input-invalid" : ""}`}>
                     <input
                       type="checkbox"
                       checked={agreeTerms}

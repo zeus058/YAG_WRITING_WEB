@@ -24,21 +24,21 @@ type AppShellProps = {
 function topbarContext(role: Role, isPremium: boolean = false) {
   if (role === "author") {
     return [
-      { icon: "calendar" as IconName, text: "Lịch đăng tự động" },
-      { icon: "check" as IconName, text: "Tự động lưu" },
+      { icon: "calendar" as IconName, text: "Lịch đăng tự động", href: "/author/schedule" },
+      { icon: "check" as IconName, text: "Tự động lưu", href: "#" },
     ];
   }
 
   if (role === "admin") {
     return [
-      { icon: "shield" as IconName, text: "Bảng kiểm duyệt AI" },
-      { icon: "chart" as IconName, text: "Realtime stats" },
+      { icon: "shield" as IconName, text: "Bảng kiểm duyệt AI", href: "/admin/moderation" },
+      { icon: "chart" as IconName, text: "Realtime stats", href: "/admin" },
     ];
   }
 
   return [
-    { icon: "book" as IconName, text: isPremium ? "Gói Premium" : "Gói Free" },
-    { icon: "book" as IconName, text: "Truyện đang đọc" },
+    { icon: "book" as IconName, text: isPremium ? "Gói Premium" : "Gói Free", href: "/membership" },
+    { icon: "book" as IconName, text: "Truyện đang đọc", href: "/library" },
   ];
 }
 
@@ -69,6 +69,7 @@ const triggerLiveToast = (message: string) => {
 
 export function AppShell({ activeId, actions, children }: AppShellProps) {
   const { user: authUser, logout } = useAuth();
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
   const role = authUser?.role === "admin" ? "admin" : getRoleForPage(activeId);
   const isPremium = authUser?.premium_until ? new Date(authUser.premium_until) > new Date() : false;
@@ -128,6 +129,19 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
     };
   }, [authUser]);
 
+  // Handle outside click to close account menu
+  useEffect(() => {
+    if (!isAccountMenuOpen) return;
+    const handleClose = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".account-menu")) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClose);
+    return () => document.removeEventListener("click", handleClose);
+  }, [isAccountMenuOpen]);
+
   const handleLogout = () => {
     logout();
   };
@@ -174,27 +188,16 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
             );
           })}
         </div>
-        <div className="sidebar-footer">
-          {role === "admin" ? (
-            <>
-              <strong>Ban quản trị YAG</strong>
-              <span>Không gian dành riêng cho đội ngũ điều phối và kiểm duyệt.</span>
-              <Link className={`button admin-test-link active`} href="/admin">
-                <Icon name="shield" />
-                Trang quản trị viên
-              </Link>
-            </>
-          ) : (
-            <>
-              <strong>Trợ giúp & Hỗ trợ</strong>
-              <span>Gặp sự cố thanh toán hay lỗi chương? Hãy liên hệ với chúng tôi.</span>
-              <Link className="button admin-test-link" href="/auth" onClick={handleLogout}>
-                <Icon name="close" />
-                Đăng xuất tài khoản
-              </Link>
-            </>
-          )}
-        </div>
+        {role === "admin" && (
+          <div className="sidebar-footer">
+            <strong>Ban quản trị YAG</strong>
+            <span>Không gian dành riêng cho đội ngũ điều phối và kiểm duyệt.</span>
+            <Link className={`button admin-test-link active`} href="/admin">
+              <Icon name="shield" />
+              Trang quản trị viên
+            </Link>
+          </div>
+        )}
       </aside>
 
       <main className="prototype-main">
@@ -208,10 +211,17 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
           <div className="topbar-actions">
             <div className="topbar-status" aria-label="Thông tin nhanh">
               {topbarContext(role, isPremium).map((item) => (
-                <span className="topbar-status-chip" key={item.text}>
-                  <Icon name={item.icon} />
-                  {item.text}
-                </span>
+                item.href && item.href !== "#" ? (
+                  <Link className="topbar-status-chip" key={item.text} href={item.href}>
+                    <Icon name={item.icon} />
+                    {item.text}
+                  </Link>
+                ) : (
+                  <span className="topbar-status-chip" key={item.text}>
+                    <Icon name={item.icon} />
+                    {item.text}
+                  </span>
+                )
               ))}
             </div>
             <Link className="button icon-button" href="/notifications" aria-label="Thông báo" style={{ position: "relative" }}>
@@ -222,19 +232,73 @@ export function AppShell({ activeId, actions, children }: AppShellProps) {
                 </span>
               )}
             </Link>
-            <Link className="user-chip" href="/settings" aria-label="Thông tin người dùng">
-              <span className="user-avatar" style={{ overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {userDisp.avatarUrl ? (
-                  <img src={userDisp.avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  userDisp.avatar
-                )}
-              </span>
-              <span>
-                <strong>{userDisp.name}</strong>
-                <small>{userDisp.label}</small>
-              </span>
-            </Link>
+            <div className="account-menu">
+              <button
+                className="user-chip account-menu-button"
+                type="button"
+                aria-haspopup="true"
+                aria-expanded={isAccountMenuOpen}
+                onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                aria-label="Thông tin người dùng"
+                style={{ border: 0, padding: "4px 10px 4px 4px", display: "inline-flex", alignItems: "center", gap: 10, background: "#FFFFFF", cursor: "pointer" }}
+              >
+                <span className="user-avatar" style={{ overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {userDisp.avatarUrl ? (
+                    <img src={userDisp.avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    userDisp.avatar
+                  )}
+                </span>
+                <span style={{ textAlign: "left" }}>
+                  <strong>{userDisp.name}</strong>
+                  <small>{userDisp.label}</small>
+                </span>
+              </button>
+              
+              {isAccountMenuOpen && (
+                <div className="account-dropdown">
+                  <div className="account-dropdown-info" style={{ padding: "8px 12px", borderBottom: "1px solid var(--line)", marginBottom: 4 }}>
+                    <div style={{ fontWeight: "bold", fontSize: 13, color: "var(--jungle-dark)", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                      {userDisp.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                      {authUser?.email || authUser?.username || ""}
+                    </div>
+                  </div>
+                  
+                  <Link className="account-dropdown-item" href="/profile/me" onClick={() => setIsAccountMenuOpen(false)}>
+                    <Icon name="user" />
+                    Hồ sơ của tôi
+                  </Link>
+                  
+                  <Link className="account-dropdown-item" href="/settings" onClick={() => setIsAccountMenuOpen(false)}>
+                    <Icon name="settings" />
+                    Cài đặt tài khoản
+                  </Link>
+                  
+                  {authUser?.role !== "admin" && (
+                    role === "reader" ? (
+                      <Link className="account-dropdown-item" href="/author/stories" onClick={() => setIsAccountMenuOpen(false)}>
+                        <Icon name="edit" />
+                        Chuyển sang Author
+                      </Link>
+                    ) : (
+                      <Link className="account-dropdown-item" href="/home" onClick={() => setIsAccountMenuOpen(false)}>
+                        <Icon name="book" />
+                        Chuyển sang Reader
+                      </Link>
+                    )
+                  )}
+                  
+                  <hr />
+                  
+                  <button className="account-dropdown-item logout-btn" type="button" onClick={() => { setIsAccountMenuOpen(false); handleLogout(); }} style={{ background: "transparent", border: 0, cursor: "pointer", width: "100%", textAlign: "left" }}>
+                    <Icon name="close" />
+                    Đăng xuất
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

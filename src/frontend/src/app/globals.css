@@ -1505,3 +1505,15 @@ input::-ms-reveal,
 input::-ms-clear {
   display: none;
 }
+
+/* Accessibility outline styles for focus-visible elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--crimson, #C81C30) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(254, 189, 178, 0.6) !important;
+}

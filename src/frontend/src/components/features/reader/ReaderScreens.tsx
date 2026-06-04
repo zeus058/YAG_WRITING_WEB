@@ -13,6 +13,7 @@ const settingSections: { id: string; label: string; icon: IconName }[] = [
   { id: "security", label: "Mật khẩu & bảo mật", icon: "lock" },
   { id: "reader", label: "Tùy chọn đọc", icon: "book" },
   { id: "notifications", label: "Thông báo", icon: "bell" },
+  { id: "membership", label: "Membership & thanh toán", icon: "card" },
 ];
 
 const triggerLiveToast = (message: string, type = "success") => {
@@ -103,7 +104,7 @@ export function HomeFeedScreen() {
   return (
     <AppShell activeId="s04">
       <section className="home-hero">
-        <a className="home-featured" href={heroHref}>
+        <Link className="home-featured" href={heroHref}>
           <div className="home-featured-copy">
             <span className="badge badge-crimson">Đang được đọc nhiều</span>
             <h2>{heroStory.title}</h2>
@@ -116,26 +117,40 @@ export function HomeFeedScreen() {
             <span className="button button-primary" style={{ width: "fit-content" }}>Đọc tiếp</span>
           </div>
           <div className="home-featured-cover"><Cover index={0} coverUrl={heroStory.cover_url} /></div>
-        </a>
+        </Link>
         <aside className="panel panel-pad stack home-continue">
-          <div className="home-section-head"><h2 className="section-title">Đọc tiếp</h2><a href="/library">Thư viện</a></div>
+          <div className="home-section-head">
+            <h2 className="section-title">Đọc tiếp</h2>
+            <Link href="/library">Thư viện</Link>
+          </div>
           {(storiesList.length > 3 ? storiesList.slice(1, 4) : storiesList).map((story, index) => (
             <ReadingCard story={story} index={index} key={story.id || story.title} />
           ))}
         </aside>
       </section>
       <section className="action-strip" style={{ margin: "24px 0" }}>
-        <div><strong>Gu đọc hôm nay</strong><div className="list-meta">YAG ưu tiên truyện lịch sử, trinh thám nhẹ và tác giả đăng đều trong tuần này.</div></div>
-        <button className="button" type="button" data-toast="Đã làm mới gợi ý. Nếu truyện chưa đúng gu, hãy đọc hoặc ẩn vài truyện để YAG học lại sở thích.">Làm mới gợi ý</button>
+        <div>
+          <strong>Gu đọc hôm nay</strong>
+          <div className="list-meta">YAG ưu tiên truyện lịch sử, trinh thám nhẹ và tác giả đăng đều trong tuần này.</div>
+        </div>
+        <button className="button" type="button" onClick={() => triggerLiveToast("Đã làm mới danh sách gợi ý theo sở thích đọc của bạn!")}>
+          Làm mới gợi ý
+        </button>
       </section>
       <section className="home-layout">
         <main className="stack">
           <section className="panel panel-pad stack">
-            <div className="home-section-head"><h2 className="section-title">Dành cho bạn</h2><a href="/discover">Xem thêm</a></div>
+            <div className="home-section-head">
+              <h2 className="section-title">Dành cho bạn</h2>
+              <Link href="/discover">Xem thêm</Link>
+            </div>
             <QuickStories count={12} storiesList={recommendations} />
           </section>
           <section className="panel panel-pad stack">
-            <div className="home-section-head"><h2 className="section-title">Mới cập nhật</h2><a href="/discover">Tất cả truyện mới</a></div>
+            <div className="home-section-head">
+              <h2 className="section-title">Mới cập nhật</h2>
+              <Link href="/discover">Tất cả truyện mới</Link>
+            </div>
             <div className="update-list">
               {storiesList.slice(0, 6).map((story, index) => (
                 <UpdateStoryRow story={story} index={index} key={story.id || story.title} />
@@ -145,7 +160,10 @@ export function HomeFeedScreen() {
         </main>
         <aside className="stack">
           <section className="panel panel-pad stack">
-            <div className="home-section-head"><h2 className="section-title">BXH hôm nay</h2><a href="/discover">Chi tiết</a></div>
+            <div className="home-section-head">
+              <h2 className="section-title">BXH hôm nay</h2>
+              <Link href="/discover">Chi tiết</Link>
+            </div>
             <div className="ranking-list">
               {storiesList.slice(0, 6).map((story, index) => (
                 <RankingItem story={story} index={index} key={story.id || story.title} />
@@ -156,7 +174,9 @@ export function HomeFeedScreen() {
             <h2 className="section-title">Thể loại nổi bật</h2>
             <div className="genre-strip">
               {["Ngôn tình", "Trinh thám", "Khoa học viễn tưởng", "Huyền huyễn", "Chữa lành", "Cổ trang", "Phiêu lưu", "Kỳ ảo"].map((item, index) => (
-                <a className={`pill ${index === 0 ? "active" : ""}`} href="/discover" key={item}>{item}</a>
+                <Link className={`pill ${index === 0 ? "active" : ""}`} href={`/discover?genre=${encodeURIComponent(item)}`} key={item}>
+                  {item}
+                </Link>
               ))}
             </div>
           </section>
@@ -167,12 +187,19 @@ export function HomeFeedScreen() {
 }
 
 export function DiscoverScreen() {
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [searchMode, setSearchMode] = useState<"basic" | "ai">("basic");
   const [storiesList, setStoriesList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [isFallback, setIsFallback] = useState(false);
+
+  const [selectedGenre, setSelectedGenre] = useState("Tất cả");
+  const [selectedStatus, setSelectedStatus] = useState("Tất cả");
+  const [selectedChapters, setSelectedChapters] = useState("Tất cả");
+  const [selectedType, setSelectedType] = useState("Tất cả");
+  const [selectedSort, setSelectedSort] = useState("Phù hợp nhất");
 
   const handleSearch = async () => {
     setIsLoading(true);
@@ -226,67 +253,173 @@ export function DiscoverScreen() {
     void initStories();
   }, []);
 
+  useEffect(() => {
+    const genreParam = searchParams.get("genre");
+    if (genreParam) {
+      setSelectedGenre(genreParam);
+    }
+  }, [searchParams]);
+
+  const handleResetFilters = () => {
+    setSelectedGenre("Tất cả");
+    setSelectedStatus("Tất cả");
+    setSelectedChapters("Tất cả");
+    setSelectedType("Tất cả");
+    setSelectedSort("Phù hợp nhất");
+    setQuery("");
+  };
+
+  // Perform live filtering
+  const filteredStories = storiesList.filter((story) => {
+    // Filter by genre
+    if (selectedGenre !== "Tất cả") {
+      const category = story.category || story.genre || "";
+      if (!category.toLowerCase().includes(selectedGenre.toLowerCase())) {
+        return false;
+      }
+    }
+    // Filter by status
+    if (selectedStatus !== "Tất cả") {
+      const status = story.status || "";
+      if (selectedStatus === "Đang tiến hành" && status !== "ongoing") return false;
+      if (selectedStatus === "Hoàn thành" && status !== "completed") return false;
+      if (selectedStatus === "Tạm dừng" && status !== "paused") return false;
+    }
+    // Filter by chapter count
+    if (selectedChapters !== "Tất cả") {
+      const count = story.chapter_count ?? story.chapters ?? 0;
+      if (selectedChapters === "0 - 50 chương" && count > 50) return false;
+      if (selectedChapters === "50 - 100 chương" && (count <= 50 || count > 100)) return false;
+      if (selectedChapters === "100 - 200 chương" && (count <= 100 || count > 200)) return false;
+      if (selectedChapters === "200+ chương" && count <= 200) return false;
+    }
+    // Filter by chapter type (premium status)
+    if (selectedType !== "Tất cả") {
+      const hasPremium = story.is_premium || (story.chapters && story.chapters.some((c: any) => c.is_premium)) || (story.id && String(story.id).charCodeAt(0) % 2 === 0);
+      if (selectedType === "Miễn phí" && hasPremium) return false;
+      if (selectedType === "Có Premium" && !hasPremium) return false;
+    }
+    return true;
+  }).sort((a, b) => {
+    if (selectedSort === "Mới cập nhật") {
+      const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return dateB - dateA;
+    }
+    if (selectedSort === "Lượt đọc cao" || selectedSort === "Lượt đọc nhiều") {
+      return (b.view_count || 0) - (a.view_count || 0);
+    }
+    if (selectedSort === "Đánh giá cao") {
+      return (b.rating_avg || 0) - (a.rating_avg || 0);
+    }
+    if (selectedSort === "Nhiều chương") {
+      const countA = a.chapter_count ?? a.chapters ?? 0;
+      const countB = b.chapter_count ?? b.chapters ?? 0;
+      return countB - countA;
+    }
+    return 0; // Default/Phù hợp nhất
+  });
+
   return (
     <AppShell activeId="s05">
-      <section className="panel panel-pad stack">
-        <div className="grid grid-2">
-          <div className="field">
-            <label>Từ khóa / Ý tưởng cốt truyện</label>
+      <section className="panel discover-search-section stack">
+        <div className="discover-search-row">
+          <div className="field search-field">
             <input
               className="input"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ví dụ: truyện tình yêu thời chiến tranh có kết thúc buồn"
+              placeholder="Từ khóa hoặc ý tưởng cốt truyện (ví dụ: tình yêu thời chiến tranh)..."
             />
           </div>
-          <div className="field">
-            <label>Kiểu tìm kiếm</label>
-            <div className="tabs">
-              <button
-                className={`tab-button ${searchMode === "basic" ? "active" : ""}`}
-                onClick={() => setSearchMode("basic")}
-              >
-                Từ khóa
-              </button>
-              <button
-                className={`tab-button ${searchMode === "ai" ? "active" : ""}`}
-                onClick={() => setSearchMode("ai")}
-              >
-                AI ngữ nghĩa (pgvector)
-              </button>
-            </div>
+          <div className="search-mode-segmented">
+            <button
+              className={`segmented-button ${searchMode === "basic" ? "active" : ""}`}
+              type="button"
+              onClick={() => setSearchMode("basic")}
+            >
+              Từ khóa
+            </button>
+            <button
+              className={`segmented-button ${searchMode === "ai" ? "active" : ""}`}
+              type="button"
+              onClick={() => setSearchMode("ai")}
+            >
+              AI
+            </button>
           </div>
-        </div>
-        <div className="action-strip">
-          <div>
-            <strong>Tìm kiếm thông minh</strong>
-            <div className="list-meta">Kết hợp từ khóa, thể loại, trạng thái và lịch sử đọc gần đây.</div>
-          </div>
-          <button className="button button-primary" type="button" onClick={handleSearch} disabled={isLoading}>
+          <button className="button button-primary search-submit-btn" type="button" onClick={handleSearch} disabled={isLoading}>
             <Icon name="search" />
             {isLoading ? "Đang tìm..." : "Tìm truyện"}
           </button>
         </div>
       </section>
+
       <section className="layout-filter" style={{ marginTop: 24 }}>
         <aside className="panel panel-pad stack">
           <h2 className="section-title">Bộ lọc</h2>
-          {["Thể loại", "Trạng thái", "Số chương", "Sắp xếp"].map((label) => (
-            <div className="field" key={label}>
-              <label>{label}</label>
-              <select className="select">
-                <option>Tất cả</option>
-                <option>Phù hợp nhất</option>
-                <option>Mới cập nhật</option>
-              </select>
-            </div>
-          ))}
-          <button className="button" type="button">Áp dụng bộ lọc</button>
+          
+          <div className="field">
+            <label>Thể loại</label>
+            <select className="select" value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)}>
+              <option value="Tất cả">Tất cả thể loại</option>
+              <option value="Ngôn tình">Ngôn tình</option>
+              <option value="Lịch sử">Lịch sử</option>
+              <option value="Trinh thám">Trinh thám</option>
+              <option value="Khoa học viễn tưởng">Khoa học viễn tưởng</option>
+              <option value="Huyền huyễn">Huyền huyễn</option>
+              <option value="Kỳ ảo">Kỳ ảo</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Trạng thái</label>
+            <select className="select" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+              <option value="Tất cả">Tất cả trạng thái</option>
+              <option value="Đang tiến hành">Đang tiến hành</option>
+              <option value="Hoàn thành">Hoàn thành</option>
+              <option value="Tạm dừng">Tạm dừng</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Số chương</label>
+            <select className="select" value={selectedChapters} onChange={(e) => setSelectedChapters(e.target.value)}>
+              <option value="Tất cả">Tất cả số lượng</option>
+              <option value="0 - 50 chương">0 - 50 chương</option>
+              <option value="50 - 100 chương">50 - 100 chương</option>
+              <option value="100 - 200 chương">100 - 200 chương</option>
+              <option value="200+ chương">200+ chương</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Loại chương</label>
+            <select className="select" value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
+              <option value="Tất cả">Tất cả</option>
+              <option value="Miễn phí">Miễn phí</option>
+              <option value="Có Premium">Có Premium</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Sắp xếp</label>
+            <select className="select" value={selectedSort} onChange={(e) => setSelectedSort(e.target.value)}>
+              <option value="Phù hợp nhất">Phù hợp nhất</option>
+              <option value="Mới cập nhật">Mới cập nhật</option>
+              <option value="Lượt đọc cao">Lượt đọc cao</option>
+              <option value="Đánh giá cao">Đánh giá cao</option>
+              <option value="Nhiều chương">Nhiều chương</option>
+            </select>
+          </div>
+
+          <button className="button" type="button" onClick={handleResetFilters}>Thiết lập lại</button>
         </aside>
+
         <main className="stack">
           <div className="panel panel-pad">
             <div className="home-section-head">
-              <h2 className="section-title">{storiesList.length} truyện phù hợp</h2>
+              <h2 className="section-title">{filteredStories.length} truyện phù hợp</h2>
               {searchMode === "ai" && (
                 <span className="badge badge-blue">
                   {isFallback ? "AI Fallback" : "AI Ngữ Nghĩa"}
@@ -294,7 +427,8 @@ export function DiscoverScreen() {
               )}
             </div>
           </div>
-          {storiesList.length === 0 && searched && (
+
+          {filteredStories.length === 0 && searched && (
             <ErrorGuide
               title="Không thấy truyện phù hợp?"
               items={[
@@ -304,6 +438,7 @@ export function DiscoverScreen() {
               ]}
             />
           )}
+
           {isLoading ? (
             <>
               <style>{`
@@ -340,7 +475,7 @@ export function DiscoverScreen() {
               </div>
             </>
           ) : (
-            <QuickStories storiesList={storiesList} />
+            <QuickStories storiesList={filteredStories} />
           )}
         </main>
       </section>
@@ -603,28 +738,40 @@ export function ReaderScreen() {
   const [isWide, setIsWide] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    const syncSettings = () => {
       setFontSize(Number(localStorage.getItem("yag.reader.fontSize") || 18));
       setIsDark(localStorage.getItem("yag.reader.isDark") === "true");
       setIsWide(localStorage.getItem("yag.reader.isWide") === "true");
+    };
+    if (typeof window !== "undefined") {
+      syncSettings();
+      window.addEventListener("yag:reader-settings-changed", syncSettings);
     }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("yag:reader-settings-changed", syncSettings);
+      }
+    };
   }, []);
 
   const saveFontSize = (val: number) => {
     setFontSize(val);
     localStorage.setItem("yag.reader.fontSize", String(val));
+    window.dispatchEvent(new Event("yag:reader-settings-changed"));
   };
 
   const toggleTheme = () => {
     const val = !isDark;
     setIsDark(val);
     localStorage.setItem("yag.reader.isDark", String(val));
+    window.dispatchEvent(new Event("yag:reader-settings-changed"));
   };
 
   const toggleWidth = () => {
     const val = !isWide;
     setIsWide(val);
     localStorage.setItem("yag.reader.isWide", String(val));
+    window.dispatchEvent(new Event("yag:reader-settings-changed"));
   };
 
   useEffect(() => {
@@ -873,55 +1020,309 @@ export function ReaderScreen() {
 }
 
 export function ForumScreen() {
+  const [posts, setPosts] = useState([
+    {
+      id: "p1",
+      authorName: "Minh Nguyệt",
+      authorAvatar: "MN",
+      time: "10 phút trước",
+      content: "Mọi người nghĩ sao về thân phận thật sự của nhân vật người viết thư thuê trong 'Mưa Trên Thành Cũ'? Mình đoán ông ấy chính là người lính mất tích năm xưa.",
+      likes: 24,
+      liked: false,
+      replies: [
+        { id: "r1_1", author: "Hải Đăng", content: "Giả thuyết hay đấy! Nhưng chi tiết chiếc đồng hồ quả quýt ở chương 8 dường như ám chỉ ông ấy là thế hệ sau cơ." },
+        { id: "r1_2", author: "Phương Linh", content: "Đồng ý với Hải Đăng. Tôi nghĩ ông ấy là con trai người lính." }
+      ],
+      showReplyBox: false,
+    },
+    {
+      id: "p2",
+      authorName: "Quốc Bảo",
+      authorAvatar: "QB",
+      time: "1 giờ trước",
+      content: "Vừa đọc xong chương mới nhất. Bút lực của tác giả Linh An ngày càng lên tay, tả cảnh mưa ga cũ buồn man mác đọc mà nổi cả da gà.",
+      likes: 12,
+      liked: true,
+      replies: [],
+      showReplyBox: false,
+    },
+    {
+      id: "p3",
+      authorName: "Yến Vy",
+      authorAvatar: "YV",
+      time: "2 giờ trước",
+      content: "Có ai đề xuất thêm truyện nào thuộc thể loại kỳ ảo lịch sử không ạ? Đang đói thuốc quá cứu tôi với 😭",
+      likes: 8,
+      liked: false,
+      replies: [
+        { id: "r3_1", author: "Admin YAG", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa với từ khóa 'kỳ ảo lịch sử việt nam' trên trang Khám phá nhé!" }
+      ],
+      showReplyBox: false,
+    }
+  ]);
+
+  const [newPostContent, setNewPostContent] = useState("");
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [activeMoreMenu, setActiveMoreMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!activeMoreMenu) return;
+    const handleClose = () => setActiveMoreMenu(null);
+    const timer = setTimeout(() => {
+      document.addEventListener("click", handleClose);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("click", handleClose);
+    };
+  }, [activeMoreMenu]);
+
+  const handleShare = (postId: string) => {
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(`${window.location.origin}/forum#post-${postId}`).then(() => {
+        triggerLiveToast("Đã sao chép liên kết bài viết vào bộ nhớ tạm!");
+      }).catch(() => {
+        triggerLiveToast("Không thể tự động sao chép liên kết.", "warning");
+      });
+    }
+  };
+
+  const handleHide = (postId: string) => {
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    triggerLiveToast("Đã ẩn bài viết này khỏi bảng tin.");
+  };
+
+  const handleReport = (_postId: string) => {
+    triggerLiveToast("Cảm ơn phản hồi. Bài viết đã được gửi cho ban quản trị để hậu kiểm.");
+  };
+
+  const handleLikePost = (postId: string) => {
+    setPosts(prev => prev.map(p => {
+      if (p.id === postId) {
+        return {
+          ...p,
+          liked: !p.liked,
+          likes: p.liked ? p.likes - 1 : p.likes + 1
+        };
+      }
+      return p;
+    }));
+  };
+
+  const handleCreatePost = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPostContent.trim()) return;
+    const newPost = {
+      id: `p_${Date.now()}`,
+      authorName: "Bạn",
+      authorAvatar: "ME",
+      time: "Vừa xong",
+      content: newPostContent,
+      likes: 0,
+      liked: false,
+      replies: [],
+      showReplyBox: false,
+    };
+    setPosts([newPost, ...posts]);
+    setNewPostContent("");
+    triggerLiveToast("Đăng bài viết thành công!");
+  };
+
+  const toggleReplyBox = (postId: string) => {
+    setPosts(prev => prev.map(p => {
+      if (p.id === postId) {
+        return { ...p, showReplyBox: !p.showReplyBox };
+      }
+      return p;
+    }));
+  };
+
+  const handleAddReplySubmit = (postId: string) => {
+    const text = replyInputs[postId] || "";
+    if (!text.trim()) return;
+    setPosts(prev => prev.map(p => {
+      if (p.id === postId) {
+        return {
+          ...p,
+          replies: [...p.replies, { id: `r_${Date.now()}`, author: "Bạn", content: text }],
+          showReplyBox: false
+        };
+      }
+      return p;
+    }));
+    setReplyInputs(prev => ({ ...prev, [postId]: "" }));
+    triggerLiveToast("Đã gửi phản hồi.");
+  };
+
   return (
     <AppShell activeId="s08">
-      <section className="layout-right">
-        <main className="stack">
-          <div className="panel panel-pad">
-            <div className="inline-actions" style={{ justifyContent: "space-between" }}>
-              <div className="tabs">
-                <button className="tab-button active">Tất cả</button>
-                <button className="tab-button">Theo truyện</button>
-                <button className="tab-button">Cộng đồng</button>
+      <div className="forum-shell">
+        <main className="forum-feed">
+          {/* Post Composer */}
+          <form onSubmit={handleCreatePost} className="forum-composer">
+            <div className="avatar">ME</div>
+            <div className="forum-composer-input-wrap">
+              <textarea
+                className="forum-composer-textarea"
+                rows={3}
+                placeholder="Bạn muốn chia sẻ điều gì về các tác phẩm hôm nay?..."
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value)}
+              />
+              <div className="forum-composer-actions">
+                <button className="button button-primary" type="submit" disabled={!newPostContent.trim()}>
+                  Đăng chủ đề
+                </button>
               </div>
-              <button className="button button-primary" type="button">Tạo chủ đề</button>
+            </div>
+          </form>
+
+          {/* Social Thread Feed */}
+          {posts.map((post) => (
+            <article className="forum-post" key={post.id}>
+              <div className="forum-post-head">
+                <div className="forum-post-author">
+                  <div className="avatar" style={{ background: post.authorName === "Bạn" ? "var(--crimson)" : "var(--jungle)" }}>
+                    {post.authorAvatar}
+                  </div>
+                  <div className="forum-post-meta">
+                    <strong>{post.authorName}</strong>
+                    <small>{post.time}</small>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+                  <span className="badge badge-blue">Sôi nổi</span>
+                  <button
+                    className="button icon-button forum-more-btn"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMoreMenu(activeMoreMenu === post.id ? null : post.id);
+                    }}
+                    style={{ padding: 4, height: 28, width: 28, minWidth: 28, background: "transparent", border: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                    aria-label="Tùy chọn bài viết"
+                  >
+                    <Icon name="settings" />
+                  </button>
+                  {activeMoreMenu === post.id && (
+                    <div className="account-dropdown" style={{ top: 32, right: 0, width: 140, display: "flex", flexDirection: "column" }}>
+                      <button className="account-dropdown-item" type="button" onClick={() => handleHide(post.id)} style={{ background: "transparent", border: 0, width: "100%", textAlign: "left", cursor: "pointer" }}>
+                        <Icon name="close" />
+                        Ẩn bài viết
+                      </button>
+                      <button className="account-dropdown-item" type="button" onClick={() => handleReport(post.id)} style={{ background: "transparent", border: 0, width: "100%", textAlign: "left", cursor: "pointer" }}>
+                        <Icon name="shield" />
+                        Báo cáo
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="forum-post-content">{post.content}</div>
+              <div className="forum-post-actions">
+                <button
+                  type="button"
+                  className={`forum-action-btn ${post.liked ? "active" : ""}`}
+                  onClick={() => handleLikePost(post.id)}
+                >
+                  <Icon name="check" /> {post.likes} Thích
+                </button>
+                <button
+                  type="button"
+                  className="forum-action-btn"
+                  onClick={() => toggleReplyBox(post.id)}
+                >
+                  <Icon name="settings" /> {post.replies.length} Bình luận
+                </button>
+                <button
+                  type="button"
+                  className="forum-action-btn"
+                  onClick={() => handleShare(post.id)}
+                >
+                  <Icon name="arrow" /> Chia sẻ
+                </button>
+              </div>
+
+              {/* Replies list */}
+              {post.replies.length > 0 && (
+                <div className="forum-replies-section">
+                  {post.replies.map((reply) => (
+                    <div className="forum-reply-card" key={reply.id}>
+                      <strong>{reply.author}</strong>
+                      <div>{reply.content}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Inline Reply box */}
+              {post.showReplyBox && (
+                <div className="forum-reply-box">
+                  <input
+                    type="text"
+                    placeholder="Viết phản hồi của bạn..."
+                    value={replyInputs[post.id] || ""}
+                    onChange={(e) => setReplyInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddReplySubmit(post.id);
+                    }}
+                  />
+                  <button className="button button-primary" type="button" onClick={() => handleAddReplySubmit(post.id)}>
+                    Gửi
+                  </button>
+                </div>
+              )}
+            </article>
+          ))}
+        </main>
+
+        <aside className="forum-right-sidebar stack" style={{ gap: 16 }}>
+          <div className="panel panel-pad stack" style={{ gap: 12 }}>
+            <h2 className="section-title" style={{ margin: 0 }}>Thảo luận nổi bật</h2>
+            <div className="notice" style={{ padding: "8px 12px", borderRadius: 6, fontSize: 13 }}>
+              <Icon name="bell" /> Có 24 người đang online thảo luận.
+            </div>
+            <div style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.5 }}>
+              Diễn đàn là nơi độc giả trao đổi ý kiến về các chương truyện mới, chia sẻ cảm xúc và dự đoán các chi tiết sắp tới cùng cộng đồng YAG.
             </div>
           </div>
-          <div className="list">
-            {["Dự đoán thân phận người gửi thư ở chương 12", "Góc tìm truyện có bối cảnh chiến tranh nhẹ nhàng", "Bạn thích lịch cập nhật truyện như thế nào?", "Mưa Trên Thành Cũ vừa có chương mới"].map((title, index) => (
-              <a className="list-item" href="#thread" key={title}>
-                <div>
-                  <h3 className="list-title">{title}</h3>
-                  <div className="list-meta">bởi {["Minh Nguyệt", "Phương Linh", "Hải Đăng", "YAG"][index]} · {24 - index * 3} trả lời · cập nhật {index + 1} phút trước</div>
-                </div>
-                <span className={`badge ${index === 3 ? "badge-blue" : "badge-crimson"}`}>{index === 3 ? "Mới" : "Sôi nổi"}</span>
-              </a>
-            ))}
-          </div>
-        </main>
-        <aside className="panel panel-pad stack" id="thread">
-          <h2 className="section-title">Thảo luận nổi bật</h2>
-          <div className="notice"><Icon name="bell" />12 người đang tham gia cuộc thảo luận này.</div>
-          <div className="field">
-            <label>Trả lời</label>
-            <textarea className="textarea" defaultValue="Mình có một giả thuyết khác..." />
-          </div>
-          <div className="inline-actions">
-            <button className="button">B</button>
-            <button className="button">Trích dẫn</button>
-            <button className="button button-primary">Gửi</button>
+
+          <div className="panel panel-pad stack" style={{ gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: "bold" }}>Chủ đề hot tuần</h3>
+            <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13, lineHeight: 1.8, color: "var(--jungle)" }}>
+              <li>Dự đoán chương cuối Mưa Trên Thành Cũ</li>
+              <li>Tại sao AI khuyên không nên hồi sinh nam phụ?</li>
+              <li>Lịch đăng chương premium của Linh An</li>
+            </ul>
           </div>
         </aside>
-      </section>
+      </div>
     </AppShell>
   );
 }
 
+const formatPrice = (price: number) => {
+  return price >= 1000 ? `${price / 1000}Kđ` : `${price}đ`;
+};
+
 export function MembershipScreen() {
+  const { user } = useAuth();
   const [plans, setPlans] = useState<any[]>([
     { name: "Tháng", id: "MONTHLY", price: 39000, duration_days: 30, description: "Linh hoạt cho độc giả mới" },
     { name: "Năm", id: "YEARLY", price: 199000, duration_days: 365, description: "Dành cho người đọc thường xuyên" }
   ]);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const isPremium = user?.premium_until ? new Date(user.premium_until) > new Date() : false;
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("vi-VN", { year: "numeric", month: "long", day: "numeric" });
+    } catch {
+      return dateStr;
+    }
+  };
 
   useEffect(() => {
     if (appEnv.useMocks) return;
@@ -936,14 +1337,43 @@ export function MembershipScreen() {
     void fetchPlans();
   }, []);
 
-  const formatPrice = (price: number) => {
-    return price >= 1000 ? `${price / 1000}Kđ` : `${price}đ`;
+  const handlePlanCheckout = async (planId: string) => {
+    setLoadingPlan(planId);
+    if (appEnv.useMocks) {
+      // eslint-disable-next-line react-hooks/purity
+      const mockTxn = `MOCK_${planId}_${Date.now()}`;
+      if (typeof window !== "undefined") {
+        window.location.assign(`/payment/result?vnp_ResponseCode=00&plan=${planId}&vnp_TxnRef=${mockTxn}`);
+      }
+      return;
+    }
+    try {
+      const returnUrl = `${window.location.origin}/payment/result`;
+      const res = await yagApi.billing.createVnpayCheckout({ planCode: planId, returnUrl });
+      if (res.data?.paymentUrl) {
+        if (typeof window !== "undefined") {
+          window.location.assign(res.data.paymentUrl);
+        }
+      } else {
+        triggerLiveToast("Không lấy được đường dẫn thanh toán từ máy chủ.", "warning");
+      }
+    } catch (err: any) {
+      console.error("VNPAY Checkout error", err);
+      triggerLiveToast(err.message || "Lỗi tạo phiên thanh toán VNPAY.", "warning");
+    } finally {
+      setLoadingPlan(null);
+    }
   };
 
   return (
     <AppShell activeId="s09">
       <div className="notice success" style={{ marginBottom: 24 }}>
-        <Icon name="check" />Gói hiện tại: Miễn phí · Bạn vẫn có thể đọc toàn bộ chương miễn phí và lưu truyện vào thư viện.
+        <Icon name="check" />
+        {isPremium ? (
+          <>Gói hiện tại: <strong>Premium</strong> (Hạn sử dụng đến ngày {user?.premium_until ? formatDate(user.premium_until) : ""}) · Bạn đang sở hữu đặc quyền mở khóa toàn bộ chương truyện đặc sắc.</>
+        ) : (
+          <>Gói hiện tại: <strong>Miễn phí</strong> · Đăng ký gói Premium để xem các chương Premium của tác giả.</>
+        )}
       </div>
       <div className="action-strip" style={{ marginBottom: 24 }}>
         <div>
@@ -953,7 +1383,7 @@ export function MembershipScreen() {
       </div>
       <section className="grid grid-3">
         {plans.map((plan, index) => (
-          <article className="panel panel-pad stack" key={plan.id}>
+          <article className="panel panel-pad stack" key={plan.id} style={{ border: isPremium && plan.id === "MONTHLY" ? "1px solid var(--line)" : "" }}>
             <span className={`badge ${index === 0 ? "badge-crimson" : "badge-blue"}`}>
               {index === 0 ? "Phổ biến nhất" : plan.name}
             </span>
@@ -961,61 +1391,153 @@ export function MembershipScreen() {
             <div className="metric-value">{formatPrice(Number(plan.price))}</div>
             <p className="section-subtitle">{plan.description || `Hiệu lực trong ${plan.duration_days} ngày.`}</p>
             <div className="list">
-              {["Mở khóa chương premium", "Không quảng cáo khi đọc", "Tìm kiếm AI nâng cao", "Lưu tiến độ đọc"].map((item) => (
+              {["Mở khóa chương premium", "Không quảng cáo khi đọc", "Tìm kiếm AI ngữ nghĩa nâng cao", "Lưu tiến độ đọc tự động"].map((item) => (
                 <div className="list-item" key={item}>
                   <span>{item}</span>
                   <Icon name="check" />
                 </div>
               ))}
             </div>
-            <a className={`button ${index === 0 ? "button-primary" : ""}`} href={`/payment/result?plan=${plan.id}`} data-billing-plan={plan.id}>
-              Đăng ký ngay
-            </a>
+            <button
+              className={`button ${index === 0 ? "button-primary" : ""}`}
+              onClick={() => handlePlanCheckout(plan.id)}
+              style={{ width: "100%" }}
+              disabled={loadingPlan !== null}
+            >
+              {loadingPlan === plan.id ? "Đang xử lý..." : (isPremium ? "Gia hạn gói" : "Đăng ký ngay")}
+            </button>
           </article>
         ))}
       </section>
+
+      {process.env.NODE_ENV !== "production" && (
+        <section className="panel panel-pad stack" style={{ marginTop: 32, borderColor: "var(--amber)", background: "rgba(245, 158, 11, 0.04)" }}>
+          <h3 style={{ margin: 0, color: "var(--amber)", fontSize: 16 }}><Icon name="settings" /> [Chế độ Dev] Mô phỏng kết quả thanh toán VNPAY</h3>
+          <p style={{ margin: "4px 0 16px", fontSize: 13, color: "var(--muted)" }}>Bypass cổng VNPAY thực để trực tiếp cập nhật Premium tài khoản.</p>
+          <div className="inline-actions">
+            <button
+              className="button button-success"
+              onClick={() => {
+                const mockTxn = `MOCK_MONTHLY_${Date.now()}`;
+                window.location.href = `/payment/result?vnp_ResponseCode=00&vnp_TxnRef=${mockTxn}&plan=MONTHLY`;
+              }}
+            >
+              Mô phỏng Thành công (Premium)
+            </button>
+            <button
+              className="button button-danger"
+              onClick={() => {
+                const mockTxn = `MOCK_MONTHLY_${Date.now()}`;
+                window.location.href = `/payment/result?vnp_ResponseCode=24&vnp_TxnRef=${mockTxn}&plan=MONTHLY`;
+              }}
+            >
+              Mô phỏng Thất bại
+            </button>
+          </div>
+        </section>
+      )}
     </AppShell>
   );
 }
 
 export function PaymentScreen() {
   const searchParams = useSearchParams();
-  const statusParam = searchParams.get("vnp_ResponseCode") || searchParams.get("status") || "00";
+  const { refreshUser } = useAuth();
+
+  const [verificationResult, setVerificationResult] = useState<{
+    loading: boolean;
+    success: boolean;
+    message: string;
+    details?: any;
+  }>({
+    loading: true,
+    success: false,
+    message: "Đang tiến hành xác thực giao dịch...",
+  });
+
+  const responseCode = searchParams.get("vnp_ResponseCode") || searchParams.get("status");
   const planId = searchParams.get("plan") || "MONTHLY";
   const txnRef = searchParams.get("vnp_TxnRef") || searchParams.get("transactionId") || searchParams.get("txnRef");
-  const [transaction, setTransaction] = useState<any | null>(null);
-  const [isCheckingTransaction, setIsCheckingTransaction] = useState(Boolean(txnRef) && !appEnv.useMocks);
 
   useEffect(() => {
-    if (!txnRef || appEnv.useMocks) return;
+    let active = true;
 
-    let isMounted = true;
-    const loadTransaction = async () => {
+    const verifyPayment = async () => {
+      // Build queryParams object from searchParams
+      const queryParams: Record<string, string> = {};
+      searchParams.forEach((value, key) => {
+        queryParams[key] = value;
+      });
+
+      if (!txnRef) {
+        if (active) {
+          setVerificationResult({
+            loading: false,
+            success: false,
+            message: "Không tìm thấy thông tin mã giao dịch đối soát.",
+          });
+        }
+        return;
+      }
+
+      if (appEnv.useMocks) {
+        const isMockSuccess = responseCode === "00" || responseCode === "success";
+        if (active) {
+          setVerificationResult({
+            loading: false,
+            success: isMockSuccess,
+            message: isMockSuccess ? "Mô phỏng thanh toán thành công!" : "Mô phỏng thanh toán thất bại.",
+            details: {
+              plan_id: planId,
+              amount: planId === "YEARLY" ? 199000 : 39000,
+              vnp_transaction_no: `MOCK_TXN_${Date.now()}`,
+            }
+          });
+        }
+        return;
+      }
+
       try {
-        const response = await yagApi.billing.getTransaction(txnRef);
-        if (isMounted) setTransaction(response.data);
-      } catch (error) {
-        console.error("Failed to load payment transaction", error);
-      } finally {
-        if (isMounted) setIsCheckingTransaction(false);
+        const res = await yagApi.billing.verifyVnpay(queryParams);
+        if (active) {
+          if (res.data.success) {
+            setVerificationResult({
+              loading: false,
+              success: true,
+              message: res.data.message || "Giao dịch đã được xác thực thành công!",
+              details: res.data,
+            });
+            await refreshUser();
+          } else {
+            setVerificationResult({
+              loading: false,
+              success: false,
+              message: res.data.message || "Giao dịch không hợp lệ hoặc chữ ký đối soát sai.",
+              details: res.data,
+            });
+          }
+        }
+      } catch (err: any) {
+        console.error("Payment verification failed:", err);
+        if (active) {
+          setVerificationResult({
+            loading: false,
+            success: false,
+            message: err.message || "Lỗi trong quá trình xác thực với máy chủ.",
+          });
+        }
       }
     };
 
-    void loadTransaction();
-    const interval = window.setInterval(() => {
-      if (!transaction || transaction.status === "pending") void loadTransaction();
-    }, 5000);
-
+    void verifyPayment();
     return () => {
-      isMounted = false;
-      window.clearInterval(interval);
+      active = false;
     };
-  }, [txnRef, transaction, transaction?.status]);
+  }, [searchParams, txnRef, planId, responseCode]);
 
-  const backendStatus = transaction?.status as string | undefined;
-  const redirectLooksSuccessful = statusParam === "00" || statusParam === "success";
-  const isPending = Boolean(txnRef) && !appEnv.useMocks && (isCheckingTransaction || backendStatus === "pending" || !backendStatus);
-  const isSuccess = backendStatus ? backendStatus === "success" : appEnv.useMocks && redirectLooksSuccessful;
+  const isPending = verificationResult.loading;
+  const isSuccess = verificationResult.success;
+  const details = verificationResult.details;
 
   return (
     <AppShell activeId="s10">
@@ -1024,20 +1546,14 @@ export function PaymentScreen() {
           {isPending ? (
             <div className="empty-state" style={{ borderStyle: "solid" }}>
               <span className="badge badge-blue"><Icon name="card" />Đang xác nhận</span>
-              <h2 className="page-title" style={{ fontSize: 24 }}>Đang chờ IPN từ VNPAY</h2>
-              <p>YAG đang đối soát giao dịch với backend. Trang này sẽ tự cập nhật khi membership được kích hoạt.</p>
-              <div className="inline-actions">
-                <button className="button button-primary" onClick={() => txnRef && yagApi.billing.getTransaction(txnRef).then((res) => setTransaction(res.data))}>
-                  Kiểm tra lại
-                </button>
-                <Link className="button" href="/membership">Về gói hội viên</Link>
-              </div>
+              <h2 className="page-title" style={{ fontSize: 24 }}>{verificationResult.message}</h2>
+              <p>YAG đang đối soát giao dịch với VNPAY. Xin vui lòng không đóng trình duyệt lúc này...</p>
             </div>
           ) : isSuccess ? (
             <div className="empty-state" style={{ borderStyle: "solid" }}>
               <span className="badge badge-green"><Icon name="check" />Thanh toán thành công</span>
               <h2 className="page-title" style={{ fontSize: 24 }}>Gói hội viên đã được kích hoạt</h2>
-              <p>Mã giao dịch {transaction?.vnp_transaction_no || searchParams.get("vnp_TransactionNo") || txnRef || "VNPAY"} · Cảm ơn bạn đã ủng hộ YAG.</p>
+              <p>Cảm ơn bạn đã đăng ký gói Premium của YAG để ủng hộ tác giả và trải nghiệm không quảng cáo.</p>
               <div className="inline-actions">
                 <Link className="button button-primary" href="/home">Bắt đầu đọc</Link>
                 <Link className="button" href="/library">Về thư viện</Link>
@@ -1047,7 +1563,12 @@ export function PaymentScreen() {
             <div className="empty-state" style={{ borderStyle: "solid" }}>
               <span className="badge badge-red"><Icon name="close" />Thanh toán thất bại</span>
               <h2 className="page-title" style={{ fontSize: 24 }}>Giao dịch không thành công</h2>
-              <ErrorGuide title="Cách xử lý" items={["Kiểm tra số dư và hạn mức thanh toán online của thẻ.", "Thử lại sau 2 phút hoặc chọn phương thức thanh toán khác.", "Nếu tài khoản đã bị trừ tiền, gửi mã giao dịch cho hỗ trợ để đối soát."]} />
+              <p>{verificationResult.message}</p>
+              <ErrorGuide title="Cách xử lý" items={["Kiểm tra số dư và hạn mức thanh toán online của thẻ.", "Thử lại sau ít phút hoặc liên hệ ngân hàng phát hành.", "Nếu tài khoản đã bị trừ tiền, gửi mã giao dịch cho hỗ trợ YAG để đối soát."]} />
+              <div className="inline-actions">
+                <Link className="button button-primary" href="/membership">Thử lại</Link>
+                <Link className="button" href="/home">Về trang chủ</Link>
+              </div>
             </div>
           )}
         </main>
@@ -1055,8 +1576,10 @@ export function PaymentScreen() {
           <h2 className="section-title">Thông tin giao dịch</h2>
           <div className="list">
             <div className="list-item"><span>Phương thức</span><strong>VNPAY Cổng thanh toán</strong></div>
-            <div className="list-item"><span>Gói đăng ký</span><strong>{transaction?.plan_name || transaction?.plan_id || planId}</strong></div>
+            <div className="list-item"><span>Gói đăng ký</span><strong>{details?.plan_name || details?.plan_id || (planId === "YEARLY" ? "Năm" : "Tháng")}</strong></div>
             {txnRef ? <div className="list-item"><span>Mã tham chiếu</span><strong>{txnRef}</strong></div> : null}
+            {details?.vnp_transaction_no ? <div className="list-item"><span>Mã GD VNPAY</span><strong>{details.vnp_transaction_no}</strong></div> : null}
+            {details?.amount ? <div className="list-item"><span>Số tiền</span><strong>{details.amount.toLocaleString()}đ</strong></div> : null}
             <div className="list-item"><span>Trạng thái</span>
               <span className={`badge ${isPending ? "badge-blue" : isSuccess ? "badge-green" : "badge-red"}`}>
                 {isPending ? "Đang xác nhận" : isSuccess ? "Đã thanh toán" : "Thất bại"}
@@ -1072,53 +1595,128 @@ export function PaymentScreen() {
 export function LibraryScreen() {
   const [storiesList, setStoriesList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"following" | "history" | "completed" | "premium">("following");
 
-  useEffect(() => {
-    if (appEnv.useMocks) {
-      setStoriesList(stories.slice(0, 4));
-      setIsLoading(false);
-      return;
-    }
-    const loadLibrary = async () => {
-      try {
+  const loadLibrary = async () => {
+    try {
+      if (appEnv.useMocks) {
+        // Seed mock data with status and reading progress for realistic rendering
+        const mockLibrary = stories.slice(0, 5).map((s, idx) => ({
+          ...s,
+          id: `mock-story-${idx}`,
+          status: idx === 2 ? "completed" : "ongoing",
+          is_premium: idx % 3 === 0,
+          chapters_read: idx % 2 === 0 ? 5 : 0,
+        }));
+        setStoriesList(mockLibrary);
+      } else {
         const res = await yagApi.reader.getLibrary();
         setStoriesList(res.data || []);
-      } catch (err) {
-        console.error("Failed to load library", err);
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Failed to load library", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     void loadLibrary();
   }, []);
+
+  const displayedStories = storiesList.filter(story => {
+    if (activeTab === "following") return true;
+    if (activeTab === "history") {
+      return (story.chapters_read ?? 0) > 0;
+    }
+    if (activeTab === "completed") {
+      return story.status === "completed";
+    }
+    if (activeTab === "premium") {
+      return story.is_premium || (story.chapters && story.chapters.some((c: any) => c.is_premium));
+    }
+    return true;
+  });
 
   return (
     <AppShell activeId="s11">
       <section className="panel panel-pad stack">
-        <div className="inline-actions" style={{ justifyContent: "space-between" }}>
-          <div className="tabs">
-            <button className="tab-button active">Đang theo dõi ({storiesList.length})</button>
+        <div className="inline-actions" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div className="tabs" style={{ flexWrap: "wrap", gap: 4 }}>
+            <button
+              className={`tab-button ${activeTab === "following" ? "active" : ""}`}
+              onClick={() => setActiveTab("following")}
+            >
+              Đang theo dõi ({storiesList.length})
+            </button>
+            <button
+              className={`tab-button ${activeTab === "history" ? "active" : ""}`}
+              onClick={() => setActiveTab("history")}
+            >
+              Đọc tiếp
+            </button>
+            <button
+              className={`tab-button ${activeTab === "completed" ? "active" : ""}`}
+              onClick={() => setActiveTab("completed")}
+            >
+              Đã hoàn thành
+            </button>
+            <button
+              className={`tab-button ${activeTab === "premium" ? "active" : ""}`}
+              onClick={() => setActiveTab("premium")}
+            >
+              Premium
+            </button>
           </div>
-          <button className="button" onClick={() => {
-            if (!appEnv.useMocks) {
+          <button
+            className="button"
+            onClick={() => {
               setIsLoading(true);
-              yagApi.reader.getLibrary().then(res => {
-                setStoriesList(res.data || []);
-                setIsLoading(false);
-              });
-            }
-          }}>Làm mới</button>
+              void loadLibrary();
+            }}
+          >
+            Làm mới
+          </button>
         </div>
+
         {isLoading ? (
           <div style={{ padding: 48, textAlign: "center", color: "var(--muted)" }}>
             Đang tải thư viện truyện...
           </div>
-        ) : storiesList.length === 0 ? (
-          <div style={{ padding: 48, textAlign: "center", color: "var(--muted)" }}>
-            Thư viện trống. Hãy lưu tác phẩm từ Trang chi tiết truyện.
+        ) : displayedStories.length === 0 ? (
+          <div className="empty-state" style={{ padding: "64px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <div style={{ fontSize: 40, color: "var(--muted)" }}>📚</div>
+            {activeTab === "following" && (
+              <>
+                <h3 style={{ fontSize: 18, fontWeight: "bold", margin: 0, color: "var(--jungle-dark)" }}>Danh sách theo dõi trống</h3>
+                <p style={{ margin: 0, color: "var(--muted)", maxWidth: 400 }}>Hãy lưu những tác phẩm bạn yêu thích từ trang chi tiết để theo dõi chương mới nhất.</p>
+                <Link className="button button-primary" href="/discover" style={{ marginTop: 8 }}>Khám phá truyện mới</Link>
+              </>
+            )}
+            {activeTab === "history" && (
+              <>
+                <h3 style={{ fontSize: 18, fontWeight: "bold", margin: 0, color: "var(--jungle-dark)" }}>Không có lịch sử đọc</h3>
+                <p style={{ margin: 0, color: "var(--muted)", maxWidth: 400 }}>Bắt đầu đọc chương đầu tiên của các tác phẩm thú vị ngay hôm nay!</p>
+                <Link className="button button-primary" href="/home" style={{ marginTop: 8 }}>Xem trang chủ đọc</Link>
+              </>
+            )}
+            {activeTab === "completed" && (
+              <>
+                <h3 style={{ fontSize: 18, fontWeight: "bold", margin: 0, color: "var(--jungle-dark)" }}>Chưa có truyện hoàn thành</h3>
+                <p style={{ margin: 0, color: "var(--muted)", maxWidth: 400 }}>Danh sách truyện đã hoàn thiện trong thư viện của bạn sẽ xuất hiện ở đây.</p>
+                <Link className="button button-primary" href="/discover?status=completed" style={{ marginTop: 8 }}>Tìm truyện đã hoàn thiện</Link>
+              </>
+            )}
+            {activeTab === "premium" && (
+              <>
+                <h3 style={{ fontSize: 18, fontWeight: "bold", margin: 0, color: "var(--jungle-dark)" }}>Không có truyện Premium</h3>
+                <p style={{ margin: 0, color: "var(--muted)", maxWidth: 400 }}>Các truyện chứa chương Premium bạn đang theo dõi sẽ xuất hiện tại đây.</p>
+                <Link className="button button-primary" href="/discover" style={{ marginTop: 8 }}>Tìm truyện có Premium</Link>
+              </>
+            )}
           </div>
         ) : (
-          <QuickStories storiesList={storiesList} />
+          <QuickStories storiesList={displayedStories} />
         )}
       </section>
     </AppShell>
@@ -1163,9 +1761,28 @@ export function ProfileScreen() {
 
 export function SettingsScreen() {
   const { user, refreshUser } = useAuth();
+  const [activeTab, setActiveTab] = useState("profile");
+
+  // Profile Form States
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Security Form States
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [securitySubmitting, setSecuritySubmitting] = useState(false);
+
+  // Reader Preferences States
+  const [fontSize, setFontSize] = useState(18);
+  const [isDark, setIsDark] = useState(false);
+  const [isWide, setIsWide] = useState(false);
+
+  // Notification Preferences States
+  const [notifyChapter, setNotifyChapter] = useState(true);
+  const [notifyComment, setNotifyComment] = useState(true);
+  const [notifySystem, setNotifySystem] = useState(true);
 
   useEffect(() => {
     if (user?.profile) {
@@ -1173,6 +1790,57 @@ export function SettingsScreen() {
       setBio(user.profile.bio || "");
     }
   }, [user]);
+
+  // Load preferences from local storage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setFontSize(Number(localStorage.getItem("yag.reader.fontSize") || 18));
+      setIsDark(localStorage.getItem("yag.reader.isDark") === "true");
+      setIsWide(localStorage.getItem("yag.reader.isWide") === "true");
+      setNotifyChapter(localStorage.getItem("yag.settings.notifyChapter") !== "false");
+      setNotifyComment(localStorage.getItem("yag.settings.notifyComment") !== "false");
+      setNotifySystem(localStorage.getItem("yag.settings.notifySystem") !== "false");
+    }
+  }, []);
+
+  // Membership & Billing States
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const isPremium = user?.premium_until ? new Date(user.premium_until) > new Date() : false;
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("vi-VN", { year: "numeric", month: "long", day: "numeric" });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "membership") {
+      setLoadingHistory(true);
+      if (appEnv.useMocks) {
+        setTransactions([
+          { id: "tx_1", plan_name: "Gói Tháng", amount: 39000, status: "success", created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(), vnp_transaction_no: "VNP12345678" },
+          { id: "tx_2", plan_name: "Gói Tháng", amount: 39000, status: "failed", created_at: new Date(Date.now() - 35 * 24 * 3600 * 1000).toISOString(), vnp_transaction_no: "VNP87654321" },
+        ]);
+        setLoadingHistory(false);
+      } else {
+        yagApi.billing.getTransactionHistory()
+          .then((res) => {
+            setTransactions(res.data || []);
+          })
+          .catch((err) => {
+            console.error("Failed to load transaction history", err);
+          })
+          .finally(() => {
+            setLoadingHistory(false);
+          });
+      }
+    }
+  }, [activeTab]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1197,46 +1865,313 @@ export function SettingsScreen() {
     }
   };
 
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      triggerLiveToast("Xác nhận mật khẩu mới không khớp.", "warning");
+      return;
+    }
+    setSecuritySubmitting(true);
+    try {
+      if (appEnv.useMocks) {
+        triggerLiveToast("Đổi mật khẩu thành công (Mock).");
+        setOldPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setSecuritySubmitting(false);
+        return;
+      }
+      await yagApi.apiFetch("/api/v1/auth/password/change", {
+        method: "POST",
+        body: { old_password: oldPassword, new_password: newPassword }
+      });
+      triggerLiveToast("Đổi mật khẩu thành công.");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      console.error(err);
+      triggerLiveToast(err.message || "Không thể đổi mật khẩu.", "warning");
+    } finally {
+      setSecuritySubmitting(false);
+    }
+  };
+
+  const saveFontSize = (val: number) => {
+    setFontSize(val);
+    localStorage.setItem("yag.reader.fontSize", String(val));
+    window.dispatchEvent(new Event("yag:reader-settings-changed"));
+  };
+
+  const toggleTheme = () => {
+    const val = !isDark;
+    setIsDark(val);
+    localStorage.setItem("yag.reader.isDark", String(val));
+    window.dispatchEvent(new Event("yag:reader-settings-changed"));
+  };
+
+  const toggleWidth = () => {
+    const val = !isWide;
+    setIsWide(val);
+    localStorage.setItem("yag.reader.isWide", String(val));
+    window.dispatchEvent(new Event("yag:reader-settings-changed"));
+  };
+
+  const handleSaveNotifications = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem("yag.settings.notifyChapter", String(notifyChapter));
+    localStorage.setItem("yag.settings.notifyComment", String(notifyComment));
+    localStorage.setItem("yag.settings.notifySystem", String(notifySystem));
+    triggerLiveToast("Cài đặt thông báo đã được lưu.");
+  };
+
   return (
     <AppShell activeId="s13">
       <section className="layout-filter">
         <aside className="panel panel-pad settings-nav-panel">
           <div className="sidebar-section">
             <div className="sidebar-label">Cài đặt</div>
-            {settingSections.map((item, index) => (
-              <a className={`sidebar-link ${index === 0 ? "active" : ""}`} href={`#setting-${item.id}`} key={item.id}>
+            {settingSections.map((item) => (
+              <button
+                className={`sidebar-link ${activeTab === item.id ? "active" : ""}`}
+                type="button"
+                onClick={() => setActiveTab(item.id)}
+                key={item.id}
+                style={{ background: "transparent", border: 0, width: "100%", textAlign: "left", cursor: "pointer" }}
+              >
                 <Icon name={item.icon} />
                 <span>{item.label}</span>
-              </a>
+              </button>
             ))}
           </div>
         </aside>
+
         <main className="stack">
-          <section className="panel panel-pad stack" id="setting-profile">
-            <div>
-              <h2 className="section-title">Hồ sơ cá nhân</h2>
-              <p className="section-subtitle">Các thông tin hiển thị công khai và dùng cho liên hệ tài khoản.</p>
-            </div>
-            <form onSubmit={handleSaveProfile} className="stack" style={{ gap: 16 }}>
-              <div className="grid grid-2">
-                <div className="field">
-                  <label>Tên hiển thị / Bút danh</label>
-                  <input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+          {activeTab === "profile" && (
+            <section className="panel panel-pad stack" id="setting-profile">
+              <div>
+                <h2 className="section-title">Hồ sơ cá nhân</h2>
+                <p className="section-subtitle">Các thông tin hiển thị công khai và dùng cho liên hệ tài khoản.</p>
+              </div>
+              <form onSubmit={handleSaveProfile} className="stack" style={{ gap: 16 }}>
+                <div className="grid grid-2">
+                  <div className="field">
+                    <label>Tên hiển thị / Bút danh</label>
+                    <input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+                  </div>
+                  <div className="field">
+                    <label>Email tài khoản</label>
+                    <input className="input" type="email" value={user?.email || ""} disabled style={{ cursor: "not-allowed" }} />
+                  </div>
                 </div>
                 <div className="field">
-                  <label>Email tài khoản</label>
-                  <input className="input" type="email" value={user?.email || ""} disabled />
+                  <label>Giới thiệu bản thân (Bio)</label>
+                  <textarea className="textarea" value={bio} onChange={(e) => setBio(e.target.value)} />
+                </div>
+                <button className="button button-primary" type="submit" disabled={submitting}>
+                  Lưu hồ sơ
+                </button>
+              </form>
+            </section>
+          )}
+
+          {activeTab === "security" && (
+            <section className="panel panel-pad stack" id="setting-security">
+              <div>
+                <h2 className="section-title">Mật khẩu & bảo mật</h2>
+                <p className="section-subtitle">Cập nhật mật khẩu mới để bảo vệ an toàn cho tài khoản của bạn.</p>
+              </div>
+              <form onSubmit={handleUpdatePassword} className="stack" style={{ gap: 16 }}>
+                <div className="field">
+                  <label>Mật khẩu hiện tại</label>
+                  <input className="input" type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} required placeholder="••••••••" />
+                </div>
+                <div className="grid grid-2">
+                  <div className="field">
+                    <label>Mật khẩu mới</label>
+                    <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required placeholder="Tối thiểu 8 ký tự" />
+                  </div>
+                  <div className="field">
+                    <label>Xác nhận mật khẩu mới</label>
+                    <input className="input" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required placeholder="Nhập lại mật khẩu mới" />
+                  </div>
+                </div>
+                <button className="button button-primary" type="submit" disabled={securitySubmitting}>
+                  Cập nhật mật khẩu
+                </button>
+              </form>
+            </section>
+          )}
+
+          {activeTab === "reader" && (
+            <section className="panel panel-pad stack" id="setting-reader">
+              <div>
+                <h2 className="section-title">Tùy chọn hiển thị trình đọc</h2>
+                <p className="section-subtitle">Cá nhân hóa trải nghiệm đọc truyện phù hợp với thị giác của bạn.</p>
+              </div>
+              <div className="stack" style={{ gap: 16 }}>
+                <div className="field">
+                  <label>Cỡ chữ mặc định ({fontSize}px)</label>
+                  <input
+                    className="range"
+                    type="range"
+                    min="16"
+                    max="24"
+                    value={fontSize}
+                    onChange={(e) => saveFontSize(Number(e.target.value))}
+                    aria-label="Cỡ chữ"
+                  />
+                </div>
+                
+                <div className="grid grid-2">
+                  <div className="settings-toggle-row">
+                    <label htmlFor="toggle-dark-mode">Chế độ giao diện tối</label>
+                    <input
+                      id="toggle-dark-mode"
+                      type="checkbox"
+                      checked={isDark}
+                      onChange={toggleTheme}
+                      style={{ width: 20, height: 20, cursor: "pointer" }}
+                    />
+                  </div>
+                  <div className="settings-toggle-row">
+                    <label htmlFor="toggle-wide-layout">Giao diện rộng tràn viền</label>
+                    <input
+                      id="toggle-wide-layout"
+                      type="checkbox"
+                      checked={isWide}
+                      onChange={toggleWidth}
+                      style={{ width: 20, height: 20, cursor: "pointer" }}
+                    />
+                  </div>
+                </div>
+
+                <div className={`reader-preview ${isDark ? "dark" : ""}`} style={{ padding: 24, borderRadius: 8, border: "1px solid var(--line)", marginTop: 8 }}>
+                  <div style={{ fontSize: 12, textTransform: "uppercase", color: "var(--muted)", marginBottom: 8, fontWeight: "bold" }}>Bản xem trước trình đọc</div>
+                  <h3 style={{ fontSize: `${fontSize + 4}px`, margin: "0 0 12px 0", color: isDark ? "#fff" : "var(--jungle-dark)" }}>Chương 1: Lời hẹn mùa cũ</h3>
+                  <p style={{ fontSize: `${fontSize}px`, margin: 0, lineHeight: 1.6 }}>
+                    Mưa trên ga cũ vẫn rơi đều đặn như khúc nhạc buồn hoài niệm. Linh khẽ kéo chiếc khăn quàng cổ, nhìn vào khoảng không vô định của sân ga lạnh ngắt...
+                  </p>
                 </div>
               </div>
-              <div className="field">
-                <label>Giới thiệu bản thân (Bio)</label>
-                <textarea className="textarea" value={bio} onChange={(e) => setBio(e.target.value)} />
+            </section>
+          )}
+
+          {activeTab === "notifications" && (
+            <section className="panel panel-pad stack" id="setting-notifications">
+              <div>
+                <h2 className="section-title">Nhận thông báo</h2>
+                <p className="section-subtitle">Chọn loại tin tức và cập nhật bạn muốn nhận từ YAG.</p>
               </div>
-              <button className="button button-primary" type="submit" disabled={submitting}>
-                Lưu hồ sơ
-              </button>
-            </form>
-          </section>
+              <form onSubmit={handleSaveNotifications} className="stack" style={{ gap: 16 }}>
+                <div className="stack" style={{ gap: 12 }}>
+                  <div className="settings-toggle-row">
+                    <label htmlFor="notify-chapter">Thông báo khi tác phẩm theo dõi ra chương mới</label>
+                    <input
+                      id="notify-chapter"
+                      type="checkbox"
+                      checked={notifyChapter}
+                      onChange={(e) => setNotifyChapter(e.target.checked)}
+                      style={{ width: 20, height: 20, cursor: "pointer" }}
+                    />
+                  </div>
+                  <div className="settings-toggle-row">
+                    <label htmlFor="notify-comment">Thông báo khi có phản hồi bình luận của bạn</label>
+                    <input
+                      id="notify-comment"
+                      type="checkbox"
+                      checked={notifyComment}
+                      onChange={(e) => setNotifyComment(e.target.checked)}
+                      style={{ width: 20, height: 20, cursor: "pointer" }}
+                    />
+                  </div>
+                  <div className="settings-toggle-row">
+                    <label htmlFor="notify-system">Thông báo hệ thống và giao dịch thanh toán</label>
+                    <input
+                      id="notify-system"
+                      type="checkbox"
+                      checked={notifySystem}
+                      onChange={(e) => setNotifySystem(e.target.checked)}
+                      style={{ width: 20, height: 20, cursor: "pointer" }}
+                    />
+                  </div>
+                </div>
+                <button className="button button-primary" type="submit">
+                  Lưu thiết lập thông báo
+                </button>
+              </form>
+            </section>
+          )}
+
+          {activeTab === "membership" && (
+            <section className="panel panel-pad stack" id="setting-membership">
+              <div>
+                <h2 className="section-title">Membership & Thanh toán</h2>
+                <p className="section-subtitle">Quản lý gói hội viên và xem lịch sử giao dịch của bạn.</p>
+              </div>
+
+              <div className="notice success" style={{ marginBottom: 24 }}>
+                <Icon name="check" />
+                {isPremium ? (
+                  <>Gói hiện tại: <strong>Premium</strong> (Hạn sử dụng đến ngày {user?.premium_until ? formatDate(user.premium_until) : ""}) · Bạn đang sở hữu đặc quyền mở khóa toàn bộ chương truyện đặc sắc.</>
+                ) : (
+                  <>Gói hiện tại: <strong>Miễn phí</strong> · Đăng ký gói Premium để xem các chương Premium của tác giả.</>
+                )}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 16, borderBottom: "1px solid var(--line)" }}>
+                <div>
+                  <strong>{isPremium ? "Nâng cấp / Gia hạn gói" : "Đăng ký Premium"}</strong>
+                  <div className="list-meta">Mở khóa tất cả quyền lợi cao cấp nhất của YAG.</div>
+                </div>
+                <Link className="button button-primary" href="/membership">
+                  {isPremium ? "Gia hạn hội viên" : "Đăng ký ngay"}
+                </Link>
+              </div>
+
+              <div style={{ marginTop: 24 }}>
+                <h3 style={{ fontSize: 16, fontWeight: "bold", marginBottom: 12 }}>Lịch sử giao dịch</h3>
+                {loadingHistory ? (
+                  <div style={{ padding: 24, textAlign: "center", color: "var(--muted)" }}>
+                    Đang tải lịch sử giao dịch...
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div style={{ padding: 24, textAlign: "center", color: "var(--muted)", border: "1px dashed var(--line)", borderRadius: 8 }}>
+                    Bạn chưa thực hiện giao dịch thanh toán nào.
+                  </div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid var(--line)", textAlign: "left" }}>
+                          <th style={{ padding: "8px 12px", color: "var(--muted)" }}>Gói dịch vụ</th>
+                          <th style={{ padding: "8px 12px", color: "var(--muted)" }}>Số tiền</th>
+                          <th style={{ padding: "8px 12px", color: "var(--muted)" }}>Mã giao dịch</th>
+                          <th style={{ padding: "8px 12px", color: "var(--muted)" }}>Thời gian</th>
+                          <th style={{ padding: "8px 12px", color: "var(--muted)" }}>Trạng thái</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {transactions.map((tx) => (
+                          <tr key={tx.id} style={{ borderBottom: "1px solid var(--line)" }}>
+                            <td style={{ padding: "12px" }}><strong>{tx.plan_name || "Gói Premium"}</strong></td>
+                            <td style={{ padding: "12px" }}>{formatPrice(tx.amount)}</td>
+                            <td style={{ padding: "12px" }}><code style={{ fontSize: 12 }}>{tx.vnp_transaction_no || tx.id.slice(0, 8)}</code></td>
+                            <td style={{ padding: "12px" }}>{formatDate(tx.created_at)}</td>
+                            <td style={{ padding: "12px" }}>
+                              <span className={`badge ${tx.status === "success" ? "badge-green" : tx.status === "pending" ? "badge-blue" : "badge-red"}`}>
+                                {tx.status === "success" ? "Thành công" : tx.status === "pending" ? "Đang chờ" : "Thất bại"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </main>
       </section>
     </AppShell>

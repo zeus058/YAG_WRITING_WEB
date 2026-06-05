@@ -155,7 +155,7 @@ const infoPages = {
       },
       {
         title: "Xác minh giao dịch",
-        body: "Hỗ trợ kiểm tra, đối soát giao dịch thanh toán gói Membership qua cổng VNPAY và kích hoạt tài khoản nhanh chóng.",
+        body: "Hỗ trợ kiểm tra, đối soát giao dịch thanh toán gói Membership qua cổng PayOS và kích hoạt tài khoản nhanh chóng.",
         icon: "card",
       },
       {
@@ -236,7 +236,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
           <div style={{ position: "relative" }}>
             <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--crimson)", border: "3px fill #FFF" }}></div>
             <strong>Quý 1 - Quý 2 / 2026: Phiên bản 1.0 (Hiện tại)</strong>
-            <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>Ra mắt giao diện đọc tối giản, split-screen soạn thảo dành cho tác giả, kiểm duyệt AI thời gian thực và tích hợp ví điện tử VNPAY.</p>
+            <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>Ra mắt giao diện đọc tối giản, split-screen soạn thảo dành cho tác giả, kiểm duyệt AI thời gian thực và tích hợp ví điện tử PayOS.</p>
           </div>
           <div style={{ position: "relative" }}>
             <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--green)" }}></div>
@@ -310,7 +310,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
           <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden" }}>
             <div style={{ width: "100%", height: "100%", background: "var(--green)" }}></div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Cổng thanh toán trung gian</strong><span style={{ color: "var(--green)", fontWeight: 800 }}>VNPAY (Không lưu số thẻ)</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Cổng thanh toán trung gian</strong><span style={{ color: "var(--green)", fontWeight: 800 }}>PayOS (Không lưu số thẻ)</span></div>
           <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden" }}>
             <div style={{ width: "100%", height: "100%", background: "var(--green)" }}></div>
           </div>

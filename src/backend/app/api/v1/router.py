@@ -23,10 +23,10 @@ api_router.include_router(
     auth.router, prefix="/auth", tags=["F1 - Authentication (Gia Hiển)"]
 )
 api_router.include_router(
-    payment.router, prefix="/payment", tags=["F2 - VNPAY Payment (Duy Trường)"]
+    payment.router, prefix="/payment", tags=["F2 - PayOS Payment (Duy Trường)"]
 )
 api_router.include_router(
-    payment.router, prefix="/payments", tags=["F2 - VNPAY Payment (Frontend Alias)"]
+    payment.router, prefix="/payments", tags=["F2 - PayOS Payment (Frontend Alias)"]
 )
 api_router.include_router(
     payment.membership_router,

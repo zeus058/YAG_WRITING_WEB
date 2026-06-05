@@ -200,8 +200,8 @@ export const yagApi = {
   },
 
   billing: {
-    createVnpayCheckout: (body: { planCode: string; returnUrl: string }) =>
-      apiFetch<{ paymentUrl: string; transactionId: string }>("/api/v1/payments/vnpay/checkout", {
+    createPayosCheckout: (body: { planCode: string; returnUrl: string }) =>
+      apiFetch<{ paymentUrl: string; transactionId: string }>("/api/v1/payments/payos/checkout", {
         method: "POST",
         body,
       }),
@@ -218,7 +218,7 @@ export const yagApi = {
       }>(`/api/v1/payments/transactions/${vnpTxnRef}`, {
         method: "GET",
       }),
-    verifyVnpay: (queryParams: Record<string, string>) =>
+    verifyPayos: (queryParams: Record<string, string>) =>
       apiFetch<{
         success: boolean;
         transaction_id?: string;
@@ -226,7 +226,7 @@ export const yagApi = {
         amount?: number;
         premium_until?: string;
         message: string;
-      }>("/api/v1/payments/vnpay/verify", {
+      }>("/api/v1/payments/payos/verify", {
         method: "POST",
         body: queryParams,
       }),

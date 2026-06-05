@@ -408,7 +408,7 @@ jobs:
           env_vars: |
             ENVIRONMENT=production
             SERVICE_ROLE=api
-            PAYMENT_PROVIDER=vnpay
+            PAYMENT_PROVIDER=payos
             ALLOW_WEBSOCKET_QUERY_TOKEN=false
             AUTO_CREATE_TABLES=false
             APPLY_MIGRATIONS_ON_STARTUP=false

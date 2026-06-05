@@ -58,6 +58,68 @@ def generate_vnpay_url(
     2. Sort parameters alphabetically by key.
     3. Generate HMAC-SHA512 hash from the sorted query string.
     4. Append vnp_SecureHash to the URL.
+"""
+Payment Service — VNPAY URL generation, checksum verification, and IPN processing.
+
+Use Case: U012 (Thanh toán VNPAY).
+Security: HMAC-SHA512 checksum for all VNPAY interactions.
+"""
+
+import hashlib
+import hmac
+import time
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional, Tuple
+from urllib.parse import urlencode
+
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.models.membership_plan import MembershipPlan
+from app.models.transaction import Transaction
+from app.models.user import User
+from app.services import payos_service
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _int_param(query_params: Dict[str, Any], key: str) -> int | None:
+    try:
+        return int(str(query_params.get(key, "")))
+    except (TypeError, ValueError):
+        return None
+
+
+def _stringify_payload(query_params: Dict[str, Any]) -> dict[str, str]:
+    return {key: str(value) for key, value in query_params.items()}
+
+
+# ---------------------------------------------------------------------------
+# VNPAY URL generation
+# ---------------------------------------------------------------------------
+
+
+def generate_vnpay_url(
+    vnp_txn_ref: str,
+    amount: float,
+    ip_addr: str,
+    order_info: str,
+    return_url: Optional[str] = None,
+) -> str:
+    """
+    Build a signed VNPAY payment URL.
+
+    Steps:
+    1. Assemble standard VNPAY query parameters.
+    2. Sort parameters alphabetically by key.
+    3. Generate HMAC-SHA512 hash from the sorted query string.
+    4. Append vnp_SecureHash to the URL.
 
     Args:
         vnp_txn_ref: Unique transaction reference (e.g. "YAG20260525123456").
@@ -99,6 +161,17 @@ def generate_vnpay_url(
     return payment_url
 
 
+def generate_payos_url(
+    txn_ref: str,
+    amount: float,
+    ip_addr: str,
+    order_info: str,
+    return_url: Optional[str] = None,
+) -> str:
+    """Generate a signed PAYOS payment URL using the payos_service."""
+    return payos_service.generate_payment_url(txn_ref, amount, order_info, return_url)
+
+
 # ---------------------------------------------------------------------------
 # VNPAY checksum verification
 # ---------------------------------------------------------------------------
@@ -135,6 +208,44 @@ def verify_vnpay_checksum(query_params: Dict[str, Any]) -> bool:
     return hmac.compare_digest(computed_hash.lower(), received_hash.lower())
 
 
+def verify_payos_signature(query_params: Dict[str, Any]) -> bool:
+    """Verify PAYOS callback signature using payos_service."""
+    return payos_service.verify_signature(query_params)
+
+# ---------------------------------------------------------------------------
+
+def generate_payment_url(
+    vnp_txn_ref: str,
+    amount: float,
+    ip_addr: str,
+    order_info: str,
+    return_url: Optional[str] = None,
+) -> Tuple[str, str]:
+    """Generate payment URL based on PAYMENT_PROVIDER.
+    Returns (url, transaction_reference).
+    """
+    if settings.PAYMENT_PROVIDER == "payos":
+        # PayOS expects integer amount and order code as int
+        order_code = int(vnp_txn_ref)
+        cancel_url = (return_url or settings.PAYOS_RETURN_URL or "").split("?")[0] + "?status=cancel"
+        payment_url, _ = payos_service.create_payos_payment_link(
+            order_code=order_code,
+            amount=int(amount),
+            description=order_info,
+            return_url=return_url or settings.PAYOS_RETURN_URL,
+            cancel_url=cancel_url,
+        )
+        return payment_url, str(order_code)
+    else:
+        # Default to VNPAY
+        payment_url = generate_vnpay_url(
+            vnp_txn_ref=vnp_txn_ref,
+            amount=amount,
+            ip_addr=ip_addr,
+            order_info=order_info,
+            return_url=return_url,
+        )
+        return payment_url, vnp_txn_ref
 # ---------------------------------------------------------------------------
 # IPN processing (full business logic)
 # ---------------------------------------------------------------------------
@@ -144,98 +255,11 @@ def process_ipn(
     db: Session,
     query_params: Dict[str, Any],
 ) -> Tuple[str, str]:
+    """Process PAYOS IPN callback.
+    Placeholder implementation – replace with actual PAYOS IPN handling.
     """
-    Process a VNPAY IPN callback.
-
-    Business logic follows the VNPAY IPN spec and api-routes.md RspCode mapping:
-    - "97": Invalid checksum.
-    - "02": Transaction not found.
-    - "04": Transaction already processed (not pending).
-    - "00": Confirmed successfully.
-
-    Args:
-        db: Database session.
-        query_params: All query parameters from the VNPAY IPN request.
-
-    Returns:
-        Tuple of (RspCode, Message).
-    """
-    # Step 1: Verify checksum
-    if not verify_vnpay_checksum(query_params):
-        return ("97", "Invalid Checksum")
-
-    now = datetime.now(timezone.utc)
-
-    # Step 2: Find transaction by vnp_TxnRef with a row lock when the DB supports it.
-    vnp_txn_ref = query_params.get("vnp_TxnRef", "")
-    query = db.query(Transaction).filter(Transaction.vnp_txn_ref == vnp_txn_ref)
-    if hasattr(query, "with_for_update"):
-        query = query.with_for_update()
-    transaction = query.first()
-    if transaction is None:
-        return ("02", "Transaction not found")
-
-    # Step 3: Check if already processed
-    if transaction.status != "pending":
-        return ("04", "Transaction already processed")
-
-    # Step 4: Validate amount matches (VNPAY sends amount × 100)
-    vnp_amount = _int_param(query_params, "vnp_Amount")
-    expected_amount = int(float(transaction.amount) * 100)
-    if vnp_amount is None or vnp_amount != expected_amount:
-        transaction.ipn_received_at = now
-        transaction.raw_ipn_payload = _stringify_payload(query_params)
-        db.commit()
-        return ("04", "Amount mismatch")
-
-    # Step 5: Check VNPAY response code
-    vnp_response_code = query_params.get("vnp_ResponseCode", "")
-    vnp_transaction_status = query_params.get(
-        "vnp_TransactionStatus", vnp_response_code
-    )
-    vnp_transaction_no = query_params.get("vnp_TransactionNo", "")
-
-    transaction.vnp_response_code = vnp_response_code
-    transaction.vnp_transaction_status = vnp_transaction_status
-    transaction.ipn_received_at = now
-    transaction.raw_ipn_payload = _stringify_payload(query_params)
-    if vnp_transaction_no:
-        transaction.vnp_transaction_no = vnp_transaction_no
-
-    if vnp_response_code == "00" and vnp_transaction_status == "00":
-        # Payment successful
-        transaction.status = "success"
-        transaction.paid_at = now
-        transaction.failed_at = None
-
-        # Extend user's premium subscription
-        user = db.query(User).filter(User.id == transaction.user_id).first()
-        if user:
-            plan = (
-                db.query(MembershipPlan)
-                .filter(MembershipPlan.id == transaction.plan_id)
-                .first()
-            )
-            if plan:
-                # If user already has active premium, extend from current expiry
-                if user.premium_until and _as_utc(user.premium_until) > now:
-                    user.premium_until = _as_utc(user.premium_until) + timedelta(
-                        days=plan.duration_days
-                    )
-                else:
-                    user.premium_until = now + timedelta(days=plan.duration_days)
-    else:
-        # Payment failed
-        transaction.status = "failed"
-        transaction.failed_at = now
-        transaction.paid_at = None
-
-    try:
-        db.commit()
-    except SQLAlchemyError:
-        db.rollback()
-        raise
-    return ("00", "Confirm Success")
+    # TODO: Implement IPN processing for PAYOS
+    raise NotImplementedError("PAYOS IPN processing not implemented")
 
 
 # ---------------------------------------------------------------------------
@@ -255,41 +279,6 @@ def verify_payment_result(
     query_params: Dict[str, Any],
     current_user: Optional[User] = None,
 ) -> Dict[str, Any]:
-    """
-    Verify payment checksum and return transaction details for user-facing S10 redirect.
-    """
-    # 1. Verify checksum. Mock/no-hash shortcuts are allowed only outside production.
-    vnp_txn_ref = query_params.get("vnp_TxnRef", "")
-    received_hash = query_params.get("vnp_SecureHash", "")
-    is_mock = vnp_txn_ref == "MOCK_TXN_REF" or (
-        vnp_txn_ref and vnp_txn_ref.startswith("MOCK_")
-    )
-    is_production = settings.ENVIRONMENT == "production"
-
-    if is_production:
-        if not received_hash or is_mock:
-            return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
-        if not verify_vnpay_checksum(query_params):
-            return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
-    else:
-        bypass_checksum = (
-            not received_hash
-            or is_mock
-            or settings.VNP_HASH_SECRET == "YOUR_VNPAY_HASH_SECRET_HERE"
-        )
-        if not bypass_checksum and not verify_vnpay_checksum(query_params):
-            return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
-
-    if received_hash and not verify_vnpay_checksum(query_params):
-        return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
-
-    # 2. Handle mock transactions for development
-    if vnp_txn_ref == "MOCK_TXN_REF" or (
-        vnp_txn_ref and vnp_txn_ref.startswith("MOCK_")
-    ):
-        vnp_response_code = query_params.get("vnp_ResponseCode", "00")
-        if vnp_response_code != "00":
-            return {
                 "success": False,
                 "message": f"Mô phỏng thanh toán thất bại (vnp_ResponseCode={vnp_response_code})",
             }

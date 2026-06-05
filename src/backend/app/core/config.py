@@ -36,13 +36,24 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     SERVICE_ROLE: str = "api"
     QUEUE_PROVIDER: str = "rabbitmq"
-    PAYMENT_PROVIDER: str = "vnpay"
+    PAYMENT_PROVIDER: str = "payos"
 
     # PayOS Settings
     PAYOS_CLIENT_ID: Optional[str] = None
     PAYOS_API_KEY: Optional[str] = None
     PAYOS_CHECKSUM_KEY: Optional[str] = None
     PAYOS_RETURN_URL: Optional[str] = None
+
+    # Security Settings
+    SECRET_KEY: str = "yag_development_secret_key_change_in_production"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ALLOW_WEBSOCKET_QUERY_TOKEN: bool = True
+
+    # AI Engine & Gemini API
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
+    GEMINI_MAX_OUTPUT_TOKENS: int = 1024
 
     # Database Settings
     DATABASE_URL: Optional[str] = None
@@ -78,23 +89,6 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: Optional[str] = None
     CLOUDINARY_COVER_FOLDER: str = "yag/covers"
 
-    # Security Settings
-    SECRET_KEY: str = "yag_development_secret_key_change_in_production"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    ALLOW_WEBSOCKET_QUERY_TOKEN: bool = True
-
-    # VNPAY Sandbox Settings
-    VNP_TMN_CODE: str = "YAGTEST1"
-    VNP_HASH_SECRET: str = "YAGDEVSECRETKEY12345678"
-    VNP_URL: str = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
-    VNP_RETURN_URL: str = "http://localhost:3000/payment/result"
-    VNP_API_URL: str = "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction"
-
-    # AI Engine & Gemini API
-    GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-flash"
-    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
-    GEMINI_MAX_OUTPUT_TOKENS: int = 1024
     GEMINI_TIMEOUT_SECONDS: float = 10.0
     AI_CONTEXT_WORD_LIMIT: int = 1000
 
@@ -143,10 +137,6 @@ class Settings(BaseSettings):
                     )
 
             essential_uris = {"CORS_ORIGINS", "GEMINI_API_KEY"}
-            if self.PAYMENT_PROVIDER == "vnpay":
-                essential_uris.add("VNP_URL")
-                essential_uris.add("VNP_RETURN_URL")
-                essential_uris.add("VNP_API_URL")
 
             for uri_name in essential_uris:
                 val = getattr(self, uri_name)

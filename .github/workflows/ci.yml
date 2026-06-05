@@ -424,11 +424,10 @@ jobs:
             CLOUDINARY_CLOUD_NAME=YAG_CLOUDINARY_CLOUD_NAME:latest
             CLOUDINARY_API_KEY=YAG_CLOUDINARY_API_KEY:latest
             CLOUDINARY_API_SECRET=YAG_CLOUDINARY_API_SECRET:latest
-            VNP_TMN_CODE=yag-vnp-tmn-code:latest
-            VNP_HASH_SECRET=yag-vnp-hash-secret:latest
-            VNP_URL=yag-vnp-url:latest
-            VNP_RETURN_URL=yag-vnp-return-url:latest
-            VNP_API_URL=yag-vnp-api-url:latest
+            PAYOS_CLIENT_ID=YAG_PAYOS_CLIENT_ID:latest
+            PAYOS_API_KEY=YAG_PAYOS_API_KEY:latest
+            PAYOS_CHECKSUM_KEY=YAG_PAYOS_CHECKSUM_KEY:latest
+            PAYOS_RETURN_URL=YAG_PAYOS_RETURN_URL:latest
           flags: |
             --allow-unauthenticated
             --cpu=1

@@ -373,7 +373,7 @@ async def verify_payos_checkout(
 @router.get(
     "/transactions/{vnp_txn_ref}",
     response_model=TransactionStatusResponse,
-    summary="U012 - Tra cứu trạng thái giao dịch theo mã VNPAY reference",
+    summary="U012 - Tra cứu trạng thái giao dịch theo mã PayOS reference",
 )
 def get_transaction_status(
     vnp_txn_ref: str,

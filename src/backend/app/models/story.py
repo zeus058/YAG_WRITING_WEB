@@ -82,6 +82,22 @@ class Story(Base):
     def rating_count(self) -> int:
         return len(self.reviews)
 
+    @property
+    def draft_count(self) -> int:
+        return sum(
+            1
+            for c in self.chapters
+            if c.moderation_status == "draft"
+        )
+
+    @property
+    def pending_count(self) -> int:
+        return sum(
+            1
+            for c in self.chapters
+            if c.moderation_status == "pending"
+        )
+
     __table_args__ = (
         CheckConstraint(
             "status IN ('ongoing', 'completed', 'paused')", name="chk_stories_status"

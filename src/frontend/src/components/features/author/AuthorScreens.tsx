@@ -6,7 +6,7 @@ import Link from "next/link";
 import { stories } from "@/data/yag";
 import { Icon, Cover, MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
-import { yagApi, appEnv, createDraftSocket } from "@/lib";
+import { yagApi, appEnv, createDraftSocket, useAuth } from "@/lib";
 
 const triggerLiveToast = (message: string, type = "success") => {
   if (typeof window === "undefined") return;
@@ -46,6 +46,7 @@ function getNextChapterNumber(chapters: any[]) {
 
 export function AuthorWorksScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [works, setWorks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -185,6 +186,21 @@ export function AuthorWorksScreen() {
       }
       return (b.updated_at || "").localeCompare(a.updated_at || "");
     });
+  // Perform calculations for metrics
+  const totalViews = works.reduce((acc, story) => acc + (story.view_count || 0), 0);
+  const formattedViews = totalViews >= 1000000 
+    ? `${(totalViews / 1000000).toFixed(1)}M` 
+    : totalViews >= 1000 
+    ? `${(totalViews / 1000).toFixed(1)}K` 
+    : String(totalViews);
+
+  const ratedStories = works.filter((s) => (s.rating_count || 0) > 0);
+  const avgRating = ratedStories.length > 0 
+    ? (ratedStories.reduce((acc, s) => acc + (s.rating_avg || 0), 0) / ratedStories.length).toFixed(1)
+    : "0.0";
+
+  const displayName = user?.profile?.display_name || user?.username || "Tác giả";
+  const avatarInitials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <AppShell
@@ -198,10 +214,10 @@ export function AuthorWorksScreen() {
       <div className="author-header-panel panel panel-pad" style={{ marginBottom: 24, background: "linear-gradient(135deg, var(--jungle-dark) 0%, #163020 100%)", color: "#fff", borderRadius: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <span className="user-avatar" style={{ background: "var(--crimson)", color: "#fff", width: 64, height: 64, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: 24 }}>
-            LA
+            {avatarInitials}
           </span>
           <div>
-            <h2 style={{ fontSize: 22, fontWeight: "bold", margin: 0, color: "#fff" }}>Chào mừng trở lại, Linh An!</h2>
+            <h2 style={{ fontSize: 22, fontWeight: "bold", margin: 0, color: "#fff" }}>Chào mừng trở lại, {displayName}!</h2>
             <p style={{ margin: "4px 0 0 0", opacity: 0.8, fontSize: 13 }}>Không gian quản lý tác phẩm & theo dõi hành trình sáng tác.</p>
           </div>
         </div>
@@ -210,10 +226,10 @@ export function AuthorWorksScreen() {
       <section className="metric-grid" style={{ marginBottom: 24 }}>
         <MetricCard label="Tác phẩm" value={String(works.length)} />
         <MetricCard label="Số chương nháp" value={String(works.reduce((acc, story) => acc + (story.draft_count || 0), 0))} />
-        <MetricCard label="Chờ duyệt AI" value={String(works.reduce((acc, story) => acc + (story.moderation_status === "pending" ? 1 : 0), 0))} />
-        <MetricCard label="Uy tín tác giả" value="98%" />
-        <MetricCard label="Lượt đọc tháng" value="154.5K" />
-        <MetricCard label="Đánh giá TB" value="4.8 ★" />
+        <MetricCard label="Chờ duyệt AI" value={String(works.reduce((acc, story) => acc + (story.pending_count || 0), 0))} />
+        <MetricCard label="Uy tín tác giả" value={`${user?.profile?.reputation_score ?? 100}%`} />
+        <MetricCard label="Lượt đọc" value={formattedViews} />
+        <MetricCard label="Đánh giá TB" value={`${avgRating} ★`} />
       </section>
 
       <div className="panel panel-pad inline-actions" style={{ marginBottom: 24, justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
@@ -1538,7 +1554,10 @@ export function PublishScreen() {
 }
 
 export function ScheduleScreen() {
-  const [juneDays, setJuneDays] = useState<any[]>([]);
+  const [works, setWorks] = useState<any[]>([]);
+  const [calendarDays, setCalendarDays] = useState<any[]>([]);
+  const [currentMonthStr, setCurrentMonthStr] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   
   // Timer States
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -1549,11 +1568,113 @@ export function ScheduleScreen() {
   const [manualWords, setManualWords] = useState("");
   const [manualNotes, setManualNotes] = useState("");
   const [sessions, setSessions] = useState<any[]>([]);
-  // Commitments targets
-  const [commitments] = useState<any[]>([
-    { id: "com-1", novel: "Mưa Trên Thành Cũ", targetChaps: 100, currentChaps: 72, deadline: "30/08/2026" },
-    { id: "com-2", novel: "Cánh Cửa Sau Sao Băng", targetChaps: 60, currentChaps: 48, deadline: "15/07/2026" }
-  ]);
+
+  // Load works and chapters to populate commitments and calendar events
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        if (appEnv.useMocks) {
+          // Keep mock list
+          setWorks([
+            { id: "com-1", title: "Mưa Trên Thành Cũ", targetChaps: 100, chapter_count: 72, deadline: "30/08/2026" },
+            { id: "com-2", title: "Cánh Cửa Sau Sao Băng", targetChaps: 60, chapter_count: 48, deadline: "15/07/2026" }
+          ]);
+          
+          // Generate mock calendar days for June 2026
+          const daysList = Array.from({ length: 30 }, (_, index) => {
+            const dayNum = index + 1;
+            let event = null;
+            if (dayNum === 4) {
+              event = { title: "C14: Đêm lạnh", status: "pending", time: "10:00" };
+            } else if (dayNum === 7) {
+              event = { title: "C15: Bức thư", status: "approved", time: "15:00" };
+            } else if (dayNum === 12) {
+              event = { title: "Lịch nháp", status: "draft", time: "08:00" };
+            }
+            return { dayNum, event };
+          });
+          setCalendarDays(daysList);
+          setCurrentMonthStr("Tháng 06/2026");
+        } else {
+          // Production / API mode
+          const res = await yagApi.author.getStories();
+          const storiesList = res.data || [];
+          setWorks(storiesList);
+
+          // Get current month & year
+          const now = new Date();
+          const month = now.getMonth(); // 0-11
+          const year = now.getFullYear();
+          
+          // Number of days in current month
+          const numDays = new Date(year, month + 1, 0).getDate();
+          
+          // Load chapters for all stories to find scheduled ones
+          const allChapters: any[] = [];
+          for (const s of storiesList) {
+            try {
+              const chRes = await yagApi.author.getChapters(s.id);
+              if (chRes.data) {
+                allChapters.push(...chRes.data.map((c: any) => ({ ...c, storyTitle: s.title })));
+              }
+            } catch (err) {
+              console.error(`Failed to load chapters for story ${s.id}:`, err);
+            }
+          }
+
+          // Generate calendar days
+          const daysList = Array.from({ length: numDays }, (_, index) => {
+            const dayNum = index + 1;
+            // Find if there is any chapter scheduled on this day
+            const scheduledChapter = allChapters.find((c: any) => {
+              if (!c.publish_at) return false;
+              const pubDate = new Date(c.publish_at);
+              return (
+                pubDate.getDate() === dayNum &&
+                pubDate.getMonth() === month &&
+                pubDate.getFullYear() === year
+              );
+            });
+
+            let event = null;
+            if (scheduledChapter) {
+              const pubDate = new Date(scheduledChapter.publish_at);
+              const hrs = String(pubDate.getHours()).padStart(2, "0");
+              const mins = String(pubDate.getMinutes()).padStart(2, "0");
+              event = {
+                title: `C${scheduledChapter.chapter_number}: ${scheduledChapter.title.slice(0, 10)}...`,
+                status: scheduledChapter.moderation_status,
+                time: `${hrs}:${mins}`
+              };
+            }
+            return { dayNum, event };
+          });
+
+          setCalendarDays(daysList);
+          setCurrentMonthStr(`Tháng ${String(month + 1).padStart(2, "0")}/${year}`);
+        }
+      } catch (err) {
+        console.error("Failed to load schedule data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    void loadData();
+  }, []);
+
+  // Compute commitments dynamically
+  const commitments = works.map((w, idx) => {
+    const target = w.targetChaps || (w.chapter_count > 100 ? w.chapter_count + 20 : 100);
+    const current = w.currentChaps || w.chapter_count || 0;
+    const deadline = w.deadline || "30/09/2026";
+    return {
+      id: w.id || `com-${idx}`,
+      novel: w.title,
+      targetChaps: target,
+      currentChaps: current,
+      deadline: deadline
+    };
+  });
 
   // Load stopwatch sessions
   useEffect(() => {
@@ -1562,30 +1683,18 @@ export function ScheduleScreen() {
       if (stored) {
         try { setSessions(JSON.parse(stored)); } catch { setSessions([]); }
       } else {
-        const initialMock = [
-          { id: "s1", date: "02/06/2026", duration: 45, words: 1200, notes: "Chỉnh sửa thô chương 12" },
-          { id: "s2", date: "03/06/2026", duration: 60, words: 1800, notes: "Hoàn thiện chương 13 nháp" },
-        ];
-        setSessions(initialMock);
-        localStorage.setItem("yag.author.sessions", JSON.stringify(initialMock));
+        if (appEnv.useMocks) {
+          const initialMock = [
+            { id: "s1", date: "02/06/2026", duration: 45, words: 1200, notes: "Chỉnh sửa thô chương 12" },
+            { id: "s2", date: "03/06/2026", duration: 60, words: 1800, notes: "Hoàn thiện chương 13 nháp" },
+          ];
+          setSessions(initialMock);
+          localStorage.setItem("yag.author.sessions", JSON.stringify(initialMock));
+        } else {
+          setSessions([]);
+        }
       }
     }
-  }, []);
-  // Generate June 2026 calendar days
-  useEffect(() => {
-    const daysList = Array.from({ length: 30 }, (_, index) => {
-      const dayNum = index + 1;
-      let event = null;
-      if (dayNum === 4) {
-        event = { title: "C14: Đêm lạnh", status: "pending", time: "10:00" };
-      } else if (dayNum === 7) {
-        event = { title: "C15: Bức thư", status: "approved", time: "15:00" };
-      } else if (dayNum === 12) {
-        event = { title: "Lịch nháp", status: "draft", time: "08:00" };
-      }
-      return { dayNum, event };
-    });
-    setJuneDays(daysList);
   }, []);
 
   // Timer stopwatch trigger
@@ -1667,7 +1776,7 @@ export function ScheduleScreen() {
                 <h2 className="section-title" style={{ margin: 0, fontSize: 18, color: "var(--jungle-dark)" }}>Bảng lịch đăng chương</h2>
                 <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>Hẹn giờ phát hành & Trạng thái duyệt tự động của AI</p>
               </div>
-              <strong style={{ fontSize: 16, color: "var(--jungle-dark)" }}>Tháng 06/2026</strong>
+              <strong style={{ fontSize: 16, color: "var(--jungle-dark)" }}>{currentMonthStr}</strong>
             </div>
 
             {/* Weekdays header */}
@@ -1683,8 +1792,7 @@ export function ScheduleScreen() {
 
             {/* Calendar grid */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginTop: 8 }}>
-              {/* Padding for first day of June 2026 (June 1st, 2026 is Monday) */}
-              {juneDays.map((day) => (
+              {calendarDays.map((day) => (
                 <div
                   key={day.dayNum}
                   style={{
@@ -1728,7 +1836,7 @@ export function ScheduleScreen() {
                       }}
                     >
                       <div style={{ fontWeight: "bold" }}>{day.event.time}</div>
-                      <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{day.event.title}</div>
+                      <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={day.event.title}>{day.event.title}</div>
                     </div>
                   )}
                 </div>
@@ -1740,26 +1848,32 @@ export function ScheduleScreen() {
           <section className="panel panel-pad stack">
             <h2 className="section-title" style={{ fontSize: 16, margin: "0 0 12px 0", color: "var(--jungle-dark)" }}>Bảng cam kết sáng tác & Tiến độ</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {commitments.map((com) => {
-                const percent = Math.min(100, Math.round((com.currentChaps / com.targetChaps) * 100));
-                return (
-                  <div key={com.id} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 16 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                      <div>
-                        <strong style={{ fontSize: 14, color: "var(--foreground)" }}>{com.novel}</strong>
-                        <div style={{ fontSize: 11, color: "var(--muted)" }}>Hạn hoàn thành: {com.deadline}</div>
+              {commitments.length === 0 ? (
+                <div style={{ fontSize: 13, color: "var(--muted)", textAlign: "center", padding: "16px 0" }}>
+                  Bạn chưa có tác phẩm nào để cam kết tiến độ. Hãy tạo tác phẩm mới trong mục Tác phẩm của tôi!
+                </div>
+              ) : (
+                commitments.map((com) => {
+                  const percent = Math.min(100, Math.round((com.currentChaps / com.targetChaps) * 100));
+                  return (
+                    <div key={com.id} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 16 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <div>
+                          <strong style={{ fontSize: 14, color: "var(--foreground)" }}>{com.novel}</strong>
+                          <div style={{ fontSize: 11, color: "var(--muted)" }}>Hạn hoàn thành: {com.deadline}</div>
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: "bold", color: "var(--jungle-dark)" }}>
+                          {com.currentChaps} / {com.targetChaps} chương ({percent}%)
+                        </span>
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: "bold", color: "var(--jungle-dark)" }}>
-                        {com.currentChaps} / {com.targetChaps} chương ({percent}%)
-                      </span>
+                      {/* Progress bar container */}
+                      <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden", position: "relative" }}>
+                        <div style={{ width: `${percent}%`, height: "100%", background: "linear-gradient(90deg, var(--jungle-dark) 0%, var(--green) 100%)", borderRadius: 4 }} />
+                      </div>
                     </div>
-                    {/* Progress bar container */}
-                    <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden", position: "relative" }}>
-                      <div style={{ width: `${percent}%`, height: "100%", background: "linear-gradient(90deg, var(--jungle-dark) 0%, var(--green) 100%)", borderRadius: 4 }} />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </section>
         </div>

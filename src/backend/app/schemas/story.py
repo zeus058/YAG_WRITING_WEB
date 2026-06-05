@@ -88,6 +88,8 @@ class StoryResponse(BaseModel):
     rating_avg: float = Field(..., description="Điểm đánh giá trung bình (0-5)")
     rating_count: Optional[int] = Field(default=0, description="Số lượt đánh giá")
     chapter_count: Optional[int] = Field(default=0, description="Số chương")
+    draft_count: Optional[int] = Field(default=0, description="Số chương nháp")
+    pending_count: Optional[int] = Field(default=0, description="Số chương chờ duyệt AI")
     created_at: datetime = Field(..., description="Ngày tạo")
     updated_at: datetime = Field(..., description="Lần cập nhật cuối")
 

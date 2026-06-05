@@ -1106,50 +1106,70 @@ export function ReaderScreen() {
 }
 
 export function ForumScreen() {
-  const [posts, setPosts] = useState([
-    {
-      id: "p1",
-      authorName: "Minh Nguyệt",
-      authorAvatar: "MN",
-      time: "10 phút trước",
-      content: "Mọi người nghĩ sao về thân phận thật sự của nhân vật người viết thư thuê trong 'Mưa Trên Thành Cũ'? Mình đoán ông ấy chính là người lính mất tích năm xưa.",
-      likes: 24,
-      liked: false,
-      replies: [
-        { id: "r1_1", author: "Hải Đăng", content: "Giả thuyết hay đấy! Nhưng chi tiết chiếc đồng hồ quả quýt ở chương 8 dường như ám chỉ ông ấy là thế hệ sau cơ." },
-        { id: "r1_2", author: "Phương Linh", content: "Đồng ý với Hải Đăng. Tôi nghĩ ông ấy là con trai người lính." }
-      ],
-      showReplyBox: false,
-    },
-    {
-      id: "p2",
-      authorName: "Quốc Bảo",
-      authorAvatar: "QB",
-      time: "1 giờ trước",
-      content: "Vừa đọc xong chương mới nhất. Bút lực của tác giả Linh An ngày càng lên tay, tả cảnh mưa ga cũ buồn man mác đọc mà nổi cả da gà.",
-      likes: 12,
-      liked: true,
-      replies: [],
-      showReplyBox: false,
-    },
-    {
-      id: "p3",
-      authorName: "Yến Vy",
-      authorAvatar: "YV",
-      time: "2 giờ trước",
-      content: "Có ai đề xuất thêm truyện nào thuộc thể loại kỳ ảo lịch sử không ạ? Đang đói thuốc quá cứu tôi với 😭",
-      likes: 8,
-      liked: false,
-      replies: [
-        { id: "r3_1", author: "Admin YAG", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa với từ khóa 'kỳ ảo lịch sử việt nam' trên trang Khám phá nhé!" }
-      ],
-      showReplyBox: false,
-    }
-  ]);
-
+  const [posts, setPosts] = useState<any[]>([]);
   const [newPostContent, setNewPostContent] = useState("");
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [activeMoreMenu, setActiveMoreMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("yag.forum.posts");
+      if (stored) {
+        try {
+          setPosts(JSON.parse(stored));
+        } catch {
+          setPosts([]);
+        }
+      } else {
+        if (appEnv.useMocks) {
+          const initialMock = [
+            {
+              id: "p1",
+              authorName: "Minh Nguyệt",
+              authorAvatar: "MN",
+              time: "10 phút trước",
+              content: "Mọi người nghĩ sao về thân phận thật sự của nhân vật người viết thư thuê trong 'Mưa Trên Thành Cũ'? Mình đoán ông ấy chính là người lính mất tích năm xưa.",
+              likes: 24,
+              liked: false,
+              replies: [
+                { id: "r1_1", author: "Hải Đăng", content: "Giả thuyết hay đấy! Nhưng chi tiết chiếc đồng hồ quả quýt ở chương 8 dường như ám chỉ ông ấy là thế hệ sau cơ." },
+                { id: "r1_2", author: "Phương Linh", content: "Đồng ý với Hải Đăng. Tôi nghĩ ông ấy là con trai người lính." }
+              ],
+              showReplyBox: false,
+            },
+            {
+              id: "p2",
+              authorName: "Quốc Bảo",
+              authorAvatar: "QB",
+              time: "1 giờ trước",
+              content: "Vừa đọc xong chương mới nhất. Bút lực của tác giả Linh An ngày càng lên tay, tả cảnh mưa ga cũ buồn man mác đọc mà nổi cả da gà.",
+              likes: 12,
+              liked: true,
+              replies: [],
+              showReplyBox: false,
+            },
+            {
+              id: "p3",
+              authorName: "Yến Vy",
+              authorAvatar: "YV",
+              time: "2 giờ trước",
+              content: "Có ai đề xuất thêm truyện nào thuộc thể loại kỳ ảo lịch sử không ạ? Đang đói thuốc quá cứu tôi với 😭",
+              likes: 8,
+              liked: false,
+              replies: [
+                { id: "r3_1", author: "Admin YAG", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa với từ khóa 'kỳ ảo lịch sử việt nam' trên trang Khám phá nhé!" }
+              ],
+              showReplyBox: false,
+            }
+          ];
+          setPosts(initialMock);
+          localStorage.setItem("yag.forum.posts", JSON.stringify(initialMock));
+        } else {
+          setPosts([]);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!activeMoreMenu) return;
@@ -1174,7 +1194,11 @@ export function ForumScreen() {
   };
 
   const handleHide = (postId: string) => {
-    setPosts(prev => prev.filter(p => p.id !== postId));
+    const updated = posts.filter(p => p.id !== postId);
+    setPosts(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
+    }
     triggerLiveToast("Đã ẩn bài viết này khỏi bảng tin.");
   };
 
@@ -1184,7 +1208,7 @@ export function ForumScreen() {
   };
 
   const handleLikePost = (postId: string) => {
-    setPosts(prev => prev.map(p => {
+    const updated = posts.map(p => {
       if (p.id === postId) {
         return {
           ...p,
@@ -1193,7 +1217,11 @@ export function ForumScreen() {
         };
       }
       return p;
-    }));
+    });
+    setPosts(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
+    }
   };
 
   const handleCreatePost = (e: React.FormEvent) => {
@@ -1210,7 +1238,11 @@ export function ForumScreen() {
       replies: [],
       showReplyBox: false,
     };
-    setPosts([newPost, ...posts]);
+    const updated = [newPost, ...posts];
+    setPosts(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
+    }
     setNewPostContent("");
     triggerLiveToast("Đăng bài viết thành công!");
   };
@@ -1227,7 +1259,7 @@ export function ForumScreen() {
   const handleAddReplySubmit = (postId: string) => {
     const text = replyInputs[postId] || "";
     if (!text.trim()) return;
-    setPosts(prev => prev.map(p => {
+    const updated = posts.map(p => {
       if (p.id === postId) {
         return {
           ...p,
@@ -1236,7 +1268,11 @@ export function ForumScreen() {
         };
       }
       return p;
-    }));
+    });
+    setPosts(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
+    }
     setReplyInputs(prev => ({ ...prev, [postId]: "" }));
     triggerLiveToast("Đã gửi phản hồi.");
   };
@@ -1265,109 +1301,112 @@ export function ForumScreen() {
           </form>
 
           {/* Social Thread Feed */}
-          {posts.map((post) => (
-            <article className="forum-post" key={post.id}>
-              <div className="forum-post-head">
-                <div className="forum-post-author">
-                  <div className="avatar" style={{ background: post.authorName === "Bạn" ? "var(--crimson)" : "var(--jungle)" }}>
-                    {post.authorAvatar}
+          {posts.length === 0 ? (
+            <div className="panel panel-pad" style={{ textAlign: "center", color: "var(--muted)", padding: 48, borderRadius: 12 }}>
+              Chưa có bài viết thảo luận nào trên diễn đàn. Hãy bắt đầu cuộc thảo luận đầu tiên của bạn!
+            </div>
+          ) : (
+            posts.map((post) => (
+              <article className="forum-post" key={post.id}>
+                <div className="forum-post-head">
+                  <div className="forum-post-author">
+                    <div className="avatar" style={{ background: post.authorName === "Bạn" ? "var(--crimson)" : "var(--jungle)" }}>
+                      {post.authorAvatar}
+                    </div>
+                    <div className="forum-post-meta">
+                      <strong>{post.authorName}</strong>
+                      <small>{post.time}</small>
+                    </div>
                   </div>
-                  <div className="forum-post-meta">
-                    <strong>{post.authorName}</strong>
-                    <small>{post.time}</small>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+                    <span className="badge badge-blue">Sôi nổi</span>
+                    <button
+                      className="button icon-button forum-more-btn"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMoreMenu(activeMoreMenu === post.id ? null : post.id);
+                      }}
+                      style={{ padding: 4, height: 28, width: 28, minWidth: 28, background: "transparent", border: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                      aria-label="Tùy chọn bài viết"
+                    >
+                      <Icon name="settings" />
+                    </button>
+                    {activeMoreMenu === post.id && (
+                      <div className="menu dropdown-menu" style={{ right: 0, top: 32, position: "absolute", zIndex: 10, minWidth: 120 }}>
+                        <button className="menu-item" type="button" onClick={() => handleShare(post.id)}>Chia sẻ</button>
+                        <button className="menu-item" type="button" onClick={() => handleHide(post.id)}>Ẩn bài viết</button>
+                        <button className="menu-item" type="button" onClick={() => handleReport(post.id)} style={{ color: "var(--crimson)" }}>Báo cáo</button>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
-                  <span className="badge badge-blue">Sôi nổi</span>
+
+                <div className="forum-post-content">{post.content}</div>
+
+                <div className="forum-post-actions">
                   <button
-                    className="button icon-button forum-more-btn"
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMoreMenu(activeMoreMenu === post.id ? null : post.id);
-                    }}
-                    style={{ padding: 4, height: 28, width: 28, minWidth: 28, background: "transparent", border: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                    aria-label="Tùy chọn bài viết"
+                    className={`forum-action-btn ${post.liked ? "active" : ""}`}
+                    onClick={() => handleLikePost(post.id)}
                   >
-                    <Icon name="settings" />
+                    <Icon name="check" /> {post.likes} Thích
                   </button>
-                  {activeMoreMenu === post.id && (
-                    <div className="account-dropdown" style={{ top: 32, right: 0, width: 140, display: "flex", flexDirection: "column" }}>
-                      <button className="account-dropdown-item" type="button" onClick={() => handleHide(post.id)} style={{ background: "transparent", border: 0, width: "100%", textAlign: "left", cursor: "pointer" }}>
-                        <Icon name="close" />
-                        Ẩn bài viết
-                      </button>
-                      <button className="account-dropdown-item" type="button" onClick={() => handleReport(post.id)} style={{ background: "transparent", border: 0, width: "100%", textAlign: "left", cursor: "pointer" }}>
-                        <Icon name="shield" />
-                        Báo cáo
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="forum-post-content">{post.content}</div>
-              <div className="forum-post-actions">
-                <button
-                  type="button"
-                  className={`forum-action-btn ${post.liked ? "active" : ""}`}
-                  onClick={() => handleLikePost(post.id)}
-                >
-                  <Icon name="check" /> {post.likes} Thích
-                </button>
-                <button
-                  type="button"
-                  className="forum-action-btn"
-                  onClick={() => toggleReplyBox(post.id)}
-                >
-                  <Icon name="settings" /> {post.replies.length} Bình luận
-                </button>
-                <button
-                  type="button"
-                  className="forum-action-btn"
-                  onClick={() => handleShare(post.id)}
-                >
-                  <Icon name="arrow" /> Chia sẻ
-                </button>
-              </div>
-
-              {/* Replies list */}
-              {post.replies.length > 0 && (
-                <div className="forum-replies-section">
-                  {post.replies.map((reply) => (
-                    <div className="forum-reply-card" key={reply.id}>
-                      <strong>{reply.author}</strong>
-                      <div>{reply.content}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Inline Reply box */}
-              {post.showReplyBox && (
-                <div className="forum-reply-box">
-                  <input
-                    type="text"
-                    placeholder="Viết phản hồi của bạn..."
-                    value={replyInputs[post.id] || ""}
-                    onChange={(e) => setReplyInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleAddReplySubmit(post.id);
-                    }}
-                  />
-                  <button className="button button-primary" type="button" onClick={() => handleAddReplySubmit(post.id)}>
-                    Gửi
+                  <button
+                    type="button"
+                    className="forum-action-btn"
+                    onClick={() => toggleReplyBox(post.id)}
+                  >
+                    <Icon name="settings" /> {post.replies.length} Bình luận
+                  </button>
+                  <button
+                    type="button"
+                    className="forum-action-btn"
+                    onClick={() => handleShare(post.id)}
+                  >
+                    <Icon name="arrow" /> Chia sẻ
                   </button>
                 </div>
-              )}
+
+                {/* Replies list */}
+                {post.replies.length > 0 && (
+                  <div className="forum-replies-section">
+                    {post.replies.map((reply: any) => (
+                      <div className="forum-reply-card" key={reply.id}>
+                        <strong>{reply.author}</strong>
+                        <div>{reply.content}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Inline Reply box */}
+                {post.showReplyBox && (
+                  <div className="forum-reply-box">
+                    <input
+                      type="text"
+                      placeholder="Viết phản hồi của bạn..."
+                      value={replyInputs[post.id] || ""}
+                      onChange={(e) => setReplyInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleAddReplySubmit(post.id);
+                      }}
+                    />
+                    <button className="button button-primary" type="button" onClick={() => handleAddReplySubmit(post.id)}>
+                      Gửi
+                    </button>
+                  </div>
+                )}
             </article>
-          ))}
-        </main>
+          ))
+        )}
+      </main>
 
         <aside className="forum-right-sidebar stack" style={{ gap: 16 }}>
           <div className="panel panel-pad stack" style={{ gap: 12 }}>
             <h2 className="section-title" style={{ margin: 0 }}>Thảo luận nổi bật</h2>
             <div className="notice" style={{ padding: "8px 12px", borderRadius: 6, fontSize: 13 }}>
-              <Icon name="bell" /> Có 24 người đang online thảo luận.
+              <Icon name="bell" /> {appEnv.useMocks ? "Có 24 người đang online thảo luận." : "Kết nối cộng đồng YAG."}
             </div>
             <div style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.5 }}>
               Diễn đàn là nơi độc giả trao đổi ý kiến về các chương truyện mới, chia sẻ cảm xúc và dự đoán các chi tiết sắp tới cùng cộng đồng YAG.
@@ -1377,9 +1416,19 @@ export function ForumScreen() {
           <div className="panel panel-pad stack" style={{ gap: 8 }}>
             <h3 style={{ margin: 0, fontSize: 15, fontWeight: "bold" }}>Chủ đề hot tuần</h3>
             <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13, lineHeight: 1.8, color: "var(--jungle)" }}>
-              <li>Dự đoán chương cuối Mưa Trên Thành Cũ</li>
-              <li>Tại sao AI khuyên không nên hồi sinh nam phụ?</li>
-              <li>Lịch đăng chương premium của Linh An</li>
+              {appEnv.useMocks ? (
+                <>
+                  <li>Dự đoán chương cuối Mưa Trên Thành Cũ</li>
+                  <li>Tại sao AI khuyên không nên hồi sinh nam phụ?</li>
+                  <li>Lịch đăng chương premium của Linh An</li>
+                </>
+              ) : (
+                <>
+                  <li>Thảo luận về các tác phẩm mới cập nhật</li>
+                  <li>Sử dụng AI gợi ý tình tiết câu chuyện</li>
+                  <li>Chia sẻ trải nghiệm đọc truyện trên YAG</li>
+                </>
+              )}
             </ul>
           </div>
         </aside>
@@ -2093,12 +2142,16 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
       if (stored) {
         try { setAnnouncements(JSON.parse(stored)); } catch { setAnnouncements([]); }
       } else {
-        const mockAnn = [
-          { id: "an-1", title: "Cảm ơn độc giả ủng hộ", content: "Mưa Trên Thành Cũ chính thức đạt mốc 100,000 lượt đọc! Cảm ơn sự đồng hành của mọi người.", date: "02/06/2026" },
-          { id: "an-2", title: "Thông báo dời lịch đăng chương 14", content: "Do tuần này mình bận một số công việc cá nhân, chương 14 sẽ được dời lịch đăng từ thứ Sáu sang thứ Bảy (06/06). Cảm ơn các bạn đã thông cảm!", date: "03/06/2026" }
-        ];
-        setAnnouncements(mockAnn);
-        localStorage.setItem("yag.author.announcements", JSON.stringify(mockAnn));
+        if (appEnv.useMocks) {
+          const mockAnn = [
+            { id: "an-1", title: "Cảm ơn độc giả ủng hộ", content: "Mưa Trên Thành Cũ chính thức đạt mốc 100,000 lượt đọc! Cảm ơn sự đồng hành của mọi người.", date: "02/06/2026" },
+            { id: "an-2", title: "Thông báo dời lịch đăng chương 14", content: "Do tuần này mình bận một số công việc cá nhân, chương 14 sẽ được dời lịch đăng từ thứ Sáu sang thứ Bảy (06/06). Cảm ơn các bạn đã thông cảm!", date: "03/06/2026" }
+          ];
+          setAnnouncements(mockAnn);
+          localStorage.setItem("yag.author.announcements", JSON.stringify(mockAnn));
+        } else {
+          setAnnouncements([]);
+        }
       }
     }
   }, []);

@@ -221,7 +221,6 @@ jobs:
   docker:
     name: "🐳 Docker Build Check"
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
 
     steps:
       - name: Checkout code
@@ -415,19 +414,19 @@ jobs:
             SCHEDULER_ENABLED=false
             VIEW_COUNT_FLUSH_ENABLED=false
           secrets: |
-            DATABASE_URL=YAG_DATABASE_URL:latest
-            SECRET_KEY=YAG_SECRET_KEY:latest
-            CORS_ORIGINS=YAG_CORS_ORIGINS:latest
-            REDIS_URL=YAG_REDIS_URL:latest
-            RABBITMQ_URL=YAG_RABBITMQ_URL:latest
-            GEMINI_API_KEY=YAG_GEMINI_API_KEY:latest
-            CLOUDINARY_CLOUD_NAME=YAG_CLOUDINARY_CLOUD_NAME:latest
-            CLOUDINARY_API_KEY=YAG_CLOUDINARY_API_KEY:latest
-            CLOUDINARY_API_SECRET=YAG_CLOUDINARY_API_SECRET:latest
-            PAYOS_CLIENT_ID=YAG_PAYOS_CLIENT_ID:latest
-            PAYOS_API_KEY=YAG_PAYOS_API_KEY:latest
-            PAYOS_CHECKSUM_KEY=YAG_PAYOS_CHECKSUM_KEY:latest
-            PAYOS_RETURN_URL=YAG_PAYOS_RETURN_URL:latest
+            DATABASE_URL=yag-database-url:latest
+            SECRET_KEY=yag-secret-key:latest
+            CORS_ORIGINS=yag-cors-origins:latest
+            REDIS_URL=yag-redis-url:latest
+            RABBITMQ_URL=yag-rabbitmq-url:latest
+            GEMINI_API_KEY=yag-gemini-key:latest
+            CLOUDINARY_CLOUD_NAME=yag-cloudinary-name:latest
+            CLOUDINARY_API_KEY=yag-cloudinary-key:latest
+            CLOUDINARY_API_SECRET=yag-cloudinary-secret:latest
+            PAYOS_CLIENT_ID=yag-payos-client-id:latest
+            PAYOS_API_KEY=yag-payos-api-key:latest
+            PAYOS_CHECKSUM_KEY=yag-payos-checksum-key:latest
+            PAYOS_RETURN_URL=yag-payos-return-url:latest
           flags: |
             --allow-unauthenticated
             --cpu=1

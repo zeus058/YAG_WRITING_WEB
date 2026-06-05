@@ -31,6 +31,7 @@ x-backend-env: &backend-env
   REDIS_URL: ${REDIS_URL:-}
   REDIS_HOST: ${REDIS_HOST:-redis}
   REDIS_PORT: ${REDIS_PORT:-6379}
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-}
 
   # RabbitMQ Message Broker Configuration
   RABBITMQ_URL: ${RABBITMQ_URL:-}
@@ -80,7 +81,7 @@ services:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-yag_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yag_secret}
@@ -98,7 +99,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     command: >
@@ -129,8 +130,8 @@ services:
     image: rabbitmq:3.13-management-alpine
     restart: unless-stopped
     ports:
-      - "${RABBITMQ_PORT:-5672}:5672"
-      - "${RABBITMQ_DASHBOARD_PORT:-15672}:15672"
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_DASHBOARD_PORT:-15672}:15672"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-yag_mq}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-yag_mq_secret}
@@ -263,7 +264,7 @@ services:
       args:
         NEXT_PUBLIC_DEPLOY_ENV: ${ENVIRONMENT:-production}
         NEXT_PUBLIC_APP_URL: ${FRONTEND_PUBLIC_URL:-http://localhost}
-        NEXT_PUBLIC_API_BASE_URL: ${API_PUBLIC_URL:-http://localhost/api}
+        NEXT_PUBLIC_API_BASE_URL: ${API_PUBLIC_URL:-http://localhost}
         NEXT_PUBLIC_WS_BASE_URL: ${WS_PUBLIC_URL:-ws://localhost/ws}
         NEXT_PUBLIC_API_TIMEOUT_MS: ${API_TIMEOUT_MS:-12000}
         NEXT_PUBLIC_USE_MOCKS: "false"

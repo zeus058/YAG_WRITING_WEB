@@ -1,5 +1,13 @@
 import uuid
-from sqlalchemy import Column, String, Numeric, ForeignKey, DateTime, CheckConstraint, text
+from sqlalchemy import (
+    Column,
+    String,
+    Numeric,
+    ForeignKey,
+    DateTime,
+    CheckConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -41,12 +49,17 @@ class Transaction(Base):
     ipn_received_at = Column(DateTime(timezone=True), nullable=True)
     raw_ipn_payload = Column(JSONB, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     user = relationship("User", back_populates="transactions")
     membership_plan = relationship("MembershipPlan", back_populates="transactions")
 
     __table_args__ = (
         CheckConstraint("amount > 0", name="chk_transactions_amount_positive"),
-        CheckConstraint("status IN ('pending', 'success', 'failed')", name="chk_transactions_status_valid"),
+        CheckConstraint(
+            "status IN ('pending', 'success', 'failed')",
+            name="chk_transactions_status_valid",
+        ),
     )

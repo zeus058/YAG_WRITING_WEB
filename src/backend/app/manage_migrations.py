@@ -5,12 +5,12 @@ Usage:
     python -m app.manage_migrations
     python -m app.manage_migrations --check
 """
+
 import argparse
 import hashlib
 from pathlib import Path
 from sqlalchemy import text
 from app.core.database import engine
-
 
 CREATE_MIGRATIONS_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -35,7 +35,9 @@ def _ensure_migrations_table(conn) -> None:
 
 
 def _load_applied_migrations(conn) -> dict[str, str]:
-    rows = conn.execute(text("SELECT version, checksum FROM schema_migrations")).fetchall()
+    rows = conn.execute(
+        text("SELECT version, checksum FROM schema_migrations")
+    ).fetchall()
     return {str(row.version): str(row.checksum) for row in rows}
 
 
@@ -79,12 +81,10 @@ def apply_migrations(migrations_dir: str | Path, check_only: bool = False) -> li
             print(f"Applying migration: {sql_file.name}")
             conn.execute(text(sql))
             conn.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO schema_migrations (version, filename, checksum)
                     VALUES (:version, :filename, :checksum)
-                    """
-                ),
+                    """),
                 {
                     "version": version,
                     "filename": sql_file.name,
@@ -104,7 +104,9 @@ def apply_migrations(migrations_dir: str | Path, check_only: bool = False) -> li
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Apply YAG SQL migrations.")
-    parser.add_argument("--check", action="store_true", help="Fail if any migration is pending.")
+    parser.add_argument(
+        "--check", action="store_true", help="Fail if any migration is pending."
+    )
     return parser.parse_args()
 
 

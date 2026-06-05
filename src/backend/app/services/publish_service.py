@@ -25,7 +25,9 @@ class PublishTaskPayload:
     requested_by: str
     publish_at: Optional[str] = None
     is_premium: bool = False
-    requested_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    requested_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
     def to_dict(self) -> dict:
         return {
@@ -80,7 +82,9 @@ def push_publish_task_to_queue(payload: PublishTaskPayload) -> bool:
                 loop = asyncio.get_running_loop()
                 loop.run_in_executor(None, handle_publish_chapter, payload_dict)
             except RuntimeError:
-                thread = threading.Thread(target=handle_publish_chapter, args=(payload_dict,))
+                thread = threading.Thread(
+                    target=handle_publish_chapter, args=(payload_dict,)
+                )
                 thread.daemon = True
                 thread.start()
             return True
@@ -146,10 +150,10 @@ def _load_chapter_and_story(chapter_id: str, db: Session) -> tuple[Chapter, Stor
 
 
 def _authorize_publish_owner(story: Story, current_user: User) -> None:
-    if current_user.role not in {"author", "admin"}:
-        raise PermissionError("Only authors can publish chapters")
+    if current_user.role == "admin":
+        raise PermissionError("Admin accounts cannot publish reader/author chapters")
 
-    if current_user.role != "admin" and str(story.author_id) != str(current_user.id):
+    if str(story.author_id) != str(current_user.id):
         raise PermissionError("You do not own this chapter")
 
 

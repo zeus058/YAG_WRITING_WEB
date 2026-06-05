@@ -69,10 +69,19 @@ def _publish_retry(channel, payload: dict, properties, reason: str) -> bool:
     target_queue = settings.RABBITMQ_MODERATION_RETRY_QUEUE
     if retry_count > settings.RABBITMQ_MODERATION_MAX_RETRIES:
         target_queue = settings.RABBITMQ_MODERATION_DLQ
-        logger.error("Moving moderation task to DLQ after %s retries: %s", retry_count - 1, reason)
+        logger.error(
+            "Moving moderation task to DLQ after %s retries: %s",
+            retry_count - 1,
+            reason,
+        )
     else:
-        logger.warning("Retrying moderation task in %ss (attempt %s/%s): %s", REQUEUE_DELAY_SECONDS,
-                       retry_count, settings.RABBITMQ_MODERATION_MAX_RETRIES, reason)
+        logger.warning(
+            "Retrying moderation task in %ss (attempt %s/%s): %s",
+            REQUEUE_DELAY_SECONDS,
+            retry_count,
+            settings.RABBITMQ_MODERATION_MAX_RETRIES,
+            reason,
+        )
 
     channel.basic_publish(
         exchange="",
@@ -105,7 +114,8 @@ def _build_notification(chapter: Chapter, report) -> dict:
         "chapter_id": str(chapter.id),
         "story_id": str(chapter.story_id),
         "moderation_status": chapter.moderation_status,
-        "is_violation": report.result in {ModerationResult.REJECTED, ModerationResult.FLAGGED},
+        "is_violation": report.result
+        in {ModerationResult.REJECTED, ModerationResult.FLAGGED},
         "confidence_score": report.confidence,
         "reason": report.reason,
         "flagged_categories": report.flagged_categories,
@@ -123,9 +133,15 @@ def _sync_embedding_if_approved(db, chapter: Chapter, report) -> None:
     try:
         from app.services.ai_service import sync_story_embedding
 
-        asyncio.run(sync_story_embedding(db, story_id=str(story.id), description=story.description))
+        asyncio.run(
+            sync_story_embedding(
+                db, story_id=str(story.id), description=story.description
+            )
+        )
     except Exception as exc:
-        logger.warning("Failed to sync embedding for story %s after moderation: %s", story.id, exc)
+        logger.warning(
+            "Failed to sync embedding for story %s after moderation: %s", story.id, exc
+        )
 
 
 def handle_publish_chapter(payload: dict, db=None) -> None:
@@ -151,7 +167,9 @@ def handle_publish_chapter(payload: dict, db=None) -> None:
         chapter = apply_moderation_result(chapter_id=chapter_id, report=report, db=db)
         _sync_embedding_if_approved(db, chapter, report)
 
-        author_id = payload.get("requested_by") or _load_story_author_id(db, chapter.story_id)
+        author_id = payload.get("requested_by") or _load_story_author_id(
+            db, chapter.story_id
+        )
         if author_id:
             notification_payload = _build_notification(chapter, report)
             create_notification(
@@ -210,7 +228,9 @@ def start_worker() -> None:
             channel = connection.channel()
             declare_moderation_queues(channel)
             channel.basic_qos(prefetch_count=1)
-            channel.basic_consume(queue=PUBLISH_QUEUE_NAME, on_message_callback=on_message)
+            channel.basic_consume(
+                queue=PUBLISH_QUEUE_NAME, on_message_callback=on_message
+            )
 
             logger.info("Worker listening on queue '%s'", PUBLISH_QUEUE_NAME)
             channel.start_consuming()

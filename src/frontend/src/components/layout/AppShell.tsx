@@ -78,7 +78,7 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
   useEffect(() => {
     if (authUser?.premium_until) {
       setIsPremium(new Date(authUser.premium_until) > new Date());
-    } else if (typeof window !== "undefined") {
+    } else if (appEnv.useMocks && typeof window !== "undefined") {
       const cached = localStorage.getItem("yag.mockMembership");
       if (cached) {
         try {
@@ -88,7 +88,7 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
           } else {
             setIsPremium(false);
           }
-        } catch (e) {
+        } catch {
           setIsPremium(false);
         }
       } else {

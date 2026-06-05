@@ -71,7 +71,7 @@ def _extract_json(text: str) -> dict:
     start = stripped.find("{")
     end = stripped.rfind("}")
     if start != -1 and end != -1:
-        stripped = stripped[start: end + 1]
+        stripped = stripped[start : end + 1]
 
     return json.loads(stripped)
 
@@ -96,8 +96,13 @@ def _clamp_confidence(value) -> float:
 
 
 def moderate_content(content: str, chapter_id: str) -> ModerationReport:
-    if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE":
-        logger.warning("GEMINI_API_KEY is not configured; auto-approving chapter %s", chapter_id)
+    if (
+        not settings.GEMINI_API_KEY
+        or settings.GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE"
+    ):
+        logger.warning(
+            "GEMINI_API_KEY is not configured; auto-approving chapter %s", chapter_id
+        )
         return ModerationReport(
             result=ModerationResult.APPROVED,
             reason="Gemini API key is not configured; moderation skipped in local mode.",
@@ -123,7 +128,9 @@ def moderate_content(content: str, chapter_id: str) -> ModerationReport:
             result=_normalize_result(parsed.get("result")),
             reason=parsed.get("reason", ""),
             flagged_categories=[str(category) for category in categories],
-            confidence=_clamp_confidence(parsed.get("confidence_score", parsed.get("confidence"))),
+            confidence=_clamp_confidence(
+                parsed.get("confidence_score", parsed.get("confidence"))
+            ),
             raw_response=raw_text,
         )
         logger.info(
@@ -162,11 +169,18 @@ def apply_moderation_result(chapter_id: str, report: ModerationReport, db) -> Ch
         chapter.moderation_status = report.result.value
 
     categories = [str(category) for category in report.flagged_categories]
-    log = db.query(AIModerationLog).filter(AIModerationLog.chapter_id == chapter.id).first()
+    log = (
+        db.query(AIModerationLog)
+        .filter(AIModerationLog.chapter_id == chapter.id)
+        .first()
+    )
     if log is None:
         log = AIModerationLog(chapter_id=chapter.id)
 
-    log.is_violation = report.result in {ModerationResult.REJECTED, ModerationResult.FLAGGED}
+    log.is_violation = report.result in {
+        ModerationResult.REJECTED,
+        ModerationResult.FLAGGED,
+    }
     log.violation_category = ", ".join(categories)[:50] if categories else None
     log.confidence_score = report.confidence
     log.reason = report.reason

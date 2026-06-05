@@ -10,7 +10,6 @@ from typing import Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-
 # ---------------------------------------------------------------------------
 # Response schemas
 # ---------------------------------------------------------------------------
@@ -37,9 +36,7 @@ class MembershipStatusResponse(BaseModel):
     premium_until: Optional[datetime] = Field(
         default=None, description="Hạn sử dụng Membership"
     )
-    is_active: bool = Field(
-        ..., description="Membership còn hiệu lực hay không"
-    )
+    is_active: bool = Field(..., description="Membership còn hiệu lực hay không")
 
 
 # ---------------------------------------------------------------------------
@@ -74,5 +71,9 @@ class CheckoutResponse(BaseModel):
 
     payment_url: str = Field(..., description="URL redirect sang VNPAY")
     vnp_txn_ref: str = Field(..., description="Mã tham chiếu giao dịch")
-    paymentUrl: Optional[str] = Field(default=None, description="Frontend camelCase payment URL")
-    transactionId: Optional[str] = Field(default=None, description="Frontend camelCase transaction reference")
+    paymentUrl: Optional[str] = Field(
+        default=None, description="Frontend camelCase payment URL"
+    )
+    transactionId: Optional[str] = Field(
+        default=None, description="Frontend camelCase transaction reference"
+    )

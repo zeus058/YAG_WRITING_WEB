@@ -105,43 +105,57 @@ async def request_publish_chapter(
 @router.get("/author/schedule/overview", summary="U014 - Author schedule chart data")
 def get_author_schedule_chart_data(
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User = Depends(deps.get_current_author),
 ):
-    if current_user.role not in {"author", "admin"}:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="AUTHOR_REQUIRED")
     return get_author_schedule_overview(db, current_user)
 
 
-@router.put("/author/stories/{story_id}/schedule", summary="U014 - Update next publish schedule")
+@router.put(
+    "/author/stories/{story_id}/schedule", summary="U014 - Update next publish schedule"
+)
 def update_author_story_schedule(
     story_id: str,
     request: ScheduleUpdateRequest,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User = Depends(deps.get_current_author),
 ):
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Story not found")
-    if current_user.role != "admin" and str(story.author_id) != str(current_user.id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized for this story")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Story not found"
+        )
+    if str(story.author_id) != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized for this story",
+        )
 
     try:
         from datetime import datetime
 
-        scheduled_time = datetime.fromisoformat(request.next_chapter_at.replace("Z", "+00:00"))
+        scheduled_time = datetime.fromisoformat(
+            request.next_chapter_at.replace("Z", "+00:00")
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="INVALID_NEXT_CHAPTER_AT") from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="INVALID_NEXT_CHAPTER_AT",
+        ) from exc
 
     schedule = (
         db.query(PublishSchedule)
-        .filter(PublishSchedule.story_id == story.id, PublishSchedule.status == "scheduled")
+        .filter(
+            PublishSchedule.story_id == story.id, PublishSchedule.status == "scheduled"
+        )
         .order_by(PublishSchedule.scheduled_time.asc())
         .first()
     )
     if schedule:
         schedule.scheduled_time = scheduled_time
     else:
-        schedule = PublishSchedule(story_id=story.id, scheduled_time=scheduled_time, status="scheduled")
+        schedule = PublishSchedule(
+            story_id=story.id, scheduled_time=scheduled_time, status="scheduled"
+        )
         db.add(schedule)
 
     db.commit()

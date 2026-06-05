@@ -1,5 +1,14 @@
 import uuid
-from sqlalchemy import Column, Text, Integer, ForeignKey, DateTime, UniqueConstraint, CheckConstraint, text
+from sqlalchemy import (
+    Column,
+    Text,
+    Integer,
+    ForeignKey,
+    DateTime,
+    UniqueConstraint,
+    CheckConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -28,7 +37,9 @@ class Review(Base):
     rating = Column(Integer, nullable=False)
     content = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     story = relationship("Story", back_populates="reviews")
     user = relationship("User")
@@ -37,3 +48,11 @@ class Review(Base):
         UniqueConstraint("user_id", "story_id", name="uq_reviews_user_story"),
         CheckConstraint("rating >= 1 AND rating <= 5", name="chk_reviews_rating_range"),
     )
+
+    @property
+    def username(self) -> str:
+        return self.user.username if self.user else ""
+
+    @property
+    def display_name(self) -> str:
+        return self.user.display_name if self.user else ""

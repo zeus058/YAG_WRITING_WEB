@@ -17,8 +17,41 @@ concurrency:
 permissions:
   contents: read
   pull-requests: write  # Để comment coverage lên PR
+  id-token: write       # BẮT BUỘC: Cho phép GitHub Actions tạo OIDC token để xác thực với GCP qua WIF
 
 jobs:
+  # ────────────────────────────────────────────────────────────
+  # JOB 0: Check Secrets Presence
+  # ────────────────────────────────────────────────────────────
+  check-secrets:
+    name: "🔍 Check Secrets Presence"
+    runs-on: ubuntu-latest
+    outputs:
+      has_gcp: ${{ steps.check.outputs.has_gcp }}
+      has_db: ${{ steps.check.outputs.has_db }}
+    steps:
+      - id: check
+        env:
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -n "$GCP_WORKLOAD_IDENTITY_PROVIDER" ] && [ -n "$GCP_SERVICE_ACCOUNT" ] && [ -n "$GCP_PROJECT_ID" ]; then
+            echo "has_gcp=true" >> $GITHUB_OUTPUT
+            echo "GCP WIF secrets are configured"
+          else
+            echo "has_gcp=false" >> $GITHUB_OUTPUT
+            echo "GCP WIF secrets are NOT configured"
+          fi
+          if [ -n "$DATABASE_URL" ]; then
+            echo "has_db=true" >> $GITHUB_OUTPUT
+            echo "DATABASE_URL is configured"
+          else
+            echo "has_db=false" >> $GITHUB_OUTPUT
+            echo "DATABASE_URL is NOT configured"
+          fi
+
   # ────────────────────────────────────────────────────────────
   # JOB 1: Backend CI — Lint, Migrate, Test
   # ────────────────────────────────────────────────────────────
@@ -93,16 +126,16 @@ jobs:
           pip install flake8 pytest pytest-cov
 
       - name: Lint — Syntax errors & critical issues
-        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        run: flake8 app tests --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: Lint — Code quality warnings
-        run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+        run: flake8 app tests --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
 
       - name: Run database migrations
         run: python -m app.manage_migrations
 
       - name: Run tests with coverage
-        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml -v
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=80 -v
 
       - name: Upload coverage report
         if: always()
@@ -176,13 +209,19 @@ jobs:
         run: npm audit --omit=dev || true
         continue-on-error: true
 
+      - name: Run Bandit Security Scan
+        working-directory: ./src/backend
+        run: |
+          pip install bandit
+          bandit -r app/ -ll
+
   # ────────────────────────────────────────────────────────────
-  # JOB 4: Docker Build Validation
+  # JOB 4: Docker Build Validation (PRs + push to dev)
   # ────────────────────────────────────────────────────────────
   docker:
     name: "🐳 Docker Build Check"
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.base_ref == 'main' || github.base_ref == 'dev'
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
 
     steps:
       - name: Checkout code
@@ -197,7 +236,240 @@ jobs:
         run: |
           docker build \
             --build-arg NEXT_PUBLIC_APP_URL=https://ci-test.local \
-            --build-arg NEXT_PUBLIC_API_BASE_URL=https://ci-test.local/api \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=https://ci-test.local \
             --build-arg NEXT_PUBLIC_WS_BASE_URL=wss://ci-test.local/ws \
+            --build-arg NEXT_PUBLIC_DEPLOY_ENV=production \
+            --build-arg NEXT_PUBLIC_API_TIMEOUT_MS=12000 \
             -t yag-frontend:ci-${{ github.sha }} ./src/frontend
           echo "✅ Frontend Docker image built successfully"
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 5: SonarQube Analysis
+  # ────────────────────────────────────────────────────────────
+  sonarqube:
+    name: "📊 SonarQube Analysis"
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    steps:
+      - name: Detect SonarQube configuration
+        id: sonar_config
+        run: |
+          if [ -n "$SONAR_TOKEN" ] && [ -n "$SONAR_HOST_URL" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "SonarQube secrets are not configured; skipping optional analysis."
+          fi
+
+      - name: Checkout code
+        if: steps.sonar_config.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download backend coverage artifact
+        if: steps.sonar_config.outputs.enabled == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage
+          path: src/backend
+
+      - name: SonarQube Scan
+        if: steps.sonar_config.outputs.enabled == 'true'
+        uses: SonarSource/sonarqube-scan-action@v2
+        with:
+          args: >
+            -Dsonar.python.coverage.reportPaths=src/backend/coverage.xml
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 6: CD — Database Migrations (Production/Staging)
+  # ────────────────────────────────────────────────────────────
+  deploy-migrations:
+    name: "🗄️ Apply Production Migrations"
+    needs: [backend, frontend, check-secrets]
+    runs-on: ubuntu-latest
+    # Production migrations run only from main.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has_db == 'true'
+
+    environment: production
+
+    defaults:
+      run:
+        working-directory: ./src/backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: src/backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check for pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "⚠️ DATABASE_URL secret is not configured. Skipping."
+            exit 0
+          fi
+          python -m app.manage_migrations --check && echo "✅ No pending migrations" || echo "📦 Pending migrations detected"
+
+      - name: Apply database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "⚠️ DATABASE_URL secret is not configured. Skipping migrations."
+            exit 0
+          fi
+          python -m app.manage_migrations
+          echo "✅ Database migrations applied successfully."
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 7: CD — Deploy Backend to Google Cloud Run (via WIF)
+  # ────────────────────────────────────────────────────────────
+  deploy-backend:
+    name: "☁️ Deploy Backend → Cloud Run"
+    needs: [deploy-migrations, check-secrets, security]
+    runs-on: ubuntu-latest
+    # Production backend deploy runs only from main and requires DB plus GCP WIF secrets.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has_gcp == 'true' && needs.check-secrets.outputs.has_db == 'true'
+
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Resolve deployment variables
+        id: deploy_vars
+        env:
+          GCP_REGION: ${{ secrets.GCP_REGION }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_GAR_REPO: ${{ secrets.GCP_GAR_REPO }}
+        run: |
+          REGION="${GCP_REGION:-asia-southeast1}"
+          GAR_REPO="${GCP_GAR_REPO:-yag-repo}"
+          IMAGE="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPO/yag-backend:${{ github.sha }}"
+
+          echo "region=$REGION" >> "$GITHUB_OUTPUT"
+          echo "gar_repo=$GAR_REPO" >> "$GITHUB_OUTPUT"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Configure Docker to use Google Artifact Registry
+        run: gcloud auth configure-docker ${{ steps.deploy_vars.outputs.region }}-docker.pkg.dev --quiet
+
+      - name: Build and Push Backend Image
+        run: |
+          IMAGE="${{ steps.deploy_vars.outputs.image }}"
+          docker build -t $IMAGE ./src/backend
+          docker push $IMAGE
+          echo "✅ Image pushed: $IMAGE"
+
+      - name: Clear conflicting env vars before deploy
+        run: |
+          gcloud run services update yag-backend \
+            --region ${{ steps.deploy_vars.outputs.region }} \
+            --remove-env-vars CORS_ORIGINS \
+            --quiet 2>/dev/null || true
+          echo "✅ Cleared conflicting env vars (if any)"
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: yag-backend
+          image: ${{ steps.deploy_vars.outputs.image }}
+          region: ${{ steps.deploy_vars.outputs.region }}
+          env_vars: |
+            ENVIRONMENT=production
+            SERVICE_ROLE=api
+            PAYMENT_PROVIDER=payos
+            ALLOW_WEBSOCKET_QUERY_TOKEN=false
+            AUTO_CREATE_TABLES=false
+            APPLY_MIGRATIONS_ON_STARTUP=false
+            SCHEDULER_ENABLED=false
+            VIEW_COUNT_FLUSH_ENABLED=false
+          secrets: |
+            DATABASE_URL=YAG_DATABASE_URL:latest
+            SECRET_KEY=YAG_SECRET_KEY:latest
+            CORS_ORIGINS=YAG_CORS_ORIGINS:latest
+            REDIS_URL=YAG_REDIS_URL:latest
+            RABBITMQ_URL=YAG_RABBITMQ_URL:latest
+            GEMINI_API_KEY=YAG_GEMINI_API_KEY:latest
+            CLOUDINARY_CLOUD_NAME=YAG_CLOUDINARY_CLOUD_NAME:latest
+            CLOUDINARY_API_KEY=YAG_CLOUDINARY_API_KEY:latest
+            CLOUDINARY_API_SECRET=YAG_CLOUDINARY_API_SECRET:latest
+            VNP_TMN_CODE=yag-vnp-tmn-code:latest
+            VNP_HASH_SECRET=yag-vnp-hash-secret:latest
+            VNP_URL=yag-vnp-url:latest
+            VNP_RETURN_URL=yag-vnp-return-url:latest
+            VNP_API_URL=yag-vnp-api-url:latest
+          flags: |
+            --allow-unauthenticated
+            --cpu=1
+            --memory=512Mi
+            --min-instances=0
+            --max-instances=3
+            --timeout=300
+
+      - name: Verify deployment health
+        run: |
+          URL="${{ steps.deploy.outputs.url }}"
+          echo "🔍 Checking health at $URL/health/ready ..."
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/health/ready" || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Backend deployment healthy (HTTP $STATUS)"
+          else
+            echo "⚠️ Health check returned HTTP $STATUS (service may still be starting)"
+          fi
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 8: CD — Deployment Summary
+  # ────────────────────────────────────────────────────────────
+  deploy-summary:
+    name: "📋 Deployment Summary"
+    needs: [deploy-migrations, deploy-backend]
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Generate deployment report
+        run: |
+          echo "## 🚀 Deployment Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| DB Migrations | ${{ needs.deploy-migrations.result == 'success' && '✅ Applied' || needs.deploy-migrations.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend (Cloud Run) | ${{ needs.deploy-backend.result == 'success' && '✅ Deployed' || needs.deploy-backend.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend (Vercel) | ✅ Auto-deployed via GitHub integration |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY

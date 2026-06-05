@@ -32,7 +32,9 @@ class StandardResponse(BaseModel):
 class ErrorDetail(BaseModel):
     """Chi tiết lỗi trả về cho client."""
 
-    code: str = Field(..., description="Mã lỗi (VD: 'INVALID_CREDENTIALS', 'NOT_FOUND')")
+    code: str = Field(
+        ..., description="Mã lỗi (VD: 'INVALID_CREDENTIALS', 'NOT_FOUND')"
+    )
     message: str = Field(..., description="Mô tả lỗi chi tiết")
 
 

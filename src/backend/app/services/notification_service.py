@@ -30,13 +30,17 @@ def get_redis_client() -> redis.Redis:
             socket_timeout=2.0,
         )
 
-    return redis.Redis(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        db=0,
-        decode_responses=True,
-        socket_timeout=2.0,
-    )
+    redis_kwargs = {
+        "host": settings.REDIS_HOST,
+        "port": settings.REDIS_PORT,
+        "db": 0,
+        "decode_responses": True,
+        "socket_timeout": 2.0,
+    }
+    redis_password = getattr(settings, "REDIS_PASSWORD", None)
+    if isinstance(redis_password, str) and redis_password:
+        redis_kwargs["password"] = redis_password
+    return redis.Redis(**redis_kwargs)
 
 
 def publish_user_notification(user_id: str, payload: dict[str, Any]) -> bool:
@@ -52,7 +56,9 @@ def publish_user_notification(user_id: str, payload: dict[str, Any]) -> bool:
 
 def _token_from_websocket(websocket: WebSocket) -> str | None:
     if settings.ALLOW_WEBSOCKET_QUERY_TOKEN:
-        token = websocket.query_params.get("token") or websocket.query_params.get("access_token")
+        token = websocket.query_params.get("token") or websocket.query_params.get(
+            "access_token"
+        )
         if token:
             return token
     auth_header = websocket.headers.get("authorization")
@@ -123,6 +129,7 @@ async def stream_user_notifications(websocket: WebSocket, user_id: str) -> None:
 # Database Persistent Operations
 # ---------------------------------------------------------------------------
 
+
 def create_notification(
     db: Session,
     user_id: UUID,
@@ -152,7 +159,11 @@ def create_notification(
         "message": db_notification.message,
         "payload": db_notification.payload,
         "read_at": None,
-        "created_at": db_notification.created_at.isoformat() if db_notification.created_at else None,
+        "created_at": (
+            db_notification.created_at.isoformat()
+            if db_notification.created_at
+            else None
+        ),
     }
     publish_user_notification(str(user_id), live_payload)
     return db_notification
@@ -196,7 +207,10 @@ def mark_all_notifications_as_read(db: Session, user_id: UUID) -> int:
     result = (
         db.query(Notification)
         .filter(Notification.user_id == user_id, Notification.read_at.is_(None))
-        .update({Notification.read_at: datetime.now(timezone.utc)}, synchronize_session=False)
+        .update(
+            {Notification.read_at: datetime.now(timezone.utc)},
+            synchronize_session=False,
+        )
     )
     db.commit()
     return result

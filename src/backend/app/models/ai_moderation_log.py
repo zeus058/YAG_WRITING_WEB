@@ -1,5 +1,15 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, Float, Text, ForeignKey, DateTime, CheckConstraint, text
+from sqlalchemy import (
+    Column,
+    String,
+    Boolean,
+    Float,
+    Text,
+    ForeignKey,
+    DateTime,
+    CheckConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -27,15 +37,21 @@ class AiModerationLog(Base):
     reason = Column(Text, nullable=True)
     model_name = Column(String(100), nullable=True)
     raw_response = Column(JSONB, nullable=True)
-    created_by = Column(String(20), nullable=False, default="worker", server_default="worker")
+    created_by = Column(
+        String(20), nullable=False, default="worker", server_default="worker"
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     chapter = relationship("Chapter", back_populates="moderation_log")
 
     __table_args__ = (
-        CheckConstraint("confidence_score IS NULL OR (confidence_score >= 0.0 AND confidence_score <= 1.0)",
-                        name="chk_ai_moderation_logs_confidence_score_range"),
+        CheckConstraint(
+            "confidence_score IS NULL OR (confidence_score >= 0.0 AND confidence_score <= 1.0)",
+            name="chk_ai_moderation_logs_confidence_score_range",
+        ),
     )
 
 

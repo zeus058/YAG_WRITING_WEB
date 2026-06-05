@@ -18,7 +18,9 @@ class ReadingHistory(Base):
         ForeignKey("chapters.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    read_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    read_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     user = relationship("User")
     chapter = relationship("Chapter")

@@ -4,6 +4,7 @@ Payment Service — VNPAY URL generation, checksum verification, and IPN process
 Use Case: U012 (Thanh toán VNPAY).
 Security: HMAC-SHA512 checksum for all VNPAY interactions.
 """
+
 import hashlib
 import hmac
 import uuid
@@ -40,6 +41,7 @@ def _stringify_payload(query_params: Dict[str, Any]) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # VNPAY URL generation
 # ---------------------------------------------------------------------------
+
 
 def generate_vnpay_url(
     vnp_txn_ref: str,
@@ -101,6 +103,7 @@ def generate_vnpay_url(
 # VNPAY checksum verification
 # ---------------------------------------------------------------------------
 
+
 def verify_vnpay_checksum(query_params: Dict[str, Any]) -> bool:
     """
     Verify the HMAC-SHA512 secure hash sent by VNPAY in an IPN callback.
@@ -115,7 +118,8 @@ def verify_vnpay_checksum(query_params: Dict[str, Any]) -> bool:
 
     # Remove hash-related fields before re-signing
     params_to_sign = {
-        k: v for k, v in query_params.items()
+        k: v
+        for k, v in query_params.items()
         if k not in ("vnp_SecureHash", "vnp_SecureHashType")
     }
 
@@ -134,6 +138,7 @@ def verify_vnpay_checksum(query_params: Dict[str, Any]) -> bool:
 # ---------------------------------------------------------------------------
 # IPN processing (full business logic)
 # ---------------------------------------------------------------------------
+
 
 def process_ipn(
     db: Session,
@@ -185,7 +190,9 @@ def process_ipn(
 
     # Step 5: Check VNPAY response code
     vnp_response_code = query_params.get("vnp_ResponseCode", "")
-    vnp_transaction_status = query_params.get("vnp_TransactionStatus", vnp_response_code)
+    vnp_transaction_status = query_params.get(
+        "vnp_TransactionStatus", vnp_response_code
+    )
     vnp_transaction_no = query_params.get("vnp_TransactionNo", "")
 
     transaction.vnp_response_code = vnp_response_code
@@ -212,7 +219,9 @@ def process_ipn(
             if plan:
                 # If user already has active premium, extend from current expiry
                 if user.premium_until and _as_utc(user.premium_until) > now:
-                    user.premium_until = _as_utc(user.premium_until) + timedelta(days=plan.duration_days)
+                    user.premium_until = _as_utc(user.premium_until) + timedelta(
+                        days=plan.duration_days
+                    )
                 else:
                     user.premium_until = now + timedelta(days=plan.duration_days)
     else:
@@ -233,6 +242,7 @@ def process_ipn(
 # Transaction helpers
 # ---------------------------------------------------------------------------
 
+
 def generate_txn_ref() -> str:
     """Generate a unique VNPAY transaction reference: YAG + timestamp + short UUID."""
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
@@ -248,25 +258,40 @@ def verify_payment_result(
     """
     Verify payment checksum and return transaction details for user-facing S10 redirect.
     """
-    # 1. Verify checksum (with bypass logic for mock/development flows)
+    # 1. Verify checksum. Mock/no-hash shortcuts are allowed only outside production.
     vnp_txn_ref = query_params.get("vnp_TxnRef", "")
     received_hash = query_params.get("vnp_SecureHash", "")
-    is_mock = vnp_txn_ref == "MOCK_TXN_REF" or (vnp_txn_ref and vnp_txn_ref.startswith("MOCK_"))
-    bypass_checksum = not received_hash or is_mock or settings.VNP_HASH_SECRET == "YOUR_VNPAY_HASH_SECRET_HERE"
+    is_mock = vnp_txn_ref == "MOCK_TXN_REF" or (
+        vnp_txn_ref and vnp_txn_ref.startswith("MOCK_")
+    )
+    is_production = settings.ENVIRONMENT == "production"
 
-    if not bypass_checksum and not verify_vnpay_checksum(query_params):
-        return {
-            "success": False,
-            "message": "Mã bảo mật checksum không hợp lệ."
-        }
+    if is_production:
+        if not received_hash or is_mock:
+            return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
+        if not verify_vnpay_checksum(query_params):
+            return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
+    else:
+        bypass_checksum = (
+            not received_hash
+            or is_mock
+            or settings.VNP_HASH_SECRET == "YOUR_VNPAY_HASH_SECRET_HERE"
+        )
+        if not bypass_checksum and not verify_vnpay_checksum(query_params):
+            return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
+
+    if received_hash and not verify_vnpay_checksum(query_params):
+        return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
 
     # 2. Handle mock transactions for development
-    if vnp_txn_ref == "MOCK_TXN_REF" or (vnp_txn_ref and vnp_txn_ref.startswith("MOCK_")):
+    if vnp_txn_ref == "MOCK_TXN_REF" or (
+        vnp_txn_ref and vnp_txn_ref.startswith("MOCK_")
+    ):
         vnp_response_code = query_params.get("vnp_ResponseCode", "00")
         if vnp_response_code != "00":
             return {
                 "success": False,
-                "message": f"Mô phỏng thanh toán thất bại (vnp_ResponseCode={vnp_response_code})"
+                "message": f"Mô phỏng thanh toán thất bại (vnp_ResponseCode={vnp_response_code})",
             }
         now = datetime.now(timezone.utc)
         vnp_amount_str = query_params.get("vnp_Amount", "4900000")
@@ -279,20 +304,26 @@ def verify_payment_result(
         # Query database to find a matching plan by price (only if db supports queries)
         plan = None
         if hasattr(db, "query"):
-            plan = db.query(MembershipPlan).filter(MembershipPlan.price == amount).first()
+            plan = (
+                db.query(MembershipPlan).filter(MembershipPlan.price == amount).first()
+            )
 
         if plan:
             duration_days = plan.duration_days
             plan_name = plan.name
         else:
             duration_days = 365 if amount > 100000 else 30
-            plan_name = "Gói Năm Premium" if duration_days == 365 else "Gói Tháng Premium"
+            plan_name = (
+                "Gói Năm Premium" if duration_days == 365 else "Gói Tháng Premium"
+            )
 
         premium_until = now + timedelta(days=duration_days)
 
         if current_user:
             if current_user.premium_until and current_user.premium_until > now:
-                current_user.premium_until = current_user.premium_until + timedelta(days=duration_days)
+                current_user.premium_until = current_user.premium_until + timedelta(
+                    days=duration_days
+                )
             else:
                 current_user.premium_until = now + timedelta(days=duration_days)
             premium_until = current_user.premium_until
@@ -304,28 +335,41 @@ def verify_payment_result(
             "plan_name": plan_name,
             "amount": amount,
             "premium_until": premium_until,
-            "message": "Thanh toán thành công (Mô phỏng)"
+            "message": "Thanh toán thành công (Mô phỏng)",
         }
 
     # 3. Find real transaction
     transaction = (
-        db.query(Transaction)
-        .filter(Transaction.vnp_txn_ref == vnp_txn_ref)
-        .first()
+        db.query(Transaction).filter(Transaction.vnp_txn_ref == vnp_txn_ref).first()
     )
     if transaction is None:
-        return {
-            "success": False,
-            "message": "Không tìm thấy giao dịch tương ứng."
-        }
+        return {"success": False, "message": "Không tìm thấy giao dịch tương ứng."}
+
+    if current_user and str(transaction.user_id) != str(current_user.id):
+        return {"success": False, "message": "Giao dịch không thuộc tài khoản hiện tại."}
 
     vnp_response_code = query_params.get("vnp_ResponseCode", "")
+    vnp_transaction_status = query_params.get(
+        "vnp_TransactionStatus", vnp_response_code
+    )
     vnp_transaction_no = query_params.get("vnp_TransactionNo", "")
 
+    vnp_amount = _int_param(query_params, "vnp_Amount")
+    expected_amount = int(float(transaction.amount) * 100)
+    if vnp_amount is not None and vnp_amount != expected_amount:
+        return {"success": False, "message": "Số tiền giao dịch không khớp."}
+
     # Handle pending transactions if client arrived before IPN callback
-    if transaction.status == "pending" and vnp_response_code == "00":
+    if (
+        transaction.status == "pending"
+        and vnp_response_code == "00"
+        and vnp_transaction_status == "00"
+    ):
         transaction.status = "success"
         transaction.vnp_transaction_no = vnp_transaction_no
+        transaction.vnp_response_code = vnp_response_code
+        transaction.vnp_transaction_status = vnp_transaction_status
+        transaction.paid_at = datetime.now(timezone.utc)
 
         user = db.query(User).filter(User.id == transaction.user_id).first()
         if user:
@@ -336,16 +380,25 @@ def verify_payment_result(
             )
             if plan:
                 now = datetime.now(timezone.utc)
-                if user.premium_until and user.premium_until > now:
-                    user.premium_until = user.premium_until + timedelta(days=plan.duration_days)
+                if user.premium_until and _as_utc(user.premium_until) > now:
+                    user.premium_until = _as_utc(user.premium_until) + timedelta(
+                        days=plan.duration_days
+                    )
                 else:
                     user.premium_until = now + timedelta(days=plan.duration_days)
         db.commit()
     elif transaction.status == "pending" and vnp_response_code != "":
         transaction.status = "failed"
+        transaction.vnp_response_code = vnp_response_code
+        transaction.vnp_transaction_status = vnp_transaction_status
+        transaction.failed_at = datetime.now(timezone.utc)
         db.commit()
 
-    plan = db.query(MembershipPlan).filter(MembershipPlan.id == transaction.plan_id).first()
+    plan = (
+        db.query(MembershipPlan)
+        .filter(MembershipPlan.id == transaction.plan_id)
+        .first()
+    )
     plan_name = plan.name if plan else "Gói Membership"
     user = db.query(User).filter(User.id == transaction.user_id).first()
     premium_until = user.premium_until if user else None
@@ -356,5 +409,9 @@ def verify_payment_result(
         "plan_name": plan_name,
         "amount": float(transaction.amount),
         "premium_until": premium_until,
-        "message": "Thanh toán thành công" if transaction.status == "success" else "Thanh toán thất bại"
+        "message": (
+            "Thanh toán thành công"
+            if transaction.status == "success"
+            else "Thanh toán thất bại"
+        ),
     }

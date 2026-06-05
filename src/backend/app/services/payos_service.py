@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 import httpx
 
 from app.core.config import settings

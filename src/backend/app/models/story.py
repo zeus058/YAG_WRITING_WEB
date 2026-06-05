@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     CheckConstraint,
+    Boolean,
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -36,6 +37,20 @@ class Story(Base):
     description = Column(Text, nullable=False)
     cover_url = Column(String(255), nullable=True)
     category = Column(String(50), nullable=False, index=True)
+    language = Column(String(30), nullable=False, default="vi", server_default="vi")
+    story_type = Column(
+        String(30), nullable=False, default="fiction", server_default="fiction"
+    )
+    tags = Column(Text, nullable=True)
+    copyright = Column(
+        String(50),
+        nullable=False,
+        default="all_rights_reserved",
+        server_default="all_rights_reserved",
+    )
+    is_mature = Column(Boolean, nullable=False, default=False, server_default="false")
+    main_characters = Column(Text, nullable=True)
+    target_audience = Column(String(50), nullable=True)
     status = Column(
         String(20), nullable=False, default="ongoing", server_default="ongoing"
     )

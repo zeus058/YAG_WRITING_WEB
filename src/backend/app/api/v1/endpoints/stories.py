@@ -54,6 +54,13 @@ async def create_story(
     title: str = Form(...),
     description: str = Form(...),
     category: str = Form(...),
+    language: str = Form("vi"),
+    story_type: str = Form("fiction"),
+    tags: Optional[str] = Form(None),
+    copyright: str = Form("all_rights_reserved"),
+    is_mature: bool = Form(False),
+    main_characters: Optional[str] = Form(None),
+    target_audience: Optional[str] = Form(None),
     status_value: StoryStatus = Form("ongoing", alias="status"),
     cover_file: Optional[UploadFile] = File(None),
     db: Session = Depends(deps.get_db),
@@ -74,6 +81,13 @@ async def create_story(
         title=title,
         description=description,
         category=category,
+        language=language,
+        story_type=story_type,
+        tags=tags,
+        copyright=copyright,
+        is_mature=is_mature,
+        main_characters=main_characters,
+        target_audience=target_audience,
         status=status_value,
         cover_url=cover_url,
     )
@@ -199,6 +213,13 @@ def get_story_detail(story_id: UUID, db: Session = Depends(deps.get_db)):
         "title": story.title,
         "description": story.description,
         "category": story.category,
+        "language": story.language,
+        "story_type": story.story_type,
+        "tags": story.tags,
+        "copyright": story.copyright,
+        "is_mature": story.is_mature,
+        "main_characters": story.main_characters,
+        "target_audience": story.target_audience,
         "status": story.status,
         "cover_url": story.cover_url,
         "view_count": story.view_count,
@@ -424,6 +445,13 @@ async def update_story(
     title: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
+    language: Optional[str] = Form(None),
+    story_type: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),
+    copyright: Optional[str] = Form(None),
+    is_mature: Optional[bool] = Form(None),
+    main_characters: Optional[str] = Form(None),
+    target_audience: Optional[str] = Form(None),
     status_value: Optional[StoryStatus] = Form(None, alias="status"),
     cover_file: Optional[UploadFile] = File(None),
     db: Session = Depends(deps.get_db),
@@ -443,12 +471,26 @@ async def update_story(
             title = payload.get("title", title)
             description = payload.get("description", description)
             category = payload.get("category", category)
+            language = payload.get("language", language)
+            story_type = payload.get("story_type", story_type)
+            tags = payload.get("tags", tags)
+            copyright = payload.get("copyright", copyright)
+            is_mature = payload.get("is_mature", is_mature)
+            main_characters = payload.get("main_characters", main_characters)
+            target_audience = payload.get("target_audience", target_audience)
             status_value = payload.get("status", status_value)
 
     story_in = StoryUpdate(
         title=title,
         description=description,
         category=category,
+        language=language,
+        story_type=story_type,
+        tags=tags,
+        copyright=copyright,
+        is_mature=is_mature,
+        main_characters=main_characters,
+        target_audience=target_audience,
         status=status_value,
     )
 

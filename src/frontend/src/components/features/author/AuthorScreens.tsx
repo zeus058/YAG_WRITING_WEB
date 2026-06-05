@@ -44,6 +44,35 @@ function getNextChapterNumber(chapters: any[]) {
   return Math.max(0, ...chapters.map((chapter) => Number(chapter.chapter_number) || 0)) + 1;
 }
 
+const storyCategoryOptions = ["Ngôn tình", "Kiếm hiệp", "Kỳ ảo", "Trinh thám", "Khoa học viễn tưởng", "Đời thường", "Lịch sử", "Huyền huyễn", "Phiêu lưu", "Chữa lành"];
+const storyLanguageOptions = [
+  { value: "vi", label: "Tiếng Việt" },
+  { value: "en", label: "English" },
+  { value: "ja", label: "日本語" },
+  { value: "ko", label: "한국어" },
+  { value: "zh", label: "中文" },
+];
+const storyTypeOptions = [
+  { value: "fiction", label: "Hư cấu", description: "Tiểu thuyết, truyện dài, truyện ngắn." },
+  { value: "fanfic", label: "Fanfic", description: "Sáng tác dựa trên fandom hoặc nhân vật có sẵn." },
+  { value: "nonfiction", label: "Phi hư cấu", description: "Tự truyện, ký sự, ghi chép sáng tạo." },
+  { value: "poetry", label: "Thơ ca", description: "Thơ, tản văn ngắn, văn xuôi giàu nhạc tính." },
+];
+const copyrightOptions = [
+  { value: "all_rights_reserved", label: "Bảo lưu mọi quyền" },
+  { value: "cc_by", label: "Creative Commons BY" },
+  { value: "cc_by_nc", label: "Creative Commons BY-NC" },
+  { value: "public_domain", label: "Miền công cộng" },
+];
+const targetAudienceOptions = [
+  { value: "", label: "Chưa xác định" },
+  { value: "young_adult", label: "Thanh thiếu niên" },
+  { value: "new_adult", label: "Người trẻ trưởng thành" },
+  { value: "adult", label: "Người trưởng thành" },
+  { value: "general", label: "Độc giả đại chúng" },
+];
+const storyDescriptionMinLength = 50;
+
 export function AuthorWorksScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -55,6 +84,13 @@ export function AuthorWorksScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Ngôn tình");
+  const [language, setLanguage] = useState("vi");
+  const [storyType, setStoryType] = useState("fiction");
+  const [tags, setTags] = useState("");
+  const [copyright, setCopyright] = useState("all_rights_reserved");
+  const [isMature, setIsMature] = useState(false);
+  const [mainCharacters, setMainCharacters] = useState("");
+  const [targetAudience, setTargetAudience] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -108,10 +144,31 @@ export function AuthorWorksScreen() {
     }
   };
 
+  const resetStoryForm = () => {
+    setTitle("");
+    setDescription("");
+    setCategory("Ngôn tình");
+    setLanguage("vi");
+    setStoryType("fiction");
+    setTags("");
+    setCopyright("all_rights_reserved");
+    setIsMature(false);
+    setMainCharacters("");
+    setTargetAudience("");
+    setCoverFile(null);
+    setCoverUrl(null);
+  };
+
   const handleCreateStory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) {
-      triggerLiveToast("Vui lòng điền đầy đủ thông tin bắt buộc.", "warning");
+    const cleanTitle = title.trim();
+    const cleanDescription = description.trim();
+    if (cleanTitle.length < 3) {
+      triggerLiveToast("Tên tác phẩm cần ít nhất 3 ký tự.", "warning");
+      return;
+    }
+    if (cleanDescription.length < storyDescriptionMinLength) {
+      triggerLiveToast(`Tóm tắt cần ít nhất ${storyDescriptionMinLength} ký tự để độc giả và AI hiểu đúng tác phẩm.`, "warning");
       return;
     }
     setSubmitting(true);
@@ -119,9 +176,16 @@ export function AuthorWorksScreen() {
       if (appEnv.useMocks) {
         const fakeNew = {
           id: `mock-story-${Date.now()}`,
-          title,
-          description,
+          title: cleanTitle,
+          description: cleanDescription,
           category,
+          language,
+          story_type: storyType,
+          tags,
+          copyright,
+          is_mature: isMature,
+          main_characters: mainCharacters,
+          target_audience: targetAudience,
           chapter_count: 0,
           cover_url: coverUrl,
           status: "ongoing",
@@ -133,19 +197,23 @@ export function AuthorWorksScreen() {
         };
         setWorks([fakeNew, ...works]);
         setIsModalOpen(false);
-        setTitle("");
-        setDescription("");
-        setCoverUrl(null);
-        setCoverFile(null);
+        resetStoryForm();
         triggerLiveToast("Đã khởi tạo bộ truyện nháp (Mock).");
         router.push(`/author/stories/${fakeNew.id}/edit`);
         return;
       }
 
       const formData = new FormData();
-      formData.append("title", title);
-      formData.append("description", description);
+      formData.append("title", cleanTitle);
+      formData.append("description", cleanDescription);
       formData.append("category", category);
+      formData.append("language", language);
+      formData.append("story_type", storyType);
+      formData.append("tags", tags.trim());
+      formData.append("copyright", copyright);
+      formData.append("is_mature", String(isMature));
+      formData.append("main_characters", mainCharacters.trim());
+      formData.append("target_audience", targetAudience);
       formData.append("status", "ongoing");
       if (coverFile) {
         formData.append("cover_file", coverFile);
@@ -154,10 +222,7 @@ export function AuthorWorksScreen() {
       const response = await yagApi.author.createStory(formData);
       void loadWorks();
       setIsModalOpen(false);
-      setTitle("");
-      setDescription("");
-      setCoverFile(null);
-      setCoverUrl(null);
+      resetStoryForm();
       triggerLiveToast("Đã tạo bộ truyện mới thành công!");
       if (response.data?.id) {
         router.push(`/author/stories/${response.data.id}/edit`);
@@ -216,6 +281,15 @@ export function AuthorWorksScreen() {
 
     router.push(target);
   };
+  const descriptionProgress = Math.min(100, Math.round((description.trim().length / storyDescriptionMinLength) * 100));
+  const selectedStoryTypeLabel = storyTypeOptions.find((item) => item.value === storyType)?.label || "Hư cấu";
+  const selectedLanguageLabel = storyLanguageOptions.find((item) => item.value === language)?.label || "Tiếng Việt";
+  const selectedCopyrightLabel = copyrightOptions.find((item) => item.value === copyright)?.label || "Bảo lưu mọi quyền";
+  const previewTags = tags
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 5);
 
   return (
     <AppShell
@@ -291,10 +365,19 @@ export function AuthorWorksScreen() {
         <section className="grid grid-3" style={{ gap: 20 }}>
           {filteredWorks.map((story, index) => {
             const chapCount = story.chapter_count ?? 0;
+            const storyKey = story?.id ? String(story.id) : "";
+            const editHref = storyKey ? `/author/stories/${storyKey}/edit` : "#";
+            const publishHref = storyKey ? `/author/stories/${storyKey}/publish` : "#";
+            const detailHref = storyKey ? `/stories/${storyKey}` : "#";
+            const guardMissingStoryId = (event: React.MouseEvent<HTMLAnchorElement>) => {
+              if (storyKey) return;
+              event.preventDefault();
+              openStoryRoute(story, "edit");
+            };
             return (
-              <article className="story-card" key={story.id || story.title} style={{ display: "flex", flexDirection: "column" }}>
+              <article className="story-card author-work-card" key={story.id || story.title} style={{ display: "flex", flexDirection: "column" }}>
                 <Cover index={index} coverUrl={story.cover_url} />
-                <div className="compact-stack" style={{ flexGrow: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "16px 0 0 0" }}>
+                <div className="compact-stack author-card-body" style={{ flexGrow: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "16px 0 0 0" }}>
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                       <span className={`badge ${story.status === "completed" ? "badge-green" : story.status === "paused" ? "badge-amber" : "badge-blue"}`}>
@@ -312,19 +395,19 @@ export function AuthorWorksScreen() {
                       <strong>{chapCount}</strong> chương · <span>{story.category}</span> · <strong>{(story.view_count || 0).toLocaleString()}</strong> đọc · <strong>{story.rating_avg || 0}★</strong>
                     </div>
                   </div>
-                  <div className="grid grid-2" style={{ gap: 8, position: "relative", zIndex: 2 }}>
-                    <button className="button button-primary" type="button" onClick={() => openStoryRoute(story, "edit")} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>
+                  <div className="grid grid-2 author-card-actions">
+                    <Link className="button button-primary author-card-action" href={editHref} onClick={guardMissingStoryId}>
                       Viết tiếp
-                    </button>
-                    <button className="button button-soft" type="button" onClick={() => openStoryRoute(story, "publish")} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>
+                    </Link>
+                    <Link className="button button-soft author-card-action" href={publishHref} onClick={guardMissingStoryId}>
                       Đăng chương
-                    </button>
-                    <button className="button" type="button" onClick={() => openStoryRoute(story, "detail")} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>
+                    </Link>
+                    <Link className="button author-card-action" href={detailHref} onClick={guardMissingStoryId}>
                       Chi tiết
-                    </button>
-                    <button className="button" type="button" onClick={() => router.push("/author/schedule")} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>
+                    </Link>
+                    <Link className="button author-card-action" href="/author/schedule">
                       Xem lịch
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </article>
@@ -335,43 +418,180 @@ export function AuthorWorksScreen() {
 
       {/* Story creation modal */}
       {isModalOpen && (
-        <div className="modal-backdrop open" style={{ display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setIsModalOpen(false)}>
-          <div className="modal-window panel panel-pad" style={{ maxWidth: 500, width: "100%" }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: "bold" }}>Khởi tạo tác phẩm mới</h2>
-              <button className="button icon-button" onClick={() => setIsModalOpen(false)}><Icon name="close" /></button>
+        <div className="modal-backdrop open story-setup-backdrop" onClick={() => !submitting && setIsModalOpen(false)}>
+          <div className="story-setup-modal" role="dialog" aria-modal="true" aria-labelledby="storySetupTitle" onClick={(e) => e.stopPropagation()}>
+            <div className="story-setup-header">
+              <div>
+                <span className="badge badge-crimson">Author Studio</span>
+                <h2 id="storySetupTitle">Khởi tạo tác phẩm mới</h2>
+                <p>Thiết lập hồ sơ truyện đầy đủ để YAG có thể phân loại, gợi ý và hỗ trợ bạn viết chương đầu tiên tốt hơn.</p>
+              </div>
+              <button className="button icon-button" type="button" onClick={() => setIsModalOpen(false)} aria-label="Đóng cửa sổ tạo tác phẩm">
+                <Icon name="close" />
+              </button>
             </div>
-            <form onSubmit={handleCreateStory} className="stack" style={{ gap: 16, marginTop: 16 }}>
-              <div className="field">
-                <label style={{ fontWeight: "bold", fontSize: 13 }}>Tên tác phẩm (Độc bản) <span style={{ color: "var(--crimson)" }}>*</span></label>
-                <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ví dụ: Tác phẩm mới" />
-              </div>
-              <div className="field">
-                <label style={{ fontWeight: "bold", fontSize: 13 }}>Thể loại chính</label>
-                <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
-                  {["Ngôn tình", "Kiếm hiệp", "Kỳ ảo", "Trinh thám", "Khoa học viễn tưởng", "Đời thường", "Lịch sử"].map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label style={{ fontWeight: "bold", fontSize: 13 }}>Tóm tắt cốt truyện <span style={{ color: "var(--crimson)" }}>*</span></label>
-                <textarea className="textarea" value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Tóm tắt ngắn gọn câu chuyện của bạn..." style={{ height: 100 }} />
-              </div>
-              <div className="field">
-                <label style={{ fontWeight: "bold", fontSize: 13 }}>Ảnh bìa tác phẩm (Không bắt buộc)</label>
-                <input type="file" className="input" accept="image/*" onChange={handleCoverChange} />
-                {coverUrl && (
-                  <div style={{ marginTop: 12, textAlign: "center" }}>
-                    <p style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 6px 0" }}>Bản xem trước ảnh bìa:</p>
-                    <img src={coverUrl} alt="Cover preview" style={{ maxWidth: "120px", maxHeight: "160px", borderRadius: 6, border: "1px solid var(--line)", objectFit: "cover" }} />
+
+            <form onSubmit={handleCreateStory} className="story-setup-content">
+              <aside className="story-setup-preview">
+                <div className="story-cover-preview">
+                  {coverUrl ? (
+                    <img src={coverUrl} alt="Bản xem trước ảnh bìa" />
+                  ) : (
+                    <div className="story-cover-placeholder">
+                      <Icon name="book" />
+                      <strong>{title.trim() || "Tác phẩm mới"}</strong>
+                      <span>{selectedStoryTypeLabel}</span>
+                    </div>
+                  )}
+                </div>
+                <input id="story-cover-file" type="file" accept="image/*" onChange={handleCoverChange} hidden />
+                <div className="story-cover-actions">
+                  <label className="button button-soft" htmlFor="story-cover-file">
+                    <Icon name="edit" /> Chọn ảnh bìa
+                  </label>
+                  {coverUrl ? (
+                    <button className="button" type="button" onClick={() => { setCoverFile(null); setCoverUrl(null); }}>
+                      Gỡ ảnh
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="story-setup-summary">
+                  <div>
+                    <span>Ngôn ngữ</span>
+                    <strong>{selectedLanguageLabel}</strong>
                   </div>
-                )}
+                  <div>
+                    <span>Loại hình</span>
+                    <strong>{selectedStoryTypeLabel}</strong>
+                  </div>
+                  <div>
+                    <span>Bản quyền</span>
+                    <strong>{selectedCopyrightLabel}</strong>
+                  </div>
+                  <div>
+                    <span>Xếp loại</span>
+                    <strong>{isMature ? "Trưởng thành" : "Phổ thông"}</strong>
+                  </div>
+                </div>
+              </aside>
+
+              <div className="story-setup-form">
+                <section className="story-setup-section">
+                  <div className="story-setup-section-head">
+                    <span className="story-setup-step">1</span>
+                    <div>
+                      <h3>Thông tin cốt lõi</h3>
+                      <p>Tên, mô tả và thể loại là nền tảng để độc giả tìm thấy truyện.</p>
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label>Tên tác phẩm <span className="required">*</span></label>
+                    <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={3} maxLength={255} placeholder="Tên truyện của bạn" />
+                  </div>
+                  <div className="story-setup-grid two">
+                    <div className="field">
+                      <label>Thể loại chính</label>
+                      <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
+                        {storyCategoryOptions.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label>Ngôn ngữ</label>
+                      <select className="select" value={language} onChange={(e) => setLanguage(e.target.value)}>
+                        {storyLanguageOptions.map(item => (
+                          <option key={item.value} value={item.value}>{item.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label>Tóm tắt cốt truyện <span className="required">*</span></label>
+                    <textarea className="textarea story-description-input" value={description} onChange={(e) => setDescription(e.target.value)} required minLength={storyDescriptionMinLength} placeholder="Giới thiệu tiền đề, nhân vật chính, xung đột và lời hứa cảm xúc của câu chuyện..." />
+                    <div className="story-field-meter">
+                      <span style={{ width: `${descriptionProgress}%` }} />
+                    </div>
+                    <small>{description.trim().length}/{storyDescriptionMinLength} ký tự tối thiểu</small>
+                  </div>
+                </section>
+
+                <section className="story-setup-section">
+                  <div className="story-setup-section-head">
+                    <span className="story-setup-step">2</span>
+                    <div>
+                      <h3>Phân loại & tìm kiếm</h3>
+                      <p>Các thiết lập này giúp hệ thống gợi ý truyện đúng nhóm độc giả.</p>
+                    </div>
+                  </div>
+                  <div className="story-type-grid">
+                    {storyTypeOptions.map(item => (
+                      <label className={`story-type-option ${storyType === item.value ? "active" : ""}`} key={item.value}>
+                        <input type="radio" name="storyType" value={item.value} checked={storyType === item.value} onChange={() => setStoryType(item.value)} />
+                        <strong>{item.label}</strong>
+                        <span>{item.description}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="field">
+                    <label>Tags</label>
+                    <input className="input" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="Ví dụ: slow burn, học đường, báo thù, chữa lành" />
+                    {previewTags.length > 0 ? (
+                      <div className="story-tag-preview">
+                        {previewTags.map(tag => <span key={tag}>#{tag}</span>)}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="story-setup-grid two">
+                    <div className="field">
+                      <label>Các nhân vật chính</label>
+                      <input className="input" value={mainCharacters} onChange={(e) => setMainCharacters(e.target.value)} placeholder="Tên nhân vật, cách nhau bằng dấu phẩy" />
+                    </div>
+                    <div className="field">
+                      <label>Độc giả mục tiêu</label>
+                      <select className="select" value={targetAudience} onChange={(e) => setTargetAudience(e.target.value)}>
+                        {targetAudienceOptions.map(item => (
+                          <option key={item.value} value={item.value}>{item.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="story-setup-section">
+                  <div className="story-setup-section-head">
+                    <span className="story-setup-step">3</span>
+                    <div>
+                      <h3>Quyền & an toàn nội dung</h3>
+                      <p>Hoàn tất thông tin để bảo vệ tác phẩm và phân loại độ tuổi phù hợp.</p>
+                    </div>
+                  </div>
+                  <div className="story-setup-grid two">
+                    <div className="field">
+                      <label>Bản quyền</label>
+                      <select className="select" value={copyright} onChange={(e) => setCopyright(e.target.value)}>
+                        {copyrightOptions.map(item => (
+                          <option key={item.value} value={item.value}>{item.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <label className={`story-mature-toggle ${isMature ? "active" : ""}`}>
+                      <input type="checkbox" checked={isMature} onChange={(e) => setIsMature(e.target.checked)} />
+                      <span />
+                      <div>
+                        <strong>Nội dung trưởng thành</strong>
+                        <small>Đánh dấu nếu truyện có chủ đề nhạy cảm hoặc cảnh chỉ phù hợp với độc giả trưởng thành.</small>
+                      </div>
+                    </label>
+                  </div>
+                </section>
               </div>
-              <div className="inline-actions" style={{ justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
-                <button className="button" type="button" onClick={() => setIsModalOpen(false)}>Hủy bỏ</button>
+
+              <div className="story-setup-footer">
+                <button className="button" type="button" onClick={() => setIsModalOpen(false)} disabled={submitting}>Hủy bỏ</button>
                 <button className="button button-primary" type="submit" disabled={submitting}>
-                  {submitting ? "Đang tạo..." : "Khởi tạo"}
+                  {submitting ? "Đang khởi tạo..." : "Khởi tạo & mở Editor"}
                 </button>
               </div>
             </form>

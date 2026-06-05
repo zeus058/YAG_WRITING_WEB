@@ -407,6 +407,7 @@ jobs:
           env_vars: |
             ENVIRONMENT=production
             SERVICE_ROLE=api
+            QUEUE_PROVIDER=local
             PAYMENT_PROVIDER=payos
             ALLOW_WEBSOCKET_QUERY_TOKEN=false
             AUTO_CREATE_TABLES=false
@@ -418,7 +419,6 @@ jobs:
             SECRET_KEY=YAG_SECRET_KEY:latest
             CORS_ORIGINS=YAG_CORS_ORIGINS:latest
             REDIS_URL=YAG_REDIS_URL:latest
-            RABBITMQ_URL=YAG_RABBITMQ_URL:latest
             GEMINI_API_KEY=YAG_GEMINI_API_KEY:latest
             CLOUDINARY_CLOUD_NAME=YAG_CLOUDINARY_CLOUD_NAME:latest
             CLOUDINARY_API_KEY=YAG_CLOUDINARY_API_KEY:latest

@@ -6,7 +6,7 @@ from fastapi import status
 from app.main import app
 from app.api import deps
 from app.models.user import User
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, verify_password
 
 # Create a clean TestClient
 client = TestClient(app)
@@ -214,3 +214,27 @@ def test_password_reset_confirm_invalid_otp(mock_redis, mock_db):
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json()["detail"] == "INVALID_OTP"
+
+
+def test_change_password_success(mock_db):
+    """Authenticated users can change password with their current password."""
+    user = User(
+        id="d6a2f7c0-2f9b-449e-ba23-9502e6c7d5bd",
+        username="hien_test",
+        email="hien@yag.vn",
+        password_hash=get_password_hash("OldPassword123!"),
+        role="reader",
+    )
+    app.dependency_overrides[deps.get_current_user] = lambda: user
+
+    response = client.post(
+        "/api/v1/auth/password/change",
+        json={"old_password": "OldPassword123!", "new_password": "NewPassword123!"},
+    )
+
+    app.dependency_overrides.pop(deps.get_current_user, None)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["message"] == "Mật khẩu đã được cập nhật"
+    assert mock_db.commit.called
+    assert verify_password("NewPassword123!", user.password_hash)

@@ -9,6 +9,15 @@ from pydantic import model_validator
 
 LOCAL_URL_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")  # nosec B104
 VALID_SERVICE_ROLES = {"api", "worker", "migrate", "scheduler"}
+INSECURE_SECRET_KEYS = {
+    "dev_secret_key",
+    "yag_development_secret_key_change_in_production",
+}
+INSECURE_DB_PASSWORDS = {"postgres", "yag_secret", ""}
+INSECURE_RABBITMQ_CREDENTIALS = {
+    ("guest", "guest"),
+    ("yag_mq", "yag_mq_secret"),
+}
 
 
 def _looks_local(value: str) -> bool:
@@ -50,6 +59,7 @@ class Settings(BaseSettings):
     REDIS_URL: Optional[str] = None
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+    REDIS_PASSWORD: Optional[str] = None
 
     # RabbitMQ Settings
     RABBITMQ_URL: Optional[str] = None
@@ -106,9 +116,16 @@ class Settings(BaseSettings):
             raise ValueError(f"Invalid SERVICE_ROLE: {self.SERVICE_ROLE}")
 
         if self.ENVIRONMENT == "production":
-            required_prod_vars = {
-                "SECRET_KEY": "yag_development_secret_key_change_in_production",
-            }
+            if (
+                not self.SECRET_KEY
+                or self.SECRET_KEY in INSECURE_SECRET_KEYS
+                or len(self.SECRET_KEY) < 32
+            ):
+                raise ValueError(
+                    "SECRET_KEY must be explicitly set to a strong production value"
+                )
+
+            required_prod_vars = {}
             if self.PAYMENT_PROVIDER == "vnpay":
                 required_prod_vars["VNP_HASH_SECRET"] = "YAGDEVSECRETKEY12345678"
                 required_prod_vars["VNP_TMN_CODE"] = "YAGTEST1"
@@ -116,6 +133,7 @@ class Settings(BaseSettings):
                 required_prod_vars["PAYOS_CLIENT_ID"] = None
                 required_prod_vars["PAYOS_API_KEY"] = None
                 required_prod_vars["PAYOS_CHECKSUM_KEY"] = None
+                required_prod_vars["PAYOS_RETURN_URL"] = None
 
             for var_name, default_val in required_prod_vars.items():
                 val = getattr(self, var_name)
@@ -124,14 +142,7 @@ class Settings(BaseSettings):
                         f"Field '{var_name}' must be explicitly set and different from default in production environment"
                     )
 
-            essential_uris = {
-                "CORS_ORIGINS",
-                "DATABASE_URL",
-                "REDIS_URL",
-                "GEMINI_API_KEY",
-            }
-            if self.QUEUE_PROVIDER == "rabbitmq":
-                essential_uris.add("RABBITMQ_URL")
+            essential_uris = {"CORS_ORIGINS", "GEMINI_API_KEY"}
             if self.PAYMENT_PROVIDER == "vnpay":
                 essential_uris.add("VNP_URL")
                 essential_uris.add("VNP_RETURN_URL")
@@ -169,18 +180,54 @@ class Settings(BaseSettings):
                     "SCHEDULER_ENABLED must be false in production API replicas; run scheduler as a separate job"
                 )
 
-            if _looks_local(self.DATABASE_URL or ""):
-                raise ValueError(
-                    "DATABASE_URL must not point to localhost in production"
-                )
-            if _looks_local(self.REDIS_URL or ""):
-                raise ValueError("REDIS_URL must not point to localhost in production")
+            if self.DATABASE_URL:
+                if _looks_local(self.DATABASE_URL):
+                    raise ValueError(
+                        "DATABASE_URL must not point to localhost in production"
+                    )
+            else:
+                if _looks_local(self.POSTGRES_SERVER):
+                    raise ValueError(
+                        "POSTGRES_SERVER must not point to localhost in production"
+                    )
+                if self.POSTGRES_PASSWORD in INSECURE_DB_PASSWORDS:
+                    raise ValueError(
+                        "POSTGRES_PASSWORD must be explicitly set to a non-default production value"
+                    )
+
+            if self.REDIS_URL:
+                if _looks_local(self.REDIS_URL):
+                    raise ValueError(
+                        "REDIS_URL must not point to localhost in production"
+                    )
+            else:
+                if _looks_local(self.REDIS_HOST):
+                    raise ValueError(
+                        "REDIS_HOST must not point to localhost in production"
+                    )
+                if not self.REDIS_PASSWORD:
+                    raise ValueError(
+                        "REDIS_PASSWORD must be set when REDIS_URL is not used in production"
+                    )
+
             if self.QUEUE_PROVIDER == "rabbitmq" and _looks_local(
                 self.RABBITMQ_URL or ""
             ):
                 raise ValueError(
                     "RABBITMQ_URL must not point to localhost in production"
                 )
+            if self.QUEUE_PROVIDER == "rabbitmq" and not self.RABBITMQ_URL:
+                if _looks_local(self.RABBITMQ_HOST):
+                    raise ValueError(
+                        "RABBITMQ_HOST must not point to localhost in production"
+                    )
+                if (
+                    self.RABBITMQ_USER,
+                    self.RABBITMQ_PASSWORD,
+                ) in INSECURE_RABBITMQ_CREDENTIALS or not self.RABBITMQ_PASSWORD:
+                    raise ValueError(
+                        "RabbitMQ credentials must be changed from development defaults in production"
+                    )
             if self.PAYMENT_PROVIDER == "vnpay":
                 if _looks_local(self.VNP_RETURN_URL):
                     raise ValueError(
@@ -195,6 +242,13 @@ class Settings(BaseSettings):
                     raise ValueError(
                         "Production VNPAY URLs must not point to sandbox endpoints"
                     )
+            if self.PAYMENT_PROVIDER == "payos":
+                if _looks_local(self.PAYOS_RETURN_URL or ""):
+                    raise ValueError(
+                        "PAYOS_RETURN_URL must not point to localhost in production"
+                    )
+                if not (self.PAYOS_RETURN_URL or "").startswith("https://"):
+                    raise ValueError("PAYOS_RETURN_URL must be HTTPS in production")
 
             origins = _split_csv(self.CORS_ORIGINS)
             if not origins:

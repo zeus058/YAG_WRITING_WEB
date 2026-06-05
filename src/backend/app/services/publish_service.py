@@ -150,10 +150,10 @@ def _load_chapter_and_story(chapter_id: str, db: Session) -> tuple[Chapter, Stor
 
 
 def _authorize_publish_owner(story: Story, current_user: User) -> None:
-    if current_user.role not in {"author", "admin"}:
-        raise PermissionError("Only authors can publish chapters")
+    if current_user.role == "admin":
+        raise PermissionError("Admin accounts cannot publish reader/author chapters")
 
-    if current_user.role != "admin" and str(story.author_id) != str(current_user.id):
+    if str(story.author_id) != str(current_user.id):
         raise PermissionError("You do not own this chapter")
 
 

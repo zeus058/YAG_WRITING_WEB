@@ -160,12 +160,13 @@ async def checkout(
         db.commit()
 
         order_info = f"YAG Premium {plan.id}"
-        cancel_url = body.return_url.split("?")[0] + "?status=cancel"
+        return_url = body.return_url or settings.PAYOS_RETURN_URL or settings.VNP_RETURN_URL
+        cancel_url = return_url.split("?")[0] + "?status=cancel"
         payment_url, _ = await payos_svc.create_payos_payment_link(
             order_code=order_code,
             amount=int(plan.price),
             description=order_info,
-            return_url=body.return_url,
+            return_url=return_url,
             cancel_url=cancel_url,
         )
 
@@ -304,12 +305,13 @@ async def checkout_payos(
     db.commit()
 
     order_info = f"YAG Premium {plan.id}"
-    cancel_url = body.return_url.split("?")[0] + "?status=cancel"
+    return_url = body.return_url or settings.PAYOS_RETURN_URL or settings.VNP_RETURN_URL
+    cancel_url = return_url.split("?")[0] + "?status=cancel"
     payment_url, _ = await payos_svc.create_payos_payment_link(
         order_code=order_code,
         amount=int(plan.price),
         description=order_info,
-        return_url=body.return_url,
+        return_url=return_url,
         cancel_url=cancel_url,
     )
 

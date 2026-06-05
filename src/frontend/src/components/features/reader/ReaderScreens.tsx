@@ -1409,7 +1409,7 @@ export function MembershipScreen() {
       const active = new Date(user.premium_until) > new Date();
       setIsPremium(active);
       setMembershipExpiry(active ? user.premium_until : null);
-    } else if (typeof window !== "undefined") {
+    } else if (appEnv.useMocks && typeof window !== "undefined") {
       const cached = localStorage.getItem("yag.mockMembership");
       if (cached) {
         try {
@@ -1689,6 +1689,18 @@ export function PaymentScreen() {
           return;
         }
 
+        if (!appEnv.useMocks) {
+          if (active) {
+            setVerificationResult({
+              loading: false,
+              success: true,
+              message: data.message || "Giao dịch đã được xác thực thành công!",
+              details: data,
+            });
+          }
+          return;
+        }
+
         let expiry = data.premium_until;
         const cached = localStorage.getItem("yag.mockMembership");
         let cachedExpiry: Date | null = null;
@@ -1815,38 +1827,15 @@ export function PaymentScreen() {
           }
         }
       } catch (err: any) {
-        console.warn("Verify API failed, falling back to mock query parser:", err);
-        const isMockSuccess = responseCode === "00" || responseCode === "success";
-        const rawAmount = planId === "YEARLY" ? 199000 : 39000;
-        const durationDays = planId === "YEARLY" ? 365 : 30;
-
-        let baseDate = new Date();
-        const cached = localStorage.getItem("yag.mockMembership");
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (parsed.is_active && parsed.premium_until) {
-              const currentExpiry = new Date(parsed.premium_until);
-              if (currentExpiry > baseDate) {
-                baseDate = currentExpiry;
-              }
-            }
-          } catch {}
+        console.warn("Verify API failed:", err);
+        if (active) {
+          setVerificationResult({
+            loading: false,
+            success: false,
+            message: err?.message || "Không thể xác thực giao dịch với máy chủ.",
+            details: { error: err?.message },
+          });
         }
-
-        const expiryDate = new Date(baseDate);
-        expiryDate.setDate(expiryDate.getDate() + durationDays);
-
-        const mockData = {
-          success: isMockSuccess,
-          transaction_id: txnRef || `MOCK_TXN_${Date.now()}`,
-          plan_name: planId === "YEARLY" ? "Gói Năm Premium" : "Gói Tháng Premium",
-          amount: rawAmount,
-          premium_until: expiryDate.toISOString(),
-          message: isMockSuccess ? "Xác thực mô phỏng thành công (API offline)" : "Xác thực mô phỏng thất bại (API offline)"
-        };
-
-        processPaymentData(mockData);
       }
     };
 
@@ -2334,7 +2323,7 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
     if (user?.premium_until) {
       setIsPremium(new Date(user.premium_until) > new Date());
       setMembershipExpiry(user.premium_until);
-    } else if (typeof window !== "undefined") {
+    } else if (appEnv.useMocks && typeof window !== "undefined") {
       const cached = localStorage.getItem("yag.mockMembership");
       if (cached) {
         try {

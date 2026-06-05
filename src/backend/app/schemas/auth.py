@@ -72,6 +72,17 @@ class PasswordResetConfirm(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class PasswordChange(BaseModel):
+    current_password: str = Field(
+        ...,
+        validation_alias=AliasChoices("current_password", "old_password"),
+        min_length=1,
+    )
+    new_password: str = Field(..., min_length=8)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 # ==========================================
 # U002 — Profile Management Schemas
 # ==========================================

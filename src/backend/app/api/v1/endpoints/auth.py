@@ -20,6 +20,7 @@ from app.schemas.auth import (
     UserRegister,
     UserLogin,
     TokenResponse,
+    PasswordChange,
     PasswordResetRequest,
     PasswordResetConfirm,
     ProfileUpdate,
@@ -28,7 +29,7 @@ from app.schemas.auth import (
 )
 from app.services.auth_service import AuthService
 from app.services.cloudinary_service import CloudinaryService
-from app.core.security import create_access_token
+from app.core.security import create_access_token, get_password_hash, verify_password
 
 router = APIRouter()
 
@@ -89,6 +90,31 @@ def reset_request(
 )
 def reset_confirm(confirm_in: PasswordResetConfirm, db: Session = Depends(deps.get_db)):
     return AuthService.confirm_password_reset(db, confirm_in)
+
+
+@router.post("/password/change", summary="U001 - Đổi mật khẩu khi đã đăng nhập")
+def change_password(
+    password_in: PasswordChange,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+):
+    if not verify_password(password_in.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CURRENT_PASSWORD_INVALID",
+        )
+
+    current_user.password_hash = get_password_hash(password_in.new_password)
+    try:
+        db.add(current_user)
+        db.commit()
+        return {"message": "Mật khẩu đã được cập nhật"}
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="PASSWORD_CHANGE_FAILED",
+        )
 
 
 # ========================================================

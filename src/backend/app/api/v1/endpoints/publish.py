@@ -105,12 +105,8 @@ async def request_publish_chapter(
 @router.get("/author/schedule/overview", summary="U014 - Author schedule chart data")
 def get_author_schedule_chart_data(
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User = Depends(deps.get_current_author),
 ):
-    if current_user.role not in {"author", "admin"}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="AUTHOR_REQUIRED"
-        )
     return get_author_schedule_overview(db, current_user)
 
 
@@ -121,14 +117,14 @@ def update_author_story_schedule(
     story_id: str,
     request: ScheduleUpdateRequest,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user),
+    current_user: User = Depends(deps.get_current_author),
 ):
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Story not found"
         )
-    if current_user.role != "admin" and str(story.author_id) != str(current_user.id):
+    if str(story.author_id) != str(current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized for this story",

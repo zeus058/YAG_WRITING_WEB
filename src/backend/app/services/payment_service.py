@@ -258,19 +258,29 @@ def verify_payment_result(
     """
     Verify payment checksum and return transaction details for user-facing S10 redirect.
     """
-    # 1. Verify checksum (with bypass logic for mock/development flows)
+    # 1. Verify checksum. Mock/no-hash shortcuts are allowed only outside production.
     vnp_txn_ref = query_params.get("vnp_TxnRef", "")
     received_hash = query_params.get("vnp_SecureHash", "")
     is_mock = vnp_txn_ref == "MOCK_TXN_REF" or (
         vnp_txn_ref and vnp_txn_ref.startswith("MOCK_")
     )
-    bypass_checksum = (
-        not received_hash
-        or is_mock
-        or settings.VNP_HASH_SECRET == "YOUR_VNPAY_HASH_SECRET_HERE"
-    )
+    is_production = settings.ENVIRONMENT == "production"
 
-    if not bypass_checksum and not verify_vnpay_checksum(query_params):
+    if is_production:
+        if not received_hash or is_mock:
+            return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
+        if not verify_vnpay_checksum(query_params):
+            return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
+    else:
+        bypass_checksum = (
+            not received_hash
+            or is_mock
+            or settings.VNP_HASH_SECRET == "YOUR_VNPAY_HASH_SECRET_HERE"
+        )
+        if not bypass_checksum and not verify_vnpay_checksum(query_params):
+            return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
+
+    if received_hash and not verify_vnpay_checksum(query_params):
         return {"success": False, "message": "Mã bảo mật checksum không hợp lệ."}
 
     # 2. Handle mock transactions for development
@@ -335,13 +345,31 @@ def verify_payment_result(
     if transaction is None:
         return {"success": False, "message": "Không tìm thấy giao dịch tương ứng."}
 
+    if current_user and str(transaction.user_id) != str(current_user.id):
+        return {"success": False, "message": "Giao dịch không thuộc tài khoản hiện tại."}
+
     vnp_response_code = query_params.get("vnp_ResponseCode", "")
+    vnp_transaction_status = query_params.get(
+        "vnp_TransactionStatus", vnp_response_code
+    )
     vnp_transaction_no = query_params.get("vnp_TransactionNo", "")
 
+    vnp_amount = _int_param(query_params, "vnp_Amount")
+    expected_amount = int(float(transaction.amount) * 100)
+    if vnp_amount is not None and vnp_amount != expected_amount:
+        return {"success": False, "message": "Số tiền giao dịch không khớp."}
+
     # Handle pending transactions if client arrived before IPN callback
-    if transaction.status == "pending" and vnp_response_code == "00":
+    if (
+        transaction.status == "pending"
+        and vnp_response_code == "00"
+        and vnp_transaction_status == "00"
+    ):
         transaction.status = "success"
         transaction.vnp_transaction_no = vnp_transaction_no
+        transaction.vnp_response_code = vnp_response_code
+        transaction.vnp_transaction_status = vnp_transaction_status
+        transaction.paid_at = datetime.now(timezone.utc)
 
         user = db.query(User).filter(User.id == transaction.user_id).first()
         if user:
@@ -352,8 +380,8 @@ def verify_payment_result(
             )
             if plan:
                 now = datetime.now(timezone.utc)
-                if user.premium_until and user.premium_until > now:
-                    user.premium_until = user.premium_until + timedelta(
+                if user.premium_until and _as_utc(user.premium_until) > now:
+                    user.premium_until = _as_utc(user.premium_until) + timedelta(
                         days=plan.duration_days
                     )
                 else:
@@ -361,6 +389,9 @@ def verify_payment_result(
         db.commit()
     elif transaction.status == "pending" and vnp_response_code != "":
         transaction.status = "failed"
+        transaction.vnp_response_code = vnp_response_code
+        transaction.vnp_transaction_status = vnp_transaction_status
+        transaction.failed_at = datetime.now(timezone.utc)
         db.commit()
 
     plan = (

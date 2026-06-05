@@ -30,13 +30,17 @@ def get_redis_client() -> redis.Redis:
             socket_timeout=2.0,
         )
 
-    return redis.Redis(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        db=0,
-        decode_responses=True,
-        socket_timeout=2.0,
-    )
+    redis_kwargs = {
+        "host": settings.REDIS_HOST,
+        "port": settings.REDIS_PORT,
+        "db": 0,
+        "decode_responses": True,
+        "socket_timeout": 2.0,
+    }
+    redis_password = getattr(settings, "REDIS_PASSWORD", None)
+    if isinstance(redis_password, str) and redis_password:
+        redis_kwargs["password"] = redis_password
+    return redis.Redis(**redis_kwargs)
 
 
 def publish_user_notification(user_id: str, payload: dict[str, Any]) -> bool:

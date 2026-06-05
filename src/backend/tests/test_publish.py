@@ -158,6 +158,23 @@ def test_prepare_publish_sets_pending_and_builds_payload():
     assert db.commits == 1
 
 
+def test_prepare_publish_allows_reader_author_mode_owner():
+    from app.services.publish_service import prepare_chapter_for_publish
+
+    user, story, chapter = _objects()
+    user.role = "reader"
+    db = FakeDB(chapter=chapter, story=story)
+
+    prepared = prepare_chapter_for_publish(
+        chapter_id=str(chapter.id),
+        db=db,
+        current_user=user,
+    )
+
+    assert chapter.moderation_status == "pending"
+    assert prepared.payload.requested_by == str(user.id)
+
+
 def test_prepare_publish_rejects_non_owner():
     from app.services.publish_service import prepare_chapter_for_publish
 

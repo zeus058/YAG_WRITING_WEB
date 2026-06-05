@@ -31,15 +31,20 @@ jobs:
       has_db: ${{ steps.check.outputs.has_db }}
     steps:
       - id: check
+        env:
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          if [ -n "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ] && [ -n "${{ secrets.GCP_SERVICE_ACCOUNT }}" ] && [ -n "${{ secrets.GCP_PROJECT_ID }}" ]; then
+          if [ -n "$GCP_WORKLOAD_IDENTITY_PROVIDER" ] && [ -n "$GCP_SERVICE_ACCOUNT" ] && [ -n "$GCP_PROJECT_ID" ]; then
             echo "has_gcp=true" >> $GITHUB_OUTPUT
             echo "GCP WIF secrets are configured"
           else
             echo "has_gcp=false" >> $GITHUB_OUTPUT
             echo "GCP WIF secrets are NOT configured"
           fi
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+          if [ -n "$DATABASE_URL" ]; then
             echo "has_db=true" >> $GITHUB_OUTPUT
             echo "DATABASE_URL is configured"
           else
@@ -121,10 +126,10 @@ jobs:
           pip install flake8 pytest pytest-cov
 
       - name: Lint — Syntax errors & critical issues
-        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        run: flake8 app tests --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: Lint — Code quality warnings
-        run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+        run: flake8 app tests --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
 
       - name: Run database migrations
         run: python -m app.manage_migrations
@@ -231,8 +236,10 @@ jobs:
         run: |
           docker build \
             --build-arg NEXT_PUBLIC_APP_URL=https://ci-test.local \
-            --build-arg NEXT_PUBLIC_API_BASE_URL=https://ci-test.local/api \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=https://ci-test.local \
             --build-arg NEXT_PUBLIC_WS_BASE_URL=wss://ci-test.local/ws \
+            --build-arg NEXT_PUBLIC_DEPLOY_ENV=production \
+            --build-arg NEXT_PUBLIC_API_TIMEOUT_MS=12000 \
             -t yag-frontend:ci-${{ github.sha }} ./src/frontend
           echo "✅ Frontend Docker image built successfully"
 
@@ -243,24 +250,36 @@ jobs:
     name: "📊 SonarQube Analysis"
     runs-on: ubuntu-latest
     needs: [backend, frontend]
-    if: always() && secrets.SONAR_TOKEN != ''
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     steps:
+      - name: Detect SonarQube configuration
+        id: sonar_config
+        run: |
+          if [ -n "$SONAR_TOKEN" ] && [ -n "$SONAR_HOST_URL" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "SonarQube secrets are not configured; skipping optional analysis."
+          fi
+
       - name: Checkout code
+        if: steps.sonar_config.outputs.enabled == 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Download backend coverage artifact
+        if: steps.sonar_config.outputs.enabled == 'true'
         uses: actions/download-artifact@v4
         with:
           name: backend-coverage
           path: src/backend
 
       - name: SonarQube Scan
+        if: steps.sonar_config.outputs.enabled == 'true'
         uses: SonarSource/sonarqube-scan-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
             -Dsonar.python.coverage.reportPaths=src/backend/coverage.xml
@@ -272,8 +291,8 @@ jobs:
     name: "🗄️ Apply Production Migrations"
     needs: [backend, frontend, check-secrets]
     runs-on: ubuntu-latest
-    # Chạy trên push to dev/main và chỉ khi DATABASE_URL được cấu hình
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && needs.check-secrets.outputs.has_db == 'true'
+    # Production migrations run only from main.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has_db == 'true'
 
     environment: production
 
@@ -325,8 +344,8 @@ jobs:
     name: "☁️ Deploy Backend → Cloud Run"
     needs: [deploy-migrations, check-secrets, security]
     runs-on: ubuntu-latest
-    # Chạy trên push to dev/main và chỉ khi có đủ các biến GCP WIF
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && needs.check-secrets.outputs.has_gcp == 'true'
+    # Production backend deploy runs only from main and requires DB plus GCP WIF secrets.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has_gcp == 'true' && needs.check-secrets.outputs.has_db == 'true'
 
     environment:
       name: 'production'
@@ -346,17 +365,27 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker to use Google Artifact Registry
+      - name: Resolve deployment variables
+        id: deploy_vars
+        env:
+          GCP_REGION: ${{ secrets.GCP_REGION }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_GAR_REPO: ${{ secrets.GCP_GAR_REPO }}
         run: |
-          REGION="${{ secrets.GCP_REGION || 'asia-southeast1' }}"
-          gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+          REGION="${GCP_REGION:-asia-southeast1}"
+          GAR_REPO="${GCP_GAR_REPO:-yag-repo}"
+          IMAGE="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPO/yag-backend:${{ github.sha }}"
+
+          echo "region=$REGION" >> "$GITHUB_OUTPUT"
+          echo "gar_repo=$GAR_REPO" >> "$GITHUB_OUTPUT"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Configure Docker to use Google Artifact Registry
+        run: gcloud auth configure-docker ${{ steps.deploy_vars.outputs.region }}-docker.pkg.dev --quiet
 
       - name: Build and Push Backend Image
         run: |
-          REGION="${{ secrets.GCP_REGION || 'asia-southeast1' }}"
-          PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}"
-          GAR_REPO="${{ secrets.GCP_GAR_REPO || 'yag-repo' }}"
-          IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/yag-backend:${{ github.sha }}"
+          IMAGE="${{ steps.deploy_vars.outputs.image }}"
           docker build -t $IMAGE ./src/backend
           docker push $IMAGE
           echo "✅ Image pushed: $IMAGE"
@@ -366,14 +395,21 @@ jobs:
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: yag-backend
-          image: ${{ secrets.GCP_REGION || 'asia-southeast1' }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_GAR_REPO || 'yag-repo' }}/yag-backend:${{ github.sha }}
-          region: ${{ secrets.GCP_REGION || 'asia-southeast1' }}
+          image: ${{ steps.deploy_vars.outputs.image }}
+          region: ${{ steps.deploy_vars.outputs.region }}
           env_vars: |
             ENVIRONMENT=production
             SERVICE_ROLE=api
+            PAYMENT_PROVIDER=vnpay
+            ALLOW_WEBSOCKET_QUERY_TOKEN=false
+            AUTO_CREATE_TABLES=false
+            APPLY_MIGRATIONS_ON_STARTUP=false
+            SCHEDULER_ENABLED=false
+            VIEW_COUNT_FLUSH_ENABLED=false
           secrets: |
             DATABASE_URL=yag-database-url:latest
             SECRET_KEY=yag-secret-key:latest
+            CORS_ORIGINS=yag-cors-origins:latest
             REDIS_URL=yag-redis-url:latest
             RABBITMQ_URL=yag-rabbitmq-url:latest
             GEMINI_API_KEY=yag-gemini-key:latest
@@ -382,6 +418,9 @@ jobs:
             CLOUDINARY_API_SECRET=yag-cloudinary-secret:latest
             VNP_TMN_CODE=yag-vnp-tmn-code:latest
             VNP_HASH_SECRET=yag-vnp-hash-secret:latest
+            VNP_URL=yag-vnp-url:latest
+            VNP_RETURN_URL=yag-vnp-return-url:latest
+            VNP_API_URL=yag-vnp-api-url:latest
           flags: |
             --allow-unauthenticated
             --cpu=1
@@ -409,7 +448,7 @@ jobs:
     name: "📋 Deployment Summary"
     needs: [deploy-migrations, deploy-backend]
     runs-on: ubuntu-latest
-    if: always() && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Generate deployment report

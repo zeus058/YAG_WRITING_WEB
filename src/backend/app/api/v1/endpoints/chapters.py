@@ -196,12 +196,25 @@ def get_websocket_author(websocket: WebSocket, db: Session) -> User:
 
 
 def get_redis_client():
-    redis_url = (
-        settings.REDIS_URL or f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/0"
-    )
-    return redis.Redis.from_url(
-        redis_url, decode_responses=True, socket_connect_timeout=1, socket_timeout=1
-    )
+    if settings.REDIS_URL:
+        return redis.Redis.from_url(
+            settings.REDIS_URL,
+            decode_responses=True,
+            socket_connect_timeout=1,
+            socket_timeout=1,
+        )
+    redis_kwargs = {
+        "host": settings.REDIS_HOST,
+        "port": settings.REDIS_PORT,
+        "db": 0,
+        "decode_responses": True,
+        "socket_connect_timeout": 1,
+        "socket_timeout": 1,
+    }
+    redis_password = getattr(settings, "REDIS_PASSWORD", None)
+    if isinstance(redis_password, str) and redis_password:
+        redis_kwargs["password"] = redis_password
+    return redis.Redis(**redis_kwargs)
 
 
 def chapter_cache_key(chapter_id: UUID) -> str:
@@ -502,7 +515,11 @@ def update_chapter(
 
 
 @router.post("/views/flush", summary="U007 - Flush Redis view counters về PostgreSQL")
-def flush_views(db: Session = Depends(deps.get_db)):
+def flush_views(
+    db: Session = Depends(deps.get_db),
+    current_admin=Depends(deps.require_role("admin")),
+):
+    _ = current_admin
     flushed_total = flush_story_view_counts(db, get_redis_client())
     return {
         "message": "View counters flushed",

@@ -293,6 +293,30 @@ class TestVerifyPaymentResultLogic:
         assert result["success"] is False
         assert "checksum" in result["message"]
 
+    def test_verify_result_production_requires_checksum(self, monkeypatch):
+        """Production redirects without a VNPAY secure hash must never grant premium."""
+        monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+        params = {"vnp_TxnRef": "YAG202606050001", "vnp_ResponseCode": "00"}
+
+        class MockDB:
+            pass
+
+        result = payment_svc.verify_payment_result(MockDB(), params)
+        assert result["success"] is False
+        assert "checksum" in result["message"]
+
+    def test_verify_result_production_rejects_mock_txn(self, monkeypatch):
+        """Mock payment shortcuts are development-only."""
+        monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+        params = {"vnp_TxnRef": "MOCK_TXN_REF", "vnp_ResponseCode": "00"}
+
+        class MockDB:
+            pass
+
+        result = payment_svc.verify_payment_result(MockDB(), params)
+        assert result["success"] is False
+        assert "checksum" in result["message"]
+
     def test_verify_result_transaction_not_found(self):
         """Valid checksum but missing transaction returns success=False."""
         params = {

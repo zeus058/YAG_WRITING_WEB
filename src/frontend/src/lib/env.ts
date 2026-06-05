@@ -2,6 +2,7 @@ export const appEnv = {
   deployEnvironment:
     process.env.NEXT_PUBLIC_DEPLOY_ENV ??
     process.env.NEXT_PUBLIC_ENVIRONMENT ??
+    (process.env.VERCEL_ENV === "production" ? "production" : undefined) ??
     "development",
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
@@ -15,6 +16,7 @@ export const appEnv = {
 } as const;
 
 const localUrlMarkers = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"];
+const isProductionBuild = process.env.NODE_ENV === "production";
 
 function assertProductionUrl(name: string, value: string, allowedProtocols: string[]) {
   const url = new URL(value);
@@ -26,13 +28,14 @@ function assertProductionUrl(name: string, value: string, allowedProtocols: stri
   }
 }
 
+if ((appEnv.deployEnvironment === "production" || isProductionBuild) && appEnv.useMocks) {
+  throw new Error("NEXT_PUBLIC_USE_MOCKS must be false in production builds");
+}
+
 if (appEnv.deployEnvironment === "production") {
   assertProductionUrl("NEXT_PUBLIC_APP_URL", appEnv.appUrl, ["https:"]);
   assertProductionUrl("NEXT_PUBLIC_API_BASE_URL", appEnv.apiBaseUrl, ["https:"]);
   assertProductionUrl("NEXT_PUBLIC_WS_BASE_URL", appEnv.wsBaseUrl, ["wss:"]);
-  if (appEnv.useMocks) {
-    throw new Error("NEXT_PUBLIC_USE_MOCKS must be false in production");
-  }
 }
 
 export function resolveApiUrl(path: string) {

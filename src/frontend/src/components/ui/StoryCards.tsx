@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { stories, type Story } from "@/data/yag";
+import type { Story } from "@/data/yag";
 import { Cover } from "./Cover";
 
 export function getStoryAuthorName(story: any) {
@@ -10,7 +10,7 @@ export function getStoryAuthorName(story: any) {
     author?.profile?.display_name ||
     author?.username ||
     story?.author_name ||
-    "Tác giả YAG"
+    "Tác giả chưa rõ"
   );
 }
 
@@ -27,20 +27,20 @@ export function StoryBadge({ badge, short = false }: { badge: Story["badge"]; sh
 }
 
 export function HomeStoryCard({ story, index }: { story: any; index: number }) {
-  const reads = story.view_count !== undefined ? String(story.view_count >= 1000 ? `${(story.view_count / 1000).toFixed(0)}K` : story.view_count) : ["1.2M", "842K", "635K", "524K", "418K", "390K", "318K", "276K"][index % 8];
-  const rating = formatRating(story.rating_avg, (4.9 - (index % 5) * 0.1).toFixed(1));
+  const reads = story.view_count !== undefined ? String(story.view_count >= 1000 ? `${(story.view_count / 1000).toFixed(0)}K` : story.view_count) : "0";
+  const rating = formatRating(story.rating_avg, "0.0");
   const href = story.id ? `/stories/${story.id}` : "/story-detail";
   
   const authorName = getStoryAuthorName(story);
   const genre = story.category || story.genre || "Truyện";
   const chapterCount = story.chapter_count ?? story.chapters ?? 0;
-  const badgeVal = story.badge || (index % 3 === 0 ? "hot" : index % 2 === 0 ? "ai" : "done");
+  const badgeVal = story.badge as Story["badge"] | undefined;
 
   return (
     <Link className="home-story-card" href={href}>
       <div className="home-story-cover">
         <Cover index={index} coverUrl={story.cover_url} />
-        <StoryBadge badge={badgeVal} short />
+        {badgeVal ? <StoryBadge badge={badgeVal} short /> : null}
       </div>
       <div className="home-story-body">
         <h3 className="story-title">{story.title}</h3>
@@ -57,9 +57,11 @@ export function HomeStoryCard({ story, index }: { story: any; index: number }) {
 
 export function ReadingCard({ story, index }: { story: any; index: number }) {
   const chapterCount = Math.max(Number(story.chapter_count ?? story.chapters ?? 1), 1);
-  const current = Math.max(1, Math.min(chapterCount, 8 + index * 5));
-  const percent = Math.round((current / chapterCount) * 100);
-  const href = story.id ? `/stories/${story.id}/chapters/${current}` : "/reader-mode";
+  const rawCurrent = Number(story.current_chapter_number ?? story.last_read_chapter ?? story.chapters_read ?? 0);
+  const current = Math.max(0, Math.min(chapterCount, rawCurrent));
+  const hasProgress = current > 0;
+  const percent = hasProgress ? Math.round((current / chapterCount) * 100) : 0;
+  const href = story.id ? (hasProgress ? `/stories/${story.id}/chapters/${current}` : `/stories/${story.id}`) : "/discover";
   
   const authorName = getStoryAuthorName(story);
   const genre = story.category || story.genre || "Truyện";
@@ -70,8 +72,14 @@ export function ReadingCard({ story, index }: { story: any; index: number }) {
       <div className="reading-info">
         <h3 className="story-title">{story.title}</h3>
         <div className="story-meta">{authorName} · {genre}</div>
-        <div className="progress"><span style={{ width: `${percent}%` }} /></div>
-        <div className="home-meta-row"><span>Chương {current}/{chapterCount}</span><span>{percent}%</span></div>
+        {hasProgress ? (
+          <>
+            <div className="progress"><span style={{ width: `${percent}%` }} /></div>
+            <div className="home-meta-row"><span>Chương {current}/{chapterCount}</span><span>{percent}%</span></div>
+          </>
+        ) : (
+          <div className="home-meta-row"><span>{chapterCount} chương</span><span>Chưa đọc</span></div>
+        )}
       </div>
     </Link>
   );
@@ -89,7 +97,11 @@ export function RankingItem({ story, index }: { story: any; index: number }) {
         <h3 className="list-title">{story.title}</h3>
         <div className="list-meta">{authorName} · {genre}</div>
       </div>
-      <span className={`badge ${index < 3 ? "badge-crimson" : "badge-blue"}`}>{index < 3 ? "Tăng hạng" : "Ổn định"}</span>
+      {typeof story.rank_change === "number" ? (
+        <span className={`badge ${story.rank_change > 0 ? "badge-crimson" : "badge-blue"}`}>
+          {story.rank_change > 0 ? `+${story.rank_change}` : story.rank_change}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -98,7 +110,7 @@ export function UpdateStoryRow({ story, index }: { story: any; index: number }) 
   const href = story.id ? `/stories/${story.id}` : "/story-detail";
   const authorName = getStoryAuthorName(story);
   const genre = story.category || story.genre || "Truyện";
-  const badgeVal = story.badge || (index % 3 === 0 ? "hot" : index % 2 === 0 ? "ai" : "done");
+  const badgeVal = story.badge as Story["badge"] | undefined;
 
   return (
     <Link className="update-row" href={href}>
@@ -108,7 +120,7 @@ export function UpdateStoryRow({ story, index }: { story: any; index: number }) 
         <div className="story-meta">{authorName} · {genre}</div>
       </div>
       <div className="update-meta">
-        <StoryBadge badge={badgeVal} />
+        {badgeVal ? <StoryBadge badge={badgeVal} /> : null}
         <span>vừa cập nhật</span>
       </div>
     </Link>
@@ -116,7 +128,7 @@ export function UpdateStoryRow({ story, index }: { story: any; index: number }) 
 }
 
 export function QuickStories({ count = 6, storiesList }: { count?: number; storiesList?: any[] }) {
-  const displayList = storiesList || stories.slice(0, count);
+  const displayList = (storiesList ?? []).slice(0, count);
 
   return (
     <div className="home-story-grid">

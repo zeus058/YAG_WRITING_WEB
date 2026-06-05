@@ -115,8 +115,8 @@ const MOCK_REVENUE_SERIES: RevenuePoint[] = [
 ];
 
 const MOCK_ALERTS: ScheduleAlert[] = [
-  { id: "a1", severity: "warning", message: "Truyện Mưa Trên Thành Cũ trễ lịch đăng 1 chương.", is_resolved: false },
-  { id: "a2", severity: "critical", message: "Tác giả Linh An trễ cam kết 3 ngày liên tiếp.", is_resolved: false },
+  { id: "a1", severity: "warning", message: "Một tác phẩm minh họa trễ lịch đăng 1 chương.", is_resolved: false },
+  { id: "a2", severity: "critical", message: "Một tác giả minh họa trễ cam kết 3 ngày liên tiếp.", is_resolved: false },
 ];
 
 const MOCK_AUDIT_LOGS: AuditLog[] = [
@@ -129,8 +129,8 @@ const MOCK_QUEUE: ModerationItem[] = [
     chapter_id: "mock-c1",
     title: "Bóng Đêm Sau Cửa Sổ",
     chapter_number: 13,
-    story: { title: "Mưa Trên Thành Cũ" },
-    author: { username: "Linh An" },
+    story: { title: "Tác phẩm minh họa 01" },
+    author: { username: "Tác giả minh họa" },
     moderation_status: "flagged",
     reason: "Bạo lực mô tả chi tiết",
     content:

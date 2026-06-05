@@ -332,8 +332,8 @@ export default function LandingPage() {
                   />
                 </svg>
                 <div className="book-meta">
-                  <div className="book-title-sm">Cánh Cửa Sau Sao Băng</div>
-                  <div className="book-author-sm">Minh Khôi</div>
+                  <div className="book-title-sm">Tác phẩm minh họa 02</div>
+                  <div className="book-author-sm">Tác giả minh họa</div>
                 </div>
               </div>
               {/* Book 2 */}
@@ -381,8 +381,8 @@ export default function LandingPage() {
                   />
                 </svg>
                 <div className="book-meta">
-                  <div className="book-title-sm">Hồ Sơ Ánh Trăng</div>
-                  <div className="book-author-sm">Lam Tử</div>
+                  <div className="book-title-sm">Tác phẩm minh họa 03</div>
+                  <div className="book-author-sm">Tác giả minh họa</div>
                 </div>
               </div>
               {/* Book 1 (front) */}
@@ -458,7 +458,7 @@ export default function LandingPage() {
                     fill="rgba(255,236,206,.9)"
                     fontStyle="italic"
                   >
-                    Mưa Trên Thành Cũ
+                    Tác phẩm minh họa
                   </text>
                   <text
                     x="100"
@@ -469,7 +469,7 @@ export default function LandingPage() {
                     fill="rgba(255,255,255,.4)"
                     letterSpacing="1"
                   >
-                    Linh An
+                    Tác giả YAG
                   </text>
                 </svg>
               </div>
@@ -909,12 +909,12 @@ export default function LandingPage() {
                 </div>
                 <div className="s-info">
                   <div className="s-genre">Ngôn tình lịch sử</div>
-                  <div className="s-name">Mưa Trên Thành Cũ</div>
-                  <div className="s-author">Linh An</div>
+                  <div className="s-name">Tác phẩm minh họa 01</div>
+                  <div className="s-author">Tác giả minh họa</div>
                   <div className="s-stats">
-                    <span className="s-stat">👁 1.2M</span>
-                    <span className="s-stat">⭐ 4.9</span>
-                    <span className="s-stat">📚 72 ch.</span>
+                    <span className="s-stat">👁 0</span>
+                    <span className="s-stat">⭐ 0.0</span>
+                    <span className="s-stat">📚 0 ch.</span>
                   </div>
                 </div>
               </div>
@@ -947,12 +947,12 @@ export default function LandingPage() {
                 </div>
                 <div className="s-info">
                   <div className="s-genre">Khoa học viễn tưởng</div>
-                  <div className="s-name">Cánh Cửa Sau Sao Băng</div>
-                  <div className="s-author">Minh Khôi</div>
+                  <div className="s-name">Tác phẩm minh họa 02</div>
+                  <div className="s-author">Tác giả minh họa</div>
                   <div className="s-stats">
-                    <span className="s-stat">👁 850K</span>
-                    <span className="s-stat">⭐ 4.7</span>
-                    <span className="s-stat">📚 48 ch.</span>
+                    <span className="s-stat">👁 0</span>
+                    <span className="s-stat">⭐ 0.0</span>
+                    <span className="s-stat">📚 0 ch.</span>
                   </div>
                 </div>
               </div>
@@ -985,12 +985,12 @@ export default function LandingPage() {
                 </div>
                 <div className="s-info">
                   <div className="s-genre">Trinh thám</div>
-                  <div className="s-name">Hồ Sơ Ánh Trăng</div>
-                  <div className="s-author">Lam Tử</div>
+                  <div className="s-name">Tác phẩm minh họa 03</div>
+                  <div className="s-author">Tác giả minh họa</div>
                   <div className="s-stats">
-                    <span className="s-stat">👁 940K</span>
-                    <span className="s-stat">⭐ 4.8</span>
-                    <span className="s-stat">📚 64 ch.</span>
+                    <span className="s-stat">👁 0</span>
+                    <span className="s-stat">⭐ 0.0</span>
+                    <span className="s-stat">📚 0 ch.</span>
                   </div>
                 </div>
               </div>
@@ -1025,12 +1025,12 @@ export default function LandingPage() {
                 </div>
                 <div className="s-info">
                   <div className="s-genre">Đời thường</div>
-                  <div className="s-name">Vườn Ký Ức</div>
-                  <div className="s-author">Ngọc Hà</div>
+                  <div className="s-name">Tác phẩm minh họa 04</div>
+                  <div className="s-author">Tác giả minh họa</div>
                   <div className="s-stats">
-                    <span className="s-stat">👁 620K</span>
-                    <span className="s-stat">⭐ 4.6</span>
-                    <span className="s-stat">📚 36 ch.</span>
+                    <span className="s-stat">👁 0</span>
+                    <span className="s-stat">⭐ 0.0</span>
+                    <span className="s-stat">📚 0 ch.</span>
                   </div>
                 </div>
               </div>
@@ -1064,12 +1064,12 @@ export default function LandingPage() {
                 </div>
                 <div className="s-info">
                   <div className="s-genre">Huyền huyễn</div>
-                  <div className="s-name">Tàn Tro Phượng Hoàng</div>
-                  <div className="s-author">Hải Đăng</div>
+                  <div className="s-name">Tác phẩm minh họa 05</div>
+                  <div className="s-author">Tác giả minh họa</div>
                   <div className="s-stats">
-                    <span className="s-stat">👁 2.1M</span>
-                    <span className="s-stat">⭐ 4.9</span>
-                    <span className="s-stat">📚 82 ch.</span>
+                    <span className="s-stat">👁 0</span>
+                    <span className="s-stat">⭐ 0.0</span>
+                    <span className="s-stat">📚 0 ch.</span>
                   </div>
                 </div>
               </div>
@@ -1100,12 +1100,12 @@ export default function LandingPage() {
                 </div>
                 <div className="s-info">
                   <div className="s-genre">Tâm lý</div>
-                  <div className="s-name">Đường Về Phía Biển</div>
-                  <div className="s-author">Phương Nam</div>
+                  <div className="s-name">Tác phẩm minh họa 06</div>
+                  <div className="s-author">Tác giả minh họa</div>
                   <div className="s-stats">
-                    <span className="s-stat">👁 510K</span>
-                    <span className="s-stat">⭐ 4.5</span>
-                    <span className="s-stat">📚 28 ch.</span>
+                    <span className="s-stat">👁 0</span>
+                    <span className="s-stat">⭐ 0.0</span>
+                    <span className="s-stat">📚 0 ch.</span>
                   </div>
                 </div>
               </div>
@@ -1261,9 +1261,9 @@ export default function LandingPage() {
                   các app khác nhiều.
                 </p>
                 <div className="t-author">
-                  <div className="t-avatar">MN</div>
+                  <div className="t-avatar">DG</div>
                   <div>
-                    <div className="t-name">Minh Nguyệt</div>
+                    <div className="t-name">Độc giả YAG</div>
                     <div className="t-role">Độc giả · TP.HCM</div>
                   </div>
                 </div>
@@ -1279,10 +1279,10 @@ export default function LandingPage() {
                   sợ bí không viết được nữa.
                 </p>
                 <div className="t-author">
-                  <div className="t-avatar">TH</div>
+                  <div className="t-avatar">TG</div>
                   <div>
-                    <div className="t-name">Trần Hùng</div>
-                    <div className="t-role">Tác giả · Hà Nội</div>
+                    <div className="t-name">Tác giả YAG</div>
+                    <div className="t-role">Tác giả</div>
                   </div>
                 </div>
               </div>
@@ -1297,10 +1297,10 @@ export default function LandingPage() {
                   hay tác giả.
                 </p>
                 <div className="t-author">
-                  <div className="t-avatar">PL</div>
+                  <div className="t-avatar">DG</div>
                   <div>
-                    <div className="t-name">Phương Linh</div>
-                    <div className="t-role">Độc giả · Đà Nẵng</div>
+                    <div className="t-name">Độc giả YAG</div>
+                    <div className="t-role">Độc giả</div>
                   </div>
                 </div>
               </div>

@@ -89,9 +89,9 @@ export const roleNav: Record<Role, ScreenId[]> = {
 };
 
 export const roleInfo = {
-  reader: { label: "Độc giả", name: "Minh Nguyệt", avatar: "MN" },
-  author: { label: "Tác giả", name: "Linh An", avatar: "LA" },
-  admin: { label: "Quản trị", name: "Admin YAG", avatar: "AD" },
+  reader: { label: "Độc giả", name: "Độc giả", avatar: "DG" },
+  author: { label: "Tác giả", name: "Tác giả", avatar: "TG" },
+  admin: { label: "Quản trị", name: "Quản trị", avatar: "QT" },
 } satisfies Record<Role, { label: string; name: string; avatar: string }>;
 
 export const screenRouteMap: Record<string, ScreenId> = {
@@ -156,22 +156,22 @@ export const screenRouteMap: Record<string, ScreenId> = {
 export const screenStaticSlugs = Object.keys(screenRouteMap);
 
 export const stories: Story[] = [
-  { title: "Mưa Trên Thành Cũ", author: "Linh An", genre: "Ngôn tình lịch sử", chapters: 72, badge: "hot" },
-  { title: "Cánh Cửa Sau Sao Băng", author: "Minh Khôi", genre: "Khoa học viễn tưởng", chapters: 48, badge: "ai" },
-  { title: "Hồ Sơ Ánh Trăng", author: "Lam Tử", genre: "Trinh thám", chapters: 64, badge: "done" },
-  { title: "Vườn Ký Ức", author: "Ngọc Hà", genre: "Đời thường", chapters: 36, badge: "hot" },
-  { title: "Tàn Tro Phượng Hoàng", author: "Hải Đăng", genre: "Huyền huyễn", chapters: 82, badge: "ai" },
-  { title: "Đường Về Phía Biển", author: "Phương Nam", genre: "Tâm lý", chapters: 28, badge: "done" },
-  { title: "Thư Viện Không Ngủ", author: "An Nhiên", genre: "Kỳ ảo", chapters: 54, badge: "hot" },
-  { title: "Ngày Mai Chưa Đến", author: "Bảo Châu", genre: "Hiện đại", chapters: 41, badge: "ai" },
-  { title: "Lời Thì Thầm Của Gió", author: "Gia Hân", genre: "Thanh xuân", chapters: 59, badge: "hot" },
-  { title: "Bản Đồ Dưới Lòng Đất", author: "Khang Vũ", genre: "Phiêu lưu", chapters: 67, badge: "ai" },
-  { title: "Mắt Biếc Thành Đông", author: "Tú Uyên", genre: "Cổ trang", chapters: 45, badge: "done" },
-  { title: "Quán Trà Cuối Hẻm", author: "Duy Minh", genre: "Chữa lành", chapters: 33, badge: "hot" },
-  { title: "Vệt Nắng Sau Mùa Đông", author: "Hạ Vy", genre: "Gia đình", chapters: 52, badge: "ai" },
-  { title: "Người Gác Sao", author: "Quang Nhật", genre: "Kỳ ảo", chapters: 76, badge: "hot" },
-  { title: "Bên Kia Dòng Sông", author: "Mai Anh", genre: "Lịch sử", chapters: 64, badge: "done" },
-  { title: "Thành Phố Không Tên", author: "Đức Trí", genre: "Cyberpunk", chapters: 88, badge: "ai" },
+  { title: "Tác phẩm minh họa 01", author: "Tác giả minh họa", genre: "Ngôn tình lịch sử", chapters: 0, badge: "hot" },
+  { title: "Tác phẩm minh họa 02", author: "Tác giả minh họa", genre: "Khoa học viễn tưởng", chapters: 0, badge: "ai" },
+  { title: "Tác phẩm minh họa 03", author: "Tác giả minh họa", genre: "Trinh thám", chapters: 0, badge: "done" },
+  { title: "Tác phẩm minh họa 04", author: "Tác giả minh họa", genre: "Đời thường", chapters: 0, badge: "hot" },
+  { title: "Tác phẩm minh họa 05", author: "Tác giả minh họa", genre: "Huyền huyễn", chapters: 0, badge: "ai" },
+  { title: "Tác phẩm minh họa 06", author: "Tác giả minh họa", genre: "Tâm lý", chapters: 0, badge: "done" },
+  { title: "Tác phẩm minh họa 07", author: "Tác giả minh họa", genre: "Kỳ ảo", chapters: 0, badge: "hot" },
+  { title: "Tác phẩm minh họa 08", author: "Tác giả minh họa", genre: "Hiện đại", chapters: 0, badge: "ai" },
+  { title: "Tác phẩm minh họa 09", author: "Tác giả minh họa", genre: "Thanh xuân", chapters: 0, badge: "hot" },
+  { title: "Tác phẩm minh họa 10", author: "Tác giả minh họa", genre: "Phiêu lưu", chapters: 0, badge: "ai" },
+  { title: "Tác phẩm minh họa 11", author: "Tác giả minh họa", genre: "Cổ trang", chapters: 0, badge: "done" },
+  { title: "Tác phẩm minh họa 12", author: "Tác giả minh họa", genre: "Chữa lành", chapters: 0, badge: "hot" },
+  { title: "Tác phẩm minh họa 13", author: "Tác giả minh họa", genre: "Gia đình", chapters: 0, badge: "ai" },
+  { title: "Tác phẩm minh họa 14", author: "Tác giả minh họa", genre: "Kỳ ảo", chapters: 0, badge: "hot" },
+  { title: "Tác phẩm minh họa 15", author: "Tác giả minh họa", genre: "Lịch sử", chapters: 0, badge: "done" },
+  { title: "Tác phẩm minh họa 16", author: "Tác giả minh họa", genre: "Cyberpunk", chapters: 0, badge: "ai" },
 ];
 
 export function getScreenId(slug: string) {

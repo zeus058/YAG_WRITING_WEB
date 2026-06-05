@@ -6,7 +6,7 @@ import Link from "next/link";
 import { stories } from "@/data/yag";
 import { Icon, Cover, MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
-import { yagApi, appEnv, createDraftSocket, useAuth } from "@/lib";
+import { yagApi, appEnv, createDraftSocket, useAuth, getStoredJsonArray } from "@/lib";
 
 const triggerLiveToast = (message: string, type = "success") => {
   if (typeof window === "undefined") return;
@@ -71,16 +71,16 @@ export function AuthorWorksScreen() {
           stories.slice(0, 3).map((s, idx) => ({
             id: `mock-story-${idx + 1}`,
             title: s.title,
-            description: `Tác phẩm ngôn tình mang đậm màu sắc hoài niệm về tình yêu và chiến tranh của Linh An.`,
+            description: "Tác phẩm minh họa chỉ dùng khi bật chế độ mock.",
             category: s.genre,
             chapter_count: s.chapters,
             cover_url: null,
             status: idx === 2 ? "completed" : "ongoing",
             moderation_status: idx === 1 ? "pending" : "approved",
-            view_count: 125000 + idx * 45000,
-            rating_avg: 4.6 + idx * 0.15,
+            view_count: 0,
+            rating_avg: 0,
             updated_at: new Date(Date.now() - idx * 24 * 3600 * 1000).toISOString(),
-            draft_count: idx + 2,
+            draft_count: 0,
           }))
         );
       } else {
@@ -227,7 +227,7 @@ export function AuthorWorksScreen() {
         <MetricCard label="Tác phẩm" value={String(works.length)} />
         <MetricCard label="Số chương nháp" value={String(works.reduce((acc, story) => acc + (story.draft_count || 0), 0))} />
         <MetricCard label="Chờ duyệt AI" value={String(works.reduce((acc, story) => acc + (story.pending_count || 0), 0))} />
-        <MetricCard label="Uy tín tác giả" value={`${user?.profile?.reputation_score ?? 100}%`} />
+        <MetricCard label="Uy tín tác giả" value={user?.profile?.reputation_score != null ? `${user.profile.reputation_score}%` : "Chưa có"} />
         <MetricCard label="Lượt đọc" value={formattedViews} />
         <MetricCard label="Đánh giá TB" value={`${avgRating} ★`} />
       </section>
@@ -325,7 +325,7 @@ export function AuthorWorksScreen() {
             <form onSubmit={handleCreateStory} className="stack" style={{ gap: 16, marginTop: 16 }}>
               <div className="field">
                 <label style={{ fontWeight: "bold", fontSize: 13 }}>Tên tác phẩm (Độc bản) <span style={{ color: "var(--crimson)" }}>*</span></label>
-                <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ví dụ: Mưa Trên Thành Cũ" />
+                <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ví dụ: Tác phẩm mới" />
               </div>
               <div className="field">
                 <label style={{ fontWeight: "bold", fontSize: 13 }}>Thể loại chính</label>
@@ -429,19 +429,9 @@ export function AuthorStudioScreen() {
         setEditorTitle(chaps[0].title);
         setEditorContent(chaps[0].content);
       } else {
-        const newChap = await yagApi.apiFetch<any>("/api/v1/chapters/", {
-          method: "POST",
-          body: {
-            story_id: storyId,
-            chapter_number: 1,
-            title: "Chương 1: Khởi đầu",
-            content: "Nội dung chương viết ở đây..."
-          }
-        });
-        setChapters([newChap.data]);
-        setActiveChapter(newChap.data);
-        setEditorTitle(newChap.data.title);
-        setEditorContent(newChap.data.content);
+        setActiveChapter(null);
+        setEditorTitle("");
+        setEditorContent("");
       }
     } catch (err) {
       console.error(err);
@@ -805,8 +795,8 @@ export function AuthorStudioScreen() {
       const newChap = {
         id: `mock-chap-${Date.now()}`,
         chapter_number: nextNum,
-        title: `Chương ${nextNum}: Tiêu đề mới`,
-        content: "Nội dung chương viết ở đây...",
+        title: `Chương ${nextNum}`,
+        content: "",
         moderation_status: "draft",
       };
       const updated = [...chapters, newChap];
@@ -824,8 +814,8 @@ export function AuthorStudioScreen() {
         body: {
           story_id: storyId,
           chapter_number: nextNum,
-          title: `Chương ${nextNum}: Tiêu đề mới`,
-          content: "Nội dung chương viết ở đây..."
+          title: `Chương ${nextNum}`,
+          content: ""
         }
       });
       const newChap = res.data;
@@ -872,12 +862,18 @@ export function AuthorStudioScreen() {
         <section className="empty-state panel panel-pad" style={{ maxWidth: 720, margin: "48px auto", textAlign: "center" }}>
           <h2 className="section-title">Không mở được không gian viết</h2>
           <p style={{ color: "var(--muted)" }}>
-            {loadError || "Tác phẩm này chưa có chương nháp khả dụng. Hãy thử tạo lại chương đầu tiên."}
+            {loadError || "Tác phẩm này chưa có chương nháp khả dụng. Bạn có thể tạo một bản nháp trống để bắt đầu viết."}
           </p>
           <div className="inline-actions" style={{ justifyContent: "center", marginTop: 16 }}>
-            <button className="button button-primary" type="button" onClick={() => void loadStudioData()}>
-              Thử lại
-            </button>
+            {loadError ? (
+              <button className="button button-primary" type="button" onClick={() => void loadStudioData()}>
+                Thử lại
+              </button>
+            ) : (
+              <button className="button button-primary" type="button" onClick={handleCreateNewChapter} disabled={isCreatingChapter}>
+                {isCreatingChapter ? "Đang tạo..." : "Tạo chương nháp trống"}
+              </button>
+            )}
             <Link className="button" href="/author/stories">
               Quay về tác phẩm của tôi
             </Link>
@@ -1392,8 +1388,8 @@ export function PublishScreen() {
         const newDraft = {
           id: `mock-draft-${Date.now()}`,
           chapter_number: nextNum,
-          title: `Chương ${nextNum}: Tiêu đề mới`,
-          content: "Nội dung chương viết ở đây...",
+          title: `Chương ${nextNum}`,
+          content: "",
           moderation_status: "draft",
         };
         setAllChapters((current) => [...current, newDraft]);
@@ -1408,8 +1404,8 @@ export function PublishScreen() {
         body: {
           story_id: storyId,
           chapter_number: nextNum,
-          title: `Chương ${nextNum}: Tiêu đề mới`,
-          content: "Nội dung chương viết ở đây...",
+          title: `Chương ${nextNum}`,
+          content: "",
         },
       });
       const newDraft = res.data;
@@ -1574,27 +1570,15 @@ export function ScheduleScreen() {
     const loadData = async () => {
       try {
         if (appEnv.useMocks) {
-          // Keep mock list
-          setWorks([
-            { id: "com-1", title: "Mưa Trên Thành Cũ", targetChaps: 100, chapter_count: 72, deadline: "30/08/2026" },
-            { id: "com-2", title: "Cánh Cửa Sau Sao Băng", targetChaps: 60, chapter_count: 48, deadline: "15/07/2026" }
-          ]);
-          
-          // Generate mock calendar days for June 2026
-          const daysList = Array.from({ length: 30 }, (_, index) => {
-            const dayNum = index + 1;
-            let event = null;
-            if (dayNum === 4) {
-              event = { title: "C14: Đêm lạnh", status: "pending", time: "10:00" };
-            } else if (dayNum === 7) {
-              event = { title: "C15: Bức thư", status: "approved", time: "15:00" };
-            } else if (dayNum === 12) {
-              event = { title: "Lịch nháp", status: "draft", time: "08:00" };
-            }
-            return { dayNum, event };
-          });
+          setWorks([]);
+
+          const now = new Date();
+          const month = now.getMonth();
+          const year = now.getFullYear();
+          const numDays = new Date(year, month + 1, 0).getDate();
+          const daysList = Array.from({ length: numDays }, (_, index) => ({ dayNum: index + 1, event: null }));
           setCalendarDays(daysList);
-          setCurrentMonthStr("Tháng 06/2026");
+          setCurrentMonthStr(`Tháng ${String(month + 1).padStart(2, "0")}/${year}`);
         } else {
           // Production / API mode
           const res = await yagApi.author.getStories();
@@ -1663,33 +1647,30 @@ export function ScheduleScreen() {
   }, []);
 
   // Compute commitments dynamically
-  const commitments = works.map((w, idx) => {
-    const target = w.targetChaps || (w.chapter_count > 100 ? w.chapter_count + 20 : 100);
-    const current = w.currentChaps || w.chapter_count || 0;
-    const deadline = w.deadline || "30/09/2026";
-    return {
-      id: w.id || `com-${idx}`,
-      novel: w.title,
-      targetChaps: target,
-      currentChaps: current,
-      deadline: deadline
-    };
-  });
+  const commitments = works
+    .filter((w) => w.targetChaps || w.target_chapters || w.commitment_target_chapters || w.deadline || w.commitment_deadline)
+    .map((w, idx) => {
+      const target = w.targetChaps || w.target_chapters || w.commitment_target_chapters || w.chapter_count || 0;
+      const current = w.currentChaps || w.chapter_count || 0;
+      const deadline = w.deadline || w.commitment_deadline || "Chưa đặt hạn";
+      return {
+        id: w.id || `com-${idx}`,
+        novel: w.title,
+        targetChaps: target,
+        currentChaps: current,
+        deadline: deadline
+      };
+    });
 
   // Load stopwatch sessions
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("yag.author.sessions");
-      if (stored) {
-        try { setSessions(JSON.parse(stored)); } catch { setSessions([]); }
+      const storedSessions = getStoredJsonArray("yag.author.sessions", appEnv.useMocks);
+      if (storedSessions.length > 0) {
+        setSessions(storedSessions);
       } else {
         if (appEnv.useMocks) {
-          const initialMock = [
-            { id: "s1", date: "02/06/2026", duration: 45, words: 1200, notes: "Chỉnh sửa thô chương 12" },
-            { id: "s2", date: "03/06/2026", duration: 60, words: 1800, notes: "Hoàn thiện chương 13 nháp" },
-          ];
-          setSessions(initialMock);
-          localStorage.setItem("yag.author.sessions", JSON.stringify(initialMock));
+          setSessions([]);
         } else {
           setSessions([]);
         }
@@ -1719,21 +1700,9 @@ export function ScheduleScreen() {
   const handleStopTimer = () => {
     setIsTimerRunning(false);
     const durationMin = Math.round(timerSeconds / 60) || 1;
-    const wordsEstimate = durationMin * 30; // Estimate 30 words per minute
-
-    const newSession = {
-      id: `session-${Date.now()}`,
-      date: new Date().toLocaleDateString("vi-VN"),
-      duration: durationMin,
-      words: wordsEstimate,
-      notes: "Ghi nhận từ bấm giờ trực tiếp",
-    };
-
-    const updated = [newSession, ...sessions];
-    setSessions(updated);
-    localStorage.setItem("yag.author.sessions", JSON.stringify(updated));
+    setManualDuration(String(durationMin));
     setTimerSeconds(0);
-    triggerLiveToast(`Đã lưu phiên làm việc: ${durationMin} phút, ~${wordsEstimate} từ.`);
+    triggerLiveToast(`Đã dừng bấm giờ sau ${durationMin} phút. Nhập số từ hoàn thành để ghi phiên.`);
   };
 
   const handleAddManualSession = (e: React.FormEvent) => {
@@ -1764,6 +1733,9 @@ export function ScheduleScreen() {
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
+  const recentSessionBars = sessions.slice(0, 4).reverse();
+  const maxSessionWords = Math.max(0, ...recentSessionBars.map((session) => Number(session.words) || 0));
+
   return (
     <AppShell activeId="s18">
       <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr", gap: 24, alignItems: "start" }} className="schedule-workspace">
@@ -1791,57 +1763,63 @@ export function ScheduleScreen() {
             </div>
 
             {/* Calendar grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginTop: 8 }}>
-              {calendarDays.map((day) => (
-                <div
-                  key={day.dayNum}
-                  style={{
-                    minHeight: 85,
-                    border: "1px solid var(--line)",
-                    borderRadius: 6,
-                    padding: 6,
-                    background: day.event ? "rgba(22, 48, 32, 0.02)" : "#fff",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between"
-                  }}
-                >
-                  <strong style={{ fontSize: 11, color: "var(--muted)" }}>{day.dayNum}</strong>
-                  {day.event && (
-                    <div
-                      style={{
-                        fontSize: 9,
-                        padding: "4px",
-                        borderRadius: 4,
-                        background:
-                          day.event.status === "approved"
-                            ? "var(--green-light)"
-                            : day.event.status === "pending"
-                            ? "var(--blue-light)"
-                            : "var(--amber-light)",
-                        color:
-                          day.event.status === "approved"
-                            ? "var(--green)"
-                            : day.event.status === "pending"
-                            ? "var(--blue)"
-                            : "var(--amber)",
-                        borderLeft: `2.5px solid ${
-                          day.event.status === "approved"
-                            ? "var(--green)"
-                            : day.event.status === "pending"
-                            ? "var(--blue)"
-                            : "var(--amber)"
-                        }`,
-                        lineHeight: 1.2
-                      }}
-                    >
-                      <div style={{ fontWeight: "bold" }}>{day.event.time}</div>
-                      <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={day.event.title}>{day.event.title}</div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            {isLoading ? (
+              <div style={{ padding: 32, textAlign: "center", color: "var(--muted)" }}>
+                Đang tải lịch đăng chương...
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginTop: 8 }}>
+                {calendarDays.map((day) => (
+                  <div
+                    key={day.dayNum}
+                    style={{
+                      minHeight: 85,
+                      border: "1px solid var(--line)",
+                      borderRadius: 6,
+                      padding: 6,
+                      background: day.event ? "rgba(22, 48, 32, 0.02)" : "#fff",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between"
+                    }}
+                  >
+                    <strong style={{ fontSize: 11, color: "var(--muted)" }}>{day.dayNum}</strong>
+                    {day.event && (
+                      <div
+                        style={{
+                          fontSize: 9,
+                          padding: "4px",
+                          borderRadius: 4,
+                          background:
+                            day.event.status === "approved"
+                              ? "var(--green-light)"
+                              : day.event.status === "pending"
+                              ? "var(--blue-light)"
+                              : "var(--amber-light)",
+                          color:
+                            day.event.status === "approved"
+                              ? "var(--green)"
+                              : day.event.status === "pending"
+                              ? "var(--blue)"
+                              : "var(--amber)",
+                          borderLeft: `2.5px solid ${
+                            day.event.status === "approved"
+                              ? "var(--green)"
+                              : day.event.status === "pending"
+                              ? "var(--blue)"
+                              : "var(--amber)"
+                          }`,
+                          lineHeight: 1.2
+                        }}
+                      >
+                        <div style={{ fontWeight: "bold" }}>{day.event.time}</div>
+                        <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={day.event.title}>{day.event.title}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Target Commitments */}
@@ -1854,7 +1832,7 @@ export function ScheduleScreen() {
                 </div>
               ) : (
                 commitments.map((com) => {
-                  const percent = Math.min(100, Math.round((com.currentChaps / com.targetChaps) * 100));
+                  const percent = com.targetChaps > 0 ? Math.min(100, Math.round((com.currentChaps / com.targetChaps) * 100)) : 0;
                   return (
                     <div key={com.id} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 16 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -1911,16 +1889,16 @@ export function ScheduleScreen() {
               <div className="grid grid-2" style={{ gap: 10 }}>
                 <div className="field">
                   <label style={{ fontSize: 11, fontWeight: "bold" }}>Số phút viết</label>
-                  <input className="input" type="number" min="1" value={manualDuration} onChange={(e) => setManualDuration(e.target.value)} required placeholder="30" style={{ padding: "6px" }} />
+                  <input className="input" type="number" min="1" value={manualDuration} onChange={(e) => setManualDuration(e.target.value)} required placeholder="Nhập số phút" style={{ padding: "6px" }} />
                 </div>
                 <div className="field">
                   <label style={{ fontSize: 11, fontWeight: "bold" }}>Số từ hoàn thành</label>
-                  <input className="input" type="number" min="1" value={manualWords} onChange={(e) => setManualWords(e.target.value)} required placeholder="800" style={{ padding: "6px" }} />
+                  <input className="input" type="number" min="1" value={manualWords} onChange={(e) => setManualWords(e.target.value)} required placeholder="Nhập số từ" style={{ padding: "6px" }} />
                 </div>
               </div>
               <div className="field">
                 <label style={{ fontSize: 11, fontWeight: "bold" }}>Ghi chú phiên viết</label>
-                <input className="input" value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} placeholder="Ví dụ: Lên ý tưởng chương 14" style={{ padding: "6px" }} />
+                <input className="input" value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} placeholder="Ghi chú phiên viết" style={{ padding: "6px" }} />
               </div>
               <button className="button button-primary" style={{ padding: "8px", fontSize: 12 }} type="submit">Ghi phiên viết</button>
             </form>
@@ -1946,28 +1924,25 @@ export function ScheduleScreen() {
             )}
           </section>
 
-          {/* Custom CSS Bar Chart for Words Written by Week */}
+          {/* Custom CSS Bar Chart for Words Written by Recent Sessions */}
           <section className="panel panel-pad stack">
-            <h3 style={{ fontSize: 14, fontWeight: "bold", margin: "0 0 12px 0", color: "var(--jungle-dark)" }}>Số từ hoàn thành theo tuần</h3>
-            <div style={{ display: "flex", justifyContent: "space-around", alignItems: "flex-end", height: 100, borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <div style={{ height: 40, width: 24, background: "var(--line)", borderRadius: "3px 3px 0 0" }} />
-                <span style={{ fontSize: 10, color: "var(--muted)" }}>T19</span>
+            <h3 style={{ fontSize: 14, fontWeight: "bold", margin: "0 0 12px 0", color: "var(--jungle-dark)" }}>Số từ hoàn thành gần đây</h3>
+            {recentSessionBars.length === 0 ? (
+              <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, textAlign: "center" }}>Chưa có dữ liệu phiên viết.</p>
+            ) : (
+              <div style={{ display: "flex", justifyContent: "space-around", alignItems: "flex-end", height: 100, borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                {recentSessionBars.map((session, index) => {
+                  const words = Number(session.words) || 0;
+                  const height = maxSessionWords > 0 ? Math.max(8, Math.round((words / maxSessionWords) * 80)) : 8;
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }} key={session.id || `${session.date}-${index}`}>
+                      <div style={{ height, width: 24, background: index === recentSessionBars.length - 1 ? "var(--green)" : "var(--line)", borderRadius: "3px 3px 0 0" }} />
+                      <span style={{ fontSize: 10, color: "var(--muted)" }}>{session.date}</span>
+                    </div>
+                  );
+                })}
               </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <div style={{ height: 55, width: 24, background: "var(--line)", borderRadius: "3px 3px 0 0" }} />
-                <span style={{ fontSize: 10, color: "var(--muted)" }}>T20</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <div style={{ height: 80, width: 24, background: "var(--green)", borderRadius: "3px 3px 0 0" }} />
-                <span style={{ fontSize: 10, color: "var(--muted)" }}>T21</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <div style={{ height: 68, width: 24, background: "var(--jungle-dark)", borderRadius: "3px 3px 0 0" }} />
-                <span style={{ fontSize: 10, color: "var(--muted)" }}>T22</span>
-              </div>
-            </div>
-            <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center", marginTop: 8 }}>Mục tiêu tuần: 8,000 từ</div>
+            )}
           </section>
         </div>
       </div>

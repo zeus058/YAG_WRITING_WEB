@@ -387,11 +387,11 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             <div className="grid grid-2">
               <div className="field">
                 <label>Họ tên</label>
-                <input className="input" defaultValue="Minh Nguyệt" required />
+                <input className="input" required />
               </div>
               <div className="field">
                 <label>Email liên hệ</label>
-                <input className="input" type="email" defaultValue="reader@yag.vn" required />
+                <input className="input" type="email" required />
               </div>
             </div>
             <div className="field">
@@ -400,7 +400,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             </div>
             <div className="field">
               <label>Nội dung chi tiết</label>
-              <textarea className="textarea" placeholder="Vui lòng mô tả chi tiết vấn đề bạn đang gặp phải..." defaultValue="Tôi cần kiểm tra giao dịch Membership vừa thanh toán..." required />
+              <textarea className="textarea" placeholder="Vui lòng mô tả chi tiết vấn đề bạn đang gặp phải..." required />
             </div>
             <label className="remember-row">
               <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} />

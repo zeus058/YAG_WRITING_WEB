@@ -4,9 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { stories, type IconName } from "@/data/yag";
-import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, RankingItem, ReadingCard, UpdateStoryRow, getStoryAuthorName } from "@/components/ui";
+import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, RankingItem, ReadingCard, StoryBadge, UpdateStoryRow, getStoryAuthorName } from "@/components/ui";
 import { AppShell } from "@/components/layout";
-import { yagApi, appEnv, useAuth } from "@/lib";
+import { yagApi, appEnv, useAuth, getStoredJsonArray } from "@/lib";
 
 const settingSections: { id: string; label: string; icon: IconName }[] = [
   { id: "profile", label: "Hồ sơ cá nhân", icon: "user" },
@@ -151,8 +151,8 @@ export function HomeFeedScreen() {
       </section>
       <section className="action-strip" style={{ margin: "24px 0" }}>
         <div>
-          <strong>Gu đọc hôm nay</strong>
-          <div className="list-meta">YAG ưu tiên truyện lịch sử, trinh thám nhẹ và tác giả đăng đều trong tuần này.</div>
+          <strong>Gợi ý hôm nay</strong>
+          <div className="list-meta">Danh sách được lấy từ hệ thống đề xuất và dữ liệu truyện hiện có.</div>
         </div>
         <button className="button" type="button" onClick={() => triggerLiveToast("Đã làm mới danh sách gợi ý theo sở thích đọc của bạn!")}>
           Làm mới gợi ý
@@ -316,7 +316,7 @@ export function DiscoverScreen() {
     }
     // Filter by chapter type (premium status)
     if (selectedType !== "Tất cả") {
-      const hasPremium = story.is_premium || (story.chapters && story.chapters.some((c: any) => c.is_premium)) || (story.id && String(story.id).charCodeAt(0) % 2 === 0);
+      const hasPremium = Boolean(story.is_premium || (story.chapters && story.chapters.some((c: any) => c.is_premium)));
       if (selectedType === "Miễn phí" && hasPremium) return false;
       if (selectedType === "Có Premium" && !hasPremium) return false;
     }
@@ -523,22 +523,22 @@ export function StoryDetailScreen() {
     if (appEnv.useMocks) {
       setStory({
         id: "422a2437-9e19-46d3-bcf0-2798ffffe3e7",
-        title: "Mưa Trên Thành Cũ",
-        description: "Giữa thành phố cũ sau chiến tranh, một người viết thư thuê và một nữ phóng viên cùng lần theo bí mật của những bức thư không người nhận.",
-        category: "Ngôn tình lịch sử",
+        title: "Tác phẩm minh họa",
+        description: "Bản ghi minh họa dùng cho chế độ mock của giao diện đọc truyện.",
+        category: "Minh họa",
         status: "ongoing",
-        view_count: 1200000,
-        rating_avg: 4.9,
-        rating_count: 128,
-        author: { username: "Linh An", profile: { display_name: "Linh An" } }
+        view_count: 0,
+        rating_avg: 0,
+        rating_count: 0,
+        author: { username: "Tác giả minh họa", profile: { display_name: "Tác giả minh họa" } }
       });
       setChapters([
-        { id: "c1", chapter_number: 1, title: "Khởi đầu dưới mưa", is_premium: false },
-        { id: "c2", chapter_number: 2, title: "Lời hẹn cũ", is_premium: false },
-        { id: "c3", chapter_number: 3, title: "Bức thư bị giấu", is_premium: false },
+        { id: "c1", chapter_number: 1, title: "Chương minh họa 1", is_premium: false },
+        { id: "c2", chapter_number: 2, title: "Chương minh họa 2", is_premium: false },
+        { id: "c3", chapter_number: 3, title: "Chương minh họa 3", is_premium: false },
       ]);
       setReviews([
-        { id: "r1", rating: 5, content: "Truyện viết rất hay, văn phong mượt mà.", user: { username: "Minh Nguyệt" } }
+        { id: "r1", rating: 5, content: "Đánh giá minh họa cho chế độ mock.", user: { username: "Độc giả minh họa" } }
       ]);
       setIsLoading(false);
       return;
@@ -625,16 +625,17 @@ export function StoryDetailScreen() {
   }
 
   const authorName = getStoryAuthorName(story);
-  const views = story.view_count >= 1000 ? `${(story.view_count / 1000).toFixed(0)}K` : String(story.view_count);
+  const viewCount = Number(story.view_count) || 0;
+  const views = viewCount >= 1000 ? `${(viewCount / 1000).toFixed(0)}K` : String(viewCount);
   const rating = Number(story.rating_avg);
-  const ratingText = Number.isFinite(rating) ? rating.toFixed(1) : "5.0";
+  const ratingText = Number.isFinite(rating) ? rating.toFixed(1) : "0.0";
 
   return (
     <AppShell activeId="s06">
       <section className="layout-2">
         <aside className="panel panel-pad stack">
           <Cover index={1} coverUrl={story.cover_url} />
-          <span className="badge badge-crimson">Đang hot</span>
+          {story.badge ? <StoryBadge badge={story.badge} /> : null}
           <div className="compact-stack">
             <strong>{authorName}</strong>
             <span className="story-meta">{chapters.length} chương · {views} lượt đọc · {ratingText} ★</span>
@@ -802,20 +803,20 @@ export function ReaderScreen() {
     if (!storyId) return;
 
     if (appEnv.useMocks) {
-      setStory({ title: "Mưa Trên Thành Cũ" });
+      setStory({ title: "Tác phẩm minh họa" });
       setChapter({
-        title: "Lời hẹn dưới mái ga",
+        title: "Chương minh họa",
         chapter_number: 12,
-        content: "Mưa rơi trên mái tôn thành những nhịp gõ đều...\n\nKhông ai đến đúng hẹn...",
+        content: "Nội dung minh họa chỉ xuất hiện khi bật chế độ mock.",
         is_premium: false,
       });
       setChapters([
-        { chapter_number: 11, title: "Bản nhạc cũ" },
-        { chapter_number: 12, title: "Lời hẹn dưới mái ga" },
-        { chapter_number: 13, title: "Tiếng còi cuối mùa" },
+        { chapter_number: 11, title: "Chương minh họa 11" },
+        { chapter_number: 12, title: "Chương minh họa 12" },
+        { chapter_number: 13, title: "Chương minh họa 13" },
       ]);
       setComments([
-        { id: "cm1", user: { username: "Minh Nguyệt" }, content: "Cảm xúc chương này rất tốt." }
+        { id: "cm1", user: { username: "Độc giả minh họa" }, content: "Bình luận minh họa cho chế độ mock." }
       ]);
       setIsLoading(false);
       return;
@@ -1113,36 +1114,32 @@ export function ForumScreen() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("yag.forum.posts");
-      if (stored) {
-        try {
-          setPosts(JSON.parse(stored));
-        } catch {
-          setPosts([]);
-        }
+      const storedPosts = getStoredJsonArray("yag.forum.posts", appEnv.useMocks);
+      if (storedPosts.length > 0) {
+        setPosts(storedPosts);
       } else {
         if (appEnv.useMocks) {
           const initialMock = [
             {
               id: "p1",
-              authorName: "Minh Nguyệt",
-              authorAvatar: "MN",
+              authorName: "Độc giả 01",
+              authorAvatar: "D1",
               time: "10 phút trước",
-              content: "Mọi người nghĩ sao về thân phận thật sự của nhân vật người viết thư thuê trong 'Mưa Trên Thành Cũ'? Mình đoán ông ấy chính là người lính mất tích năm xưa.",
+              content: "Mọi người nghĩ sao về chi tiết mở nút ở chương mới nhất? Mình đang tò mò hướng phát triển tiếp theo.",
               likes: 24,
               liked: false,
               replies: [
-                { id: "r1_1", author: "Hải Đăng", content: "Giả thuyết hay đấy! Nhưng chi tiết chiếc đồng hồ quả quýt ở chương 8 dường như ám chỉ ông ấy là thế hệ sau cơ." },
-                { id: "r1_2", author: "Phương Linh", content: "Đồng ý với Hải Đăng. Tôi nghĩ ông ấy là con trai người lính." }
+                { id: "r1_1", author: "Độc giả 02", content: "Mình cũng thấy chi tiết đó có thể là gợi ý cho tuyến nhân vật phụ." },
+                { id: "r1_2", author: "Độc giả 03", content: "Có thể tác giả đang chuẩn bị đảo chiều ở chương sau." }
               ],
               showReplyBox: false,
             },
             {
               id: "p2",
-              authorName: "Quốc Bảo",
-              authorAvatar: "QB",
+              authorName: "Độc giả 04",
+              authorAvatar: "D4",
               time: "1 giờ trước",
-              content: "Vừa đọc xong chương mới nhất. Bút lực của tác giả Linh An ngày càng lên tay, tả cảnh mưa ga cũ buồn man mác đọc mà nổi cả da gà.",
+              content: "Vừa đọc xong chương mới nhất. Nhịp kể chắc tay, đoạn kết chương khiến mình muốn đọc tiếp ngay.",
               likes: 12,
               liked: true,
               replies: [],
@@ -1150,14 +1147,14 @@ export function ForumScreen() {
             },
             {
               id: "p3",
-              authorName: "Yến Vy",
-              authorAvatar: "YV",
+              authorName: "Độc giả 05",
+              authorAvatar: "D5",
               time: "2 giờ trước",
-              content: "Có ai đề xuất thêm truyện nào thuộc thể loại kỳ ảo lịch sử không ạ? Đang đói thuốc quá cứu tôi với 😭",
+              content: "Có ai đề xuất thêm truyện cùng thể loại không ạ? Mình muốn tìm thêm vài bộ để đọc cuối tuần.",
               likes: 8,
               liked: false,
               replies: [
-                { id: "r3_1", author: "Admin YAG", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa với từ khóa 'kỳ ảo lịch sử việt nam' trên trang Khám phá nhé!" }
+                { id: "r3_1", author: "Quản trị YAG", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa trên trang Khám phá nhé!" }
               ],
               showReplyBox: false,
             }
@@ -1418,9 +1415,9 @@ export function ForumScreen() {
             <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13, lineHeight: 1.8, color: "var(--jungle)" }}>
               {appEnv.useMocks ? (
                 <>
-                  <li>Dự đoán chương cuối Mưa Trên Thành Cũ</li>
+                  <li>Dự đoán diễn biến chương cuối</li>
                   <li>Tại sao AI khuyên không nên hồi sinh nam phụ?</li>
-                  <li>Lịch đăng chương premium của Linh An</li>
+                  <li>Lịch đăng chương premium của tác giả</li>
                 </>
               ) : (
                 <>
@@ -1443,10 +1440,12 @@ const formatPrice = (price: number) => {
 
 export function MembershipScreen() {
   const { user } = useAuth();
-  const [plans, setPlans] = useState<any[]>([
+  const defaultPlans = [
     { name: "Tháng", id: "MONTHLY", price: 39000, duration_days: 30, description: "Linh hoạt cho độc giả mới" },
     { name: "Năm", id: "YEARLY", price: 199000, duration_days: 365, description: "Dành cho người đọc thường xuyên" }
-  ]);
+  ];
+  const [plans, setPlans] = useState<any[]>(appEnv.useMocks ? defaultPlans : []);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(!appEnv.useMocks);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const [isPremium, setIsPremium] = useState(false);
@@ -1541,11 +1540,15 @@ export function MembershipScreen() {
   useEffect(() => {
     if (appEnv.useMocks) return;
     const fetchPlans = async () => {
+      setIsLoadingPlans(true);
       try {
         const res = await yagApi.apiFetch<any[]>("/api/v1/membership/plans");
-        setPlans(res.data);
+        setPlans(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error("Failed to load plans:", err);
+        setPlans([]);
+      } finally {
+        setIsLoadingPlans(false);
       }
     };
     void fetchPlans();
@@ -1595,57 +1598,68 @@ export function MembershipScreen() {
           <div className="list-meta">YAG không lưu thông tin thẻ hoặc tài khoản ngân hàng của người dùng.</div>
         </div>
       </div>
-      <section className="grid grid-3">
-        {plans.map((plan, index) => {
-          const isActive = isPremium && plan.id === activePlanId;
-          const isOtherPlan = isPremium && plan.id !== activePlanId;
+      {isLoadingPlans ? (
+        <section className="panel panel-pad" style={{ textAlign: "center", color: "var(--muted)" }}>
+          Đang tải danh sách gói Membership...
+        </section>
+      ) : plans.length === 0 ? (
+        <section className="notice warning">
+          <Icon name="bell" />
+          Chưa có gói Membership khả dụng từ hệ thống thanh toán.
+        </section>
+      ) : (
+        <section className="grid grid-3">
+          {plans.map((plan, index) => {
+            const isActive = isPremium && plan.id === activePlanId;
+            const isOtherPlan = isPremium && plan.id !== activePlanId;
 
-          return (
-            <article 
-              className="panel panel-pad stack" 
-              key={plan.id} 
-              style={{ 
-                border: isActive ? "2px solid var(--crimson)" : "1px solid var(--line)",
-                position: "relative"
-              }}
-            >
-              {isActive && (
-                <span className="badge badge-green" style={{ position: "absolute", top: 12, right: 12 }}>
-                  Gói hiện tại
-                </span>
-              )}
-              <span className={`badge ${index === 0 ? "badge-crimson" : "badge-blue"}`}>
-                {index === 0 ? "Phổ biến nhất" : (plan.name === "Tháng" ? "Gói Tháng" : "Gói Năm")}
-              </span>
-              <h2 className="page-title" style={{ fontSize: 24 }}>{plan.name}</h2>
-              <div className="metric-value">{formatPrice(Number(plan.price))}</div>
-              <p className="section-subtitle">{plan.description || `Hiệu lực trong ${plan.duration_days} ngày.`}</p>
-              <div className="list">
-                {["Mở khóa chương premium", "Không quảng cáo khi đọc", "Tìm kiếm AI ngữ nghĩa nâng cao", "Lưu tiến độ đọc tự động"].map((item) => (
-                  <div className="list-item" key={item}>
-                    <span>{item}</span>
-                    <Icon name="check" />
-                  </div>
-                ))}
-              </div>
-              <button
-                className={`button ${isActive ? "button-soft" : (index === 0 ? "button-primary" : "")}`}
-                onClick={() => handlePlanCheckout(plan.id)}
-                style={{ width: "100%" }}
-                disabled={loadingPlan !== null || isActive}
+            return (
+              <article
+                className="panel panel-pad stack"
+                key={plan.id}
+                style={{
+                  border: isActive ? "2px solid var(--crimson)" : "1px solid var(--line)",
+                  position: "relative"
+                }}
               >
-                {loadingPlan === plan.id 
-                  ? "Đang xử lý..." 
-                  : isActive 
-                    ? "Đang sử dụng" 
-                    : isOtherPlan 
-                      ? (plan.id === "YEARLY" ? "Nâng cấp gói" : "Gia hạn gói") 
-                      : "Đăng ký ngay"}
-              </button>
-            </article>
-          );
-        })}
-      </section>
+                {isActive && (
+                  <span className="badge badge-green" style={{ position: "absolute", top: 12, right: 12 }}>
+                    Gói hiện tại
+                  </span>
+                )}
+                <span className={`badge ${index === 0 ? "badge-crimson" : "badge-blue"}`}>
+                  {index === 0 ? "Phổ biến nhất" : (plan.name === "Tháng" ? "Gói Tháng" : "Gói Năm")}
+                </span>
+                <h2 className="page-title" style={{ fontSize: 24 }}>{plan.name}</h2>
+                <div className="metric-value">{formatPrice(Number(plan.price))}</div>
+                <p className="section-subtitle">{plan.description || `Hiệu lực trong ${plan.duration_days} ngày.`}</p>
+                <div className="list">
+                  {["Mở khóa chương premium", "Không quảng cáo khi đọc", "Tìm kiếm AI ngữ nghĩa nâng cao", "Lưu tiến độ đọc tự động"].map((item) => (
+                    <div className="list-item" key={item}>
+                      <span>{item}</span>
+                      <Icon name="check" />
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className={`button ${isActive ? "button-soft" : (index === 0 ? "button-primary" : "")}`}
+                  onClick={() => handlePlanCheckout(plan.id)}
+                  style={{ width: "100%" }}
+                  disabled={loadingPlan !== null || isActive}
+                >
+                  {loadingPlan === plan.id
+                    ? "Đang xử lý..."
+                    : isActive
+                      ? "Đang sử dụng"
+                      : isOtherPlan
+                        ? (plan.id === "YEARLY" ? "Nâng cấp gói" : "Gia hạn gói")
+                        : "Đăng ký ngay"}
+                </button>
+              </article>
+            );
+          })}
+        </section>
+      )}
 
       {process.env.NODE_ENV !== "production" && (
         <section className="panel panel-pad stack" style={{ marginTop: 32, borderColor: "var(--amber)", background: "rgba(245, 158, 11, 0.04)" }}>
@@ -2130,9 +2144,9 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
   const [announcementText, setAnnouncementText] = useState("");
   const [announcements, setAnnouncements] = useState<any[]>([]);
 
-  const name = user?.profile?.display_name || user?.username || "Minh Nguyệt";
-  const bio = user?.profile?.bio || (modeOverride === "author" ? "Tác giả · Đam mê viết tiểu thuyết lịch sử" : "Độc giả · Thích truyện trinh thám nhẹ và lịch sử");
-  const score = user?.profile?.reputation_score ?? 100;
+  const name = user?.profile?.display_name || user?.username || "Người dùng";
+  const bio = user?.profile?.bio || (modeOverride === "author" ? "Tác giả trên YAG" : "Thành viên YAG");
+  const score = user?.profile?.reputation_score;
   const avatarText = name.slice(0, 2).toUpperCase();
 
   // Load announcements from localStorage
@@ -2140,12 +2154,12 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("yag.author.announcements");
       if (stored) {
-        try { setAnnouncements(JSON.parse(stored)); } catch { setAnnouncements([]); }
+        setAnnouncements(getStoredJsonArray("yag.author.announcements", appEnv.useMocks));
       } else {
         if (appEnv.useMocks) {
           const mockAnn = [
-            { id: "an-1", title: "Cảm ơn độc giả ủng hộ", content: "Mưa Trên Thành Cũ chính thức đạt mốc 100,000 lượt đọc! Cảm ơn sự đồng hành của mọi người.", date: "02/06/2026" },
-            { id: "an-2", title: "Thông báo dời lịch đăng chương 14", content: "Do tuần này mình bận một số công việc cá nhân, chương 14 sẽ được dời lịch đăng từ thứ Sáu sang thứ Bảy (06/06). Cảm ơn các bạn đã thông cảm!", date: "03/06/2026" }
+            { id: "an-1", title: "Thông báo minh họa", content: "Đây là thông báo mẫu chỉ dùng khi bật chế độ mock.", date: "02/06/2026" },
+            { id: "an-2", title: "Cập nhật lịch đăng", content: "Lịch đăng chương mẫu đã được cập nhật cho giao diện thử nghiệm.", date: "03/06/2026" }
           ];
           setAnnouncements(mockAnn);
           localStorage.setItem("yag.author.announcements", JSON.stringify(mockAnn));
@@ -2219,10 +2233,10 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
           {activeProfileTab === "stats" && (
             <div className="stack" style={{ gap: 24 }}>
               <div className="metric-grid">
-                <MetricCard label="Tác phẩm xuất bản" value="2" />
-                <MetricCard label="Lượt xem tích lũy" value="1.2M" />
-                <MetricCard label="Điểm uy tín sáng tác" value={`${score}/100`} />
-                <MetricCard label="Người theo dõi" value="4.5K" />
+                <MetricCard label="Tác phẩm xuất bản" value="Chưa có" />
+                <MetricCard label="Lượt xem tích lũy" value="Chưa có" />
+                <MetricCard label="Điểm uy tín sáng tác" value={score != null ? `${score}/100` : "Chưa có"} />
+                <MetricCard label="Người theo dõi" value="Chưa có" />
               </div>
             </div>
           )}
@@ -2909,13 +2923,13 @@ export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" 
       if (appEnv.useMocks) {
         if (modeOverride === "author") {
           setNotifications([
-            { id: "a1", title: "Kiểm duyệt AI hoàn tất", message: "Chương 13: Tiếng còi cuối mùa của tác phẩm 'Mưa Trên Thành Cũ' đã được duyệt thành công.", read_at: null },
-            { id: "a2", title: "Cảnh báo lịch đăng chương", message: "Tác phẩm 'Cánh Cửa Sau Sao Băng' sắp đến hạn đăng chương mới trong 24 giờ tới.", read_at: null },
-            { id: "a3", title: "Đánh giá tác phẩm mới", message: "Độc giả Minh Nguyệt vừa gửi đánh giá 5★ cho tác phẩm của bạn.", read_at: "2026-06-04" },
+            { id: "a1", title: "Kiểm duyệt AI hoàn tất", message: "Một chương minh họa đã được duyệt thành công.", read_at: null },
+            { id: "a2", title: "Cảnh báo lịch đăng chương", message: "Một tác phẩm minh họa sắp đến hạn đăng chương mới trong 24 giờ tới.", read_at: null },
+            { id: "a3", title: "Đánh giá tác phẩm mới", message: "Một độc giả minh họa vừa gửi đánh giá cho tác phẩm của bạn.", read_at: "2026-06-04" },
           ]);
         } else {
           setNotifications([
-            { id: "1", title: "Cập nhật chương mới", message: "Mưa Trên Thành Cũ vừa cập nhật chương 12.", read_at: null }
+            { id: "1", title: "Cập nhật chương mới", message: "Một tác phẩm minh họa vừa cập nhật chương mới.", read_at: null }
           ]);
         }
       } else {

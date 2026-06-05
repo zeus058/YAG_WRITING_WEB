@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { getAccessToken, clearAuthTokens, setAuthTokens } from "./auth";
 import { yagApi } from "./api";
 import { appEnv } from "./env";
+import { clearMockStorageWhenDisabled } from "./mock-storage";
 
 export type AuthUser = {
   id: string;
@@ -45,20 +46,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    if (!appEnv.useMocks && token === "mock-token") {
+      clearAuthTokens();
+      clearMockStorageWhenDisabled(false);
+      setUser(null);
+      setAccessToken(null);
+      setIsLoading(false);
+      return;
+    }
+
     setAccessToken(token);
 
     if (appEnv.useMocks) {
       // Mock mode fallback user
       setUser({
         id: "00000000-0000-4000-8000-000000000001",
-        email: "reader@yag.vn",
+        email: "reader@example.local",
         username: "reader_demo",
         role: "reader",
         profile: {
-          display_name: "Minh Nguyệt",
+          display_name: "Độc giả",
           avatar_url: null,
-          bio: "Thích đọc truyện trinh thám và lịch sử",
-          reputation_score: 100,
+          bio: "Tài khoản minh họa cho chế độ mock",
+          reputation_score: 0,
         },
       });
       setIsLoading(false);
@@ -79,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    clearMockStorageWhenDisabled(appEnv.useMocks);
     void refreshUser();
   }, []);
 

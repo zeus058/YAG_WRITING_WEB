@@ -13,11 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # ---------------------------------------------------------------------------
 # Import modular schemas to satisfy imports in other files
 # ---------------------------------------------------------------------------
-from app.schemas.chapter import (
-    ChapterCreate,
-    ChapterUpdate,
-    ChapterResponse,
-)  # noqa: F401
+from app.schemas.chapter import ChapterCreate, ChapterUpdate, ChapterResponse  # noqa: F401
 from app.schemas.comment import CommentCreate, CommentResponse  # noqa: F401
 from app.schemas.review import ReviewCreate, ReviewResponse  # noqa: F401
 

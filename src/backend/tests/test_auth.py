@@ -93,8 +93,14 @@ def test_register_duplicate_username(mock_db):
     assert response.json()["detail"] == "USERNAME_EXISTS"
 
 
-def test_login_user_success(mock_db):
+@patch("app.services.auth_service.get_redis_client")
+def test_login_user_success(mock_redis, mock_db):
     """Verifies that valid login requests yield successful token responses."""
+    # Mock redis instance functions
+    redis_instance = MagicMock()
+    redis_instance.get.return_value = None
+    mock_redis.return_value = redis_instance
+
     hashed_pwd = get_password_hash("Password123!")
     mock_user = User(
         id="d6a2f7c0-2f9b-449e-ba23-9502e6c7d5bd",
@@ -118,8 +124,14 @@ def test_login_user_success(mock_db):
     assert data["user"]["email"] == "hien@yag.vn"
 
 
-def test_login_user_invalid_credentials(mock_db):
+@patch("app.services.auth_service.get_redis_client")
+def test_login_user_invalid_credentials(mock_redis, mock_db):
     """Verifies that invalid password logins are blocked with a 401 INVALID_CREDENTIALS error."""
+    # Mock redis instance functions
+    redis_instance = MagicMock()
+    redis_instance.get.return_value = None
+    mock_redis.return_value = redis_instance
+
     hashed_pwd = get_password_hash("CorrectPassword!")
     mock_user = User(
         username="hien_test",

@@ -13,7 +13,7 @@ from app.models.chapter import Chapter
 # oauth2_scheme parses the incoming "Authorization: Bearer <token>" header
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login",
-    auto_error=False  # Make it graceful so we can raise custom clear exception details
+    auto_error=False,  # Make it graceful so we can raise custom clear exception details
 )
 
 
@@ -27,8 +27,7 @@ def get_db() -> Generator:
 
 
 def get_current_user(
-    db: Session = Depends(get_db),
-    token: Optional[str] = Depends(oauth2_scheme)
+    db: Session = Depends(get_db), token: Optional[str] = Depends(oauth2_scheme)
 ) -> User:
     """Validates the JWT token signature and retrieves the matching User model."""
     credentials_exception = HTTPException(
@@ -64,8 +63,7 @@ def get_current_user(
 
 
 def get_current_user_optional(
-    db: Session = Depends(get_db),
-    token: Optional[str] = Depends(oauth2_scheme)
+    db: Session = Depends(get_db), token: Optional[str] = Depends(oauth2_scheme)
 ) -> Optional[User]:
     """
     Optional authentication dependency.
@@ -91,7 +89,7 @@ def get_current_author(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role not in ["reader", "author"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Tài khoản không có quyền truy cập không gian tác giả"
+            detail="Tài khoản không có quyền truy cập không gian tác giả",
         )
     return current_user
 
@@ -142,6 +140,7 @@ def require_role(required_role: str):
     Factory dependency that checks the current user's role.
     Usage: Depends(require_role("admin"))
     """
+
     def _check(current_user: User = Depends(get_current_user)) -> User:
         if current_user.role != required_role:
             raise HTTPException(
@@ -149,6 +148,7 @@ def require_role(required_role: str):
                 detail=f"Yêu cầu quyền '{required_role}' để truy cập tài nguyên này.",
             )
         return current_user
+
     return _check
 
 

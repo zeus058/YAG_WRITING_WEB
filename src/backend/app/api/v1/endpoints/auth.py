@@ -2,7 +2,16 @@
 Authentication & Profile Routing Handler.
 Assigned Member: Trần Gia Hiển (U001, U002 - TC-001 to TC-006).
 """
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, BackgroundTasks
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    UploadFile,
+    File,
+    status,
+    BackgroundTasks,
+)
 from sqlalchemy.orm import Session
 from app.api import deps
 from app.models.user import User
@@ -28,7 +37,7 @@ router = APIRouter()
     "/register",
     response_model=TokenResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="U001 - Đăng ký tài khoản mới"
+    summary="U001 - Đăng ký tài khoản mới",
 )
 def register(user_in: UserRegister, db: Session = Depends(deps.get_db)):
     db_user = AuthService.register(db, user_in)
@@ -37,14 +46,12 @@ def register(user_in: UserRegister, db: Session = Depends(deps.get_db)):
         "access_token": access_token,
         "accessToken": access_token,
         "token_type": "bearer",
-        "user": db_user
+        "user": db_user,
     }
 
 
 @router.post(
-    "/login",
-    response_model=TokenResponse,
-    summary="U001 - Đăng nhập tài khoản"
+    "/login", response_model=TokenResponse, summary="U001 - Đăng nhập tài khoản"
 )
 def login(login_in: UserLogin, db: Session = Depends(deps.get_db)):
     db_user = AuthService.login(db, login_in)
@@ -53,7 +60,7 @@ def login(login_in: UserLogin, db: Session = Depends(deps.get_db)):
         "access_token": access_token,
         "accessToken": access_token,
         "token_type": "bearer",
-        "user": db_user
+        "user": db_user,
     }
 
 
@@ -67,26 +74,22 @@ def get_me(current_user: User = Depends(deps.get_current_user)):
 
 
 @router.post(
-    "/password-reset/request",
-    summary="U001 - Yêu cầu khôi phục mật khẩu qua OTP"
+    "/password-reset/request", summary="U001 - Yêu cầu khôi phục mật khẩu qua OTP"
 )
 def reset_request(
     reset_in: PasswordResetRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(deps.get_db)
+    db: Session = Depends(deps.get_db),
 ):
     return AuthService.request_password_reset(db, reset_in.email, background_tasks)
 
 
 @router.post(
-    "/password-reset/confirm",
-    summary="U001 - Xác thực OTP và cập nhật mật khẩu mới"
+    "/password-reset/confirm", summary="U001 - Xác thực OTP và cập nhật mật khẩu mới"
 )
-def reset_confirm(
-    confirm_in: PasswordResetConfirm,
-    db: Session = Depends(deps.get_db)
-):
+def reset_confirm(confirm_in: PasswordResetConfirm, db: Session = Depends(deps.get_db)):
     return AuthService.confirm_password_reset(db, confirm_in)
+
 
 # ========================================================
 # U002 — Profile Endpoints
@@ -96,18 +99,17 @@ def reset_confirm(
 @router.put(
     "/profiles/me",
     response_model=ProfileResponse,
-    summary="U002 - Cập nhật hồ sơ cá nhân"
+    summary="U002 - Cập nhật hồ sơ cá nhân",
 )
 def update_profile(
     profile_in: ProfileUpdate,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.get_current_user),
 ):
     profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
     if not profile:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="PROFILE_NOT_FOUND"
+            status_code=status.HTTP_404_NOT_FOUND, detail="PROFILE_NOT_FOUND"
         )
 
     if profile_in.display_name is not None:
@@ -124,25 +126,24 @@ def update_profile(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Cập nhật profile thất bại: {str(e)}"
+            detail=f"Cập nhật profile thất bại: {str(e)}",
         )
 
 
 @router.post(
     "/profiles/avatar",
     response_model=ProfileResponse,
-    summary="U002 - Tải ảnh đại diện mới lên Cloudinary"
+    summary="U002 - Tải ảnh đại diện mới lên Cloudinary",
 )
 def upload_avatar(
     file: UploadFile = File(...),
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user)
+    current_user: User = Depends(deps.get_current_user),
 ):
     # 1. Validate image format
     if file.content_type not in ["image/png", "image/jpeg", "image/webp"]:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="INVALID_IMAGE_FORMAT"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="INVALID_IMAGE_FORMAT"
         )
 
     # 2. Validate file size (2MB max)
@@ -157,8 +158,7 @@ def upload_avatar(
 
     if file_size > 2 * 1024 * 1024:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="IMAGE_TOO_LARGE"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="IMAGE_TOO_LARGE"
         )
 
     # 3. Upload to Cloudinary
@@ -179,5 +179,5 @@ def upload_avatar(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Cập nhật ảnh đại diện thất bại: {str(e)}"
+            detail=f"Cập nhật ảnh đại diện thất bại: {str(e)}",
         )

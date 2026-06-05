@@ -2,10 +2,10 @@
 System Configuration Module.
 Defines system-wide environment variables and app settings.
 """
+
 from pydantic_settings import BaseSettings
 from typing import Optional
 from pydantic import model_validator
-
 
 LOCAL_URL_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")
 VALID_SERVICE_ROLES = {"api", "worker", "migrate", "scheduler"}
@@ -155,34 +155,56 @@ class Settings(BaseSettings):
                     )
 
             if self.ALLOW_WEBSOCKET_QUERY_TOKEN:
-                raise ValueError("ALLOW_WEBSOCKET_QUERY_TOKEN must be false in production")
+                raise ValueError(
+                    "ALLOW_WEBSOCKET_QUERY_TOKEN must be false in production"
+                )
 
             if self.AUTO_CREATE_TABLES or self.APPLY_MIGRATIONS_ON_STARTUP:
-                raise ValueError("Database schema mutation on app startup is disabled in production")
+                raise ValueError(
+                    "Database schema mutation on app startup is disabled in production"
+                )
 
             if self.SCHEDULER_ENABLED and self.SERVICE_ROLE == "api":
                 raise ValueError(
-                    "SCHEDULER_ENABLED must be false in production API replicas; run scheduler as a separate job")
+                    "SCHEDULER_ENABLED must be false in production API replicas; run scheduler as a separate job"
+                )
 
             if _looks_local(self.DATABASE_URL or ""):
-                raise ValueError("DATABASE_URL must not point to localhost in production")
+                raise ValueError(
+                    "DATABASE_URL must not point to localhost in production"
+                )
             if _looks_local(self.REDIS_URL or ""):
                 raise ValueError("REDIS_URL must not point to localhost in production")
-            if self.QUEUE_PROVIDER == "rabbitmq" and _looks_local(self.RABBITMQ_URL or ""):
-                raise ValueError("RABBITMQ_URL must not point to localhost in production")
+            if self.QUEUE_PROVIDER == "rabbitmq" and _looks_local(
+                self.RABBITMQ_URL or ""
+            ):
+                raise ValueError(
+                    "RABBITMQ_URL must not point to localhost in production"
+                )
             if self.PAYMENT_PROVIDER == "vnpay":
                 if _looks_local(self.VNP_RETURN_URL):
-                    raise ValueError("VNP_RETURN_URL must not point to localhost in production")
+                    raise ValueError(
+                        "VNP_RETURN_URL must not point to localhost in production"
+                    )
                 if not self.VNP_RETURN_URL.startswith("https://"):
                     raise ValueError("VNP_RETURN_URL must be HTTPS in production")
-                if "sandbox" in self.VNP_URL.lower() or "sandbox" in self.VNP_API_URL.lower():
-                    raise ValueError("Production VNPAY URLs must not point to sandbox endpoints")
+                if (
+                    "sandbox" in self.VNP_URL.lower()
+                    or "sandbox" in self.VNP_API_URL.lower()
+                ):
+                    raise ValueError(
+                        "Production VNPAY URLs must not point to sandbox endpoints"
+                    )
 
             origins = _split_csv(self.CORS_ORIGINS)
             if not origins:
-                raise ValueError("CORS_ORIGINS must include at least one production frontend origin")
+                raise ValueError(
+                    "CORS_ORIGINS must include at least one production frontend origin"
+                )
             if any(origin == "*" or _looks_local(origin) for origin in origins):
-                raise ValueError("CORS_ORIGINS must not include wildcard or localhost in production")
+                raise ValueError(
+                    "CORS_ORIGINS must not include wildcard or localhost in production"
+                )
             if any(not origin.startswith("https://") for origin in origins):
                 raise ValueError("CORS_ORIGINS must be HTTPS origins in production")
         return self
@@ -190,9 +212,7 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [
-            origin.strip()
-            for origin in self.CORS_ORIGINS.split(",")
-            if origin.strip()
+            origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()
         ]
 
     class Config:

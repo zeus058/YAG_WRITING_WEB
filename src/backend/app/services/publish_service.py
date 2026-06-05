@@ -25,7 +25,9 @@ class PublishTaskPayload:
     requested_by: str
     publish_at: Optional[str] = None
     is_premium: bool = False
-    requested_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    requested_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
     def to_dict(self) -> dict:
         return {
@@ -80,7 +82,9 @@ def push_publish_task_to_queue(payload: PublishTaskPayload) -> bool:
                 loop = asyncio.get_running_loop()
                 loop.run_in_executor(None, handle_publish_chapter, payload_dict)
             except RuntimeError:
-                thread = threading.Thread(target=handle_publish_chapter, args=(payload_dict,))
+                thread = threading.Thread(
+                    target=handle_publish_chapter, args=(payload_dict,)
+                )
                 thread.daemon = True
                 thread.start()
             return True

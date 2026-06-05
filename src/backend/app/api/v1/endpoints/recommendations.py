@@ -1,6 +1,7 @@
 """
 Root-level personalized recommendations endpoint for U009.
 """
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 

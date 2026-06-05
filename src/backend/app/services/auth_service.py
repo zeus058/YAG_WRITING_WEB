@@ -38,7 +38,9 @@ def _check_login_lock(identifier: str) -> None:
     except HTTPException:
         raise
     except Exception as exc:
-        logger.warning("Login lockout check skipped because Redis is unavailable: %s", exc)
+        logger.warning(
+            "Login lockout check skipped because Redis is unavailable: %s", exc
+        )
 
 
 def _record_login_failure(identifier: str) -> None:
@@ -50,7 +52,9 @@ def _record_login_failure(identifier: str) -> None:
             r.setex(_auth_lock_key(identifier), AUTH_LOCKOUT_SECONDS, "1")
             r.delete(_auth_attempt_key(identifier))
     except Exception as exc:
-        logger.warning("Login failure counter skipped because Redis is unavailable: %s", exc)
+        logger.warning(
+            "Login failure counter skipped because Redis is unavailable: %s", exc
+        )
 
 
 def _clear_login_failures(identifier: str) -> None:
@@ -59,7 +63,9 @@ def _clear_login_failures(identifier: str) -> None:
         r.delete(_auth_attempt_key(identifier))
         r.delete(_auth_lock_key(identifier))
     except Exception as exc:
-        logger.warning("Login failure cleanup skipped because Redis is unavailable: %s", exc)
+        logger.warning(
+            "Login failure cleanup skipped because Redis is unavailable: %s", exc
+        )
 
 
 def get_redis_client():
@@ -77,7 +83,7 @@ def get_redis_client():
         port=settings.REDIS_PORT,
         db=0,
         decode_responses=True,
-        socket_timeout=2.0
+        socket_timeout=2.0,
     )
 
 
@@ -94,6 +100,7 @@ def send_otp_email(email: str, otp: str):
 
     # Get SMTP configs from environment if present, else fallback graceful
     import os
+
     smtp_user = os.getenv("SMTP_USER")
     smtp_password = os.getenv("SMTP_PASSWORD")
 
@@ -109,7 +116,9 @@ def send_otp_email(email: str, otp: str):
                 server.sendmail(smtp_user, email, msg.as_string())
             logger.info(f"OTP successfully sent via SMTP to {email}")
         except Exception as e:
-            logger.error(f"Failed to send email via SMTP: {e}. Fallback console logging.")
+            logger.error(
+                f"Failed to send email via SMTP: {e}. Fallback console logging."
+            )
     else:
         logger.info("SMTP credentials not configured. Email logged to console.")
 
@@ -122,16 +131,16 @@ class AuthService:
         existing_email = db.query(User).filter(User.email == user_in.email).first()
         if existing_email:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="EMAIL_EXISTS"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="EMAIL_EXISTS"
             )
 
         # 2. Check if username already registered
-        existing_username = db.query(User).filter(User.username == user_in.username).first()
+        existing_username = (
+            db.query(User).filter(User.username == user_in.username).first()
+        )
         if existing_username:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="USERNAME_EXISTS"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="USERNAME_EXISTS"
             )
 
         # 3. Create User & Profile atomically
@@ -147,9 +156,7 @@ class AuthService:
             db.flush()  # Populates db_user.id for profile matching
 
             db_profile = Profile(
-                user_id=db_user.id,
-                display_name=db_user.username,
-                reputation_score=100
+                user_id=db_user.id, display_name=db_user.username, reputation_score=100
             )
             db.add(db_profile)
             db.commit()
@@ -160,7 +167,7 @@ class AuthService:
             logger.error(f"Failed to register user: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="DANG_KY_THAT_BAI"
+                detail="DANG_KY_THAT_BAI",
             )
 
     @staticmethod
@@ -170,23 +177,23 @@ class AuthService:
         _check_login_lock(identifier)
 
         # 1. Locate user via email or username
-        db_user = db.query(User).filter(
-            (User.email == login_in.email) | (User.username == login_in.email)
-        ).first()
+        db_user = (
+            db.query(User)
+            .filter((User.email == login_in.email) | (User.username == login_in.email))
+            .first()
+        )
 
         if not db_user:
             _record_login_failure(identifier)
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="INVALID_CREDENTIALS"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="INVALID_CREDENTIALS"
             )
 
         # 2. Verify hashed password
         if not verify_password(login_in.password, db_user.password_hash):
             _record_login_failure(identifier)
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="INVALID_CREDENTIALS"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="INVALID_CREDENTIALS"
             )
 
         if db_user.is_locked:
@@ -203,7 +210,9 @@ class AuthService:
         return db_user
 
     @staticmethod
-    def request_password_reset(db: Session, email: str, background_tasks: BackgroundTasks) -> dict:
+    def request_password_reset(
+        db: Session, email: str, background_tasks: BackgroundTasks
+    ) -> dict:
         """Generates a 6-digit OTP, caches in Redis, and dispatches an email background task."""
         # Check if email exists in database
         db_user = db.query(User).filter(User.email == email).first()
@@ -226,8 +235,7 @@ class AuthService:
             print(f"\n[REDIS OFFLINE FALLBACK] OTP for {email} is: {otp}\n")
             # We raise a graceful error since OTP won't be confirmable if Redis is offline
             raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="REDIS_OFFLINE_ERROR"
+                status_code=status.HTTP_502_BAD_GATEWAY, detail="REDIS_OFFLINE_ERROR"
             )
 
         # Dispatch background mail sending
@@ -244,23 +252,20 @@ class AuthService:
         except Exception as e:
             logger.error(f"Redis is offline, cannot confirm OTP: {e}")
             raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="REDIS_OFFLINE_ERROR"
+                status_code=status.HTTP_502_BAD_GATEWAY, detail="REDIS_OFFLINE_ERROR"
             )
 
         # 2. Match OTP
         if not cached_otp or cached_otp != confirm_in.otp:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="INVALID_OTP"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="INVALID_OTP"
             )
 
         # 3. Update PostgreSQL
         db_user = db.query(User).filter(User.email == confirm_in.email).first()
         if not db_user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="USER_NOT_FOUND"
+                status_code=status.HTTP_404_NOT_FOUND, detail="USER_NOT_FOUND"
             )
 
         try:
@@ -276,5 +281,5 @@ class AuthService:
             logger.error(f"Failed to reset password: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="RESET_THAT_BAI"
+                detail="RESET_THAT_BAI",
             )

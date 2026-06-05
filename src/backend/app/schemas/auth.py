@@ -1,4 +1,11 @@
-from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    field_validator,
+)
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
@@ -63,6 +70,7 @@ class PasswordResetConfirm(BaseModel):
     )
 
     model_config = ConfigDict(populate_by_name=True)
+
 
 # ==========================================
 # U002 — Profile Management Schemas

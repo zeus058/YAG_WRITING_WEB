@@ -11,7 +11,6 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ---------------------------------------------------------------------------
 # VNPAY IPN
 # ---------------------------------------------------------------------------
@@ -36,12 +35,8 @@ class PaymentResultResponse(BaseModel):
     transaction_id: Optional[uuid.UUID] = Field(
         default=None, description="ID giao dịch"
     )
-    plan_name: Optional[str] = Field(
-        default=None, description="Tên gói đã thanh toán"
-    )
-    amount: Optional[float] = Field(
-        default=None, description="Số tiền (VND)"
-    )
+    plan_name: Optional[str] = Field(default=None, description="Tên gói đã thanh toán")
+    amount: Optional[float] = Field(default=None, description="Số tiền (VND)")
     premium_until: Optional[datetime] = Field(
         default=None, description="Hạn Membership sau thanh toán"
     )
@@ -55,8 +50,12 @@ class TransactionHistoryItem(BaseModel):
     plan_name: Optional[str] = Field(default=None, description="Tên gói đã thanh toán")
     amount: float = Field(..., description="Số tiền (VND)")
     status: str = Field(..., description="Trạng thái: pending / success / failed")
-    created_at: Optional[datetime] = Field(default=None, description="Thời gian tạo giao dịch")
-    vnp_transaction_no: Optional[str] = Field(default=None, description="Mã giao dịch VNPAY")
+    created_at: Optional[datetime] = Field(
+        default=None, description="Thời gian tạo giao dịch"
+    )
+    vnp_transaction_no: Optional[str] = Field(
+        default=None, description="Mã giao dịch VNPAY"
+    )
 
     model_config = ConfigDict(from_attributes=True)
 

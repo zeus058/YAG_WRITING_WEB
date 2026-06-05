@@ -10,7 +10,6 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ---------------------------------------------------------------------------
 # Response schemas
 # ---------------------------------------------------------------------------
@@ -22,7 +21,9 @@ class ProfileResponse(BaseModel):
     user_id: uuid.UUID = Field(..., description="ID tài khoản")
     username: str = Field(..., description="Tên đăng nhập")
     display_name: str = Field(..., description="Bút danh hiển thị")
-    avatar_url: Optional[str] = Field(default=None, description="URL ảnh đại diện (Cloudinary)")
+    avatar_url: Optional[str] = Field(
+        default=None, description="URL ảnh đại diện (Cloudinary)"
+    )
     bio: Optional[str] = Field(default=None, description="Giới thiệu bản thân")
     reputation_score: int = Field(..., description="Điểm uy tín tác giả (0-100)")
     role: str = Field(..., description="Vai trò (admin / author / reader)")
@@ -44,5 +45,7 @@ class ProfileUpdate(BaseModel):
         default=None, max_length=100, description="Bút danh mới"
     )
     bio: Optional[str] = Field(
-        default=None, max_length=500, description="Giới thiệu bản thân (tối đa 500 ký tự)"
+        default=None,
+        max_length=500,
+        description="Giới thiệu bản thân (tối đa 500 ký tự)",
     )

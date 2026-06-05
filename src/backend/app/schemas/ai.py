@@ -111,15 +111,14 @@ class AIRecommendRequest(BaseModel):
 class AIRecommendResponse(BaseModel):
     """Response chứa danh sách truyện được AI đề xuất."""
 
-    items: List[StoryListItem] = Field(
-        ..., description="Danh sách truyện đề xuất"
-    )
+    items: List[StoryListItem] = Field(..., description="Danh sách truyện đề xuất")
     total: int = Field(..., description="Tổng số truyện đề xuất")
 
 
 # ---------------------------------------------------------------------------
 # AI Semantic Search (U008)
 # ---------------------------------------------------------------------------
+
 
 class AISemanticSearchRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)

@@ -10,7 +10,6 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Keyword search
 # ---------------------------------------------------------------------------
@@ -64,9 +63,7 @@ class SemanticSearchResultItem(BaseModel):
     title: str = Field(..., description="Tiêu đề")
     author_name: str = Field(..., description="Bút danh tác giả")
     cover_url: Optional[str] = Field(default=None, description="URL ảnh bìa")
-    similarity_score: float = Field(
-        ..., description="Điểm tương đồng cosine (0.0-1.0)"
-    )
+    similarity_score: float = Field(..., description="Điểm tương đồng cosine (0.0-1.0)")
     plot_summary: str = Field(..., description="Tóm tắt cốt truyện đã vector hóa")
 
 

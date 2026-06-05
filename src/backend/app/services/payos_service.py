@@ -33,9 +33,7 @@ def compute_payos_signature(data: Dict[str, Any], checksum_key: str) -> str:
 
     sign_content = "&".join(parts)
     return hmac.new(
-        checksum_key.encode("utf-8"),
-        sign_content.encode("utf-8"),
-        hashlib.sha256
+        checksum_key.encode("utf-8"), sign_content.encode("utf-8"), hashlib.sha256
     ).hexdigest()
 
 
@@ -89,7 +87,9 @@ async def create_payos_payment_link(
                 logger.error("PayOS API error: %s", res_json)
                 raise RuntimeError(res_json.get("desc", "Failed to create PayOS link"))
         except Exception as exc:
-            logger.error("Failed to connect to PayOS API: %s. Falling back to mock.", exc)
+            logger.error(
+                "Failed to connect to PayOS API: %s. Falling back to mock.", exc
+            )
             mock_url = f"{return_url}?status=success&orderCode={order_code}&amount={amount}&txnRef=MOCK_PAYOS_{order_code}"
             return mock_url, "mock_signature"
 

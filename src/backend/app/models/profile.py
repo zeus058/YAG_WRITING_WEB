@@ -1,4 +1,12 @@
-from sqlalchemy import Column, String, Integer, Text, ForeignKey, DateTime, CheckConstraint
+from sqlalchemy import (
+    Column,
+    String,
+    Integer,
+    Text,
+    ForeignKey,
+    DateTime,
+    CheckConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -16,12 +24,19 @@ class Profile(Base):
     display_name = Column(String(100), nullable=False)
     avatar_url = Column(String(255), nullable=True)
     bio = Column(Text, nullable=True)
-    reputation_score = Column(Integer, nullable=False, default=100, server_default="100")
+    reputation_score = Column(
+        Integer, nullable=False, default=100, server_default="100"
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     user = relationship("User", back_populates="profile")
 
     __table_args__ = (
-        CheckConstraint("reputation_score >= 0 AND reputation_score <= 100", name="chk_profiles_reputation_score"),
+        CheckConstraint(
+            "reputation_score >= 0 AND reputation_score <= 100",
+            name="chk_profiles_reputation_score",
+        ),
     )

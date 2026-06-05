@@ -2,10 +2,10 @@
 Media upload services.
 Cloudinary credentials stay on the backend; clients only receive delivery URLs.
 """
+
 from fastapi import HTTPException, UploadFile, status
 
 from app.core.config import settings
-
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}

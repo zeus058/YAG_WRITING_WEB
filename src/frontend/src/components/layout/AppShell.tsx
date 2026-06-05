@@ -88,7 +88,7 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
           } else {
             setIsPremium(false);
           }
-        } catch (e) {
+        } catch {
           setIsPremium(false);
         }
       } else {

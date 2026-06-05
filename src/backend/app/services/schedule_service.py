@@ -42,7 +42,9 @@ def _days_late(scheduled_time: datetime, now: datetime) -> int:
     return max(1, math.ceil(seconds_late / SECONDS_PER_DAY))
 
 
-def _find_publication_for_schedule(db: Session, schedule: PublishSchedule) -> Optional[Chapter]:
+def _find_publication_for_schedule(
+    db: Session, schedule: PublishSchedule
+) -> Optional[Chapter]:
     return (
         db.query(Chapter)
         .filter(
@@ -75,7 +77,9 @@ def send_schedule_warning_email(
     smtp_user = os.getenv("SMTP_USER")
     smtp_password = os.getenv("SMTP_PASSWORD")
     if not smtp_user or not smtp_password:
-        logger.info("SMTP credentials are not configured; schedule warning logged only.")
+        logger.info(
+            "SMTP credentials are not configured; schedule warning logged only."
+        )
         return
 
     try:
@@ -88,7 +92,9 @@ def send_schedule_warning_email(
             server.login(smtp_user, smtp_password)
             server.sendmail(smtp_user, recipient, msg.as_string())
     except Exception as exc:
-        logger.warning("Failed to send schedule warning email to %s: %s", recipient, exc)
+        logger.warning(
+            "Failed to send schedule warning email to %s: %s", recipient, exc
+        )
 
 
 def _notify_admins(db: Session, alert: AdminAlert) -> int:
@@ -109,7 +115,9 @@ def _notify_admins(db: Session, alert: AdminAlert) -> int:
     return sent
 
 
-def _mark_schedule_published_if_fulfilled(db: Session, schedule: PublishSchedule) -> bool:
+def _mark_schedule_published_if_fulfilled(
+    db: Session, schedule: PublishSchedule
+) -> bool:
     publication = _find_publication_for_schedule(db, schedule)
     if not publication:
         return False
@@ -119,10 +127,16 @@ def _mark_schedule_published_if_fulfilled(db: Session, schedule: PublishSchedule
     return True
 
 
-def _handle_missed_schedule(db: Session, schedule: PublishSchedule, now: datetime) -> Optional[dict]:
+def _handle_missed_schedule(
+    db: Session, schedule: PublishSchedule, now: datetime
+) -> Optional[dict]:
     story = db.query(Story).filter(Story.id == schedule.story_id).first()
     if not story:
-        logger.warning("Publish schedule %s references missing story %s", schedule.id, schedule.story_id)
+        logger.warning(
+            "Publish schedule %s references missing story %s",
+            schedule.id,
+            schedule.story_id,
+        )
         schedule.status = "missed"
         db.add(schedule)
         return None
@@ -130,7 +144,9 @@ def _handle_missed_schedule(db: Session, schedule: PublishSchedule, now: datetim
     author = db.query(User).filter(User.id == story.author_id).first()
     profile = db.query(Profile).filter(Profile.user_id == story.author_id).first()
     days_late = _days_late(schedule.scheduled_time, now)
-    penalty = min(days_late * REPUTATION_PENALTY_PER_DAY, MAX_REPUTATION_PENALTY_PER_MISS)
+    penalty = min(
+        days_late * REPUTATION_PENALTY_PER_DAY, MAX_REPUTATION_PENALTY_PER_MISS
+    )
 
     old_score = profile.reputation_score if profile else None
     new_score = old_score
@@ -230,7 +246,9 @@ def scan_publish_schedules(db: Session, now: Optional[datetime] = None) -> dict:
     return result
 
 
-def get_author_schedule_overview(db: Session, author: User, now: Optional[datetime] = None) -> dict:
+def get_author_schedule_overview(
+    db: Session, author: User, now: Optional[datetime] = None
+) -> dict:
     now = now or _now_utc()
     profile = db.query(Profile).filter(Profile.user_id == author.id).first()
     stories = db.query(Story).filter(Story.author_id == author.id).all()
@@ -244,7 +262,9 @@ def get_author_schedule_overview(db: Session, author: User, now: Optional[dateti
             "on_time_rate": 0,
             "approved_chapters": 0,
             "followers": 0,
-            "reputation_series": [{"label": now.strftime("%d/%m"), "score": reputation_score}],
+            "reputation_series": [
+                {"label": now.strftime("%d/%m"), "score": reputation_score}
+            ],
             "upcoming_schedule": [],
         }
 
@@ -256,12 +276,22 @@ def get_author_schedule_overview(db: Session, author: User, now: Optional[dateti
     )
     approved_chapters = (
         db.query(Chapter)
-        .filter(Chapter.story_id.in_(story_ids), Chapter.moderation_status == "approved")
+        .filter(
+            Chapter.story_id.in_(story_ids), Chapter.moderation_status == "approved"
+        )
         .count()
     )
-    completed_schedules = [schedule for schedule in schedules if schedule.status in {"published", "missed"}]
-    published_count = sum(1 for schedule in completed_schedules if schedule.status == "published")
-    on_time_rate = round((published_count / len(completed_schedules)) * 100) if completed_schedules else 100
+    completed_schedules = [
+        schedule for schedule in schedules if schedule.status in {"published", "missed"}
+    ]
+    published_count = sum(
+        1 for schedule in completed_schedules if schedule.status == "published"
+    )
+    on_time_rate = (
+        round((published_count / len(completed_schedules)) * 100)
+        if completed_schedules
+        else 100
+    )
 
     upcoming_schedule = []
     for schedule in schedules:
@@ -285,7 +315,9 @@ def get_author_schedule_overview(db: Session, author: User, now: Optional[dateti
         "on_time_rate": on_time_rate,
         "approved_chapters": approved_chapters,
         "followers": 0,
-        "reputation_series": [{"label": now.strftime("%d/%m"), "score": reputation_score}],
+        "reputation_series": [
+            {"label": now.strftime("%d/%m"), "score": reputation_score}
+        ],
         "upcoming_schedule": upcoming_schedule,
     }
 

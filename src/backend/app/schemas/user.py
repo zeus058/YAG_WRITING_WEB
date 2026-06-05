@@ -10,7 +10,6 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-
 # ---------------------------------------------------------------------------
 # Request schemas
 # ---------------------------------------------------------------------------
@@ -27,9 +26,7 @@ class UserCreate(BaseModel):
         description="Tên đăng nhập (chỉ chứa chữ thường, số, gạch dưới)",
     )
     email: EmailStr = Field(..., description="Địa chỉ email")
-    password: str = Field(
-        ..., min_length=8, description="Mật khẩu (tối thiểu 8 ký tự)"
-    )
+    password: str = Field(..., min_length=8, description="Mật khẩu (tối thiểu 8 ký tự)")
     role: Optional[Literal["reader", "author"]] = Field(
         default="reader", description="Vai trò tài khoản"
     )
@@ -52,9 +49,7 @@ class PasswordResetConfirm(BaseModel):
     """Schema xác nhận đặt lại mật khẩu bằng OTP."""
 
     email: EmailStr = Field(..., description="Email tài khoản")
-    otp: str = Field(
-        ..., min_length=6, max_length=6, description="Mã OTP 6 ký tự"
-    )
+    otp: str = Field(..., min_length=6, max_length=6, description="Mã OTP 6 ký tự")
     new_password: str = Field(
         ..., min_length=8, description="Mật khẩu mới (tối thiểu 8 ký tự)"
     )

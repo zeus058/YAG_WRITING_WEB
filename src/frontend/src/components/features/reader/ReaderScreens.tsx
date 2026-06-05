@@ -95,44 +95,58 @@ export function HomeFeedScreen() {
     );
   }
 
-  const heroStory = storiesList[0] || {
-    title: "Mưa Trên Thành Cũ",
-    description: "Một bí mật bị giấu trong những bức thư cũ kéo hai con người trở lại thành phố sau chiến tranh.",
-    chapters: 72,
-    rating_avg: 4.9,
-    view_count: 1200000,
-  };
+  const hasStories = storiesList.length > 0;
+  const heroStory = hasStories ? storiesList[0] : null;
 
-  const heroHref = heroStory.id ? `/stories/${heroStory.id}` : "/story-detail";
-  const heroChapters = heroStory.chapter_count ?? heroStory.chapters ?? 0;
-  const heroRating = heroStory.rating_avg !== undefined ? heroStory.rating_avg.toFixed(1) : "4.9";
-  const heroViews = heroStory.view_count !== undefined ? (heroStory.view_count >= 1000000 ? `${(heroStory.view_count / 1000000).toFixed(1)}M` : heroStory.view_count) : "1.2M";
+  const heroHref = heroStory?.id ? `/stories/${heroStory.id}` : "/discover";
+  const heroTitle = heroStory ? heroStory.title : "Chào mừng bạn đến với YAG!";
+  const heroDescription = heroStory
+    ? heroStory.description
+    : "Không gian đọc và sáng tác tiểu thuyết mạng tích hợp AI đầu tiên dành cho người Việt. Hãy bắt đầu hành trình sáng tác và đọc truyện của bạn ngay hôm nay.";
+
+  const heroChapters = heroStory ? (heroStory.chapter_count ?? heroStory.chapters ?? 0) : 0;
+  const heroRating = heroStory && heroStory.rating_avg !== undefined ? heroStory.rating_avg.toFixed(1) : "0.0";
+  const heroViews = heroStory && heroStory.view_count !== undefined
+    ? (heroStory.view_count >= 1000000 ? `${(heroStory.view_count / 1000000).toFixed(1)}M` : heroStory.view_count)
+    : "0";
 
   return (
     <AppShell activeId="s04">
       <section className="home-hero">
         <Link className="home-featured" href={heroHref}>
           <div className="home-featured-copy">
-            <span className="badge badge-crimson">Đang được đọc nhiều</span>
-            <h2>{heroStory.title}</h2>
-            <p>{heroStory.description}</p>
-            <div className="home-featured-stats">
-              <span>{heroChapters} chương</span>
-              <span>{heroRating} ★</span>
-              <span>{heroViews} lượt đọc</span>
-            </div>
-            <span className="button button-primary" style={{ width: "fit-content" }}>Đọc tiếp</span>
+            <span className="badge badge-crimson">
+              {hasStories ? "Đang được đọc nhiều" : "Chào mừng bạn mới"}
+            </span>
+            <h2>{heroTitle}</h2>
+            <p>{heroDescription}</p>
+            {hasStories && (
+              <div className="home-featured-stats">
+                <span>{heroChapters} chương</span>
+                <span>{heroRating} ★</span>
+                <span>{heroViews} lượt đọc</span>
+              </div>
+            )}
+            <span className="button button-primary" style={{ width: "fit-content" }}>
+              {hasStories ? "Đọc tiếp" : "Khám phá ngay"}
+            </span>
           </div>
-          <div className="home-featured-cover"><Cover index={0} coverUrl={heroStory.cover_url} /></div>
+          <div className="home-featured-cover"><Cover index={0} coverUrl={heroStory?.cover_url} /></div>
         </Link>
         <aside className="panel panel-pad stack home-continue">
           <div className="home-section-head">
             <h2 className="section-title">Đọc tiếp</h2>
             <Link href="/library">Thư viện</Link>
           </div>
-          {(storiesList.length > 3 ? storiesList.slice(1, 4) : storiesList).map((story, index) => (
-            <ReadingCard story={story} index={index} key={story.id || story.title} />
-          ))}
+          {hasStories ? (
+            (storiesList.length > 3 ? storiesList.slice(1, 4) : storiesList).map((story, index) => (
+              <ReadingCard story={story} index={index} key={story.id || story.title} />
+            ))
+          ) : (
+            <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 13, textAlign: "center", minHeight: 120, padding: 12 }}>
+              Bạn chưa theo dõi truyện nào. Hãy khám phá truyện mới và thêm vào thư viện nhé!
+            </div>
+          )}
         </aside>
       </section>
       <section className="action-strip" style={{ margin: "24px 0" }}>
@@ -1164,7 +1178,8 @@ export function ForumScreen() {
     triggerLiveToast("Đã ẩn bài viết này khỏi bảng tin.");
   };
 
-  const handleReport = (_postId: string) => {
+  const handleReport = (postId: string) => {
+    console.log("Reported post:", postId);
     triggerLiveToast("Cảm ơn phản hồi. Bài viết đã được gửi cho ban quản trị để hậu kiểm.");
   };
 
@@ -1407,7 +1422,7 @@ export function MembershipScreen() {
             setIsPremium(false);
             setMembershipExpiry(null);
           }
-        } catch (e) {
+        } catch {
           setIsPremium(false);
           setMembershipExpiry(null);
         }
@@ -1442,7 +1457,7 @@ export function MembershipScreen() {
           } else {
             setActivePlanId("MONTHLY");
           }
-        } catch (e) {
+        } catch {
           setActivePlanId("MONTHLY");
         }
       } else {
@@ -1683,7 +1698,7 @@ export function PaymentScreen() {
             if (parsed.is_active && parsed.premium_until) {
               cachedExpiry = new Date(parsed.premium_until);
             }
-          } catch (e) {}
+          } catch {}
         }
 
         const rawAmt = data.amount || (planId === "YEARLY" ? 199000 : 39000);
@@ -1765,7 +1780,7 @@ export function PaymentScreen() {
                 baseDate = currentExpiry;
               }
             }
-          } catch (e) {}
+          } catch {}
         }
 
         const expiryDate = new Date(baseDate);
@@ -1816,7 +1831,7 @@ export function PaymentScreen() {
                 baseDate = currentExpiry;
               }
             }
-          } catch (e) {}
+          } catch {}
         }
 
         const expiryDate = new Date(baseDate);
@@ -2087,7 +2102,7 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("yag.author.announcements");
       if (stored) {
-        try { setAnnouncements(JSON.parse(stored)); } catch (e) { setAnnouncements([]); }
+        try { setAnnouncements(JSON.parse(stored)); } catch { setAnnouncements([]); }
       } else {
         const mockAnn = [
           { id: "an-1", title: "Cảm ơn độc giả ủng hộ", content: "Mưa Trên Thành Cũ chính thức đạt mốc 100,000 lượt đọc! Cảm ơn sự đồng hành của mọi người.", date: "02/06/2026" },
@@ -2336,7 +2351,7 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
             setIsPremium(false);
             setMembershipExpiry(null);
           }
-        } catch (e) {
+        } catch {
           setIsPremium(false);
           setMembershipExpiry(null);
         }
@@ -2367,7 +2382,7 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
         if (cached) {
           try {
             setTransactions(JSON.parse(cached));
-          } catch (e) {
+          } catch {
             setTransactions([]);
           }
         } else {

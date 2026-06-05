@@ -176,6 +176,10 @@ export const yagApi = {
         method: "PUT",
         body,
       }),
+    deleteStory: (storyId: string) =>
+      apiFetch(`/api/v1/stories/${storyId}`, {
+        method: "DELETE",
+      }),
     getChapters: (storyId: string) => apiFetch(`/api/v1/stories/author/${storyId}/chapters`),
     createChapter: (body: { story_id: string; chapter_number: number; title: string; content: string; is_premium?: boolean }) =>
       apiFetch("/api/v1/chapters/", {

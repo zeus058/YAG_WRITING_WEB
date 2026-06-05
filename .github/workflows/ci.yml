@@ -243,47 +243,6 @@ jobs:
           echo "✅ Frontend Docker image built successfully"
 
   # ────────────────────────────────────────────────────────────
-  # JOB 5: SonarQube Analysis
-  # ────────────────────────────────────────────────────────────
-  sonarqube:
-    name: "📊 SonarQube Analysis"
-    runs-on: ubuntu-latest
-    needs: [backend, frontend]
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-    steps:
-      - name: Detect SonarQube configuration
-        id: sonar_config
-        run: |
-          if [ -n "$SONAR_TOKEN" ] && [ -n "$SONAR_HOST_URL" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "SonarQube secrets are not configured; skipping optional analysis."
-          fi
-
-      - name: Checkout code
-        if: steps.sonar_config.outputs.enabled == 'true'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download backend coverage artifact
-        if: steps.sonar_config.outputs.enabled == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-coverage
-          path: src/backend
-
-      - name: SonarQube Scan
-        if: steps.sonar_config.outputs.enabled == 'true'
-        uses: SonarSource/sonarqube-scan-action@v2
-        with:
-          args: >
-            -Dsonar.python.coverage.reportPaths=src/backend/coverage.xml
-
-  # ────────────────────────────────────────────────────────────
   # JOB 6: CD — Database Migrations (Production/Staging)
   # ────────────────────────────────────────────────────────────
   deploy-migrations:

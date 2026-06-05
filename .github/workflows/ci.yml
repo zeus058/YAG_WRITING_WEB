@@ -415,15 +415,15 @@ jobs:
             SCHEDULER_ENABLED=false
             VIEW_COUNT_FLUSH_ENABLED=false
           secrets: |
-            DATABASE_URL=yag-database-url:latest
-            SECRET_KEY=yag-secret-key:latest
-            CORS_ORIGINS=yag-cors-origins:latest
-            REDIS_URL=yag-redis-url:latest
-            RABBITMQ_URL=yag-rabbitmq-url:latest
-            GEMINI_API_KEY=yag-gemini-key:latest
-            CLOUDINARY_CLOUD_NAME=yag-cloudinary-name:latest
-            CLOUDINARY_API_KEY=yag-cloudinary-key:latest
-            CLOUDINARY_API_SECRET=yag-cloudinary-secret:latest
+            DATABASE_URL=YAG_DATABASE_URL:latest
+            SECRET_KEY=YAG_SECRET_KEY:latest
+            CORS_ORIGINS=YAG_CORS_ORIGINS:latest
+            REDIS_URL=YAG_REDIS_URL:latest
+            RABBITMQ_URL=YAG_RABBITMQ_URL:latest
+            GEMINI_API_KEY=YAG_GEMINI_API_KEY:latest
+            CLOUDINARY_CLOUD_NAME=YAG_CLOUDINARY_CLOUD_NAME:latest
+            CLOUDINARY_API_KEY=YAG_CLOUDINARY_API_KEY:latest
+            CLOUDINARY_API_SECRET=YAG_CLOUDINARY_API_SECRET:latest
             VNP_TMN_CODE=yag-vnp-tmn-code:latest
             VNP_HASH_SECRET=yag-vnp-hash-secret:latest
             VNP_URL=yag-vnp-url:latest

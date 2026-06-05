@@ -53,7 +53,6 @@ from app.schemas.membership import (
     CheckoutResponse,
 )
 from app.schemas.payment import (
-    VNPAYIPNResponse,
     PaymentResultResponse,
     TransactionHistoryItem,
 )
@@ -129,7 +128,6 @@ __all__ = [
     "CheckoutRequest",
     "CheckoutResponse",
     # Payment
-    "VNPAYIPNResponse",
     "PaymentResultResponse",
     "TransactionHistoryItem",
     # Search

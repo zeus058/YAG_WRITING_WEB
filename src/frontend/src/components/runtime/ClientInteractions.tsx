@@ -188,9 +188,9 @@ export function ClientInteractions() {
       const billingTarget = target.closest<HTMLElement>("[data-billing-plan]");
       if (billingTarget?.dataset.billingPlan && !appEnv.useMocks) {
         event.preventDefault();
-        showToast("Đang tạo phiên thanh toán VNPAY...", "success");
+        showToast("Đang tạo phiên thanh toán PayOS...", "success");
         void yagApi.billing
-          .createVnpayCheckout({
+          .createPayosCheckout({
             planCode: billingTarget.dataset.billingPlan,
             returnUrl: `${window.location.origin}/payment/result`,
           })
@@ -198,7 +198,7 @@ export function ClientInteractions() {
             window.location.href = result.data.paymentUrl;
           })
           .catch(() => {
-            showToast("Không thể tạo phiên thanh toán. Vui lòng thử lại sau.", "warning");
+            showToast("Không thể tạo phiên thanh toán PayOS. Vui lòng thử lại sau.", "warning");
           });
       }
 

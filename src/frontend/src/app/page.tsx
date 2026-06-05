@@ -761,12 +761,12 @@ export default function LandingPage() {
                       background: "linear-gradient(135deg,#fdf4ff,#ede0ff)",
                     }}
                   >
-                    {/* Hand-drawn crown and VNPAY card */}
+                    {/* Hand-drawn crown and PayOS card */}
                     <svg viewBox="0 0 100 100" style={{ width: "90px", height: "90px" }} fill="none" stroke="#8B5CF6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="18" y="32" width="64" height="42" rx="6" fill="rgba(255,255,255,0.7)" />
                       <line x1="26" y1="42" x2="38" y2="42" strokeWidth="3" opacity="0.7" />
                       <rect x="26" y="52" width="48" height="12" rx="2" fill="#EDE0FF" stroke="#8B5CF6" strokeWidth="1.5" />
-                      <text x="50" y="61" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#8B5CF6" stroke="none" fontFamily="sans-serif">VNPAY</text>
+                      <text x="50" y="61" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#8B5CF6" stroke="none" fontFamily="sans-serif">PayOS</text>
                       <path d="M35,32 L40,20 L50,28 L60,20 L65,32 Z" fill="#F59E0B" stroke="#8B5CF6" />
                       <circle cx="40" cy="18" r="2" fill="#8B5CF6" stroke="none" />
                       <circle cx="50" cy="26" r="2" fill="#8B5CF6" stroke="none" />
@@ -776,7 +776,7 @@ export default function LandingPage() {
                   <div className="feat-title">Membership</div>
                   <p className="feat-desc">
                     Mở khoá toàn bộ chương premium, ủng hộ tác giả yêu thích. Thanh
-                    toán an toàn qua VNPAY, 3 gói linh hoạt.
+                    toán an toàn qua PayOS, 3 gói linh hoạt.
                   </p>
                   <div
                     className="feat-tag"
@@ -793,7 +793,7 @@ export default function LandingPage() {
                       <rect x="1" y="4" width="14" height="10" rx="2" />
                       <path d="M1 8h14" />
                     </svg>
-                    Thanh toán VNPAY
+                    Thanh toán PayOS
                   </div>
                 </div>
               </div>
@@ -1602,7 +1602,7 @@ export default function LandingPage() {
             </div>
             <p className="cta-note">
               Không cần thẻ tín dụng · Bắt đầu trong 30 giây · Thanh toán qua
-              VNPAY
+              PayOS
             </p>
           </RevealOnScroll>
         </div>

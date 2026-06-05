@@ -564,3 +564,25 @@ async def semantic_search(
     db: Session = Depends(deps.get_db),
 ):
     return await search_stories_semantic(db, payload)
+
+
+@router.delete(
+    "/{story_id}",
+    response_model=MessageResponse,
+    summary="U003 - Xóa truyện của tác giả hiện hành hoặc Admin",
+)
+def delete_story(
+    story_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(deps.get_current_user),
+):
+    story = get_story_or_404(db, story_id)
+    if current_user.role != "admin" and story.author_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this story",
+        )
+    db.delete(story)
+    db.commit()
+    return {"message": "Story deleted successfully"}
+

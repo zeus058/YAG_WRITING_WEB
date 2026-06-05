@@ -591,3 +591,37 @@ class TestStoriesAPI:
         data = response.json()
         assert len(data["results"]) == 1
         assert data["results"][0]["title"] == "Matched Story"
+
+    # ---------------------------------------------------------------------------
+    # U003 - delete_story endpoint tests
+    # ---------------------------------------------------------------------------
+
+    def test_delete_story_success(self):
+        mock_story = _make_mock_story(self.mock_author)
+        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_story
+
+        response = client.delete(f"/api/v1/stories/{mock_story.id}")
+        assert response.status_code == 200
+        assert response.json()["message"] == "Story deleted successfully"
+        assert self.mock_db.delete.called
+        assert self.mock_db.commit.called
+
+    def test_delete_story_admin_success(self):
+        app.dependency_overrides[deps.get_current_user] = lambda: self.mock_admin
+        mock_story = _make_mock_story(self.mock_author) # Owned by author
+        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_story
+
+        response = client.delete(f"/api/v1/stories/{mock_story.id}")
+        assert response.status_code == 200
+        assert response.json()["message"] == "Story deleted successfully"
+        assert self.mock_db.delete.called
+        assert self.mock_db.commit.called
+
+    def test_delete_story_unauthorized(self):
+        other_author = _make_mock_user(role="author", username="other_author")
+        mock_story = _make_mock_story(other_author) # Owned by other author
+        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_story
+
+        response = client.delete(f"/api/v1/stories/{mock_story.id}")
+        assert response.status_code == 403
+        assert "Not authorized to delete" in response.json()["detail"]

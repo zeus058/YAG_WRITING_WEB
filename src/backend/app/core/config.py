@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 from pydantic import model_validator
 
-LOCAL_URL_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")
+LOCAL_URL_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")  # nosec B104
 VALID_SERVICE_ROLES = {"api", "worker", "migrate", "scheduler"}
 
 

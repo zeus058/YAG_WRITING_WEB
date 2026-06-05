@@ -1,0 +1,5 @@
+[run]
+omit =
+    app/seed.py
+    app/manage_migrations.py
+    app/reset_dev_db.py

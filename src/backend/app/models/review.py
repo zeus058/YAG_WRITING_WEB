@@ -48,3 +48,11 @@ class Review(Base):
         UniqueConstraint("user_id", "story_id", name="uq_reviews_user_story"),
         CheckConstraint("rating >= 1 AND rating <= 5", name="chk_reviews_rating_range"),
     )
+
+    @property
+    def username(self) -> str:
+        return self.user.username if self.user else ""
+
+    @property
+    def display_name(self) -> str:
+        return self.user.display_name if self.user else ""

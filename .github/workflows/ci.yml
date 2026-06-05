@@ -374,11 +374,10 @@ jobs:
             APPLY_MIGRATIONS_ON_STARTUP=false
             SCHEDULER_ENABLED=false
             VIEW_COUNT_FLUSH_ENABLED=false
-            CORS_ORIGINS=https://se-writing-web.vercel.app
-            PAYOS_RETURN_URL=https://se-writing-web.vercel.app/payment/result
           secrets: |
             DATABASE_URL=YAG_DATABASE_URL:latest
             SECRET_KEY=YAG_SECRET_KEY:latest
+            CORS_ORIGINS=YAG_CORS_ORIGINS:latest
             REDIS_URL=YAG_REDIS_URL:latest
             GEMINI_API_KEY=YAG_GEMINI_API_KEY:latest
             CLOUDINARY_CLOUD_NAME=YAG_CLOUDINARY_CLOUD_NAME:latest
@@ -387,6 +386,7 @@ jobs:
             PAYOS_CLIENT_ID=YAG_PAYOS_CLIENT_ID:latest
             PAYOS_API_KEY=YAG_PAYOS_API_KEY:latest
             PAYOS_CHECKSUM_KEY=YAG_PAYOS_CHECKSUM_KEY:latest
+            PAYOS_RETURN_URL=YAG_PAYOS_RETURN_URL:latest
           flags: |
             --allow-unauthenticated
             --cpu=1

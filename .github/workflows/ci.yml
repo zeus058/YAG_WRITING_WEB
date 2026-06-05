@@ -407,7 +407,7 @@ jobs:
           env_vars: |
             ENVIRONMENT=production
             SERVICE_ROLE=api
-            QUEUE_PROVIDER=local
+            QUEUE_PROVIDER=pubsub
             PAYMENT_PROVIDER=payos
             ALLOW_WEBSOCKET_QUERY_TOKEN=false
             AUTO_CREATE_TABLES=false

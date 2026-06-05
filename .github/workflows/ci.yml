@@ -216,12 +216,12 @@ jobs:
           bandit -r app/ -ll
 
   # ────────────────────────────────────────────────────────────
-  # JOB 4: Docker Build Validation (Only runs on Pull Requests)
+  # JOB 4: Docker Build Validation (PRs + push to dev)
   # ────────────────────────────────────────────────────────────
   docker:
     name: "🐳 Docker Build Check"
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
 
     steps:
       - name: Checkout code
@@ -389,6 +389,14 @@ jobs:
           docker build -t $IMAGE ./src/backend
           docker push $IMAGE
           echo "✅ Image pushed: $IMAGE"
+
+      - name: Clear conflicting env vars before deploy
+        run: |
+          gcloud run services update yag-backend \
+            --region ${{ steps.deploy_vars.outputs.region }} \
+            --remove-env-vars CORS_ORIGINS \
+            --quiet 2>/dev/null || true
+          echo "✅ Cleared conflicting env vars (if any)"
 
       - name: Deploy to Cloud Run
         id: deploy

@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     PAYOS_CHECKSUM_KEY: Optional[str] = None
     PAYOS_RETURN_URL: Optional[str] = None
 
+    # VNPAY Sandbox Settings
+    VNP_TMN_CODE: str = "YAGTEST1"
+    VNP_HASH_SECRET: str = "YAGDEVSECRETKEY12345678"
+    VNP_URL: str = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+    VNP_RETURN_URL: str = "http://localhost:3000/payment/result"
+    VNP_API_URL: str = "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction"
+
     # Security Settings
     SECRET_KEY: str = "yag_development_secret_key_change_in_production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
@@ -137,6 +144,10 @@ class Settings(BaseSettings):
                     )
 
             essential_uris = {"CORS_ORIGINS", "GEMINI_API_KEY"}
+            if self.PAYMENT_PROVIDER == "vnpay":
+                essential_uris.add("VNP_URL")
+                essential_uris.add("VNP_RETURN_URL")
+                essential_uris.add("VNP_API_URL")
 
             for uri_name in essential_uris:
                 val = getattr(self, uri_name)

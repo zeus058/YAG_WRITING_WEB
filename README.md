@@ -404,66 +404,117 @@ VNP_API_URL=<production VNPAY API URL>
 
 Important: `API_PUBLIC_URL` is the origin only, for example `https://your-domain.com`, because the frontend client appends `/api/v1`.
 
-## CI/CD
+## CI/CD & Production Deployment (GCP + Supabase + Vercel)
 
-GitHub Actions runs on pushes and pull requests to `dev` and `main`.
+The repository runs a unified GitHub Actions pipeline (`.github/workflows/ci.yml`) for linting, testing, security audits, and automated deployments.
 
-### Validation jobs
+### 1. Unified Pipeline Triggers
+* **CI validation** (Backend tests, linting, frontend builds, Dockerfile check, dependency audits) runs on all branches on push or pull requests.
+* **CD deployment** (Database migrations and Cloud Run deploy) runs **only** on a push to the `main` branch, and **gracefully skips** if the required GitHub Secrets are not configured.
 
-- Backend: install Python dependencies, flake8 critical lint, migrations, pytest with coverage.
-- Frontend: install Node dependencies, ESLint, Next.js build.
-- Security: `pip-audit`, `npm audit`, Bandit.
-- Docker: backend/frontend Docker build check on pull requests.
-- SonarQube: optional when `SONAR_TOKEN` and `SONAR_HOST_URL` are configured.
+---
 
-### Deployment jobs
+### 2. Setting Up Workload Identity Federation (WIF) on Google Cloud
+To deploy securely without service account keys (JSON files), we use GCP Workload Identity Federation. 
 
-Production deployment jobs run only on `push` to `main`.
+Follow these steps in Google Cloud Shell or your local gcloud CLI:
 
-Current automated deployment path:
+```bash
+# 1. Set environment variables (replace with your values)
+export PROJECT_ID="your-gcp-project-id"
+export GITHUB_REPO="zeus058/SE_Writing_Web"
+export POOL_NAME="github-actions-pool"
+export PROVIDER_NAME="github-provider"
+export SA_NAME="github-actions-sa"
 
-- Apply production migrations when `DATABASE_URL` GitHub secret exists.
-- Build and deploy the backend image to Google Cloud Run when GCP Workload Identity Federation secrets exist.
-- Frontend production deploy is expected to be handled by the hosting provider integration, such as Vercel connected to `main`.
+# 2. Create the Workload Identity Pool
+gcloud iam workload-identity-pools create $POOL_NAME \
+  --project="${PROJECT_ID}" \
+  --location="global" \
+  --display-name="GitHub Actions Pool"
 
-Required GitHub secrets for Cloud Run backend deploy:
+# 3. Create the OIDC Provider for GitHub Actions
+gcloud iam workload-identity-pools providers create-oidc $PROVIDER_NAME \
+  --project="${PROJECT_ID}" \
+  --location="global" \
+  --workload-identity-pool=$POOL_NAME \
+  --display-name="GitHub Provider" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
+  --attribute-condition="assertion.repository == '${GITHUB_REPO}'" \
+  --issuer-uri="https://token.actions.githubusercontent.com"
 
-```text
-GCP_WORKLOAD_IDENTITY_PROVIDER
-GCP_SERVICE_ACCOUNT
-GCP_PROJECT_ID
-DATABASE_URL
+# 4. Create the Service Account for Deployment
+gcloud iam service-accounts create $SA_NAME \
+  --project="${PROJECT_ID}" \
+  --display-name="SA for GitHub Actions CD"
+
+# 5. Bind the GitHub Repository to the Service Account
+gcloud iam service-accounts add-iam-policy-binding "${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --project="${PROJECT_ID}" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')/locations/global/workloadIdentityPools/$POOL_NAME/attribute.repository/$GITHUB_REPO"
 ```
 
-Optional GitHub secrets:
+#### Grant Required Roles to the Service Account
+In the GCP Console (or using CLI), assign the following roles to the Service Account (`github-actions-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com`):
+1. **Artifact Registry Writer**: To push built Docker images.
+2. **Cloud Run Admin**: To deploy services.
+3. **Service Account User**: To permit Cloud Run to run using the runtime service account.
+4. **Secret Manager Secret Accessor**: To allow the service account to access secrets.
 
-```text
-GCP_REGION
-GCP_GAR_REPO
-SONAR_TOKEN
-SONAR_HOST_URL
-```
+---
 
-Cloud Run deployment expects these Google Secret Manager secrets:
+### 3. Adding Secrets to GitHub Repository
+To activate the CD jobs in the pipeline, navigate to your GitHub Repository -> **Settings** -> **Secrets and variables** -> **Actions** and add the following **Repository Secrets**:
 
-```text
-yag-database-url
-yag-secret-key
-yag-cors-origins
-yag-redis-url
-yag-rabbitmq-url
-yag-gemini-key
-yag-cloudinary-name
-yag-cloudinary-key
-yag-cloudinary-secret
-yag-vnp-tmn-code
-yag-vnp-hash-secret
-yag-vnp-url
-yag-vnp-return-url
-yag-vnp-api-url
-```
+| Secret Key | Value Example | Purpose |
+|---|---|---|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/1234567890/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider` | The full resource identifier of your OIDC Provider |
+| `GCP_SERVICE_ACCOUNT` | `github-actions-sa@your-gcp-project-id.iam.gserviceaccount.com` | The email of the service account created for deployment |
+| `GCP_PROJECT_ID` | `your-gcp-project-id` | Your Google Cloud Project ID |
+| `DATABASE_URL` | `postgresql://postgres.xxxx:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require` | Connection string to your production Supabase database (for migrations) |
+| `GCP_REGION` *(Optional)* | `asia-southeast1` | Google Cloud region for deploying backend (Defaults to `asia-southeast1`) |
+| `GCP_GAR_REPO` *(Optional)* | `yag-repo` | Artifact Registry repository name (Defaults to `yag-repo`) |
 
-If those secrets are not configured, CI validation still runs and deployment jobs are skipped or fail clearly at the deployment boundary.
+---
+
+### 4. Setting Up Production Secrets in Google Secret Manager
+Google Cloud Run retrieves production configurations from **Secret Manager** on startup. Ensure the following secrets are created and populated in Google Secret Manager:
+
+| Secret Name | Expected Payload Content |
+|---|---|
+| `YAG_DATABASE_URL` | Production Supabase/PostgreSQL connection string |
+| `YAG_SECRET_KEY` | Strong random string (minimum 32 characters) for JWT encryption |
+| `YAG_CORS_ORIGINS` | Comma-separated allowed production frontend origins (e.g. `https://yag-frontend.vercel.app`) |
+| `YAG_REDIS_URL` | Production Redis URL (e.g., `redis://:password@host:port`) |
+| `YAG_RABBITMQ_URL` | Production RabbitMQ URL (e.g., `amqps://user:pass@host:port/vhost`) |
+| `YAG_GEMINI_API_KEY` | Google Gemini API Key |
+| `YAG_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `YAG_CLOUDINARY_API_KEY` | Cloudinary API Key |
+| `YAG_CLOUDINARY_API_SECRET` | Cloudinary API Secret |
+| `yag-vnp-tmn-code` | VNPAY merchant TMN Code |
+| `yag-vnp-hash-secret` | VNPAY hash secret key |
+| `yag-vnp-url` | VNPAY endpoint payment URL |
+| `yag-vnp-return-url` | VNPAY return redirect URL (must be HTTPS in production) |
+| `yag-vnp-api-url` | VNPAY transaction query API URL |
+
+*Note: If these Secret Manager secrets are not configured or access is not granted, the Cloud Run deployment command will fail at the container setup phase.*
+
+---
+
+### 5. Frontend Production Deploy (Vercel)
+The Next.js frontend auto-deploys via Vercel integration:
+1. Connect your Vercel account to the GitHub repository.
+2. Link the repository to a Vercel project.
+3. Configure the following **Environment Variables** in Vercel settings (Environment Variables):
+   * `NEXT_PUBLIC_APP_URL` (e.g., `https://yag-frontend.vercel.app`)
+   * `NEXT_PUBLIC_API_BASE_URL` (e.g., `https://yag-backend-xxxx.a.run.app`) - Backend origin without `/api/v1` suffix
+   * `NEXT_PUBLIC_WS_BASE_URL` (e.g., `wss://yag-backend-xxxx.a.run.app/ws`)
+   * `NEXT_PUBLIC_DEPLOY_ENV` = `production`
+   * `NEXT_PUBLIC_USE_MOCKS` = `false`
+   * `NEXT_PUBLIC_API_TIMEOUT_MS` = `12000`
+4. Deploys are automatically triggered on push to `main` (for Production release) and `dev` (for Preview releases).
+
 
 ## API Map
 

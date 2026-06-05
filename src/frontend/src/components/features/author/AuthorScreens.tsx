@@ -201,6 +201,21 @@ export function AuthorWorksScreen() {
 
   const displayName = user?.profile?.display_name || user?.username || "Tác giả";
   const avatarInitials = displayName.slice(0, 2).toUpperCase();
+  const openStoryRoute = (story: any, action: "edit" | "publish" | "detail") => {
+    if (!story?.id) {
+      triggerLiveToast("Tác phẩm chưa có mã định danh hợp lệ. Vui lòng tải lại danh sách tác phẩm.", "warning");
+      return;
+    }
+
+    const target =
+      action === "edit"
+        ? `/author/stories/${story.id}/edit`
+        : action === "publish"
+          ? `/author/stories/${story.id}/publish`
+          : `/stories/${story.id}`;
+
+    router.push(target);
+  };
 
   return (
     <AppShell
@@ -275,10 +290,6 @@ export function AuthorWorksScreen() {
       ) : (
         <section className="grid grid-3" style={{ gap: 20 }}>
           {filteredWorks.map((story, index) => {
-            const editHref = `/author/stories/${story.id}/edit`;
-            const publishHref = `/author/stories/${story.id}/publish`;
-            const detailHref = `/stories/${story.id}`;
-            const scheduleHref = `/author/schedule`;
             const chapCount = story.chapter_count ?? 0;
             return (
               <article className="story-card" key={story.id || story.title} style={{ display: "flex", flexDirection: "column" }}>
@@ -301,11 +312,19 @@ export function AuthorWorksScreen() {
                       <strong>{chapCount}</strong> chương · <span>{story.category}</span> · <strong>{(story.view_count || 0).toLocaleString()}</strong> đọc · <strong>{story.rating_avg || 0}★</strong>
                     </div>
                   </div>
-                  <div className="grid grid-2" style={{ gap: 8 }}>
-                    <Link className="button button-primary" href={editHref} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>Viết tiếp</Link>
-                    <Link className="button button-soft" href={publishHref} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>Đăng chương</Link>
-                    <Link className="button" href={detailHref} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>Chi tiết</Link>
-                    <Link className="button" href={scheduleHref} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>Xem lịch</Link>
+                  <div className="grid grid-2" style={{ gap: 8, position: "relative", zIndex: 2 }}>
+                    <button className="button button-primary" type="button" onClick={() => openStoryRoute(story, "edit")} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>
+                      Viết tiếp
+                    </button>
+                    <button className="button button-soft" type="button" onClick={() => openStoryRoute(story, "publish")} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>
+                      Đăng chương
+                    </button>
+                    <button className="button" type="button" onClick={() => openStoryRoute(story, "detail")} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>
+                      Chi tiết
+                    </button>
+                    <button className="button" type="button" onClick={() => router.push("/author/schedule")} style={{ fontSize: 11, padding: "6px", textAlign: "center" }}>
+                      Xem lịch
+                    </button>
                   </div>
                 </div>
               </article>
@@ -418,16 +437,15 @@ export function AuthorStudioScreen() {
         return;
       }
 
-      await yagApi.reader.getStoryDetail(storyId);
-
       const chapsRes = await yagApi.author.getChapters(storyId);
       const chaps = chapsRes.data || [];
       setChapters(chaps);
 
       if (chaps.length > 0) {
-        setActiveChapter(chaps[0]);
-        setEditorTitle(chaps[0].title);
-        setEditorContent(chaps[0].content);
+        const preferredChapter = [...chaps].reverse().find(isAuthorDraftChapter) || chaps[chaps.length - 1];
+        setActiveChapter(preferredChapter);
+        setEditorTitle(preferredChapter.title);
+        setEditorContent(preferredChapter.content);
       } else {
         setActiveChapter(null);
         setEditorTitle("");
@@ -809,14 +827,11 @@ export function AuthorStudioScreen() {
       return;
     }
     try {
-      const res = await yagApi.apiFetch<any>("/api/v1/chapters/", {
-        method: "POST",
-        body: {
-          story_id: storyId,
-          chapter_number: nextNum,
-          title: `Chương ${nextNum}`,
-          content: ""
-        }
+      const res = await yagApi.author.createChapter({
+        story_id: storyId,
+        chapter_number: nextNum,
+        title: `Chương ${nextNum}`,
+        content: ""
       });
       const newChap = res.data;
       setChapters([...chapters, newChap]);
@@ -847,6 +862,22 @@ export function AuthorStudioScreen() {
   };
 
   const isEditingDisabled = activeChapter && activeChapter.moderation_status && activeChapter.moderation_status !== "draft" && activeChapter.moderation_status !== "nháp";
+  const editorWordCount = editorContent.split(/\s+/).filter(Boolean).length;
+  const editorReadingMinutes = Math.max(1, Math.ceil(editorWordCount / 250));
+  const editorTargetWords = 2000;
+  const editorTargetProgress = Math.min(100, Math.round((editorWordCount / editorTargetWords) * 100));
+  const activeChapterStatus = activeChapter?.moderation_status || "nháp";
+  const activeChapterStatusLabel =
+    activeChapterStatus === "approved"
+      ? "Đã duyệt"
+      : activeChapterStatus === "pending"
+        ? "Đang kiểm duyệt"
+        : activeChapterStatus === "flagged"
+          ? "Cần xử lý"
+          : activeChapterStatus === "rejected"
+            ? "Bị từ chối"
+            : "Bản nháp";
+  const canSubmitActiveChapter = !isEditingDisabled && editorWordCount > 0;
 
   if (isLoading) {
     return (
@@ -885,19 +916,24 @@ export function AuthorStudioScreen() {
 
   return (
     <div className="studio-page">
-      <header className="studio-topbar">
-        <div className="inline-actions">
+      <header className="studio-topbar studio-command-bar">
+        <div className="studio-title-group">
           <Link className="button" href="/author/stories">
             <Icon name="arrow" /> Tác phẩm
           </Link>
           <div>
             <strong>Author Studio</strong>
             <div className="story-meta">
-              Tự động lưu · {editorContent.split(/\s+/).filter(Boolean).length} từ · Mục tiêu 2.000 từ
+              Chương {activeChapter?.chapter_number || "-"} · {activeChapterStatusLabel} · {savingStatus}
             </div>
           </div>
         </div>
-        <div className="inline-actions">
+        <div className="studio-status-strip">
+          <span><Icon name="edit" /> {editorWordCount} từ</span>
+          <span><Icon name="book" /> {editorReadingMinutes} phút đọc</span>
+          <span><Icon name="chart" /> {editorTargetProgress}% mục tiêu</span>
+        </div>
+        <div className="inline-actions studio-command-actions">
           <button
             className="button"
             type="button"
@@ -918,8 +954,8 @@ export function AuthorStudioScreen() {
           >
             <Icon name="check" /> Kiểm tra
           </button>
-          <Link className="button" href={`/author/stories/${storyId}/publish`}>
-            Xuất bản
+          <Link className={`button ${canSubmitActiveChapter ? "button-soft" : "disabled"}`} href={`/author/stories/${storyId}/publish`}>
+            <Icon name="calendar" /> Xuất bản
           </Link>
           <button
             className="button button-primary"
@@ -957,7 +993,7 @@ export function AuthorStudioScreen() {
         {/* Editor Area (Left Column - 70%) */}
         <section className="editor-area">
           {/* Writing Toolbar */}
-          <div className="writing-toolbar">
+          <div className="writing-toolbar" aria-label="Thanh công cụ soạn thảo">
             <div className="tool-group">
               {["↶", "↷", "H1", "❝", "☰", "≡", "≣"].map((tool) => (
                 <button
@@ -1065,7 +1101,9 @@ export function AuthorStudioScreen() {
                   </button>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
-                  <span className="badge badge-green" style={{ fontSize: 10 }}>Đúng nhịp</span>
+                  <span className={`badge ${canSubmitActiveChapter ? "badge-green" : "badge-blue"}`} style={{ fontSize: 10 }}>
+                    {canSubmitActiveChapter ? "Sẵn sàng gửi duyệt" : "Đang soạn"}
+                  </span>
                 </div>
               </div>
 
@@ -1095,11 +1133,11 @@ export function AuthorStudioScreen() {
 
               <div className="outline-metric" style={{ marginTop: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
-                  <span>Nhịp chương</span>
-                  <strong>78%</strong>
+                  <span>Mục tiêu chương</span>
+                  <strong>{editorTargetProgress}%</strong>
                 </div>
                 <div className="progress" style={{ height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden" }}>
-                  <span style={{ display: "block", width: "78%", height: "100%", background: "var(--green)" }} />
+                  <span style={{ display: "block", width: `${editorTargetProgress}%`, height: "100%", background: "var(--green)" }} />
                 </div>
               </div>
             </aside>
@@ -1118,8 +1156,8 @@ export function AuthorStudioScreen() {
                 </div>
               )}
               <div className="editor-meta-row" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginBottom: 12 }}>
-                <span className="badge badge-blue">Trạng thái: {activeChapter?.moderation_status || "nháp"}</span>
-                <span>Markdown bật</span>
+                <span className="badge badge-blue">Trạng thái: {activeChapterStatusLabel}</span>
+                <span>Markdown bật · Autosave REST/WS</span>
               </div>
               <input
                 className="editor-title"
@@ -1162,7 +1200,7 @@ export function AuthorStudioScreen() {
                 }}
               />
               <div className="editor-footer-row" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
-                <span>{editorContent.split(/\s+/).filter(Boolean).length} từ · {Math.round(editorContent.split(/\s+/).filter(Boolean).length / 250) || 1} phút đọc</span>
+                <span>{editorWordCount} từ · {editorReadingMinutes} phút đọc · mục tiêu {editorTargetWords.toLocaleString("vi-VN")} từ</span>
                 <span className="badge badge-green">{savingStatus}</span>
               </div>
             </div>
@@ -1187,7 +1225,7 @@ export function AuthorStudioScreen() {
           <div className="agent-status" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", borderBottom: "1px solid var(--line)", paddingBottom: 12, marginBottom: 12 }}>
             <div>
               <span>Context: </span>
-              <strong>1,000 từ gần nhất</strong>
+              <strong>{Math.min(editorWordCount, 1000).toLocaleString("vi-VN")} từ gần nhất</strong>
             </div>
             <div>
               <span>Tone: </span>
@@ -1399,14 +1437,11 @@ export function PublishScreen() {
         return;
       }
 
-      const res = await yagApi.apiFetch<any>("/api/v1/chapters/", {
-        method: "POST",
-        body: {
-          story_id: storyId,
-          chapter_number: nextNum,
-          title: `Chương ${nextNum}`,
-          content: "",
-        },
+      const res = await yagApi.author.createChapter({
+        story_id: storyId,
+        chapter_number: nextNum,
+        title: `Chương ${nextNum}`,
+        content: "",
       });
       const newDraft = res.data;
       setAllChapters((current) => [...current, newDraft]);
@@ -1425,6 +1460,11 @@ export function PublishScreen() {
     e.preventDefault();
     if (!selectedChapId) {
       triggerLiveToast("Vui lòng chọn chương nháp để xuất bản.", "warning");
+      return;
+    }
+    const chapterToPublish = chapters.find(c => c.id === selectedChapId);
+    if (!chapterToPublish?.content?.trim()) {
+      triggerLiveToast("Chương nháp đang trống. Hãy mở không gian viết và hoàn thiện nội dung trước khi gửi duyệt.", "warning");
       return;
     }
     if (!agreement) {
@@ -1449,8 +1489,8 @@ export function PublishScreen() {
         return;
       }
       await yagApi.author.publishChapter(selectedChapId, {
-        isPremium,
-        scheduleAt: publishDate ? new Date(publishDate).toISOString() : undefined,
+        is_premium: isPremium,
+        publish_at: publishDate ? new Date(publishDate).toISOString() : undefined,
       });
       triggerLiveToast("Chương đã được gửi thành công. Hệ thống AI đang tiến hành kiểm duyệt...", "success");
       router.push("/author/stories");
@@ -1463,88 +1503,150 @@ export function PublishScreen() {
   };
 
   const selectedChapter = chapters.find(c => c.id === selectedChapId);
+  const selectedWordCount = selectedChapter?.content ? selectedChapter.content.split(/\s+/).filter(Boolean).length : 0;
+  const selectedCharCount = selectedChapter?.content?.length || 0;
+  const hasPublishableContent = Boolean(selectedChapter?.content?.trim());
+  const publishTimingLabel = publishDate
+    ? new Date(publishDate).toLocaleString("vi-VN", { dateStyle: "medium", timeStyle: "short" })
+    : "Ngay sau khi AI duyệt";
+  const canSubmitPublish = !submitting && !isLoadingChapters && !creatingDraft && chapters.length > 0 && hasPublishableContent && agreement;
 
   return (
     <AppShell activeId="s17">
-      <section className="panel panel-pad stack" style={{ maxWidth: 750, margin: "0 auto" }}>
-        <h2 style={{ fontSize: 18, fontWeight: "bold", margin: "0 0 16px 0", color: "var(--jungle-dark)" }}>Xuất bản chương truyện mới</h2>
+      <div className="publish-page">
+        <section className="publish-hero panel panel-pad">
+          <div>
+            <span className="badge badge-crimson">Xuất bản chương</span>
+            <h2>Chuẩn bị gửi chương cho AI kiểm duyệt</h2>
+            <p>Kiểm tra bản nháp, quyền truy cập và lịch công bố trước khi đưa chương vào pipeline xuất bản của YAG.</p>
+          </div>
+          <div className="publish-hero-actions">
+            <Link className="button" href={`/author/stories/${storyId}/edit`}>
+              <Icon name="edit" /> Mở Editor
+            </Link>
+            <Link className="button" href="/author/stories">
+              Tác phẩm của tôi
+            </Link>
+          </div>
+        </section>
+
         {loadError && (
-          <div className="notice warning" style={{ padding: 12, borderRadius: 6, marginBottom: 12 }}>
+          <div className="notice warning publish-notice">
             {loadError}
             <button className="button button-soft" type="button" onClick={() => void loadPublishDrafts()} style={{ marginLeft: 12, padding: "4px 10px", fontSize: 12 }}>
               Tải lại
             </button>
           </div>
         )}
-        <form onSubmit={handlePublish} className="stack" style={{ gap: 20 }}>
-          <div className="grid grid-3" style={{ gap: 16 }}>
-            <div className="field">
-              <label style={{ fontWeight: "bold", fontSize: 13, display: "block", marginBottom: 6 }}>Chọn chương nháp</label>
-              {isLoadingChapters ? (
-                <div style={{ color: "var(--muted)", fontSize: 12, padding: "8px", border: "1px dashed var(--line)", borderRadius: 6 }}>
-                  Đang tải chương nháp...
-                </div>
-              ) : chapters.length === 0 ? (
-                <div style={{ color: "var(--muted)", fontSize: 12, padding: "10px", border: "1px dashed var(--line)", borderRadius: 6, display: "grid", gap: 8 }}>
-                  <span>Chưa có chương nháp khả dụng để gửi duyệt.</span>
-                  <button className="button button-soft" type="button" onClick={handleCreateStarterDraft} disabled={creatingDraft}>
-                    {creatingDraft ? "Đang tạo..." : "Tạo chương nháp"}
-                  </button>
-                  <Link className="button" href={`/author/stories/${storyId}/edit`}>
-                    Mở không gian viết
-                  </Link>
-                </div>
-              ) : (
-                <select className="select" value={selectedChapId} onChange={(e) => setSelectedChapId(e.target.value)}>
-                  {chapters.map(c => (
-                    <option key={c.id} value={c.id}>Chương {c.chapter_number}: {c.title}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="field">
-              <label style={{ fontWeight: "bold", fontSize: 13, display: "block", marginBottom: 6 }}>Quyền truy cập</label>
-              <select className="select" value={isPremium ? "premium" : "free"} onChange={(e) => setIsPremium(e.target.value === "premium")}>
-                <option value="free">Miễn phí (Free)</option>
-                <option value="premium">Premium (Cần gói Membership)</option>
-              </select>
-            </div>
-            <div className="field">
-              <label style={{ fontWeight: "bold", fontSize: 13, display: "block", marginBottom: 6 }}>Hẹn giờ công bố (Tùy chọn)</label>
-              <input type="datetime-local" className="input" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} />
-              <small style={{ fontSize: 10, color: "var(--muted)", display: "block", marginTop: 4 }}>Để trống để phát hành ngay sau khi AI duyệt xong.</small>
-            </div>
-          </div>
-
-          {selectedChapter && (
-            <div className="panel panel-pad" style={{ background: "rgba(22, 48, 32, 0.02)", border: "1px solid var(--line)", borderRadius: 8 }}>
-              <strong style={{ display: "block", marginBottom: 6, fontSize: 13, color: "var(--jungle-dark)" }}>Chi tiết chương nháp được chọn:</strong>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
-                Độ dài: <strong>{selectedChapter.content ? selectedChapter.content.split(/\s+/).filter(Boolean).length : 0} từ</strong> · 
-                Ký tự: <strong>{selectedChapter.content ? selectedChapter.content.length : 0} ký tự</strong>
+        <div className="publish-layout">
+          <form onSubmit={handlePublish} className="publish-flow panel panel-pad">
+            <section className="publish-step">
+              <div className="publish-step-index">1</div>
+              <div className="publish-step-body">
+                <h3>Chọn chương nháp</h3>
+                {isLoadingChapters ? (
+                  <div className="publish-empty-box">Đang tải chương nháp...</div>
+                ) : chapters.length === 0 ? (
+                  <div className="publish-empty-box">
+                    <span>Chưa có chương nháp khả dụng để gửi duyệt.</span>
+                    <div className="inline-actions">
+                      <button className="button button-soft" type="button" onClick={handleCreateStarterDraft} disabled={creatingDraft}>
+                        {creatingDraft ? "Đang tạo..." : "Tạo chương nháp"}
+                      </button>
+                      <Link className="button" href={`/author/stories/${storyId}/edit`}>
+                        Mở không gian viết
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <select className="select publish-select" value={selectedChapId} onChange={(e) => setSelectedChapId(e.target.value)}>
+                    {chapters.map(c => (
+                      <option key={c.id} value={c.id}>Chương {c.chapter_number}: {c.title}</option>
+                    ))}
+                  </select>
+                )}
               </div>
-              <div style={{ borderLeft: "3px solid var(--crimson)", paddingLeft: 12, fontStyle: "italic", fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
-                &ldquo;{selectedChapter.content ? selectedChapter.content.substring(0, 180) + "..." : "Không có nội dung."}&rdquo;
-              </div>
-            </div>
-          )}
+            </section>
 
-          <div className="stack" style={{ gap: 16 }}>
-            <label className="pill" style={{ display: "flex", gap: 8, alignItems: "flex-start", cursor: "pointer", padding: "10px", borderRadius: 6, background: "rgba(0,0,0,0.02)", fontSize: 13 }}>
-              <input type="checkbox" checked={agreement} onChange={(e) => setAgreement(e.target.checked)} style={{ marginTop: 2 }} /> 
-              <span>Tôi cam kết nội dung chương truyện này hoàn toàn tự sáng tác, không vi phạm bản quyền và tuân thủ các quy tắc thuần phong mỹ tục của nền tảng YAG.</span>
-            </label>
-            <button className="button button-primary" type="submit" disabled={submitting || isLoadingChapters || creatingDraft || chapters.length === 0} style={{ width: "100%", padding: "12px" }}>
-              {submitting ? "Đang gửi nội dung..." : "Gửi duyệt & Xuất bản"}
-            </button>
-            {chapters.length > 0 && (
-              <Link className="button" href={`/author/stories/${storyId}/edit`} style={{ width: "100%", justifyContent: "center" }}>
-                Mở không gian viết để chỉnh sửa thêm
-              </Link>
+            <section className="publish-step">
+              <div className="publish-step-index">2</div>
+              <div className="publish-step-body">
+                <h3>Cấu hình phát hành</h3>
+                <div className="publish-option-grid">
+                  <label className={`publish-option ${!isPremium ? "active" : ""}`}>
+                    <input type="radio" name="access" checked={!isPremium} onChange={() => setIsPremium(false)} />
+                    <strong>Miễn phí</strong>
+                    <span>Mọi độc giả có thể đọc sau khi duyệt.</span>
+                  </label>
+                  <label className={`publish-option ${isPremium ? "active" : ""}`}>
+                    <input type="radio" name="access" checked={isPremium} onChange={() => setIsPremium(true)} />
+                    <strong>Premium</strong>
+                    <span>Chỉ thành viên Premium có thể mở khóa.</span>
+                  </label>
+                </div>
+                <div className="field publish-date-field">
+                  <label>Hẹn giờ công bố</label>
+                  <input type="datetime-local" className="input" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} />
+                  <small>Để trống để phát hành ngay sau khi AI duyệt xong.</small>
+                </div>
+              </div>
+            </section>
+
+            <section className="publish-step">
+              <div className="publish-step-index">3</div>
+              <div className="publish-step-body">
+                <h3>Cam kết nội dung</h3>
+                <label className="publish-agreement">
+                  <input type="checkbox" checked={agreement} onChange={(e) => setAgreement(e.target.checked)} />
+                  <span>Tôi cam kết nội dung chương truyện này hoàn toàn tự sáng tác, không vi phạm bản quyền và tuân thủ quy tắc nội dung của YAG.</span>
+                </label>
+                <button className="button button-primary publish-submit" type="submit" disabled={!canSubmitPublish}>
+                  {submitting ? "Đang gửi nội dung..." : "Gửi duyệt & Xuất bản"}
+                </button>
+                {!hasPublishableContent && selectedChapter ? (
+                  <div className="notice warning">Chương đang trống. Hãy mở Editor và viết nội dung trước khi gửi duyệt.</div>
+                ) : null}
+              </div>
+            </section>
+          </form>
+
+          <aside className="publish-review panel panel-pad">
+            <div className="publish-review-head">
+              <span className="badge badge-blue">Kiểm tra cuối</span>
+              <strong>{selectedChapter ? `Chương ${selectedChapter.chapter_number}` : "Chưa chọn chương"}</strong>
+            </div>
+            {selectedChapter ? (
+              <>
+                <div className="publish-review-title">
+                  <h3>{selectedChapter.title}</h3>
+                  <span className={`badge ${hasPublishableContent ? "badge-green" : "badge-amber"}`}>
+                    {hasPublishableContent ? "Có nội dung" : "Chưa có nội dung"}
+                  </span>
+                </div>
+                <div className="publish-stat-grid">
+                  <div><span>Số từ</span><strong>{selectedWordCount}</strong></div>
+                  <div><span>Ký tự</span><strong>{selectedCharCount}</strong></div>
+                  <div><span>Quyền đọc</span><strong>{isPremium ? "Premium" : "Free"}</strong></div>
+                  <div><span>Công bố</span><strong>{publishTimingLabel}</strong></div>
+                </div>
+                <div className="publish-excerpt">
+                  &ldquo;{selectedChapter.content ? selectedChapter.content.substring(0, 220) + (selectedChapter.content.length > 220 ? "..." : "") : "Chưa có nội dung."}&rdquo;
+                </div>
+                <div className="publish-checklist">
+                  <div className={hasPublishableContent ? "done" : ""}><Icon name={hasPublishableContent ? "check" : "edit"} /> Nội dung không rỗng</div>
+                  <div className={agreement ? "done" : ""}><Icon name={agreement ? "check" : "shield"} /> Đã xác nhận cam kết</div>
+                  <div className="done"><Icon name="check" /> Gửi qua pipeline AI moderation</div>
+                </div>
+                <Link className="button" href={`/author/stories/${storyId}/edit`}>
+                  <Icon name="edit" /> Chỉnh sửa thêm trong Editor
+                </Link>
+              </>
+            ) : (
+              <div className="publish-empty-box">Chọn một chương nháp để xem bản tóm tắt trước khi gửi duyệt.</div>
             )}
-          </div>
-        </form>
-      </section>
+          </aside>
+        </div>
+      </div>
     </AppShell>
   );
 }

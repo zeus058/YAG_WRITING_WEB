@@ -939,6 +939,12 @@ export function ReaderScreen() {
   const wordCount = paywall ? 0 : (chapter.content || "").split(/\s+/).filter(Boolean).length;
   const readingMinutes = Math.max(1, Math.ceil(wordCount / 250));
   const displayChapterTitle = normalizeChapterTitle(chapterNum, chapter.title);
+  const publishedAtLabel = chapter.publish_at
+    ? new Date(chapter.publish_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
+    : "Chưa có lịch";
+  const currentChapterHref = `/stories/${storyId}/chapters/${chapterNum}`;
+  const prevChapterHref = prevChapter ? `/stories/${storyId}/chapters/${prevChapter.chapter_number}` : "";
+  const nextChapterHref = nextChapter ? `/stories/${storyId}/chapters/${nextChapter.chapter_number}` : "";
 
   return (
     <>
@@ -967,6 +973,16 @@ export function ReaderScreen() {
             {chapter.is_premium && (
               <span className="badge badge-amber" style={{ marginRight: 8 }}><Icon name="lock" /> Premium</span>
             )}
+            <Link className="button" href="#reader-comments">
+              <Icon name="book" />
+              <span className="hide-mobile">Bình luận</span>
+            </Link>
+            {nextChapter ? (
+              <Link className="button button-primary" href={nextChapterHref}>
+                Sau
+                <Icon name="arrow" />
+              </Link>
+            ) : null}
           </div>
         </header>
 
@@ -1022,25 +1038,68 @@ export function ReaderScreen() {
           </article>
 
           <aside className="reader-side-panel reader-tools-panel" aria-label="Công cụ đọc">
-            <div className="tabs">
-              <button className="tab-button active" type="button">Hiển thị</button>
+            <div className="reader-panel-head">
+              <span className="badge badge-blue">Phiên đọc</span>
+              <strong>{readingProgress}%</strong>
             </div>
-            <div className="tab-panel active stack">
-              <div className="field">
-                <label>Cỡ chữ ({fontSize}px)</label>
-                <input
-                  className="range"
-                  type="range"
-                  min="16"
-                  max="24"
-                  value={fontSize}
-                  onChange={(e) => saveFontSize(Number(e.target.value))}
-                  aria-label="Cỡ chữ"
-                />
+            <div className="reader-session-card">
+              <div>
+                <span>Thời lượng</span>
+                <strong>{readingMinutes} phút</strong>
               </div>
+              <div>
+                <span>Từ trong chương</span>
+                <strong>{wordCount}</strong>
+              </div>
+              <div>
+                <span>Bình luận</span>
+                <strong>{comments.length}</strong>
+              </div>
+              <div>
+                <span>Công bố</span>
+                <strong>{publishedAtLabel}</strong>
+              </div>
+            </div>
+            <div className="reader-control-card">
+              <div className="reader-control-head">
+                <strong>Hiển thị</strong>
+                <span>{fontSize}px</span>
+              </div>
+              <input
+                className="range"
+                type="range"
+                min="16"
+                max="24"
+                value={fontSize}
+                onChange={(e) => saveFontSize(Number(e.target.value))}
+                aria-label="Cỡ chữ"
+              />
               <div className="grid grid-2 reader-compact-grid">
-                <button className={`button ${isDark ? "button-primary" : ""}`} onClick={toggleTheme}>Nền tối</button>
-                <button className={`button ${isWide ? "button-primary" : ""}`} onClick={toggleWidth}>Mở rộng</button>
+                <button className={`button ${isDark ? "button-primary" : ""}`} type="button" onClick={toggleTheme}>
+                  {isDark ? "Nền sáng" : "Nền tối"}
+                </button>
+                <button className={`button ${isWide ? "button-primary" : ""}`} type="button" onClick={toggleWidth}>
+                  {isWide ? "Cột vừa" : "Mở rộng"}
+                </button>
+              </div>
+            </div>
+            <div className="reader-control-card">
+              <div className="reader-control-head">
+                <strong>Chuyển chương</strong>
+                <span>{safeIndex + 1}/{totalChapters}</span>
+              </div>
+              <div className="reader-mini-nav">
+                {prevChapter ? (
+                  <Link className="button" href={prevChapterHref}>Trước</Link>
+                ) : (
+                  <button className="button" type="button" disabled>Đầu truyện</button>
+                )}
+                <Link className="button button-soft" href={currentChapterHref}>Hiện tại</Link>
+                {nextChapter ? (
+                  <Link className="button button-primary" href={nextChapterHref}>Sau</Link>
+                ) : (
+                  <button className="button" type="button" disabled>Hết truyện</button>
+                )}
               </div>
             </div>
           </aside>
@@ -1048,21 +1107,27 @@ export function ReaderScreen() {
 
         <div role="navigation" className="reader-toolbar" aria-label="Thanh chuyển chương">
           {prevChapter ? (
-            <Link className="button" href={`/stories/${storyId}/chapters/${prevChapter.chapter_number}`}>Trước</Link>
+            <Link className="button" href={prevChapterHref}>Trước</Link>
           ) : (
             <button className="button" disabled>Đầu truyện</button>
           )}
           <span className="reader-toolbar-status">Chương {chapterNum}</span>
           {nextChapter ? (
-            <Link className="button button-primary" href={`/stories/${storyId}/chapters/${nextChapter.chapter_number}`}>Sau</Link>
+            <Link className="button button-primary" href={nextChapterHref}>Sau</Link>
           ) : (
             <button className="button" disabled>Hết truyện</button>
           )}
         </div>
 
-        <section className="panel panel-pad" style={{ maxWidth: 800, margin: "40px auto 120px", width: "100%" }}>
-          <h2 className="section-title">Bình luận chương ({comments.length})</h2>
-          <div className="list" style={{ marginTop: 16 }}>
+        <section id="reader-comments" className="reader-comments-section">
+          <div className="reader-comments-head">
+            <div>
+              <span className="badge badge-crimson">Cộng đồng</span>
+              <h2 className="section-title">Bình luận chương ({comments.length})</h2>
+            </div>
+            <Link className="button" href={currentChapterHref}>Lên đầu chương</Link>
+          </div>
+          <div className="list reader-comments-list">
             {comments.length === 0 ? (
               <div className="empty-state" style={{ padding: 24 }}>
                 <h3 className="section-title" style={{ fontSize: 18 }}>Chưa có bình luận</h3>

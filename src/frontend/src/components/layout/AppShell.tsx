@@ -2,6 +2,7 @@
 
 import React, { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   getPageById,
   getRoleForPage,
@@ -70,6 +71,7 @@ const triggerLiveToast = (message: string) => {
 
 export function AppShell({ activeId, actions, children, modeOverride }: AppShellProps) {
   const { user: authUser, logout } = useAuth();
+  const pathname = usePathname();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
 
   const role = modeOverride || (authUser?.role === "admin" ? "admin" : getRoleForPage(activeId));
@@ -154,17 +156,26 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
     };
   }, [authUser]);
 
-  // Handle outside click to close account menu
+  useEffect(() => {
+    setIsAccountMenuOpen(false);
+  }, [pathname]);
+
+  // Handle outside pointer/scroll to close account menu before it can block page actions.
   useEffect(() => {
     if (!isAccountMenuOpen) return;
-    const handleClose = (e: MouseEvent) => {
+    const handleClose = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest(".account-menu")) {
         setIsAccountMenuOpen(false);
       }
     };
-    document.addEventListener("click", handleClose);
-    return () => document.removeEventListener("click", handleClose);
+    const handleScroll = () => setIsAccountMenuOpen(false);
+    document.addEventListener("pointerdown", handleClose, true);
+    window.addEventListener("scroll", handleScroll, true);
+    return () => {
+      document.removeEventListener("pointerdown", handleClose, true);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
   }, [isAccountMenuOpen]);
 
   const handleLogout = () => {

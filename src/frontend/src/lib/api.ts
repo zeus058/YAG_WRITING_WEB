@@ -177,6 +177,11 @@ export const yagApi = {
         body,
       }),
     getChapters: (storyId: string) => apiFetch(`/api/v1/stories/author/${storyId}/chapters`),
+    createChapter: (body: { story_id: string; chapter_number: number; title: string; content: string; is_premium?: boolean }) =>
+      apiFetch("/api/v1/chapters/", {
+        method: "POST",
+        body,
+      }),
     saveDraft: (chapterId: string, body: { title: string; content: string }) =>
       apiFetch(`/api/v1/author/chapters/${chapterId}/draft`, {
         method: "PUT",
@@ -187,7 +192,7 @@ export const yagApi = {
         method: "POST",
         body,
       }),
-    publishChapter: (chapterId: string, body: { scheduleAt?: string; isPremium: boolean }) =>
+    publishChapter: (chapterId: string, body: { publish_at?: string; is_premium: boolean }) =>
       apiFetch(`/api/v1/author/chapters/${chapterId}/publish`, {
         method: "POST",
         body,

@@ -32,9 +32,6 @@
 
   --background: #FFECCE;
   --foreground: #41503D;
-  --surface: #FFFFFF;
-  --line: rgba(65, 80, 61, 0.16);
-  --paper-bg: #FFFFFF;
   --transition-base: 200ms ease-in-out;
 }
 
@@ -53,9 +50,6 @@
   :root {
     --background: #41503D;
     --foreground: #FFECCE;
-    --surface: #2b3328;
-    --line: rgba(255, 236, 206, 0.16);
-    --paper-bg: var(--jungle-dark);
   }
 }
 

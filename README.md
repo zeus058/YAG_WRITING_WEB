@@ -37,7 +37,7 @@ This repository is built for the HCMUS 2025-2026 Introduction to Software Engine
 | Author | Story management, chapter drafting, autosave WebSocket, AI writing suggestions, scheduled publishing |
 | AI | Gemini plot suggestions, story embeddings, semantic search, recommendations, moderation assistance |
 | Moderation | RabbitMQ background worker, AI moderation logs, admin review queue, alerts, notifications |
-| Membership | Membership plan catalog, premium chapter access, VNPAY checkout, VNPAY IPN verification |
+| Membership | Membership plan catalog, premium chapter access, PayOS checkout, PayOS verification |
 | Admin | Dashboard metrics, moderation queue, user/story controls, audit logs |
 | Realtime | Native WebSocket routes for notifications and chapter draft autosave |
 
@@ -52,7 +52,7 @@ This repository is built for the HCMUS 2025-2026 Introduction to Software Engine
 | Queue | RabbitMQ 3.13 |
 | AI | Google Gemini API, `gemini-1.5-flash`, `text-embedding-004` |
 | Media | Cloudinary |
-| Payment | VNPAY primary; PayOS service support exists behind configuration |
+| Payment | PayOS; Secure checkout and callback/API status validation |
 | Scheduler | APScheduler |
 | Deployment | Docker Compose, Nginx, optional Google Cloud Run backend deployment |
 | CI | GitHub Actions, pytest, ESLint, Docker build validation, Bandit, optional SonarQube |
@@ -72,7 +72,7 @@ flowchart LR
     rabbit["RabbitMQ"]
     gemini["Gemini API"]
     cloudinary["Cloudinary"]
-    vnpay["VNPAY"]
+    payos["PayOS"]
 
     user --> nginx
     nginx --> frontend
@@ -81,7 +81,7 @@ flowchart LR
     backend --> redis
     backend --> rabbit
     backend --> cloudinary
-    backend --> vnpay
+    backend --> payos
     scheduler --> postgres
     scheduler --> redis
     worker --> rabbit
@@ -279,7 +279,7 @@ Open:
 | `RABBITMQ_*` | RabbitMQ component config |
 | `GEMINI_API_KEY` | Gemini AI features |
 | `CLOUDINARY_*` | Avatar and cover uploads |
-| `VNP_*` | VNPAY checkout and IPN verification |
+| `PAYOS_*` | PayOS client credentials and return URL configuration |
 | `ALLOW_WEBSOCKET_QUERY_TOKEN` | Must be `false` in production |
 
 ### Frontend essentials
@@ -395,11 +395,10 @@ GEMINI_API_KEY=<production key>
 CLOUDINARY_CLOUD_NAME=<production value>
 CLOUDINARY_API_KEY=<production value>
 CLOUDINARY_API_SECRET=<production value>
-VNP_TMN_CODE=<production merchant code>
-VNP_HASH_SECRET=<production hash secret>
-VNP_URL=<production VNPAY payment URL>
-VNP_RETURN_URL=https://your-domain.com/payment/result
-VNP_API_URL=<production VNPAY API URL>
+PAYOS_CLIENT_ID=<production client ID>
+PAYOS_API_KEY=<production API key>
+PAYOS_CHECKSUM_KEY=<production checksum key>
+PAYOS_RETURN_URL=https://your-domain.com/payment/result
 ```
 
 Important: `API_PUBLIC_URL` is the origin only, for example `https://your-domain.com`, because the frontend client appends `/api/v1`.
@@ -492,11 +491,10 @@ Google Cloud Run retrieves production configurations from **Secret Manager** on 
 | `YAG_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `YAG_CLOUDINARY_API_KEY` | Cloudinary API Key |
 | `YAG_CLOUDINARY_API_SECRET` | Cloudinary API Secret |
-| `yag-vnp-tmn-code` | VNPAY merchant TMN Code |
-| `yag-vnp-hash-secret` | VNPAY hash secret key |
-| `yag-vnp-url` | VNPAY endpoint payment URL |
-| `yag-vnp-return-url` | VNPAY return redirect URL (must be HTTPS in production) |
-| `yag-vnp-api-url` | VNPAY transaction query API URL |
+| `YAG_PAYOS_CLIENT_ID` | PayOS merchant Client ID |
+| `YAG_PAYOS_API_KEY` | PayOS merchant API key |
+| `YAG_PAYOS_CHECKSUM_KEY` | PayOS merchant checksum key |
+| `YAG_PAYOS_RETURN_URL` | PayOS return redirect URL (must be HTTPS in production) |
 
 *Note: If these Secret Manager secrets are not configured or access is not granted, the Cloud Run deployment command will fail at the container setup phase.*
 
@@ -527,7 +525,7 @@ All API routes are mounted under `/api/v1`.
 | `/chapters` | Chapter CRUD, comments, reading, view count |
 | `/author/chapters` | Author autosave and draft editing helpers |
 | `/publish` | Publish and moderation submission flows |
-| `/payment` | VNPAY and payment history |
+| `/payment` | PayOS status and payment history |
 | `/payments` | Frontend-compatible payment alias |
 | `/membership` | Membership plans and checkout alias |
 | `/ai` | AI suggestions and semantic search helpers |
@@ -567,7 +565,7 @@ Health routes:
 | Migration checksum mismatch | A migration already applied to DB was edited; create a new migration instead |
 | AI moderation stays pending | Check `moderation-worker` logs and RabbitMQ queues |
 | Semantic search returns weak results | Check `story_embeddings` data and Gemini embedding calls |
-| VNPAY result fails | Check `VNP_HASH_SECRET`, secure hash, transaction amount, and response/status codes |
+| PayOS result fails | Check `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`, transaction amount, and webhook/callback params |
 | WebSocket fails in production | Check Nginx `/ws/` routing, cookies, and `ALLOW_WEBSOCKET_QUERY_TOKEN=false` |
 | Frontend API URL is wrong | `NEXT_PUBLIC_API_BASE_URL` must be the origin only, without `/api/v1` |
 
@@ -576,7 +574,7 @@ Health routes:
 | Member | Main module | API prefix |
 |---|---|---|
 | Tran Gia Hien | F1 - Authentication | `/api/v1/auth` |
-| Nguyen Duy Truong | F2 - VNPAY Payment and Membership | `/api/v1/payment`, `/api/v1/membership` |
+| Nguyen Duy Truong | F2 - PayOS Payment and Membership | `/api/v1/payment`, `/api/v1/membership` |
 | Pham Huong Tra | F3 - AI Engine | `/api/v1/ai`, `/api/v1/recommendations` |
 | Huynh Yen Nhi | F4 - Stories, Chapters, Editor | `/api/v1/stories`, `/api/v1/chapters` |
 | Nguyen Phu Tho | F5 - Admin, Moderation | `/api/v1/admin` |

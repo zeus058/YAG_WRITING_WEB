@@ -1,7 +1,7 @@
 """
-Payment schemas — VNPAY IPN callback & kết quả thanh toán.
+Payment schemas — PayOS webhook callback & kết quả thanh toán.
 
-Phục vụ Use Cases: U012 (Thanh toán VNPAY).
+Phục vụ Use Cases: U012 (Thanh toán PayOS).
 Screen: S10 (Kết quả thanh toán).
 """
 

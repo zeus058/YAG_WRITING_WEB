@@ -1,7 +1,7 @@
 """
 Membership schemas — Gói hội viên & thanh toán.
 
-Phục vụ Use Cases: U011 (Đăng ký Membership), U012 (Thanh toán VNPAY).
+Phục vụ Use Cases: U011 (Đăng ký Membership), U012 (Thanh toán PayOS).
 Screens: S09 (Membership), S10 (Kết quả thanh toán).
 """
 
@@ -57,7 +57,7 @@ class CheckoutRequest(BaseModel):
     return_url: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("return_url", "returnUrl"),
-        description="Frontend return URL after VNPAY payment.",
+        description="Frontend return URL after PayOS payment.",
     )
 
 
@@ -67,9 +67,9 @@ class CheckoutRequest(BaseModel):
 
 
 class CheckoutResponse(BaseModel):
-    """Response sau khi tạo giao dịch, trả URL thanh toán VNPAY."""
+    """Response sau khi tạo giao dịch, trả URL thanh toán PayOS."""
 
-    payment_url: str = Field(..., description="URL redirect sang VNPAY")
+    payment_url: str = Field(..., description="URL redirect sang PayOS")
     vnp_txn_ref: str = Field(..., description="Mã tham chiếu giao dịch")
     paymentUrl: Optional[str] = Field(
         default=None, description="Frontend camelCase payment URL"

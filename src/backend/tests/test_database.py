@@ -359,12 +359,12 @@ class TestCRUD:
         """), {"id": str(tid), "uid": str(uid), "ref": txn_ref})
         session.commit()
 
-        # 4. Simulate VNPAY IPN success → update to 'success'
+        # 4. Simulate PayOS webhook/IPN success → update to 'success'
         session.execute(text("""
             UPDATE transactions
             SET status = 'success', vnp_transaction_no = :vno
             WHERE id = :id
-        """), {"vno": f"VNP_{tid.hex[:10].upper()}", "id": str(tid)})
+        """), {"vno": f"PAYOS_{tid.hex[:10].upper()}", "id": str(tid)})
 
         # 5. Grant premium to user
         session.execute(text("""

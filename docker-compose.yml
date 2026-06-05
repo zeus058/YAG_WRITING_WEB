@@ -55,12 +55,12 @@ x-backend-env: &backend-env
   CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
   CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
 
-  # VNPAY Sandbox / Production Configuration (VIP membership billing)
-  VNP_TMN_CODE: ${VNP_TMN_CODE:-}
-  VNP_HASH_SECRET: ${VNP_HASH_SECRET:-}
-  VNP_URL: ${VNP_URL:-}
-  VNP_RETURN_URL: ${VNP_RETURN_URL:-}
-  VNP_API_URL: ${VNP_API_URL:-}
+  # PayOS Integration Settings (VIP membership billing)
+  PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-payos}
+  PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+  PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+  PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+  PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-}
 
   # Database Initialization Lifecycle (managed via migrate service)
   AUTO_CREATE_TABLES: "false"

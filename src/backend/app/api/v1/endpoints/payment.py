@@ -198,7 +198,7 @@ async def checkout(
     response_model=PaymentResultResponse,
     summary="Xác thực kết quả thanh toán cho Frontend",
 )
-def verify_checkout(
+async def verify_checkout(
     query_params: dict,
     db: Session = Depends(deps.get_db),
     current_user: Optional[User] = Depends(deps.get_current_user_optional),
@@ -206,7 +206,7 @@ def verify_checkout(
     """
     Nhận tham số chuyển hướng từ PayOS, kiểm tra và trả về trạng thái chi tiết cho S10.
     """
-    return verify_payos_checkout(query_params, db, current_user)
+    return await verify_payos_checkout(query_params, db, current_user)
 
 
 @router.post(
@@ -282,7 +282,7 @@ async def payos_webhook(
     response_model=PaymentResultResponse,
     summary="Xác thực kết quả thanh toán PayOS cho Frontend",
 )
-def verify_payos_checkout(
+async def verify_payos_checkout(
     query_params: dict,
     db: Session = Depends(deps.get_db),
     current_user: Optional[User] = Depends(deps.get_current_user_optional),
@@ -309,16 +309,30 @@ def verify_payos_checkout(
     )
     plan_name = plan.name if plan else "Gói Membership"
 
-    is_success = (
-        transaction.status == "success"
-        or status_param == "success"
-        or status_param == "PAID"
-    )
-
-    if not is_success and status_param == "cancel":
-        transaction.status = "failed"
-        db.commit()
-        return {"success": False, "message": "Người dùng đã hủy thanh toán giao dịch."}
+    # In production or if PayOS is configured, verify PAID status directly from PayOS API
+    is_success = False
+    if payos_svc.is_payos_configured():
+        payos_info = await payos_svc.get_payos_payment_info(int(order_code))
+        if payos_info and payos_info.get("status") == "PAID":
+            is_success = True
+            transaction.vnp_transaction_no = str(payos_info.get("reference", ""))
+            transaction.vnp_response_code = "00"
+            transaction.vnp_transaction_status = "00"
+        elif payos_info and payos_info.get("status") in ("CANCELLED", "FAILED"):
+            transaction.status = "failed"
+            db.commit()
+            return {"success": False, "message": "Giao dịch thanh toán đã bị hủy hoặc thất bại."}
+    else:
+        # Development fallback / mock mode
+        is_success = (
+            transaction.status == "success"
+            or status_param == "success"
+            or status_param == "PAID"
+        )
+        if not is_success and status_param == "cancel":
+            transaction.status = "failed"
+            db.commit()
+            return {"success": False, "message": "Người dùng đã hủy thanh toán giao dịch."}
 
     if is_success and transaction.status == "pending":
         from datetime import datetime, timezone, timedelta

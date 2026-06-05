@@ -115,3 +115,33 @@ def verify_payos_webhook_signature(payload: Dict[str, Any]) -> bool:
 
     computed_signature = compute_payos_signature(data, settings.PAYOS_CHECKSUM_KEY)
     return hmac.compare_digest(computed_signature.lower(), received_signature.lower())
+
+
+async def get_payos_payment_info(order_code: int) -> Optional[Dict[str, Any]]:
+    """
+    Fetch payment link information from PayOS API.
+    """
+    if not is_payos_configured():
+        return None
+
+    headers = {
+        "x-client-id": settings.PAYOS_CLIENT_ID,
+        "x-api-key": settings.PAYOS_API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            response = await client.get(
+                f"https://api-merchant.payos.vn/v2/payment-requests/{order_code}",
+                headers=headers,
+            )
+            res_json = response.json()
+            if response.status_code == 200 and res_json.get("code") == "00":
+                return res_json.get("data")
+            else:
+                logger.error("PayOS Get Payment Info API error: %s", res_json)
+                return None
+        except Exception as exc:
+            logger.error("Failed to connect to PayOS API: %s", exc)
+            return None

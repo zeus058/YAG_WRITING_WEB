@@ -17,13 +17,13 @@
 - Hỗ trợ tác giả sáng tác với AI Sidebar (gợi ý tình tiết, biên tập văn phong)
 - Độc giả tìm truyện qua ngôn ngữ tự nhiên (AI Semantic Search với pgvector)
 - Kiểm duyệt nội dung tự động bằng Gemini API qua RabbitMQ pipeline
-- Thanh toán Membership qua VNPAY để đọc chương Premium
+- Thanh toán Membership qua PayOS để đọc chương Premium
 
 ### Thành viên nhóm & phân công module
 | Thành viên | Module chính | API prefix |
 |---|---|---|
 | Gia Hiển | F1 — Authentication | `/api/v1/auth` |
-| Duy Trường | F2 — VNPAY Payment & Membership | `/api/v1/payment`, `/api/v1/membership` |
+| Duy Trường | F2 — PayOS Payment & Membership | `/api/v1/payment`, `/api/v1/membership` |
 | Hương Trà | F3 — AI Engine (Search, Suggest, Recommend) | `/api/v1/ai`, `/api/v1/recommendations` |
 | Yến Nhi | F4 — Stories, Chapters, Editor | `/api/v1/stories`, `/api/v1/chapters` |
 | Phú Thọ | F5 — Admin, Moderation | `/api/v1/admin` |
@@ -44,7 +44,7 @@
 | Message Queue | RabbitMQ | 3.13 | Async AI moderation pipeline |
 | AI Engine | Google Gemini API | gemini-1.5-flash | text-embedding-004 cho embeddings |
 | Media CDN | Cloudinary | ≥1.41 | Lưu ảnh bìa truyện, avatar |
-| Payment | VNPAY Sandbox | — | IPN backend-to-backend |
+| Payment | PayOS API | — | Webhook callback & API status query |
 | Reverse Proxy | Nginx | 1.27 (Alpine) | SSL termination, Rate Limiting, Anti-crawling |
 | Scheduler | APScheduler | ≥3.10 | Cron jobs cho schedule scan, view count flush |
 | Containerization | Docker | Multi-stage builds | Separate images cho frontend & backend |
@@ -164,7 +164,7 @@ SE_Writing_Web/
 │           │           ├── auth.py           # F1: Register, Login, Reset Password
 │           │           ├── stories.py        # F4: CRUD Stories, Chapters listing, Reviews
 │           │           ├── chapters.py       # F4: CRUD Chapters, Comments, Autosave WS, Search
-│           │           ├── payment.py        # F2: VNPAY checkout, IPN, Membership plans
+│           │           ├── payment.py        # F2: PayOS checkout, webhook, Membership plans
 │           │           ├── ai.py             # F3: AI suggest (plot suggestions)
 │           │           ├── recommendations.py # F3: AI recommendations
 │           │           ├── admin.py          # F5: Moderation queue, Stats, User/Story management
@@ -202,7 +202,7 @@ SE_Writing_Web/
 │           │   ├── auth_service.py   # Register, login, password reset, profile CRUD
 │           │   ├── ai_service.py     # Gemini API calls (suggest, embed, moderate, recommend)
 │           │   ├── moderation_service.py # Content moderation logic
-│           │   ├── payment_service.py # VNPAY payment processing, IPN handling
+│           │   ├── payos_service.py   # PayOS payment processing and verification
 │           │   ├── membership_service.py # Membership plan queries
 │           │   ├── publish_service.py # Chapter publish → RabbitMQ, connection factory
 │           │   ├── schedule_service.py # APScheduler cron: schedule scan, reminders
@@ -430,15 +430,15 @@ admin_audit_logs (standalone)               [Nhật ký hành động admin]
 | `duration_days` | INTEGER | Số ngày hiệu lực |
 | `price` | DECIMAL(12,2) | Đơn vị VND |
 
-#### `transactions` — Lịch sử thanh toán VNPAY
+#### `transactions` — Lịch sử thanh toán PayOS
 | Column | Type | Mô tả |
 |---|---|---|
 | `id` | UUID | PK |
 | `user_id` | UUID | FK → users.id, ON DELETE SET NULL |
 | `plan_id` | VARCHAR(30) | FK → membership_plans.id |
 | `amount` | DECIMAL(12,2) | > 0 |
-| `vnp_txn_ref` | VARCHAR(100) | UNIQUE, mã gửi sang VNPAY |
-| `vnp_transaction_no` | VARCHAR(100) | UNIQUE NULLABLE, mã VNPAY phản hồi |
+| `vnp_txn_ref` | VARCHAR(100) | UNIQUE, mã tham chiếu gửi sang PayOS (orderCode) |
+| `vnp_transaction_no` | VARCHAR(100) | UNIQUE NULLABLE, mã giao dịch của PayOS |
 | `status` | VARCHAR(20) | IN ('pending','success','failed') |
 
 #### `ai_moderation_logs` — Nhật ký kiểm duyệt
@@ -620,14 +620,13 @@ python -m app.manage_migrations --check
 | `CLOUDINARY_API_SECRET` | — | **BẮT BUỘC** production |
 | `CLOUDINARY_COVER_FOLDER` | `yag/covers` | Folder trên Cloudinary |
 
-#### VNPAY
+#### PayOS
 | Biến | Default | Mô tả |
 |---|---|---|
-| `VNP_TMN_CODE` | `YAGTEST1` | Merchant code. **Thay đổi** cho production |
-| `VNP_HASH_SECRET` | `YAGDEVSECRETKEY...` | HMAC secret. **Thay đổi** cho production |
-| `VNP_URL` | `https://sandbox.vnpayment.vn/...` | Payment URL. Production: **không sandbox** |
-| `VNP_RETURN_URL` | `http://localhost:3000/...` | Return URL. Production: **HTTPS** |
-| `VNP_API_URL` | `https://sandbox.vnpayment.vn/...` | API URL. Production: **không sandbox** |
+| `PAYOS_CLIENT_ID` | — | Client ID do PayOS cấp |
+| `PAYOS_API_KEY` | — | API Key do PayOS cấp |
+| `PAYOS_CHECKSUM_KEY` | — | Checksum Key do PayOS cấp |
+| `PAYOS_RETURN_URL` | `http://localhost:3000/payment/result` | Return URL. Production: **HTTPS** |
 
 #### Background Jobs
 | Biến | Default | Mô tả |
@@ -683,8 +682,8 @@ Khi `ENVIRONMENT=production`, class `Settings` tự động validate và **từ 
 | Check | Mô tả |
 |---|---|
 | `SECRET_KEY` = default | JWT secret chưa thay đổi |
-| `VNP_HASH_SECRET` = default | VNPAY secret chưa thay đổi |
-| `VNP_TMN_CODE` = default | VNPAY merchant code chưa thay đổi |
+| `PAYOS_CLIENT_ID` = None | PayOS client ID chưa cấu hình |
+| `PAYOS_API_KEY` = None | PayOS API Key chưa cấu hình |
 | Missing essential URIs | `DATABASE_URL`, `REDIS_URL`, `RABBITMQ_URL`, `GEMINI_API_KEY` phải có |
 | Missing Cloudinary config | 3 biến Cloudinary phải có |
 | `ALLOW_WEBSOCKET_QUERY_TOKEN` = true | Phải tắt trong production |
@@ -694,9 +693,8 @@ Khi `ENVIRONMENT=production`, class `Settings` tự động validate và **từ 
 | `DATABASE_URL` → localhost | DB không được local |
 | `REDIS_URL` → localhost | Redis không được local |
 | `RABBITMQ_URL` → localhost | RabbitMQ không được local |
-| `VNP_RETURN_URL` → localhost | Return URL phải remote |
-| `VNP_RETURN_URL` không HTTPS | Phải HTTPS |
-| `VNP_URL` chứa "sandbox" | Production không dùng sandbox |
+| `PAYOS_RETURN_URL` → localhost | Return URL phải remote |
+| `PAYOS_RETURN_URL` không HTTPS | Phải HTTPS |
 | `CORS_ORIGINS` chứa `*` hoặc localhost | Phải explicit HTTPS origins |
 | `CORS_ORIGINS` không HTTPS | Tất cả origins phải HTTPS |
 
@@ -768,7 +766,7 @@ Khi `ENVIRONMENT=production`, class `Settings` tự động validate và **từ 
            → Trả về trong < 1.5 giây
 ```
 
-### 9.3. Luồng thanh toán VNPAY (U011 → U012)
+### 9.3. Luồng thanh toán PayOS (U011 → U012)
 
 ```
 [Reader chọn gói Membership trên S09]
@@ -776,21 +774,23 @@ Khi `ENVIRONMENT=production`, class `Settings` tự động validate và **từ 
         ▼
 [FastAPI] POST /api/v1/membership/checkout
         │  → Tạo Transaction (status='pending', vnp_txn_ref=UUID)
-        │  → Gọi VNPAY API → lấy payment URL
+        │  → Gọi PayOS API → tạo link thanh toán (paymentLink)
         │  → Trả URL cho Frontend redirect
         │
         ▼
-[VNPAY xử lý thanh toán]
+[PayOS xử lý thanh toán bằng mã QR]
         │
         ├─ Thành công:
-        │   [VNPAY] POST /api/v1/payment/vnpay-ipn  (backend-to-backend)
-        │       → Verify checksum (HMAC-SHA512)
-        │       → UPDATE transactions SET status='success', vnp_transaction_no=...
-        │       → UPDATE users SET premium_until = NOW() + interval 'N days'
+        │   [PayOS Webhook] POST /api/v1/payment/payos/webhook  (backend-to-backend)
+        │       - Verify checksum bằng PAYOS_CHECKSUM_KEY
+        │       - UPDATE transactions SET status='success', vnp_transaction_no=...
+        │       - UPDATE users SET premium_until = NOW() + interval 'N days'
         │
-        └─ Thất bại / Hủy:
-            [VNPAY] redirect → /payment/result?status=failed
-                → UPDATE transactions SET status='failed'
+        └─ Client Redirect (Verify an toàn):
+            [Client Redirect] GET /payment/result?orderCode=...
+                - Frontend gửi orderCode lên /payos/verify
+                - Backend gọi trực tiếp PayOS API check status link thanh toán
+                - Nếu trạng thái là PAID -> cập nhật Premium (nếu webhook chưa xử lý)
 ```
 
 ### 9.4. Luồng Autosave soạn thảo (U004 — FR-05)
@@ -850,7 +850,7 @@ WHERE status = 'scheduled' AND scheduled_time <= NOW()
 | U009 | Đề xuất truyện | Reader, AI Engine | S04 | FR-10 |
 | U010 | Bình luận & Đánh giá | Reader | S06, S07 | FR-11 |
 | U011 | Đăng ký Membership | Reader | S09 | FR-12 |
-| U012 | Thanh toán VNPAY | Reader, VNPAY | S09, S10 | FR-12 |
+| U012 | Thanh toán PayOS | Reader, PayOS | S09, S10 | FR-12 |
 | U013 | Kiểm duyệt nội dung AI | AI Engine, Admin | S20 | FR-13 |
 | U014 | Giám sát cam kết lộ trình | System Scheduler, Author, Admin | S18 | FR-14 |
 | U015 | Quản trị hệ thống | Admin | S19, S20, S21 | FR-15 |
@@ -950,15 +950,17 @@ POST   /api/v1/recommendations         → U009: Đề xuất truyện cá nhân
 
 ### Payment (`/api/v1/payment`, `/api/v1/payments`) — `endpoints/payment.py`
 ```
-POST   /api/v1/payment/vnpay-ipn       → U012: IPN callback từ VNPAY (verify HMAC-SHA512)
-GET    /api/v1/payment/return           → VNPAY return URL handler
+POST   /api/v1/payment/payos/checkout   → Khởi tạo hóa đơn PayOS
+POST   /api/v1/payment/payos/verify     → Xác thực kết quả thanh toán
+POST   /api/v1/payment/payos/webhook    → Webhook nhận callback từ PayOS
+GET    /api/v1/payment/transactions/{ref} → Tra cứu trạng thái giao dịch
 GET    /api/v1/payment/transactions     → Lịch sử giao dịch (user)
 ```
 
 ### Membership (`/api/v1/membership`) — `endpoints/payment.py`
 ```
 GET    /api/v1/membership/plans         → Danh sách gói
-POST   /api/v1/membership/checkout      → U011+U012: Tạo transaction + VNPAY URL
+POST   /api/v1/membership/checkout      → Khởi tạo checkout Membership qua PayOS
 GET    /api/v1/membership/status        → Kiểm tra trạng thái membership
 ```
 
@@ -1077,7 +1079,7 @@ Chapter           → saveDraft(), publish()        # publish() → RabbitMQ
 Comment           → edit(), delete()
 Review            → submitReview()                # UNIQUE (user_id, story_id)
 MembershipPlan    → getDetails()
-Transaction       → processPayment()              # Tạo VNPAY URL
+Transaction       → processPayment()              # Tạo PayOS URL
 AIModerationLog   → logResult()                   # Ghi kết quả Gemini
 PublishSchedule   → checkSchedule()               # Cron trigger
 StoryEmbedding    → generateVector()              # Gọi Gemini Embeddings API
@@ -1108,7 +1110,7 @@ MediaService      → serve_local_file (dev only)
 ### Bảo mật
 - Mật khẩu: **luôn dùng Bcrypt** (passlib), không MD5/SHA1
 - Auth: **JWT** — header `Authorization: Bearer <token>`
-- Payment: VNPAY IPN verify **HMAC-SHA512 checksum**, không tin Frontend
+- Payment: PayOS verify **signature/API status**, không tin Frontend
 - **Không lưu thông tin thẻ/tài khoản ngân hàng** vào DB
 - Rate Limiting tại Nginx:
   - `/api/v1/(auth|ai|payment|payments)/`: **5 req/phút** (zone: api_sensitive)
@@ -1164,7 +1166,7 @@ MediaService      → serve_local_file (dev only)
 | Chapter load | < 0.5 giây | Redis cache + Next.js SSR |
 | Publish response | < 500ms | HTTP 202 + async RabbitMQ |
 | AI Suggest | < 5 giây | Gemini API trực tiếp, context ≤ 1000 từ |
-| VNPAY update | < 2 giây | IPN backend-to-backend |
+| PayOS update | < 2 giây | Webhook/API status verify |
 | AI Moderation | < 5 phút | Background Worker + retry queue |
 | Uptime | ≥ 99.5% | GCP + Docker + Health checks |
 | Schedule reminder | < 10 phút | APScheduler cron job |
@@ -1253,7 +1255,7 @@ MediaService      → serve_local_file (dev only)
 │  External Services:                                          │
 │  ├── Cloudinary CDN (ảnh bìa, avatar)                       │
 │  ├── Google Gemini API (AI features)                         │
-│  └── VNPAY Production (thanh toán)                           │
+│  └── PayOS Production (thanh toán)                             │
 │                                                              │
 │  Backup: GCS daily backup cho PostgreSQL                     │
 └─────────────────────────────────────────────────────────────┘
@@ -1326,12 +1328,12 @@ FRONTEND_PUBLIC_URL=https://yourdomain.com
 API_PUBLIC_URL=https://yourdomain.com/api
 WS_PUBLIC_URL=wss://yourdomain.com/ws
 
-# ── VNPAY Production ──
-VNP_TMN_CODE=YOUR_PRODUCTION_MERCHANT_CODE
-VNP_HASH_SECRET=YOUR_PRODUCTION_HASH_SECRET
-VNP_URL=https://pay.vnpay.vn/vpcpay.html
-VNP_RETURN_URL=https://yourdomain.com/payment/result
-VNP_API_URL=https://merchant.vnpay.vn/merchant_webapi/api/transaction
+# ── PayOS Production ──
+PAYMENT_PROVIDER=payos
+PAYOS_CLIENT_ID=YOUR_PRODUCTION_CLIENT_ID
+PAYOS_API_KEY=YOUR_PRODUCTION_API_KEY
+PAYOS_CHECKSUM_KEY=YOUR_PRODUCTION_CHECKSUM_KEY
+PAYOS_RETURN_URL=https://yourdomain.com/payment/result
 
 # ── Gemini AI ──
 GEMINI_API_KEY=your_production_gemini_api_key
@@ -1496,7 +1498,7 @@ pytest tests/test_payment.py -v
 |---|---|---|
 | `test_auth.py` | F1 | Register, login, JWT, password reset |
 | `test_database.py` | Core | DB connection, models, relationships |
-| `test_payment.py` | F2 | VNPAY checkout, IPN verification |
+| `test_payment.py` | F2 | PayOS checkout, payment link verification |
 | `test_membership.py` | F2 | Membership plans, status |
 | `test_ai_suggestions.py` | F3 | AI suggest endpoint |
 | `test_ai_search_and_recommendations.py` | F3 | Semantic search, recommendations |
@@ -1594,7 +1596,7 @@ docker-compose --profile app up -d --build
 |---|---|---|
 | `moderation_status` không đổi | Worker không chạy hoặc không connect RabbitMQ | `docker-compose logs moderation-worker`, kiểm tra `RABBITMQ_URL` |
 | Semantic search không ra kết quả | `story_embeddings` chưa có data | Kiểm tra worker log, `GEMINI_API_KEY` có giá trị không |
-| VNPAY IPN không nhận | Checksum HMAC-SHA512 sai hoặc endpoint sai | Verify `VNP_HASH_SECRET`, check nginx routing `/api/v1/payment/vnpay-ipn` |
+| PayOS webhook không nhận | Checksum/Signature sai hoặc Nginx routing sai | Verify `PAYOS_CHECKSUM_KEY`, check Nginx routing `/api/v1/payment/payos/webhook` |
 | WebSocket ngắt liên tục | Redis pub/sub connection lost | Kiểm tra `REDIS_URL`, Redis container health |
 | `moderation_status` stuck ở `pending` | Message trong DLQ sau 5 retries | Kiểm tra queue `ai.moderation.dlq` trong RabbitMQ Dashboard |
 | Frontend API calls fail | CORS hoặc sai API URL | Kiểm tra `CORS_ORIGINS`, `NEXT_PUBLIC_API_BASE_URL` |
@@ -1632,7 +1634,7 @@ docker-compose logs -f postgres
 2. Tìm table cần thao tác trong mục 5.2
 3. Kiểm tra luồng nghiệp vụ ở mục 9 trước khi viết handler
 4. Với mọi task AI: đẩy RabbitMQ, không gọi Gemini trong request handler
-5. Với payment: xác minh checksum VNPAY trước khi cập nhật DB
+5. Với payment: xác minh signature/PayOS API status trước khi cập nhật DB
 6. Endpoint mới: thêm vào file tương ứng trong `endpoints/`, đăng ký trong `router.py`
 7. Model mới: thêm vào `models/`, import trong `models/__init__.py`
 8. Schema mới: thêm vào `schemas/`, export trong `schemas/__init__.py`
@@ -1653,7 +1655,7 @@ docker-compose logs -f postgres
 ### Khi debug
 1. `moderation_status` không đổi → kiểm tra RabbitMQ consumer có đang chạy
 2. Semantic search không ra kết quả → kiểm tra `story_embeddings` đã có data chưa
-3. VNPAY IPN không nhận → kiểm tra checksum HMAC-SHA512 và endpoint đúng
+3. PayOS Webhook không nhận → kiểm tra signature webhook và endpoint đúng
 4. WebSocket ngắt → kiểm tra Redis pub/sub connection
 5. DLQ có messages → kiểm tra RabbitMQ Dashboard, xem `x-last-error` header
 6. Production startup fail → đọc error message từ `config.py` production validator

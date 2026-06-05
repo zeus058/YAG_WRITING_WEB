@@ -1508,13 +1508,13 @@ export function MembershipScreen() {
       // eslint-disable-next-line react-hooks/purity
       const mockTxn = `MOCK_${planId}_${Date.now()}`;
       if (typeof window !== "undefined") {
-        window.location.assign(`/payment/result?vnp_ResponseCode=00&plan=${planId}&vnp_TxnRef=${mockTxn}`);
+        window.location.assign(`/payment/result?status=success&plan=${planId}&orderCode=${mockTxn}`);
       }
       return;
     }
     try {
       const returnUrl = `${window.location.origin}/payment/result`;
-      const res = await yagApi.billing.createVnpayCheckout({ planCode: planId, returnUrl });
+      const res = await yagApi.billing.createPayosCheckout({ planCode: planId, returnUrl });
       if (res.data?.paymentUrl) {
         if (typeof window !== "undefined") {
           window.location.assign(res.data.paymentUrl);
@@ -1523,8 +1523,8 @@ export function MembershipScreen() {
         triggerLiveToast("Không lấy được đường dẫn thanh toán từ máy chủ.", "warning");
       }
     } catch (err: any) {
-      console.error("VNPAY Checkout error", err);
-      triggerLiveToast(err.message || "Lỗi tạo phiên thanh toán VNPAY.", "warning");
+      console.error("PayOS Checkout error", err);
+      triggerLiveToast(err.message || "Lỗi tạo phiên thanh toán PayOS.", "warning");
     } finally {
       setLoadingPlan(null);
     }
@@ -1542,8 +1542,8 @@ export function MembershipScreen() {
       </div>
       <div className="action-strip" style={{ marginBottom: 24 }}>
         <div>
-          <strong>Thanh toán an toàn qua cổng trung gian VNPAY</strong>
-          <div className="list-meta">YAG không lưu số thẻ hoặc tài khoản ngân hàng của người dùng.</div>
+          <strong>Thanh toán an toàn qua cổng PayOS (QR Code)</strong>
+          <div className="list-meta">YAG không lưu thông tin thẻ hoặc tài khoản ngân hàng của người dùng.</div>
         </div>
       </div>
       <section className="grid grid-3">
@@ -1600,14 +1600,14 @@ export function MembershipScreen() {
 
       {process.env.NODE_ENV !== "production" && (
         <section className="panel panel-pad stack" style={{ marginTop: 32, borderColor: "var(--amber)", background: "rgba(245, 158, 11, 0.04)" }}>
-          <h3 style={{ margin: 0, color: "var(--amber)", fontSize: 16 }}><Icon name="settings" /> [Chế độ Dev] Mô phỏng kết quả thanh toán VNPAY</h3>
-          <p style={{ margin: "4px 0 16px", fontSize: 13, color: "var(--muted)" }}>Bypass cổng VNPAY thực để trực tiếp cập nhật Premium tài khoản.</p>
+          <h3 style={{ margin: 0, color: "var(--amber)", fontSize: 16 }}><Icon name="settings" /> [Chế độ Dev] Mô phỏng kết quả thanh toán PayOS</h3>
+          <p style={{ margin: "4px 0 16px", fontSize: 13, color: "var(--muted)" }}>Bypass cổng PayOS thực để trực tiếp cập nhật Premium tài khoản.</p>
           <div className="inline-actions">
             <button
               className="button button-success"
               onClick={() => {
                 const mockTxn = `MOCK_MONTHLY_${Date.now()}`;
-                window.location.href = `/payment/result?vnp_ResponseCode=00&vnp_TxnRef=${mockTxn}&plan=MONTHLY`;
+                window.location.href = `/payment/result?status=success&orderCode=${mockTxn}&plan=MONTHLY`;
               }}
             >
               Mô phỏng Thành công (Premium)
@@ -1616,7 +1616,7 @@ export function MembershipScreen() {
               className="button button-danger"
               onClick={() => {
                 const mockTxn = `MOCK_MONTHLY_${Date.now()}`;
-                window.location.href = `/payment/result?vnp_ResponseCode=24&vnp_TxnRef=${mockTxn}&plan=MONTHLY`;
+                window.location.href = `/payment/result?status=cancel&orderCode=${mockTxn}&plan=MONTHLY`;
               }}
             >
               Mô phỏng Thất bại
@@ -1643,9 +1643,9 @@ export function PaymentScreen() {
     message: "Đang tiến hành xác thực giao dịch...",
   });
 
-  const responseCode = searchParams.get("vnp_ResponseCode") || searchParams.get("status");
+  const responseCode = searchParams.get("status") || searchParams.get("vnp_ResponseCode");
   const planId = searchParams.get("plan") || "MONTHLY";
-  const txnRef = searchParams.get("vnp_TxnRef") || searchParams.get("transactionId") || searchParams.get("txnRef");
+  const txnRef = searchParams.get("orderCode") || searchParams.get("vnp_TxnRef") || searchParams.get("transactionId") || searchParams.get("txnRef");
 
   useEffect(() => {
     let active = true;
@@ -1750,7 +1750,7 @@ export function PaymentScreen() {
           amount: amountVal,
           status: "success",
           created_at: new Date().toISOString(),
-          vnp_transaction_no: data.vnp_transaction_no || "MOCK_VNPAY_" + Date.now() + "_" + Math.floor(Math.random() * 100)
+          vnp_transaction_no: data.vnp_transaction_no || "MOCK_PAYOS_" + Date.now() + "_" + Math.floor(Math.random() * 100)
         };
 
         const historyList = JSON.parse(localStorage.getItem("yag.mockHistory") || "[]");
@@ -1812,7 +1812,7 @@ export function PaymentScreen() {
       }
 
       try {
-        const res = await yagApi.billing.verifyVnpay(queryParams);
+        const res = await yagApi.billing.verifyPayos(queryParams);
         if (active) {
           if (res.data.success) {
             processPaymentData(res.data);
@@ -1876,7 +1876,7 @@ export function PaymentScreen() {
             <div className="empty-state" style={{ borderStyle: "solid" }}>
               <span className="badge badge-blue"><Icon name="card" />Đang xác nhận</span>
               <h2 className="page-title" style={{ fontSize: 24 }}>{verificationResult.message}</h2>
-              <p>YAG đang đối soát giao dịch với VNPAY. Xin vui lòng không đóng trình duyệt lúc này...</p>
+              <p>YAG đang đối soát giao dịch với PayOS. Xin vui lòng không đóng trình duyệt lúc này...</p>
             </div>
           ) : isSuccess ? (
             <div className="empty-state" style={{ borderStyle: "solid" }}>
@@ -1909,7 +1909,7 @@ export function PaymentScreen() {
         <aside className="panel panel-pad stack">
           <h2 className="section-title">Thông tin giao dịch</h2>
           <div className="list">
-            <div className="list-item"><span>Phương thức</span><strong>VNPAY Cổng thanh toán</strong></div>
+            <div className="list-item"><span>Phương thức</span><strong>PayOS Cổng thanh toán</strong></div>
             <div className="list-item"><span>Gói đăng ký</span><strong>{details?.plan_name || (planId === "YEARLY" ? "Gói Năm Premium" : "Gói Tháng Premium")}</strong></div>
             
             {txnRef ? (
@@ -1921,7 +1921,7 @@ export function PaymentScreen() {
             
             {details?.vnp_transaction_no ? (
               <div className="list-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
-                <span style={{ fontSize: "13px", color: "var(--muted)" }}>Mã GD VNPAY</span>
+                <span style={{ fontSize: "13px", color: "var(--muted)" }}>Mã GD PayOS</span>
                 <code style={{ fontSize: "12px", background: "rgba(0, 0, 0, 0.04)", padding: "4px 8px", borderRadius: "4px", overflowWrap: "anywhere" }}>{details.vnp_transaction_no}</code>
               </div>
             ) : null}

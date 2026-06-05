@@ -1,12 +1,12 @@
 """
-Membership Billing & VNPAY Payment Routing Handler.
+Membership Billing & PayOS Payment Routing Handler.
 Assigned Member: Nguyễn Duy Trường (U011, U012 - TC-007 to TC-012).
 
 Endpoints:
   GET  /plans              — List membership plans (public)
   GET  /membership/status  — Current user's membership status (auth required)
-  POST /vnpay/checkout     — Create transaction + generate VNPAY checkout URL (auth required)
-  GET  /vnpay/ipn          — VNPAY server-to-server IPN callback (public, checksum verified)
+  POST /payos/checkout     — Create transaction + generate PayOS checkout URL (auth required)
+  POST /payos/webhook      — PayOS webhook callback (public, signature verified)
   GET  /history            — User's transaction history (auth required)
 """
 
@@ -31,10 +31,8 @@ from app.schemas.payment import (
     PaymentResultResponse,
     TransactionHistoryItem,
     TransactionStatusResponse,
-    VNPAYIPNResponse,
 )
 from app.services import membership_service as membership_svc
-from app.services import payment_service as payment_svc
 from app.services import payos_service as payos_svc
 
 router = APIRouter()
@@ -103,160 +101,8 @@ def get_membership_status(
 
 
 # ---------------------------------------------------------------------------
-# U012 — VNPAY Payment
+# U012 — PayOS Payment
 # ---------------------------------------------------------------------------
-
-
-@router.post(
-    "/vnpay/checkout",
-    response_model=CheckoutResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="U012 - Khởi tạo hóa đơn và sinh checkout URL VNPAY",
-)
-@membership_router.post(
-    "/checkout",
-    response_model=CheckoutResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="U011/U012 - Khởi tạo checkout Membership",
-)
-async def checkout(
-    body: CheckoutRequest,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_user),
-):
-    """
-    Tạo giao dịch mới (pending) và sinh URL thanh toán (VNPAY hoặc PayOS).
-    Frontend sẽ redirect user sang payment gateway tương ứng.
-    """
-    if current_user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Tài khoản quản trị viên không thể thực hiện giao dịch thanh toán.",
-        )
-    # Validate plan exists
-    plan = membership_svc.get_plan_by_id(db, body.plan_id)
-    if plan is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Gói cước '{body.plan_id}' không tồn tại.",
-        )
-
-    if settings.PAYMENT_PROVIDER == "payos":
-        import time
-        import random
-
-        order_code = int(time.time() * 100) + random.randint(10, 99)
-
-        transaction = Transaction(
-            id=uuid.uuid4(),
-            user_id=current_user.id,
-            plan_id=plan.id,
-            amount=float(plan.price),
-            vnp_txn_ref=str(order_code),
-            status="pending",
-        )
-        db.add(transaction)
-        db.commit()
-
-        order_info = f"YAG Premium {plan.id}"
-        return_url = body.return_url or settings.PAYOS_RETURN_URL or settings.VNP_RETURN_URL
-        cancel_url = return_url.split("?")[0] + "?status=cancel"
-        payment_url, _ = await payos_svc.create_payos_payment_link(
-            order_code=order_code,
-            amount=int(plan.price),
-            description=order_info,
-            return_url=return_url,
-            cancel_url=cancel_url,
-        )
-
-        return CheckoutResponse(
-            payment_url=payment_url,
-            vnp_txn_ref=str(order_code),
-            paymentUrl=payment_url,
-            transactionId=str(order_code),
-        )
-
-    # Generate unique transaction reference
-    vnp_txn_ref = payment_svc.generate_txn_ref()
-
-    # Create pending transaction record
-    transaction = Transaction(
-        id=uuid.uuid4(),
-        user_id=current_user.id,
-        plan_id=plan.id,
-        amount=float(plan.price),
-        vnp_txn_ref=vnp_txn_ref,
-        status="pending",
-    )
-    db.add(transaction)
-    db.commit()
-
-    # Get client IP
-    client_ip = request.client.host if request.client else "127.0.0.1"
-
-    # Build VNPAY payment URL
-    order_info = f"YAG Premium - {plan.name}"
-    payment_url = payment_svc.generate_vnpay_url(
-        vnp_txn_ref=vnp_txn_ref,
-        amount=float(plan.price),
-        ip_addr=client_ip,
-        order_info=order_info,
-        return_url=body.return_url,
-    )
-
-    return CheckoutResponse(
-        payment_url=payment_url,
-        vnp_txn_ref=vnp_txn_ref,
-        paymentUrl=payment_url,
-        transactionId=vnp_txn_ref,
-    )
-
-
-@router.get(
-    "/vnpay/ipn",
-    response_model=VNPAYIPNResponse,
-    summary="U012 - Endpoint IPN VNPAY (Server-to-Server callback)",
-)
-def ipn_callback(
-    request: Request,
-    db: Session = Depends(deps.get_db),
-):
-    """
-    Callback IPN từ VNPAY — server-to-server, KHÔNG qua trình duyệt.
-    KHÔNG yêu cầu JWT nhưng BẮT BUỘC verify HMAC-SHA512 checksum.
-
-    RspCode mapping:
-    - 00: Xác nhận thành công
-    - 97: Checksum không hợp lệ
-    - 02: Transaction không tồn tại
-    - 04: Transaction đã xử lý rồi
-    """
-    query_params = dict(request.query_params)
-    rsp_code, message = payment_svc.process_ipn(db, query_params)
-    return VNPAYIPNResponse(RspCode=rsp_code, Message=message)
-
-
-@router.post(
-    "/vnpay/verify",
-    response_model=PaymentResultResponse,
-    summary="U012 - Xác thực kết quả thanh toán cho Frontend",
-)
-def verify_checkout(
-    query_params: dict,
-    db: Session = Depends(deps.get_db),
-    current_user: Optional[User] = Depends(deps.get_current_user_optional),
-):
-    """
-    Nhận tham số chuyển hướng từ VNPAY hoặc PayOS, kiểm tra chữ ký và trả về trạng thái chi tiết cho S10.
-    """
-    if settings.PAYMENT_PROVIDER == "payos" or "orderCode" in query_params:
-        return verify_payos_checkout(query_params, db, current_user)
-
-    result = payment_svc.verify_payment_result(
-        db, query_params, current_user=current_user
-    )
-    return result
 
 
 @router.post(
@@ -265,22 +111,39 @@ def verify_checkout(
     status_code=status.HTTP_201_CREATED,
     summary="Khởi tạo hóa đơn và sinh checkout URL PayOS",
 )
+@router.post(
+    "/checkout",
+    response_model=CheckoutResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Khởi tạo hóa đơn và sinh checkout URL PayOS (General)",
+)
 @membership_router.post(
-    "/payos/checkout",
+    "/checkout",
     response_model=CheckoutResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Khởi tạo checkout Membership qua PayOS",
 )
-async def checkout_payos(
+@membership_router.post(
+    "/payos/checkout",
+    response_model=CheckoutResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Khởi tạo checkout Membership qua PayOS (Explicit)",
+)
+async def checkout(
     body: CheckoutRequest,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
+    """
+    Tạo giao dịch mới (pending) và sinh URL thanh toán PayOS.
+    Frontend sẽ redirect user sang PayOS để quét mã QR thanh toán.
+    """
     if current_user.role == "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Tài khoản quản trị viên không thể thực hiện giao dịch thanh toán.",
         )
+    # Validate plan exists
     plan = membership_svc.get_plan_by_id(db, body.plan_id)
     if plan is None:
         raise HTTPException(
@@ -305,7 +168,9 @@ async def checkout_payos(
     db.commit()
 
     order_info = f"YAG Premium {plan.id}"
-    return_url = body.return_url or settings.PAYOS_RETURN_URL or settings.VNP_RETURN_URL
+    return_url = body.return_url or settings.PAYOS_RETURN_URL
+    if not return_url:
+        return_url = "http://localhost:3000/payment/result"
     cancel_url = return_url.split("?")[0] + "?status=cancel"
     payment_url, _ = await payos_svc.create_payos_payment_link(
         order_code=order_code,
@@ -321,6 +186,27 @@ async def checkout_payos(
         paymentUrl=payment_url,
         transactionId=str(order_code),
     )
+
+
+@router.post(
+    "/payos/verify",
+    response_model=PaymentResultResponse,
+    summary="Xác thực kết quả thanh toán PayOS cho Frontend",
+)
+@router.post(
+    "/verify",
+    response_model=PaymentResultResponse,
+    summary="Xác thực kết quả thanh toán cho Frontend",
+)
+async def verify_checkout(
+    query_params: dict,
+    db: Session = Depends(deps.get_db),
+    current_user: Optional[User] = Depends(deps.get_current_user_optional),
+):
+    """
+    Nhận tham số chuyển hướng từ PayOS, kiểm tra và trả về trạng thái chi tiết cho S10.
+    """
+    return await verify_payos_checkout(query_params, db, current_user)
 
 
 @router.post(
@@ -396,7 +282,7 @@ async def payos_webhook(
     response_model=PaymentResultResponse,
     summary="Xác thực kết quả thanh toán PayOS cho Frontend",
 )
-def verify_payos_checkout(
+async def verify_payos_checkout(
     query_params: dict,
     db: Session = Depends(deps.get_db),
     current_user: Optional[User] = Depends(deps.get_current_user_optional),
@@ -423,16 +309,30 @@ def verify_payos_checkout(
     )
     plan_name = plan.name if plan else "Gói Membership"
 
-    is_success = (
-        transaction.status == "success"
-        or status_param == "success"
-        or status_param == "PAID"
-    )
-
-    if not is_success and status_param == "cancel":
-        transaction.status = "failed"
-        db.commit()
-        return {"success": False, "message": "Người dùng đã hủy thanh toán giao dịch."}
+    # In production or if PayOS is configured, verify PAID status directly from PayOS API
+    is_success = False
+    if payos_svc.is_payos_configured():
+        payos_info = await payos_svc.get_payos_payment_info(int(order_code))
+        if payos_info and payos_info.get("status") == "PAID":
+            is_success = True
+            transaction.vnp_transaction_no = str(payos_info.get("reference", ""))
+            transaction.vnp_response_code = "00"
+            transaction.vnp_transaction_status = "00"
+        elif payos_info and payos_info.get("status") in ("CANCELLED", "FAILED"):
+            transaction.status = "failed"
+            db.commit()
+            return {"success": False, "message": "Giao dịch thanh toán đã bị hủy hoặc thất bại."}
+    else:
+        # Development fallback / mock mode
+        is_success = (
+            transaction.status == "success"
+            or status_param == "success"
+            or status_param == "PAID"
+        )
+        if not is_success and status_param == "cancel":
+            transaction.status = "failed"
+            db.commit()
+            return {"success": False, "message": "Người dùng đã hủy thanh toán giao dịch."}
 
     if is_success and transaction.status == "pending":
         from datetime import datetime, timezone, timedelta
@@ -473,7 +373,7 @@ def verify_payos_checkout(
 @router.get(
     "/transactions/{vnp_txn_ref}",
     response_model=TransactionStatusResponse,
-    summary="U012 - Tra cứu trạng thái giao dịch theo mã VNPAY reference",
+    summary="U012 - Tra cứu trạng thái giao dịch theo mã PayOS reference",
 )
 def get_transaction_status(
     vnp_txn_ref: str,

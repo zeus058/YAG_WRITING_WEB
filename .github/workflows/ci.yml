@@ -221,7 +221,6 @@ jobs:
   docker:
     name: "🐳 Docker Build Check"
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
 
     steps:
       - name: Checkout code
@@ -242,47 +241,6 @@ jobs:
             --build-arg NEXT_PUBLIC_API_TIMEOUT_MS=12000 \
             -t yag-frontend:ci-${{ github.sha }} ./src/frontend
           echo "✅ Frontend Docker image built successfully"
-
-  # ────────────────────────────────────────────────────────────
-  # JOB 5: SonarQube Analysis
-  # ────────────────────────────────────────────────────────────
-  sonarqube:
-    name: "📊 SonarQube Analysis"
-    runs-on: ubuntu-latest
-    needs: [backend, frontend]
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-    steps:
-      - name: Detect SonarQube configuration
-        id: sonar_config
-        run: |
-          if [ -n "$SONAR_TOKEN" ] && [ -n "$SONAR_HOST_URL" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "SonarQube secrets are not configured; skipping optional analysis."
-          fi
-
-      - name: Checkout code
-        if: steps.sonar_config.outputs.enabled == 'true'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download backend coverage artifact
-        if: steps.sonar_config.outputs.enabled == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-coverage
-          path: src/backend
-
-      - name: SonarQube Scan
-        if: steps.sonar_config.outputs.enabled == 'true'
-        uses: SonarSource/sonarqube-scan-action@v2
-        with:
-          args: >
-            -Dsonar.python.coverage.reportPaths=src/backend/coverage.xml
 
   # ────────────────────────────────────────────────────────────
   # JOB 6: CD — Database Migrations (Production/Staging)
@@ -408,7 +366,8 @@ jobs:
           env_vars: |
             ENVIRONMENT=production
             SERVICE_ROLE=api
-            PAYMENT_PROVIDER=vnpay
+            QUEUE_PROVIDER=pubsub
+            PAYMENT_PROVIDER=payos
             ALLOW_WEBSOCKET_QUERY_TOKEN=false
             AUTO_CREATE_TABLES=false
             APPLY_MIGRATIONS_ON_STARTUP=false
@@ -419,16 +378,14 @@ jobs:
             SECRET_KEY=YAG_SECRET_KEY:latest
             CORS_ORIGINS=YAG_CORS_ORIGINS:latest
             REDIS_URL=YAG_REDIS_URL:latest
-            RABBITMQ_URL=YAG_RABBITMQ_URL:latest
             GEMINI_API_KEY=YAG_GEMINI_API_KEY:latest
             CLOUDINARY_CLOUD_NAME=YAG_CLOUDINARY_CLOUD_NAME:latest
             CLOUDINARY_API_KEY=YAG_CLOUDINARY_API_KEY:latest
             CLOUDINARY_API_SECRET=YAG_CLOUDINARY_API_SECRET:latest
-            VNP_TMN_CODE=yag-vnp-tmn-code:latest
-            VNP_HASH_SECRET=yag-vnp-hash-secret:latest
-            VNP_URL=yag-vnp-url:latest
-            VNP_RETURN_URL=yag-vnp-return-url:latest
-            VNP_API_URL=yag-vnp-api-url:latest
+            PAYOS_CLIENT_ID=YAG_PAYOS_CLIENT_ID:latest
+            PAYOS_API_KEY=YAG_PAYOS_API_KEY:latest
+            PAYOS_CHECKSUM_KEY=YAG_PAYOS_CHECKSUM_KEY:latest
+            PAYOS_RETURN_URL=YAG_PAYOS_RETURN_URL:latest
           flags: |
             --allow-unauthenticated
             --cpu=1

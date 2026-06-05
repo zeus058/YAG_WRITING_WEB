@@ -1,7 +1,7 @@
 """
-Payment schemas — VNPAY IPN callback & kết quả thanh toán.
+Payment schemas — PayOS webhook callback & kết quả thanh toán.
 
-Phục vụ Use Cases: U012 (Thanh toán VNPAY).
+Phục vụ Use Cases: U012 (Thanh toán PayOS).
 Screen: S10 (Kết quả thanh toán).
 """
 
@@ -12,15 +12,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 # ---------------------------------------------------------------------------
-# VNPAY IPN
-# ---------------------------------------------------------------------------
 
-
-class VNPAYIPNResponse(BaseModel):
-    """Response trả về cho VNPAY IPN callback (theo format VNPAY quy định)."""
-
-    RspCode: str = Field(..., description="Mã phản hồi (VD: '00' = thành công)")
-    Message: str = Field(..., description="Mô tả kết quả xử lý")
 
 
 # ---------------------------------------------------------------------------
@@ -54,24 +46,24 @@ class TransactionHistoryItem(BaseModel):
         default=None, description="Thời gian tạo giao dịch"
     )
     vnp_transaction_no: Optional[str] = Field(
-        default=None, description="Mã giao dịch VNPAY"
+        default=None, description="Mã giao dịch của PayOS/Cổng thanh toán"
     )
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class TransactionStatusResponse(BaseModel):
-    """Current payment transaction status for frontend polling."""
+    """Trạng thái chi tiết của giao dịch thanh toán."""
 
     id: uuid.UUID
-    vnp_txn_ref: str
+    vnp_txn_ref: str = Field(..., description="Mã tham chiếu giao dịch (PayOS orderCode)")
     plan_id: str
     plan_name: Optional[str] = None
     amount: float
     status: str
-    vnp_transaction_no: Optional[str] = None
-    vnp_response_code: Optional[str] = None
-    vnp_transaction_status: Optional[str] = None
+    vnp_transaction_no: Optional[str] = Field(default=None, description="Mã giao dịch chính thức của PayOS")
+    vnp_response_code: Optional[str] = Field(default=None, description="Mã phản hồi kết quả")
+    vnp_transaction_status: Optional[str] = Field(default=None, description="Trạng thái giao dịch")
     paid_at: Optional[datetime] = None
     failed_at: Optional[datetime] = None
     ipn_received_at: Optional[datetime] = None

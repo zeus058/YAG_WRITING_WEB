@@ -296,31 +296,90 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
     Written by: 23120182 Nguyễn Duy Trường
     Reviewed by: 23120123 Trần Gia Hiển
 
+| *Test case* | TC-007 |
+| :--- | :--- |
+| Related feature | F2 - Premium Membership Payment (VNPAY Integration) |
+| Context | Kiểm thử đơn vị (Unit Test) cho hàm sinh chữ ký HMAC-SHA512 nhằm bảo đảm tính chính xác bảo mật dữ liệu giao dịch gửi cho VNPAY |
+| Input Data | Các tham số giao dịch dạng dictionary (`vnp_Amount`, `vnp_Command`, `vnp_TmnCode`, `vnp_TxnRef`) và chuỗi khóa bảo mật `vnp_HashSecret` |
+| Expected Output | Chữ ký HMAC-SHA512 được sinh từ chuỗi query string của các tham số sắp xếp theo bảng chữ cái khớp với chữ ký đối chứng |
+| Test steps | 1. Chuẩn bị dictionary các tham số giao dịch VNPAY. <br> 2. Sắp xếp các tham số theo bảng chữ cái tăng dần và build query string. <br> 3. Gọi hàm `payment_svc.verify_vnpay_checksum()` với dictionary tham số chứa chữ ký tương ứng được mã hóa bằng thuật toán HMAC-SHA512. <br> 4. Kiểm tra xem hàm có trả về `True` cho chữ ký chính xác và `False` cho chữ ký bị sửa đổi hay không. |
+| Actual Output | Hàm kiểm tra chữ ký hoạt động chính xác. Nhận diện chữ ký hợp lệ trả về `True`, tham số bị sửa đổi hoặc chữ ký sai trả về `False`. |
+| Result | Passed |
+
 #### 3.2.8. TC-008: RBAC premium chapter 403 expired
 
     Written by: 23120182 Nguyễn Duy Trường
     Reviewed by: 23120123 Trần Gia Hiển
+
+| *Test case* | TC-008 |
+| :--- | :--- |
+| Related feature | F2 - Premium Membership Payment (VNPAY Integration) |
+| Context | Kiểm thử bảo mật (Security Test) chặn quyền truy cập chương truyện VIP đối với tài khoản không có gói Premium hoặc gói đã hết hạn |
+| Input Data | - Tài khoản độc giả test: `premium_until` là Null hoặc thời gian quá khứ (hết hạn). <br> - Yêu cầu đọc chương Premium: `GET /api/v1/chapters/{chapter_id}` (với chương có `is_premium = True`). |
+| Expected Output | Máy chủ từ chối phục vụ nội dung chương truyện và phản hồi mã lỗi `HTTP 403 Forbidden` kèm thông điệp yêu cầu nâng cấp gói hội viên |
+| Test steps | 1. Gán trường `premium_until` của tài khoản độc giả kiểm thử về quá khứ hoặc `None`. <br> 2. Gửi request đọc chương truyện Premium bằng Access Token của tài khoản đó. <br> 3. Kiểm tra mã trạng thái HTTP trả về từ API xem có bằng `403` và nội dung lỗi có thông báo nâng cấp/gia hạn gói hay không. |
+| Actual Output | API trả về HTTP 403 Forbidden cùng thông báo lỗi yêu cầu nâng cấp/gia hạn gói hội viên thành công. |
+| Result | Passed |
 
 #### 3.2.9. TC-009: VNPAY checkout URL generation
 
     Written by: 23120182 Nguyễn Duy Trường
     Reviewed by: 23120123 Trần Gia Hiển
 
+| *Test case* | TC-009 |
+| :--- | :--- |
+| Related feature | F2 - Premium Membership Payment (VNPAY Integration) |
+| Context | Kiểm thử tích hợp (Integration Test) tạo phiên thanh toán (giao dịch ở trạng thái pending) và trả về URL redirect sang cổng VNPAY Sandbox hợp lệ |
+| Input Data | `POST /api/v1/payment/vnpay/checkout` với body: `{ "plan_id": "MONTHLY", "return_url": "http://localhost:3000/payment/result" }` kèm JWT Access Token của reader |
+| Expected Output | 1. API phản hồi mã trạng thái HTTP 201 Created. <br> 2. Dữ liệu trả về chứa `payment_url` hợp lệ bắt đầu bằng VNPAY gateway url, chứa mã checksum signature `vnp_SecureHash` và mã giao dịch `vnp_TxnRef`. |
+| Test steps | 1. Tạo mock gói cước `MONTHLY` trong DB. <br> 2. Thực hiện gọi API `POST /api/v1/payment/vnpay/checkout` với JWT token của người dùng. <br> 3. Xác nhận response status = 201. <br> 4. Kiểm tra thuộc tính `payment_url` trong response body có chứa tham số chữ ký bảo mật và dẫn đến sandbox của VNPAY. |
+| Actual Output | API trả về HTTP 201 Created, sinh ra URL thanh toán chứa đầy đủ các tham số cấu hình và chữ ký HMAC-SHA512. |
+| Result | Passed |
 
 #### 3.2.10. TC-010: VNPAY IPN success -> premium_until update
 
     Written by: 23120182 Nguyễn Duy Trường
     Reviewed by: 23120123 Trần Gia Hiển
 
+| *Test case* | TC-010 |
+| :--- | :--- |
+| Related feature | F2 - Premium Membership Payment (VNPAY Integration) |
+| Context | Kiểm thử tích hợp (Integration Test) luồng nhận tín hiệu IPN ngầm từ server VNPAY, xác thực chữ ký và cập nhật tự động thời hạn Premium hội viên cho người dùng |
+| Input Data | Request `GET /api/v1/payment/vnpay/ipn` chứa tham số giao dịch thành công (`vnp_ResponseCode = 00`, `vnp_TransactionStatus = 00`) kèm chữ ký `vnp_SecureHash` hợp lệ và `vnp_TxnRef` của hóa đơn đang pending |
+| Expected Output | 1. API trả về HTTP 200, phản hồi JSON theo format VNPAY: `{ "RspCode": "00", "Message": "Confirm success" }`. <br> 2. Trạng thái giao dịch trong CSDL cập nhật thành `success`. <br> 3. Trường `premium_until` của tài khoản người dùng tăng thêm số ngày tương ứng với gói cước đã chọn (ví dụ: +30 ngày cho gói MONTHLY). |
+| Test steps | 1. Tạo giao dịch ở trạng thái `pending` của người dùng A với mã giao dịch `vnp_TxnRef`. <br> 2. Gửi request IPN mô phỏng từ cổng VNPAY thành công kèm theo chữ ký hợp lệ được sinh dựa trên `vnp_TxnRef` này. <br> 3. Xác nhận response status = 200 và response body chứa `RspCode: "00"`. <br> 4. Truy vấn cơ sở dữ liệu để kiểm tra trạng thái giao dịch chuyển sang `success`. <br> 5. Kiểm tra trường `premium_until` của người dùng A được gia hạn cộng dồn thành công. |
+| Actual Output | API xử lý IPN trả về đúng format `RspCode: "00"`, cập nhật giao dịch thành `success` và cập nhật hạn Premium của user trong CSDL chính xác. |
+| Result | Passed |
+
 #### 3.2.11. TC-011: vnp_txn_ref uniqueness
 
     Written by: 23120182 Nguyễn Duy Trường
     Reviewed by: 23120123 Trần Gia Hiển
 
+| *Test case* | TC-011 |
+| :--- | :--- |
+| Related feature | F2 - Premium Membership Payment (VNPAY Integration) |
+| Context | Kiểm thử đơn vị (Unit Test) cho hàm sinh mã hóa đơn `vnp_txn_ref` nhằm bảo đảm các mã giao dịch gửi sang VNPAY luôn duy nhất và không bị trùng lặp |
+| Input Data | Lặp lại gọi hàm `payment_svc.generate_txn_ref()` 1000 lần liên tục |
+| Expected Output | 1000 mã được sinh ra đều là duy nhất, không có hai mã nào trùng lặp nhau. Định dạng mã bắt đầu bằng tiền tố `"YAG"` theo quy chuẩn dự án. |
+| Test steps | 1. Chạy vòng lặp gọi hàm sinh mã giao dịch `generate_txn_ref()` 1000 lần. <br> 2. Lưu trữ các mã được sinh vào một tập hợp (Set). <br> 3. Đo độ dài tập hợp xem có bằng 1000 hay không (đảm bảo không trùng lặp). <br> 4. Xác nhận tiền tố của các mã bắt đầu bằng `"YAG"`. |
+| Actual Output | Tất cả 1000 mã sinh ra đều là duy nhất (độ dài set bằng 1000) và đều có tiền tố `"YAG"` đúng chuẩn định dạng. |
+| Result | Passed |
+
 #### 3.2.12. TC-012: VNPAY IPN invalid checksum -> reject
 
     Written by: 23120182 Nguyễn Duy Trường
     Reviewed by: 23120123 Trần Gia Hiển
+
+| *Test case* | TC-012 |
+| :--- | :--- |
+| Related feature | F2 - Premium Membership Payment (VNPAY Integration) |
+| Context | Kiểm thử bảo mật (Security Test) ngăn chặn gian lận cước bằng cách từ chối xử lý IPN khi chữ ký checksum gửi từ client/VNPAY bị sai lệch |
+| Input Data | Request `GET /api/v1/payment/vnpay/ipn` với các tham số giao dịch nhưng chữ ký `vnp_SecureHash` bị giả mạo hoặc sai thuật toán |
+| Expected Output | API trả về HTTP 200, phản hồi JSON mã lỗi chữ ký: `{ "RspCode": "97", "Message": "Invalid checksum" }` và không có bất kỳ thay đổi nào trong cơ sở dữ liệu |
+| Test steps | 1. Tạo request IPN có chữ ký `vnp_SecureHash = "invalid_hash_value"`. <br> 2. Thực hiện gửi request đến endpoint IPN. <br> 3. Kiểm tra response body xem có bằng `{ "RspCode": "97", ... }`. <br> 4. Đảm bảo thông tin giao dịch trong database vẫn giữ nguyên trạng thái `pending` và hạn dùng tài khoản người dùng không được thay đổi. |
+| Actual Output | API phát hiện chữ ký không hợp lệ, trả về `RspCode: "97"` và chặn không cho cập nhật trạng thái giao dịch hoặc cấp hạn premium trong DB. |
+| Result | Passed |
 
 #### 3.2.13. TC-013: pgvector Cosine distance accuracy
 

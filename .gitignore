@@ -1,7 +1,30 @@
+# Local agent/runtime files
+.agent/
+
+# Python
 **/__pycache__/
 **/*.py[cod]
 **/.pytest_cache/
+**/.coverage
+**/coverage.xml
+**/htmlcov/
+**/.venv/
+**/venv/
+
+# Node / Next.js
 **/.next/
 **/node_modules/
+**/coverage/
+**/*.tsbuildinfo
+**/next-env.d.ts
+
+# Environment and secrets
 **/.env
+**/.env.*
+!**/.env.example
+nginx/certs/*
+!nginx/certs/.gitignore
+
+# Runtime uploads and logs
 **/uploads/
+*.log

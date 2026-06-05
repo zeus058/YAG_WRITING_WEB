@@ -16,7 +16,9 @@ class AdminAuditLog(Base):
         default=uuid.uuid4,
         server_default=text("gen_random_uuid()"),
     )
-    admin_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    admin_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     action = Column(String(80), nullable=False, index=True)
     target_type = Column(String(50), nullable=False, index=True)
     target_id = Column(String(100), nullable=False, index=True)

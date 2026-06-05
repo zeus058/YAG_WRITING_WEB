@@ -28,7 +28,9 @@ DESTRUCTIVE_SEED_ENV = "YAG_ALLOW_DESTRUCTIVE_SEED_RESET"
 
 def seed_database():
     if settings.ENVIRONMENT != "development":
-        raise RuntimeError("seed.py is a development-only command and must not run in staging/production.")
+        raise RuntimeError(
+            "seed.py is a development-only command and must not run in staging/production."
+        )
 
     allow_reset = os.getenv(DESTRUCTIVE_SEED_ENV) == "1"
     if allow_reset:
@@ -45,7 +47,9 @@ def seed_database():
     print(f"Applying schema migrations from {migrations_dir}...")
     apply_migrations(migrations_dir)
 
-    print("Database tables and custom indexes created successfully from migration script!")
+    print(
+        "Database tables and custom indexes created successfully from migration script!"
+    )
 
     db = SessionLocal()
     try:
@@ -65,14 +69,14 @@ def seed_database():
             name="Gói Tháng Premium",
             duration_days=30,
             price=50000.00,
-            description="Đọc tất cả chương truyện Premium không giới hạn trong 30 ngày."
+            description="Đọc tất cả chương truyện Premium không giới hạn trong 30 ngày.",
         )
         yearly_plan = MembershipPlan(
             id="YEARLY",
             name="Gói Năm Premium",
             duration_days=365,
             price=500000.00,
-            description="Đọc tất cả chương truyện Premium không giới hạn trong 365 ngày (Tiết kiệm 20%)."
+            description="Đọc tất cả chương truyện Premium không giới hạn trong 365 ngày (Tiết kiệm 20%).",
         )
         db.add_all([monthly_plan, yearly_plan])
         db.commit()
@@ -87,37 +91,61 @@ def seed_database():
             username="reader",
             email="reader@yag.vn",
             password_hash=demo_hashed_password,
-            role="reader"
+            role="reader",
         )
         demo_author = User(
             username="author",
             email="author@yag.vn",
             password_hash=demo_hashed_password,
-            role="author"
+            role="author",
         )
         demo_admin = User(
             username="admin",
             email="admin@yag.vn",
             password_hash=demo_hashed_password,
-            role="admin"
+            role="admin",
         )
         demo_admin_dev = User(
             username="admin_dev",
             email="admin@yag.dev",
             password_hash=get_password_hash("Admin@YAG2026"),
-            role="admin"
+            role="admin",
         )
         db.add_all([demo_reader, demo_author, demo_admin, demo_admin_dev])
         db.flush()
 
-        db.add(Profile(user_id=demo_reader.id, display_name="Độc giả Demo",
-               bio="Tài khoản độc giả demo hệ thống YAG.", reputation_score=100))
-        db.add(Profile(user_id=demo_author.id, display_name="Tác giả Demo",
-               bio="Tài khoản tác giả demo hệ thống YAG.", reputation_score=100))
-        db.add(Profile(user_id=demo_admin.id, display_name="Admin Demo",
-               bio="Tài khoản admin demo hệ thống YAG.", reputation_score=100))
-        db.add(Profile(user_id=demo_admin_dev.id, display_name="Admin Dev",
-               bio="Tài khoản admin dev hệ thống YAG.", reputation_score=100))
+        db.add(
+            Profile(
+                user_id=demo_reader.id,
+                display_name="Độc giả Demo",
+                bio="Tài khoản độc giả demo hệ thống YAG.",
+                reputation_score=100,
+            )
+        )
+        db.add(
+            Profile(
+                user_id=demo_author.id,
+                display_name="Tác giả Demo",
+                bio="Tài khoản tác giả demo hệ thống YAG.",
+                reputation_score=100,
+            )
+        )
+        db.add(
+            Profile(
+                user_id=demo_admin.id,
+                display_name="Admin Demo",
+                bio="Tài khoản admin demo hệ thống YAG.",
+                reputation_score=100,
+            )
+        )
+        db.add(
+            Profile(
+                user_id=demo_admin_dev.id,
+                display_name="Admin Dev",
+                bio="Tài khoản admin dev hệ thống YAG.",
+                reputation_score=100,
+            )
+        )
 
         # 2 Admins
         admins = [demo_admin]
@@ -126,7 +154,7 @@ def seed_database():
                 username=f"admin{i}",
                 email=f"admin{i}@yag.vn",
                 password_hash=hashed_password,
-                role="admin"
+                role="admin",
             )
             db.add(admin_user)
             db.flush()  # Populate ID
@@ -135,36 +163,39 @@ def seed_database():
                 user_id=admin_user.id,
                 display_name=f"Quản trị viên {i}",
                 bio=f"Hồ sơ quản lý hệ thống của Admin {i}.",
-                reputation_score=100
+                reputation_score=100,
             )
             db.add(admin_profile)
             admins.append(admin_user)
 
         # 5 Authors
         authors = []
-        author_names = ["Tiêu Dao Tử", "Cổ Long", "Kim Dung", "Ngã Ăn Tây Hồng Thị", "Đường Gia Tam Thiếu"]
+        author_names = [
+            "Tiêu Dao Tử",
+            "Cổ Long",
+            "Kim Dung",
+            "Ngã Ăn Tây Hồng Thị",
+            "Đường Gia Tam Thiếu",
+        ]
         author_bios = [
             "Yêu thích viết tiểu thuyết tiên hiệp kỳ ảo.",
             "Tác giả kỳ cựu dòng kiếm hiệp cổ điển.",
             "Bậc thầy võ hiệp, sáng lập nhiều vũ trụ tiểu thuyết.",
             "Nhà văn mạng nổi tiếng với thể loại tu chân tiên hiệp.",
-            "Tác giả của những bộ truyện huyễn hiệp bom tấn."
+            "Tác giả của những bộ truyện huyễn hiệp bom tấn.",
         ]
         for i, (name, bio) in enumerate(zip(author_names, author_bios), 1):
             author_user = User(
                 username=f"author{i}",
                 email=f"author{i}@yag.vn",
                 password_hash=hashed_password,
-                role="author"
+                role="author",
             )
             db.add(author_user)
             db.flush()
 
             author_profile = Profile(
-                user_id=author_user.id,
-                display_name=name,
-                bio=bio,
-                reputation_score=100
+                user_id=author_user.id, display_name=name, bio=bio, reputation_score=100
             )
             db.add(author_profile)
             authors.append(author_user)
@@ -176,7 +207,7 @@ def seed_database():
                 username=f"reader{i}",
                 email=f"reader{i}@yag.vn",
                 password_hash=hashed_password,
-                role="reader"
+                role="reader",
             )
             db.add(reader_user)
             db.flush()
@@ -185,7 +216,7 @@ def seed_database():
                 user_id=reader_user.id,
                 display_name=f"Độc giả {i}",
                 bio=f"Tôi là độc giả thường số {i}.",
-                reputation_score=100
+                reputation_score=100,
             )
             db.add(reader_profile)
             readers.append(reader_user)
@@ -199,7 +230,7 @@ def seed_database():
                 email=f"premium{i}@yag.vn",
                 password_hash=hashed_password,
                 role="reader",
-                premium_until=future_date
+                premium_until=future_date,
             )
             db.add(premium_user)
             db.flush()
@@ -208,7 +239,7 @@ def seed_database():
                 user_id=premium_user.id,
                 display_name=f"Hội viên Vàng {i}",
                 bio=f"Độc giả VIP sở hữu gói cước Premium thứ {i}.",
-                reputation_score=100
+                reputation_score=100,
             )
             db.add(premium_profile)
             premium_readers.append(premium_user)
@@ -217,16 +248,22 @@ def seed_database():
 
         # 3. Seed Stories (3 main stories created by first 3 authors)
         print("Seeding stories...")
-        story_titles = ["Đấu Phá Thương Khung", "Phàm Nhân Tu Tiên", "Thần Điêu Hiệp Lữ"]
+        story_titles = [
+            "Đấu Phá Thương Khung",
+            "Phàm Nhân Tu Tiên",
+            "Thần Điêu Hiệp Lữ",
+        ]
         story_categories = ["Huyền Huyễn", "Tiên Hiệp", "Võ Hiệp"]
         story_descs = [
             "Tại nơi này thế giới đấu khí thịnh hành, Tiêu Viêm bắt đầu hành trình nghịch thiên từ một phế vật gia tộc.",
             "Hàn Lập - một thiếu niên bình thường tình cờ bước chân vào giang hồ và thế giới tu tiên rộng lớn vô tận.",
-            "Câu chuyện tình duyên trắc trở và đầy sóng gió giữa Dương Quá và Tiểu Long Nữ thời Nam Tống."
+            "Câu chuyện tình duyên trắc trở và đầy sóng gió giữa Dương Quá và Tiểu Long Nữ thời Nam Tống.",
         ]
 
         stories = []
-        for i, (title, cat, desc) in enumerate(zip(story_titles, story_categories, story_descs)):
+        for i, (title, cat, desc) in enumerate(
+            zip(story_titles, story_categories, story_descs)
+        ):
             story = Story(
                 author_id=authors[i].id,
                 title=title,
@@ -234,7 +271,7 @@ def seed_database():
                 category=cat,
                 status="ongoing",
                 view_count=1250 * (i + 1),
-                rating_avg=4.5 + (0.1 * i)
+                rating_avg=4.5 + (0.1 * i),
             )
             db.add(story)
             db.flush()
@@ -254,7 +291,8 @@ def seed_database():
                     content=f"Đây là nội dung chi tiết của chương thứ {ch_num} thuộc bộ truyện '{story.title}'. Tình tiết hấp dẫn và kịch tính đang chờ đón độc giả...",
                     is_premium=is_vip,
                     moderation_status="approved",
-                    publish_at=datetime.now(timezone.utc) - timedelta(hours=(6 - ch_num))
+                    publish_at=datetime.now(timezone.utc)
+                    - timedelta(hours=(6 - ch_num)),
                 )
                 db.add(chapter)
                 db.flush()
@@ -267,9 +305,7 @@ def seed_database():
             # Generate dummy 1536 float array (standard pgvector length)
             mock_vector = [0.015 * (i + 1)] * 1536
             embedding = StoryEmbedding(
-                story_id=story.id,
-                plot_summary=story.description,
-                embedding=mock_vector
+                story_id=story.id, plot_summary=story.description, embedding=mock_vector
             )
             db.add(embedding)
         db.commit()
@@ -280,7 +316,7 @@ def seed_database():
         comment1 = Comment(
             user_id=readers[0].id,
             chapter_id=chapters[0].id,
-            content="Truyện mở đầu cuốn quá! Hóng chương tiếp theo."
+            content="Truyện mở đầu cuốn quá! Hóng chương tiếp theo.",
         )
         db.add(comment1)
         db.flush()
@@ -290,7 +326,7 @@ def seed_database():
             user_id=readers[1].id,
             chapter_id=chapters[0].id,
             content="Đồng quan điểm với đạo hữu này, tác giả viết chắc tay thực sự.",
-            parent_id=comment1.id
+            parent_id=comment1.id,
         )
         db.add(reply1)
 
@@ -298,7 +334,7 @@ def seed_database():
         comment2 = Comment(
             user_id=premium_readers[0].id,
             chapter_id=chapters[5].id,
-            content="Hàn Lập tính cách thực tế ghê, đúng gu mình!"
+            content="Hàn Lập tính cách thực tế ghê, đúng gu mình!",
         )
         db.add(comment2)
         db.commit()
@@ -310,21 +346,21 @@ def seed_database():
             user_id=readers[0].id,
             story_id=stories[0].id,
             rating=5,
-            content="Cốt truyện đỉnh cao, nhân vật phụ cũng rất có chiều sâu."
+            content="Cốt truyện đỉnh cao, nhân vật phụ cũng rất có chiều sâu.",
         )
         # Readers review story 2
         review2 = Review(
             user_id=readers[1].id,
             story_id=stories[1].id,
             rating=4,
-            content="Đoạn mở đầu hơi chậm nhưng sau đó thì tuyệt vời."
+            content="Đoạn mở đầu hơi chậm nhưng sau đó thì tuyệt vời.",
         )
         # Premium reader reviews story 3
         review3 = Review(
             user_id=premium_readers[0].id,
             story_id=stories[2].id,
             rating=5,
-            content="Tuyệt phẩm kiếm hiệp kinh điển không thể bỏ qua."
+            content="Tuyệt phẩm kiếm hiệp kinh điển không thể bỏ qua.",
         )
         db.add_all([review1, review2, review3])
         db.commit()
@@ -338,7 +374,7 @@ def seed_database():
             amount=50000.00,
             vnp_txn_ref=str(uuid.uuid4()),
             vnp_transaction_no="VNP12345678",
-            status="success"
+            status="success",
         )
         # Premium Reader 2 bought YEARLY plan
         txn2 = Transaction(
@@ -347,7 +383,7 @@ def seed_database():
             amount=500000.00,
             vnp_txn_ref=str(uuid.uuid4()),
             vnp_transaction_no="VNP98765432",
-            status="success"
+            status="success",
         )
         # Premium Reader 3 has a pending checkout session
         txn3 = Transaction(
@@ -355,7 +391,7 @@ def seed_database():
             plan_id="MONTHLY",
             amount=50000.00,
             vnp_txn_ref=str(uuid.uuid4()),
-            status="pending"
+            status="pending",
         )
         db.add_all([txn1, txn2, txn3])
         db.commit()
@@ -368,7 +404,7 @@ def seed_database():
                 chapter_id=chapters[i * 5].id,
                 is_violation=False,
                 confidence_score=0.98,
-                reason="Nội dung chương lành mạnh, không có dấu hiệu nhạy cảm hay bạo lực."
+                reason="Nội dung chương lành mạnh, không có dấu hiệu nhạy cảm hay bạo lực.",
             )
             db.add(mod_log)
         db.commit()
@@ -379,7 +415,7 @@ def seed_database():
             sched = PublishSchedule(
                 story_id=story.id,
                 scheduled_time=datetime.now(timezone.utc) + timedelta(days=2),
-                status="scheduled"
+                status="scheduled",
             )
             db.add(sched)
         db.commit()
@@ -387,18 +423,11 @@ def seed_database():
         # 11. Seed Reading Histories
         print("Seeding reading histories...")
         # Reader 1 read Chapter 1, 2 of Story 1
-        history1 = ReadingHistory(
-            user_id=readers[0].id,
-            chapter_id=chapters[0].id
-        )
-        history2 = ReadingHistory(
-            user_id=readers[0].id,
-            chapter_id=chapters[1].id
-        )
+        history1 = ReadingHistory(user_id=readers[0].id, chapter_id=chapters[0].id)
+        history2 = ReadingHistory(user_id=readers[0].id, chapter_id=chapters[1].id)
         # Premium Reader 1 read Chapter 1 of Story 2
         history3 = ReadingHistory(
-            user_id=premium_readers[0].id,
-            chapter_id=chapters[5].id
+            user_id=premium_readers[0].id, chapter_id=chapters[5].id
         )
         db.add_all([history1, history2, history3])
         db.commit()
@@ -406,19 +435,10 @@ def seed_database():
         # 12. Seed Libraries (Bookmarks)
         print("Seeding libraries...")
         # Reader 1 bookmarked Story 1 and 2
-        lib1 = Library(
-            user_id=readers[0].id,
-            story_id=stories[0].id
-        )
-        lib2 = Library(
-            user_id=readers[0].id,
-            story_id=stories[1].id
-        )
+        lib1 = Library(user_id=readers[0].id, story_id=stories[0].id)
+        lib2 = Library(user_id=readers[0].id, story_id=stories[1].id)
         # Premium Reader 1 bookmarked Story 3
-        lib3 = Library(
-            user_id=premium_readers[0].id,
-            story_id=stories[2].id
-        )
+        lib3 = Library(user_id=premium_readers[0].id, story_id=stories[2].id)
         db.add_all([lib1, lib2, lib3])
         db.commit()
 

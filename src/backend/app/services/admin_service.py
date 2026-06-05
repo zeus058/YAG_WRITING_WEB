@@ -56,7 +56,9 @@ class AdminService:
     @staticmethod
     def require_admin(current_user: User) -> User:
         if current_user.role != "admin":
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="ADMIN_REQUIRED")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="ADMIN_REQUIRED"
+            )
         return current_user
 
     @staticmethod
@@ -85,27 +87,44 @@ class AdminService:
         now = datetime.now(timezone.utc)
         seven_days_ago = now - timedelta(days=7)
         thirty_days_ago = now - timedelta(days=30)
-        transactions = db.query(Transaction).filter(Transaction.status == "success").all()
-        revenue_total = sum(float(transaction.amount or 0) for transaction in transactions)
+        transactions = (
+            db.query(Transaction).filter(Transaction.status == "success").all()
+        )
+        revenue_total = sum(
+            float(transaction.amount or 0) for transaction in transactions
+        )
         revenue_30d = sum(
             float(transaction.amount or 0)
             for transaction in transactions
-            if (created_at := _as_utc(transaction.created_at)) and created_at >= thirty_days_ago
+            if (created_at := _as_utc(transaction.created_at))
+            and created_at >= thirty_days_ago
         )
 
         return {
             "users_total": db.query(User).count(),
-            "users_new_7d": db.query(User).filter(User.created_at >= seven_days_ago).count(),
+            "users_new_7d": db.query(User)
+            .filter(User.created_at >= seven_days_ago)
+            .count(),
             "users_locked": db.query(User).filter(User.is_locked.is_(True)).count(),
             "stories_total": db.query(Story).count(),
             "chapters_total": db.query(Chapter).count(),
             "premium_revenue_total": _amount_to_million_vnd(revenue_total),
             "premium_revenue_30d": _amount_to_million_vnd(revenue_30d),
-            "moderation_pending": db.query(Chapter).filter(Chapter.moderation_status == "pending").count(),
-            "moderation_flagged": db.query(Chapter).filter(Chapter.moderation_status == "flagged").count(),
-            "moderation_rejected": db.query(Chapter).filter(Chapter.moderation_status == "rejected").count(),
-            "moderation_approved": db.query(Chapter).filter(Chapter.moderation_status == "approved").count(),
-            "unresolved_admin_alerts": db.query(AdminAlert).filter(AdminAlert.is_resolved.is_(False)).count(),
+            "moderation_pending": db.query(Chapter)
+            .filter(Chapter.moderation_status == "pending")
+            .count(),
+            "moderation_flagged": db.query(Chapter)
+            .filter(Chapter.moderation_status == "flagged")
+            .count(),
+            "moderation_rejected": db.query(Chapter)
+            .filter(Chapter.moderation_status == "rejected")
+            .count(),
+            "moderation_approved": db.query(Chapter)
+            .filter(Chapter.moderation_status == "approved")
+            .count(),
+            "unresolved_admin_alerts": db.query(AdminAlert)
+            .filter(AdminAlert.is_resolved.is_(False))
+            .count(),
             "audit_logs_total": db.query(AdminAuditLog).count(),
         }
 
@@ -120,7 +139,11 @@ class AdminService:
         elif range_name == "quarter":
             start = date(today.year, today.month, 1)
             for _ in range(2):
-                start = date(start.year - 1, 12, 1) if start.month == 1 else date(start.year, start.month - 1, 1)
+                start = (
+                    date(start.year - 1, 12, 1)
+                    if start.month == 1
+                    else date(start.year, start.month - 1, 1)
+                )
             unit = "month"
         else:
             range_name = "month"
@@ -138,9 +161,15 @@ class AdminService:
             created_at = _as_utc(transaction.created_at)
             if not created_at:
                 continue
-            key = _month_key(created_at.date()) if unit == "month" else created_at.date().isoformat()
+            key = (
+                _month_key(created_at.date())
+                if unit == "month"
+                else created_at.date().isoformat()
+            )
             bucket = buckets.setdefault(key, {"revenue_vnd": 0.0, "memberships": 0})
-            bucket["revenue_vnd"] = float(bucket["revenue_vnd"]) + float(transaction.amount or 0)
+            bucket["revenue_vnd"] = float(bucket["revenue_vnd"]) + float(
+                transaction.amount or 0
+            )
             bucket["memberships"] = int(bucket["memberships"]) + 1
 
         series = []
@@ -178,19 +207,36 @@ class AdminService:
         return {"range": range_name, "series": series}
 
     @staticmethod
-    def get_report_data(db: Session, from_date: date, to_date: date, report_type: str) -> dict:
+    def get_report_data(
+        db: Session, from_date: date, to_date: date, report_type: str
+    ) -> dict:
         if from_date > to_date:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="INVALID_DATE_RANGE")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="INVALID_DATE_RANGE",
+            )
 
         start_dt = _start_of_day(from_date)
         end_dt = _end_exclusive(to_date)
         transactions = (
             db.query(Transaction)
-            .filter(Transaction.status == "success", Transaction.created_at >= start_dt, Transaction.created_at < end_dt)
+            .filter(
+                Transaction.status == "success",
+                Transaction.created_at >= start_dt,
+                Transaction.created_at < end_dt,
+            )
             .all()
         )
-        users = db.query(User).filter(User.created_at >= start_dt, User.created_at < end_dt).all()
-        chapters = db.query(Chapter).filter(Chapter.created_at >= start_dt, Chapter.created_at < end_dt).all()
+        users = (
+            db.query(User)
+            .filter(User.created_at >= start_dt, User.created_at < end_dt)
+            .all()
+        )
+        chapters = (
+            db.query(Chapter)
+            .filter(Chapter.created_at >= start_dt, Chapter.created_at < end_dt)
+            .all()
+        )
 
         rows = []
         cursor = from_date
@@ -208,12 +254,14 @@ class AdminService:
             user_count = sum(
                 1
                 for user in users
-                if (created_at := _as_utc(user.created_at)) and bucket_start_dt <= created_at < bucket_end_dt
+                if (created_at := _as_utc(user.created_at))
+                and bucket_start_dt <= created_at < bucket_end_dt
             )
             content_count = sum(
                 1
                 for chapter in chapters
-                if (created_at := _as_utc(chapter.created_at)) and bucket_start_dt <= created_at < bucket_end_dt
+                if (created_at := _as_utc(chapter.created_at))
+                and bucket_start_dt <= created_at < bucket_end_dt
             )
             membership_count = sum(
                 1
@@ -265,11 +313,17 @@ class AdminService:
 
     @staticmethod
     def lock_user(db: Session, admin: User, user_id: str, reason: str) -> User:
-        target = db.query(User).filter(User.id == AdminService._uuid_or_raw(user_id)).first()
+        target = (
+            db.query(User).filter(User.id == AdminService._uuid_or_raw(user_id)).first()
+        )
         if not target:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="USER_NOT_FOUND")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="USER_NOT_FOUND"
+            )
         if str(target.id) == str(admin.id):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="CANNOT_LOCK_SELF")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="CANNOT_LOCK_SELF"
+            )
 
         previous_state = {
             "is_locked": target.is_locked,
@@ -294,9 +348,13 @@ class AdminService:
 
     @staticmethod
     def unlock_user(db: Session, admin: User, user_id: str, reason: str) -> User:
-        target = db.query(User).filter(User.id == AdminService._uuid_or_raw(user_id)).first()
+        target = (
+            db.query(User).filter(User.id == AdminService._uuid_or_raw(user_id)).first()
+        )
         if not target:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="USER_NOT_FOUND")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="USER_NOT_FOUND"
+            )
 
         previous_state = {
             "is_locked": target.is_locked,
@@ -329,14 +387,24 @@ class AdminService:
         violation_category: Optional[str] = None,
         confidence_score: float = 1.0,
     ) -> Chapter:
-        chapter = db.query(Chapter).filter(Chapter.id == AdminService._uuid_or_raw(chapter_id)).first()
+        chapter = (
+            db.query(Chapter)
+            .filter(Chapter.id == AdminService._uuid_or_raw(chapter_id))
+            .first()
+        )
         if not chapter:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="CHAPTER_NOT_FOUND")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="CHAPTER_NOT_FOUND"
+            )
 
         previous_status = chapter.moderation_status
         chapter.moderation_status = decision
 
-        moderation_log = db.query(AIModerationLog).filter(AIModerationLog.chapter_id == chapter.id).first()
+        moderation_log = (
+            db.query(AIModerationLog)
+            .filter(AIModerationLog.chapter_id == chapter.id)
+            .first()
+        )
         if moderation_log is None:
             moderation_log = AIModerationLog(chapter_id=chapter.id)
         moderation_log.is_violation = decision in {"rejected", "flagged"}

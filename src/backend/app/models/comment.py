@@ -32,9 +32,13 @@ class Comment(Base):
     )
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     user = relationship("User")
     chapter = relationship("Chapter", back_populates="comments")
     parent = relationship("Comment", remote_side=[id], back_populates="replies")
-    replies = relationship("Comment", back_populates="parent", cascade="all, delete-orphan")
+    replies = relationship(
+        "Comment", back_populates="parent", cascade="all, delete-orphan"
+    )

@@ -11,7 +11,6 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ---------------------------------------------------------------------------
 # Request schemas
 # ---------------------------------------------------------------------------
@@ -36,7 +35,9 @@ class ChapterUpdate(BaseModel):
         default=None, max_length=255, description="Tiêu đề mới"
     )
     content: Optional[str] = Field(default=None, description="Nội dung mới")
-    is_premium: Optional[bool] = Field(default=None, description="Cập nhật trạng thái Premium")
+    is_premium: Optional[bool] = Field(
+        default=None, description="Cập nhật trạng thái Premium"
+    )
 
 
 class ChapterPublishRequest(BaseModel):
@@ -63,9 +64,12 @@ class ChapterResponse(BaseModel):
     content: str = Field(..., description="Nội dung chương")
     is_premium: bool = Field(..., description="Chương Premium")
     moderation_status: str = Field(
-        ..., description="Trạng thái kiểm duyệt (pending / approved / rejected / flagged)"
+        ...,
+        description="Trạng thái kiểm duyệt (pending / approved / rejected / flagged)",
     )
-    publish_at: Optional[datetime] = Field(default=None, description="Thời gian xuất bản")
+    publish_at: Optional[datetime] = Field(
+        default=None, description="Thời gian xuất bản"
+    )
     prev_chapter: Optional[int] = Field(
         default=None, description="Số chương trước (null nếu là chương đầu)"
     )
@@ -86,6 +90,8 @@ class ChapterListItem(BaseModel):
     title: str = Field(..., description="Tiêu đề chương")
     moderation_status: str = Field(..., description="Trạng thái kiểm duyệt")
     is_premium: bool = Field(..., description="Chương Premium")
-    publish_at: Optional[datetime] = Field(default=None, description="Thời gian xuất bản")
+    publish_at: Optional[datetime] = Field(
+        default=None, description="Thời gian xuất bản"
+    )
 
     model_config = ConfigDict(from_attributes=True)

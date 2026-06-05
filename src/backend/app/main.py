@@ -22,7 +22,10 @@ from app.core.database import engine, SessionLocal
 import app.models as _models  # noqa: F401  # Ensure models are loaded before creating tables
 from app.services.notification_service import stream_user_notifications
 from app.services.publish_service import get_rabbitmq_connection
-from app.services.schedule_service import shutdown_schedule_scheduler, start_schedule_scheduler
+from app.services.schedule_service import (
+    shutdown_schedule_scheduler,
+    start_schedule_scheduler,
+)
 
 
 async def periodic_view_count_flush() -> None:
@@ -57,12 +60,13 @@ async def lifespan(app: FastAPI):
     # Shutdown scheduler
     shutdown_schedule_scheduler()
 
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Backend API services for YAG Smart Novel Platform.",
     version="1.0.0",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Set CORS middleware origins
@@ -99,9 +103,14 @@ async def request_context_middleware(request: Request, call_next):
         response.headers["X-Frame-Options"] = "DENY"
     if not response.headers.get("Referrer-Policy"):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    if settings.ENVIRONMENT == "production" and not response.headers.get("Strict-Transport-Security"):
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    if settings.ENVIRONMENT == "production" and not response.headers.get(
+        "Strict-Transport-Security"
+    ):
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
     return response
+
 
 # Serve local uploads only outside production. Internet deployment uses Cloudinary URLs.
 if settings.ENVIRONMENT != "production":
@@ -112,11 +121,7 @@ if settings.ENVIRONMENT != "production":
 
 @app.get("/", tags=["Main"])
 def read_root():
-    return {
-        "status": "online",
-        "project": settings.PROJECT_NAME,
-        "docs": "/docs"
-    }
+    return {"status": "online", "project": settings.PROJECT_NAME, "docs": "/docs"}
 
 
 @app.get("/health", tags=["Main"])
@@ -167,7 +172,9 @@ def readiness_check():
     else:
         checks["rabbitmq"] = f"ok (skipped for {settings.QUEUE_PROVIDER})"
 
-    status_value = "ok" if all(value.startswith("ok") for value in checks.values()) else "degraded"
+    status_value = (
+        "ok" if all(value.startswith("ok") for value in checks.values()) else "degraded"
+    )
     return {"status": status_value, "checks": checks}
 
 
@@ -182,6 +189,8 @@ async def websocket_notifications_v1(websocket: WebSocket, user_id: str):
 
 
 @app.websocket("/ws/stories/{story_id}/chapters/{chapter_id}")
-async def websocket_story_chapter_draft(websocket: WebSocket, story_id: str, chapter_id: str):
+async def websocket_story_chapter_draft(
+    websocket: WebSocket, story_id: str, chapter_id: str
+):
     _ = story_id
     await websocket_editor(websocket, UUID(chapter_id))

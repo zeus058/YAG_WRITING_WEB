@@ -1,866 +1,535 @@
-<div align="center">
+# YAG - Writing Novels Web
 
-# ✦ YAG — Nền Tảng Tiểu Thuyết Thông Minh Tích Hợp AI ✦
-
-### *"Viết truyện bằng cảm hứng, để AI lo phần còn lại."*
-
-[![CI/CD Pipeline](https://github.com/zeus058/SE_Writing_Web/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zeus058/SE_Writing_Web/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](https://opensource.org/licenses/MIT)
-[![Next.js](https://img.shields.io/badge/Next.js-16.x-black?logo=next.js)](https://nextjs.org)
+[![CI/CD Pipeline](https://github.com/zeus058/SE_Writing_Web/actions/workflows/ci.yml/badge.svg)](https://github.com/zeus058/SE_Writing_Web/actions/workflows/ci.yml)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org)
-[![Gemini AI](https://img.shields.io/badge/Gemini_AI-1.5_Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev)
-[![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
-[![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?logo=vercel)](https://vercel.com)
-[![Google Cloud](https://img.shields.io/badge/Cloud_Run-Serverless-4285F4?logo=google-cloud&logoColor=white)](https://cloud.google.com/run)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
 
----
+YAG is a full-stack web application for reading and writing online novels with AI-assisted authoring, semantic story search, asynchronous AI moderation, real-time notifications, and premium membership payments.
 
-**YAG (Writing Novels Web)** là nền tảng Web SaaS đột phá dành cho cộng đồng yêu thích truyện chữ. Tích hợp **Trợ lý Ảo Miu AI** hỗ trợ tác giả phát triển cốt truyện, tự động kiểm duyệt nội dung, tìm kiếm truyện bằng ngôn ngữ tự nhiên qua **Vector Database**, kết nối thời gian thực giữa tác giả và độc giả.
+This repository is built for the HCMUS 2025-2026 Introduction to Software Engineering project.
 
-[🌐 Truy cập Website](#) &nbsp;·&nbsp; [📖 API Documentation](#) &nbsp;·&nbsp; [📋 Báo lỗi](https://github.com/zeus058/SE_Writing_Web/issues)
+## Contents
 
-</div>
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Repository Structure](#repository-structure)
+- [Local Development](#local-development)
+- [Environment Variables](#environment-variables)
+- [Database Migrations](#database-migrations)
+- [Testing](#testing)
+- [Docker Compose](#docker-compose)
+- [Production Deployment](#production-deployment)
+- [CI/CD](#cicd)
+- [API Map](#api-map)
+- [Project Hygiene](#project-hygiene)
+- [Team](#team)
 
----
+## Features
 
-## 📌 Mục lục
-
-1. [Tính năng nổi bật](#-tính-năng-nổi-bật)
-2. [Kiến trúc Production & Công nghệ](#-kiến-trúc-production--công-nghệ)
-3. [Sơ đồ hạ tầng triển khai](#-sơ-đồ-hạ-tầng-triển-khai)
-4. [Kiến trúc hệ thống & Luồng vận hành](#-kiến-trúc-hệ-thống--luồng-vận-hành)
-5. [Cấu trúc thư mục](#-cấu-trúc-thư-mục)
-6. [Hướng dẫn khởi chạy Local Development](#-hướng-dẫn-khởi-chạy-local-development)
-7. [Triển khai Production](#-triển-khai-production)
-8. [CI/CD Pipeline](#-cicd-pipeline)
-9. [Kiểm thử & Chất lượng](#-kiểm-thử--chất-lượng)
-10. [Quy trình đóng góp](#-quy-trình-đóng-góp)
-11. [Tác giả](#-tác-giả)
-12. [Giấy phép](#-giấy-phép)
-
----
-
-## 🚀 Tính năng nổi bật
-
-<table>
-<tr>
-<td width="50%">
-
-### 🤖 Trợ lý Ảo Miu AI
-Tích hợp **Gemini API** tại Sidebar soạn thảo, phân tích ngữ cảnh bản thảo và đề xuất **3 phương án phát triển cốt truyện** khi tác giả bí ý tưởng.
-
-### 🔍 AI Semantic Search
-Tìm kiếm truyện bằng câu nói tự nhiên — *"nam chính hacker xuyên không"* — nhờ **pgvector** đo Cosine Similarity trên Vector Embeddings 1536 chiều.
-
-### ⚡ Autosave Thời gian thực
-Soạn thảo với **WebSocket** đồng bộ bản thảo tức thì, độ trễ **< 200ms**. Không bao giờ mất bản thảo.
-
-</td>
-<td width="50%">
-
-### 🛡️ Kiểm duyệt AI tự động
-Quét nội dung nhạy cảm qua **Cloud Pub/Sub** pipeline bất đồng bộ — tác giả không cần chờ, hệ thống tự thông báo kết quả qua WebSocket.
-
-### 💎 Membership & Thanh toán
-Mô hình phân quyền RBAC, thanh toán qua **PayOS (VietQR)** với xác thực **Webhook** backend-to-backend an toàn tuyệt đối.
-
-### 📊 Admin Dashboard
-Bảng điều khiển quản trị: kiểm duyệt nội dung, thống kê hệ thống, quản lý người dùng, audit log hành động.
-
-</td>
-</tr>
-</table>
-
----
-
-## 💻 Kiến trúc Production & Công nghệ
-
-YAG được thiết kế theo kiến trúc **Serverless-First**, tối ưu chi phí với khả năng auto-scale, phân tách rõ ràng các phân hệ nghiệp vụ:
-
-### Frontend & CDN
-| Công nghệ | Vai trò |
+| Area | Capability |
 |---|---|
-| **Next.js 16** (React 19, TypeScript) | Framework frontend — App Router, SSR/SSG |
-| **TailwindCSS v4** | Design system — Utility-first CSS |
-| **Vercel** | Hosting & CDN toàn cầu — Auto build/deploy từ GitHub |
-| **Cloudflare** | DNS, WAF chống DDoS (Proxy mode), ẩn IP hạ tầng |
-| **Namecheap / Name.com** | Tên miền (`.tech` / `.me` miễn phí qua GitHub Student Pack) |
+| Authentication | Register, login, JWT auth, reset password, change password, role-based access |
+| Reader | Home feed, story discovery, story detail, reader mode, comments, reviews, library, reading history |
+| Author | Story management, chapter drafting, autosave WebSocket, AI writing suggestions, scheduled publishing |
+| AI | Gemini plot suggestions, story embeddings, semantic search, recommendations, moderation assistance |
+| Moderation | RabbitMQ background worker, AI moderation logs, admin review queue, alerts, notifications |
+| Membership | Membership plan catalog, premium chapter access, VNPAY checkout, VNPAY IPN verification |
+| Admin | Dashboard metrics, moderation queue, user/story controls, audit logs |
+| Realtime | Native WebSocket routes for notifications and chapter draft autosave |
 
-### Backend & Compute
-| Công nghệ | Vai trò |
+## Tech Stack
+
+| Layer | Technology |
 |---|---|
-| **FastAPI** (Python 3.11) | API Backend — Modular Monolith, async-ready |
-| **Gunicorn + Uvicorn** | ASGI Server — Production-grade với UvicornWorker |
-| **Google Cloud Run** | Serverless container hosting — Auto-scale to zero |
-| **Google Cloud Functions** | Worker xử lý tác vụ nền (AI moderation, email, webhook) |
-| **Docker** | Multi-stage builds — Đóng gói backend & frontend |
+| Frontend | Next.js 16, React 19, TypeScript, TailwindCSS v4 |
+| Backend | FastAPI, Gunicorn, Uvicorn, Pydantic, SQLAlchemy 2 |
+| Database | PostgreSQL 16 with pgvector |
+| Cache | Redis 7 |
+| Queue | RabbitMQ 3.13 |
+| AI | Google Gemini API, `gemini-1.5-flash`, `text-embedding-004` |
+| Media | Cloudinary |
+| Payment | VNPAY primary; PayOS service support exists behind configuration |
+| Scheduler | APScheduler |
+| Deployment | Docker Compose, Nginx, optional Google Cloud Run backend deployment |
+| CI | GitHub Actions, pytest, ESLint, Docker build validation, Bandit, optional SonarQube |
 
-### Database, Cache & Storage
-| Công nghệ | Vai trò |
-|---|---|
-| **Supabase** (PostgreSQL 16 + pgvector) | CSDL chính — Connection Pooling (PgBouncer/Supavisor) |
-| **Upstash** (Serverless Redis) | Cache chiến lược — Giảm 80-90% query vào DB |
-| **Cloudinary** | CDN media — Ảnh bìa, avatar, auto-convert WebP/AVIF |
-| **Google Cloud Storage** (GCS) | Backup database định kỳ tự động |
-
-### AI & Messaging
-| Công nghệ | Vai trò |
-|---|---|
-| **Google AI Studio** (Gemini 1.5 Flash) | AI Engine — Gợi ý cốt truyện, kiểm duyệt, embeddings |
-| **Gemini text-embedding-004** | Vector Embeddings 1536 chiều cho Semantic Search |
-| **Google Cloud Pub/Sub** | Message Queue bất đồng bộ — Retry tự động khi thất bại |
-
-### Thanh toán & Tích hợp
-| Công nghệ | Vai trò |
-|---|---|
-| **PayOS** (VietQR API) | Cổng thanh toán VietQR động — Webhook xác nhận tự động |
-
-### Vận hành, Bảo mật & CI/CD
-| Công nghệ | Vai trò |
-|---|---|
-| **GitHub Actions** | CI/CD Pipeline — Lint → Test → Build → Deploy |
-| **Google Secret Manager** | Két sắt bảo mật trung tâm — API keys, DB passwords |
-| **Google Cloud Logging & Error Reporting** | Giám sát log, cảnh báo lỗi 500/timeout |
-| **APScheduler** | Cron jobs — Schedule scan, view count flush |
-
----
-
-## 🏗 Sơ đồ hạ tầng triển khai
+## Architecture
 
 ```mermaid
-graph TD
-    classDef user fill:#6366F1,stroke:#4338CA,stroke-width:2px,color:#fff,font-weight:bold;
-    classDef cdn fill:#F97316,stroke:#C2410C,stroke-width:2px,color:#fff;
-    classDef frontend fill:#000000,stroke:#333,stroke-width:2px,color:#fff;
-    classDef compute fill:#4285F4,stroke:#1A73E8,stroke-width:2px,color:#fff;
-    classDef db fill:#336791,stroke:#1B4F72,stroke-width:2px,color:#fff;
-    classDef cache fill:#DC2626,stroke:#991B1B,stroke-width:2px,color:#fff;
-    classDef ai fill:#0EA5E9,stroke:#0369A1,stroke-width:2px,color:#fff;
-    classDef mq fill:#22C55E,stroke:#15803D,stroke-width:2px,color:#fff;
-    classDef pay fill:#A855F7,stroke:#7C3AED,stroke-width:2px,color:#fff;
-    classDef sec fill:#EAB308,stroke:#A16207,stroke-width:2px,color:#fff;
-    classDef media fill:#EC4899,stroke:#BE185D,stroke-width:2px,color:#fff;
-    classDef storage fill:#78716C,stroke:#44403C,stroke-width:2px,color:#fff;
+flowchart LR
+    user["Browser"]
+    nginx["Nginx reverse proxy"]
+    frontend["Next.js frontend"]
+    backend["FastAPI backend"]
+    scheduler["Scheduler service"]
+    worker["Moderation worker"]
+    postgres["PostgreSQL + pgvector"]
+    redis["Redis"]
+    rabbit["RabbitMQ"]
+    gemini["Gemini API"]
+    cloudinary["Cloudinary"]
+    vnpay["VNPAY"]
 
-    User["👤 Người dùng"]:::user
-
-    subgraph EdgeLayer["🌐 Edge Layer"]
-        CF["Cloudflare DNS + WAF + DDoS Protection"]:::cdn
-        Vercel["Vercel CDN + Next.js 16 SSR"]:::frontend
-    end
-
-    subgraph GCP["☁️ Google Cloud Platform"]
-        CloudRun["Cloud Run — FastAPI Backend (Auto-scale)"]:::compute
-        CloudFn["Cloud Functions — AI Workers"]:::compute
-        PubSub["Cloud Pub/Sub — Message Queue"]:::mq
-        SecMgr["Secret Manager — Két sắt API Keys"]:::sec
-        Logging["Cloud Logging & Error Reporting"]:::sec
-        GCS["Cloud Storage — DB Backups"]:::storage
-    end
-
-    subgraph DataLayer["💾 Data Layer (Managed Services)"]
-        Supabase["Supabase — PostgreSQL 16 + pgvector"]:::db
-        Upstash["Upstash — Serverless Redis Cache"]:::cache
-        Cloudinary["Cloudinary — Media CDN (WebP/AVIF)"]:::media
-    end
-
-    subgraph AILayer["🧠 AI Layer"]
-        Gemini["Google AI Studio — Gemini 1.5 Flash"]:::ai
-        Embed["text-embedding-004 — Vector 1536D"]:::ai
-    end
-
-    PayOS["💳 PayOS — VietQR Payment Gateway"]:::pay
-
-    User --> CF
-    CF --> Vercel
-    Vercel -->|"/api/*, /ws/*"| CloudRun
-    CloudRun --> Supabase
-    CloudRun --> Upstash
-    CloudRun --> PubSub
-    CloudRun --> SecMgr
-    CloudRun --> Logging
-    CloudRun --> Cloudinary
-    PubSub --> CloudFn
-    CloudFn --> Gemini
-    CloudFn --> Embed
-    CloudFn --> Supabase
-    Embed --> Supabase
-    PayOS -->|"Webhook IPN"| CloudRun
-    Supabase -.->|"Backup"| GCS
+    user --> nginx
+    nginx --> frontend
+    nginx --> backend
+    backend --> postgres
+    backend --> redis
+    backend --> rabbit
+    backend --> cloudinary
+    backend --> vnpay
+    scheduler --> postgres
+    scheduler --> redis
+    worker --> rabbit
+    worker --> postgres
+    worker --> redis
+    worker --> gemini
 ```
 
----
+### Runtime services
 
-## 📐 Kiến trúc hệ thống & Luồng vận hành
+| Service | Role |
+|---|---|
+| `postgres` | Main relational database and pgvector storage |
+| `redis` | Session/cache/view count/pub-sub support |
+| `rabbitmq` | Async moderation queue |
+| `migrate` | One-shot migration runner |
+| `backend` | FastAPI API server |
+| `scheduler` | Dedicated scheduled jobs service |
+| `moderation-worker` | RabbitMQ consumer for AI moderation |
+| `frontend` | Next.js standalone frontend |
+| `nginx` | HTTP/HTTPS reverse proxy and WebSocket routing |
 
-### 1. Kiến trúc hệ thống tổng thể
-```mermaid
-graph TD
-    classDef client fill:#3B82F6,stroke:#1D4ED8,stroke-width:2px,color:#fff;
-    classDef gateway fill:#10B981,stroke:#047857,stroke-width:2px,color:#fff;
-    classDef service fill:#F59E0B,stroke:#D97706,stroke-width:2px,color:#fff;
-    classDef store fill:#EF4444,stroke:#B91C1C,stroke-width:2px,color:#fff;
-
-    Client["Next.js Web Portal (Reader / Creator Studio)"]:::client
-    CF["Cloudflare (WAF, CDN, DDoS Protection)"]:::gateway
-    GW["FastAPI API Gateway & Auth (JWT, Bcrypt)"]:::gateway
-    
-    StorySvc["Story & Content Service"]:::service
-    CommSvc["Community & Realtime Service (WebSockets)"]:::service
-    PaySvc["Payment & Membership Service (PayOS)"]:::service
-    AISvc["AI Smart Engine (Gemini API)"]:::service
-    
-    Broker["Cloud Pub/Sub Message Queue"]:::gateway
-    Worker["Cloud Functions — Async Workers"]:::service
-    
-    Postgres["Supabase PostgreSQL (Relational Storage)"]:::store
-    PgVector["pgvector (Semantic Embeddings 1536D)"]:::store
-    Redis["Upstash Redis (Cache, Session, View Count)"]:::store
-
-    Client --> CF
-    CF --> GW
-    
-    GW --> StorySvc
-    GW --> CommSvc
-    GW --> PaySvc
-    GW --> AISvc
-    
-    StorySvc --> Broker
-    Broker --> Worker
-    Worker --> AISvc
-    Worker --> Postgres
-    
-    StorySvc --> Postgres
-    CommSvc --> Postgres
-    PaySvc --> Postgres
-    AISvc --> PgVector
-    
-    StorySvc --> Redis
-    CommSvc --> Redis
-    
-    Postgres --> PgVector
-```
-
-### 2. Thiết kế Cơ sở Dữ liệu (16 bảng)
-```mermaid
-erDiagram
-    users {
-        uuid id PK
-        varchar username UK
-        varchar email UK
-        varchar password_hash
-        varchar role
-        timestamp premium_until
-        timestamp created_at
-    }
-    profiles {
-        uuid user_id PK_FK
-        varchar display_name
-        varchar avatar_url
-        text bio
-        integer reputation_score
-    }
-    stories {
-        uuid id PK
-        uuid author_id FK
-        varchar title UK
-        text description
-        varchar cover_url
-        varchar category
-        varchar status
-        integer view_count
-        decimal rating_avg
-    }
-    chapters {
-        uuid id PK
-        uuid story_id FK
-        integer chapter_number
-        varchar title
-        text content
-        varchar moderation_status
-        boolean is_premium
-        timestamp publish_at
-    }
-    story_embeddings {
-        uuid story_id PK_FK
-        vector embedding
-        text plot_summary
-    }
-    comments {
-        uuid id PK
-        uuid user_id FK
-        uuid chapter_id FK
-        text content
-        uuid parent_id FK
-    }
-    reviews {
-        uuid id PK
-        uuid user_id FK
-        uuid story_id FK
-        integer rating
-        text content
-    }
-    transactions {
-        uuid id PK
-        uuid user_id FK
-        varchar plan_id FK
-        decimal amount
-        varchar vnp_txn_ref UK
-        varchar status
-    }
-    notifications {
-        uuid id PK
-        uuid user_id FK
-        varchar type
-        varchar title
-        text message
-        boolean is_read
-    }
-
-    users ||--|| profiles : "has"
-    users ||--o{ stories : "writes"
-    users ||--o{ transactions : "pays"
-    users ||--o{ notifications : "receives"
-    stories ||--|{ chapters : "contains"
-    stories ||--|| story_embeddings : "embeds"
-    stories ||--o{ reviews : "has"
-    chapters ||--o{ comments : "has"
-    comments ||--o{ comments : "replies"
-```
-
-### 3. Luồng kiểm duyệt AI tự động & Soạn thảo thời gian thực
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Creator as Tác giả
-    participant Client as Next.js (Vercel)
-    participant API as FastAPI (Cloud Run)
-    participant Queue as Cloud Pub/Sub
-    participant DB as Supabase PostgreSQL
-    participant Worker as Cloud Functions Worker
-    participant AI as Gemini AI API
-    participant WS as WebSocket Server
-
-    Note over Creator, Client: Luồng 1: Autosave thời gian thực
-    Creator->>Client: Nhập liệu chương truyện
-    Client->>API: Gửi bản nháp qua WebSocket (debounce 3s)
-    API->>DB: Cập nhật nội dung chương (Draft)
-    API-->>Client: Phản hồi Đã lưu (< 200ms)
-
-    Note over Creator, Client: Luồng 2: Xuất bản & Kiểm duyệt AI ngầm
-    Creator->>Client: Nhấn nút "Xuất bản chương"
-    Client->>API: HTTP POST /publish (ChapterID)
-    API->>DB: Đổi trạng thái sang PENDING (Chờ duyệt)
-    API->>Queue: Đẩy Task "Duyệt chương" vào Cloud Pub/Sub
-    API-->>Client: HTTP 202 Accepted (< 500ms)
-    
-    Note over Queue, Worker: Xử lý ngầm (Serverless Worker)
-    Queue->>Worker: Trigger Cloud Function xử lý task
-    Worker->>AI: Gửi nội dung quét vi phạm (NSFW, bạo lực)
-    AI-->>Worker: Trả kết quả (Confidence Score, Vi phạm)
-    
-    alt Nội dung An toàn (Approved)
-        Worker->>DB: APPROVED + Sinh Vector Embedding (1536D)
-        Worker->>DB: INSERT notification (user_id=author)
-    else Phát hiện vi phạm (Rejected/Flagged)
-        Worker->>DB: REJECTED + Ghi ai_moderation_logs
-        Worker->>DB: INSERT notification + admin_alert
-    end
-    
-    Worker->>WS: Phát sự kiện "Duyệt hoàn tất"
-    WS-->>Client: Push thông báo real-time qua WebSocket
-    Client->>Creator: Hiển thị trạng thái trên Dashboard
-```
-
-### 4. Luồng thanh toán PayOS (VietQR) an toàn
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Reader as Độc giả
-    participant Client as Next.js (Vercel)
-    participant API as FastAPI (Cloud Run)
-    participant Pay as PayOS Gateway (VietQR)
-    participant DB as Supabase PostgreSQL
-
-    Reader->>Client: Chọn gói Membership (Tháng/Quý/Năm)
-    Client->>API: HTTP POST /membership/checkout
-    API->>DB: Khởi tạo giao dịch (status: PENDING)
-    API-->>Client: Trả về URL thanh toán PayOS + mã VietQR
-    Client->>Reader: Hiển thị QR Code thanh toán
-    Reader->>Pay: Quét QR bằng Banking App & xác nhận
-    
-    Note over Pay, API: Xác thực Webhook Backend-to-Backend
-    Pay->>API: Gửi Webhook xác nhận giao dịch
-    API->>API: Verify chữ ký Webhook (HMAC checksum)
-    
-    alt Giao dịch Hợp lệ & Thành công
-        API->>DB: UPDATE transaction → SUCCESS
-        API->>DB: UPDATE user.premium_until += duration_days
-        API-->>Pay: HTTP 200 OK
-    else Chữ ký không khớp / Thất bại
-        API->>DB: UPDATE transaction → FAILED
-        API-->>Pay: HTTP 400 Bad Request
-    end
-
-    Pay-->>Client: Redirect về Return URL
-    Client->>API: Query trạng thái giao dịch
-    API->>DB: SELECT transaction status
-    API-->>Client: Trả về kết quả thực tế
-    Client->>Reader: Hiển thị màn hình kết quả thanh toán
-```
-
-### 5. Luồng tìm kiếm ngữ nghĩa AI Semantic Search
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Reader as Độc giả
-    participant Client as Next.js (Vercel)
-    participant API as FastAPI (Cloud Run)
-    participant Gemini as Gemini Embedding API
-    participant PG as Supabase pgvector
-
-    Reader->>Client: Nhập mô tả truyện ("nam chính hacker xuyên không")
-    Client->>API: HTTP POST /search/semantic
-    API->>Gemini: Gọi text-embedding-004 → Vector 1536D
-    Gemini-->>API: Trả về mảng Vector (1536 floats)
-    API->>PG: SELECT ... ORDER BY embedding <=> query_vector LIMIT 20
-    Note over PG: Cosine Similarity trên ivfflat index
-    PG-->>API: Danh sách Story ID + Similarity Score
-    API->>PG: JOIN stories để lấy metadata (title, cover, rating)
-    API-->>Client: Trả về kết quả (< 1.5 giây)
-    Client->>Reader: Hiển thị thẻ truyện xếp theo độ khớp
-```
-
----
-
-## 📂 Cấu trúc thư mục
+## Repository Structure
 
 ```text
 SE_Writing_Web/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                    # CI/CD Pipeline (Lint → Test → Build → Deploy)
-├── nginx/
-│   ├── nginx.conf                    # Reverse proxy (SSL, Rate Limiting, WebSocket)
-│   └── certs/                        # SSL certificates
-├── src/
-│   ├── frontend/                     # ── Next.js 16 App ──
-│   │   ├── Dockerfile                # Multi-stage: deps → builder → runtime
-│   │   ├── src/
-│   │   │   ├── app/                  # App Router — 21+ screens (S01-S21)
-│   │   │   ├── components/           # React components (auth, features, layout, ui)
-│   │   │   ├── data/                 # Mock data / JSON metadata
-│   │   │   └── lib/                  # API client, Auth context, WebSocket, env config
-│   │   └── package.json
-│   └── backend/                      # ── FastAPI App ──
-│       ├── Dockerfile                # Multi-stage: builder → runtime (python:3.11-slim)
-│       ├── worker.py                 # Entry point cho Background Worker
-│       ├── migrations/               # Versioned SQL migrations (V1, V2, V3...)
-│       ├── tests/                    # pytest test suite (14 test files)
-│       └── app/
-│           ├── main.py               # FastAPI entry, middleware, WebSocket routes
-│           ├── manage_migrations.py  # SQL migration runner
-│           ├── seed.py               # Database seeder
-│           ├── api/                  # Route handlers (v1/endpoints/)
-│           ├── core/                 # Config, Database, Security (JWT, Bcrypt)
-│           ├── models/               # 16 SQLAlchemy ORM models
-│           ├── schemas/              # Pydantic request/response schemas
-│           ├── services/             # 11 Business logic services
-│           └── worker/               # Message Queue consumer (moderation pipeline)
+│       └── ci.yml
 ├── docs/
-│   ├── tools_deloy.md                # Quy hoạch hạ tầng triển khai Production
-│   ├── fix/                          # Bug fix documentation
-│   └── task/                         # Task documentation
-├── docker-compose.yml                # 7 services, 3 profiles (default, app, prod)
-├── AGENTS.md                         # Bản đồ kỹ thuật toàn dự án cho AI Agent
-└── README.md                         # ← File này
+│   └── task/
+├── nginx/
+│   ├── certs/
+│   │   └── .gitignore
+│   └── nginx.conf
+├── src/
+│   ├── backend/
+│   │   ├── app/
+│   │   │   ├── api/
+│   │   │   ├── core/
+│   │   │   ├── models/
+│   │   │   ├── schemas/
+│   │   │   ├── services/
+│   │   │   ├── worker/
+│   │   │   ├── main.py
+│   │   │   ├── manage_migrations.py
+│   │   │   ├── reset_dev_db.py
+│   │   │   └── seed.py
+│   │   ├── migrations/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   └── worker.py
+│   └── frontend/
+│       ├── src/
+│       │   ├── app/
+│       │   ├── components/
+│       │   ├── data/
+│       │   └── lib/
+│       ├── Dockerfile
+│       ├── package.json
+│       └── package-lock.json
+├── .env.example
+├── AGENTS.md
+├── docker-compose.yml
+├── README.md
+└── sonar-project.properties
 ```
 
----
+## Local Development
 
-## 🛠 Hướng dẫn khởi chạy Local Development
+### Prerequisites
 
-### Yêu cầu hệ thống
-- **Node.js** ≥ 20.x &nbsp;·&nbsp; **Python** ≥ 3.11 &nbsp;·&nbsp; **Docker Desktop** &nbsp;·&nbsp; **Git**
+- Git
+- Docker Desktop or Docker Engine with Compose v2
+- Python 3.11+
+- Node.js 20+
 
-### 1. Clone & khởi chạy Infrastructure
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/zeus058/SE_Writing_Web.git
 cd SE_Writing_Web
-
-# Khởi chạy PostgreSQL (pgvector), Redis, RabbitMQ
-docker-compose up -d
 ```
 
-### 2. Setup Backend (FastAPI)
+### 2. Start infrastructure
+
+The default Compose profile starts only PostgreSQL, Redis, and RabbitMQ.
+
+```bash
+docker compose up -d
+```
+
+Local infrastructure defaults:
+
+| Service | URL/Port | Credentials |
+|---|---|---|
+| PostgreSQL | `localhost:5432` | `yag_user / yag_secret`, database `yag_db` |
+| Redis | `localhost:6379` | no password by default |
+| RabbitMQ | `localhost:5672` | `yag_mq / yag_mq_secret` |
+| RabbitMQ UI | `http://localhost:15672` | `yag_mq / yag_mq_secret` |
+
+### 3. Configure backend
 
 ```bash
 cd src/backend
-cp .env.example .env          # Điền GEMINI_API_KEY và các secrets
+cp .env.example .env
+```
 
-# Tạo virtual environment
+For local Docker infrastructure, keep:
+
+```env
+POSTGRES_SERVER=localhost
+POSTGRES_USER=yag_user
+POSTGRES_PASSWORD=yag_secret
+POSTGRES_DB=yag_db
+REDIS_HOST=localhost
+RABBITMQ_HOST=localhost
+RABBITMQ_USER=yag_mq
+RABBITMQ_PASSWORD=yag_mq_secret
+```
+
+Set real values for AI/media/payment features when needed:
+
+```env
+GEMINI_API_KEY=...
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+VNP_TMN_CODE=...
+VNP_HASH_SECRET=...
+```
+
+Install dependencies and run migrations:
+
+```bash
 python -m venv .venv
-.venv\Scripts\activate         # Windows
-# source .venv/bin/activate    # macOS/Linux
-
+.venv\Scripts\activate
 pip install -r requirements.txt
-
-# Apply database migrations
 python -m app.manage_migrations
+```
 
-# (Optional) Seed dữ liệu mẫu
+Optional development seed:
+
+```bash
 python -m app.seed
+```
 
-# Khởi chạy API server
+Start the API:
+
+```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
-### 3. Setup Worker (Terminal riêng)
+Start the moderation worker in a separate terminal:
 
 ```bash
 cd src/backend
 .venv\Scripts\activate
-python worker.py               # RabbitMQ moderation consumer
+python worker.py
 ```
 
-### 4. Setup Frontend (Terminal riêng)
+### 4. Configure frontend
 
 ```bash
 cd src/frontend
 cp .env.example .env
 npm install
-npm run dev                    # → http://localhost:3000
+npm run dev
 ```
 
-### 5. Biến môi trường quan trọng
+Open:
 
-<details>
-<summary>📋 <strong>Backend (.env)</strong> — Click để mở</summary>
+| App | URL |
+|---|---|
+| Frontend | `http://localhost:3000` |
+| Backend docs | `http://localhost:8000/docs` |
+| Backend readiness | `http://localhost:8000/health/ready` |
 
-```env
-# Application
-ENVIRONMENT=development
-SECRET_KEY=your_random_secret_key
+## Environment Variables
 
-# Database (Docker default)
-DATABASE_URL=postgresql://yag_user:yag_secret@localhost:5432/yag_db
+### Backend essentials
 
-# Redis & RabbitMQ (Docker default)
-REDIS_HOST=localhost
-RABBITMQ_HOST=localhost
-RABBITMQ_USER=yag_mq
-RABBITMQ_PASSWORD=yag_mq_secret
+| Variable | Purpose |
+|---|---|
+| `ENVIRONMENT` | `development`, `staging`, or `production` |
+| `SERVICE_ROLE` | `api`, `worker`, `migrate`, or `scheduler` |
+| `SECRET_KEY` | JWT signing key |
+| `CORS_ORIGINS` | Comma-separated frontend origins |
+| `DATABASE_URL` | Optional full PostgreSQL URL; overrides component DB vars |
+| `POSTGRES_*` | PostgreSQL component config |
+| `REDIS_URL` | Optional full Redis URL |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | Redis component config |
+| `RABBITMQ_URL` | Optional full RabbitMQ URL |
+| `RABBITMQ_*` | RabbitMQ component config |
+| `GEMINI_API_KEY` | Gemini AI features |
+| `CLOUDINARY_*` | Avatar and cover uploads |
+| `VNP_*` | VNPAY checkout and IPN verification |
+| `ALLOW_WEBSOCKET_QUERY_TOKEN` | Must be `false` in production |
 
-# AI Engine (Bắt buộc cho AI features)
-GEMINI_API_KEY=your_google_gemini_api_key
+### Frontend essentials
 
-# Cloudinary (Bắt buộc cho upload ảnh)
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-```
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_APP_URL` | Public frontend origin |
+| `NEXT_PUBLIC_API_BASE_URL` | API origin, without `/api/v1` |
+| `NEXT_PUBLIC_WS_BASE_URL` | WebSocket origin/path |
+| `NEXT_PUBLIC_DEPLOY_ENV` | `development`, `staging`, or `production` |
+| `NEXT_PUBLIC_USE_MOCKS` | UI mock mode; must be `false` outside demos |
+| `NEXT_PUBLIC_API_TIMEOUT_MS` | API request timeout |
 
-</details>
+## Database Migrations
 
-<details>
-<summary>📋 <strong>Frontend (.env)</strong> — Click để mở</summary>
-
-```env
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-NEXT_PUBLIC_WS_BASE_URL=ws://localhost:8000
-NEXT_PUBLIC_DEPLOY_ENV=development
-NEXT_PUBLIC_USE_MOCKS=false
-```
-
-</details>
-
-### 6. Verify
-
-| Service | URL | Mô tả |
-|---|---|---|
-| Frontend | http://localhost:3000 | Web Portal |
-| Backend API Docs | http://localhost:8000/docs | Swagger UI |
-| Health Check | http://localhost:8000/health/ready | DB + Redis + RabbitMQ status |
-| RabbitMQ Dashboard | http://localhost:15672 | User: `yag_mq` / `yag_mq_secret` |
-
-### 7. Full-stack Docker (Alternative)
-
-```bash
-# Chạy tất cả trong Docker (không cần install Node/Python)
-docker-compose --profile app up -d --build
-# → Nginx: http://localhost (port 80)
-```
-
----
-
-## 🚢 Triển khai Production
-
-YAG sử dụng kiến trúc **Serverless-First** để tối ưu chi phí và khả năng chịu tải:
-
-### Tổng quan hạ tầng Production
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                    🌐 PRODUCTION INFRASTRUCTURE                    │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                    │
-│  [Cloudflare]  DNS + WAF + DDoS Protection                        │
-│       │                                                            │
-│       ▼                                                            │
-│  [Vercel]  Next.js 16 Frontend (CDN toàn cầu, auto-deploy)       │
-│       │                                                            │
-│       ▼  /api/*, /ws/*                                            │
-│  [Cloud Run]  FastAPI Backend (Docker, auto-scale to zero)        │
-│       │                                                            │
-│       ├──▶ [Supabase]  PostgreSQL 16 + pgvector (Connection Pool) │
-│       ├──▶ [Upstash]   Serverless Redis (Cache, Session)          │
-│       ├──▶ [Cloud Pub/Sub]  Message Queue (→ Cloud Functions)     │
-│       ├──▶ [Cloudinary]    Media CDN (WebP/AVIF auto-convert)     │
-│       ├──▶ [Secret Manager]  API Keys, DB passwords               │
-│       └──▶ [PayOS]  VietQR Payment Gateway (Webhook)             │
-│                                                                    │
-│  [Cloud Functions]  AI Workers (Gemini moderation + embeddings)   │
-│  [Cloud Logging]    Monitoring & Error Reporting                  │
-│  [GCS]              Database Backup (daily cron)                  │
-│                                                                    │
-│  [Gemini AI]  gemini-1.5-flash + text-embedding-004               │
-│                                                                    │
-└────────────────────────────────────────────────────────────────────┘
-```
-
-### Bước triển khai
-
-<details>
-<summary>📋 <strong>Bước 1: Cấu hình Managed Services</strong></summary>
-
-```bash
-# 1. Supabase — Tạo project, bật pgvector extension
-#    Dashboard → SQL Editor → CREATE EXTENSION IF NOT EXISTS vector;
-#    Connection string: postgresql://postgres.xxx:pass@aws-0-region.pooler.supabase.com:6543/postgres
-
-# 2. Upstash — Tạo Redis database
-#    Connection: rediss://default:TOKEN@REGION.upstash.io:6379
-
-# 3. Cloudinary — Tạo account, lấy API credentials
-
-# 4. Google Cloud — Bật APIs: Cloud Run, Cloud Functions, Pub/Sub, Secret Manager
-gcloud services enable run.googleapis.com cloudfunctions.googleapis.com pubsub.googleapis.com secretmanager.googleapis.com
-
-# 5. PayOS — Đăng ký merchant, lấy API Key + Webhook Secret
-```
-
-</details>
-
-<details>
-<summary>📋 <strong>Bước 2: Deploy Backend lên Cloud Run</strong></summary>
-
-```bash
-# Build & push Docker image
-gcloud builds submit --tag gcr.io/PROJECT_ID/yag-backend ./src/backend
-
-# Deploy Cloud Run service
-gcloud run deploy yag-backend \
-  --image gcr.io/PROJECT_ID/yag-backend \
-  --region asia-southeast1 \
-  --platform managed \
-  --allow-unauthenticated \
-  --set-env-vars ENVIRONMENT=production \
-  --set-secrets DATABASE_URL=yag-db-url:latest,SECRET_KEY=yag-secret-key:latest,GEMINI_API_KEY=yag-gemini-key:latest
-```
-
-</details>
-
-<details>
-<summary>📋 <strong>Bước 3: Deploy Frontend lên Vercel</strong></summary>
-
-```bash
-# Kết nối GitHub repo với Vercel
-# Settings → Environment Variables:
-#   NEXT_PUBLIC_APP_URL = https://yourdomain.com
-#   NEXT_PUBLIC_API_BASE_URL = https://yag-backend-xxx.run.app
-#   NEXT_PUBLIC_WS_BASE_URL = wss://yag-backend-xxx.run.app
-#   NEXT_PUBLIC_DEPLOY_ENV = production
-
-# Auto-deploy khi push to main branch
-```
-
-</details>
-
-<details>
-<summary>📋 <strong>Bước 4: Cấu hình Cloudflare DNS</strong></summary>
-
-```
-yourdomain.com    → CNAME → cname.vercel-dns.com (Proxied ☁️)
-api.yourdomain.com → CNAME → yag-backend-xxx.run.app (Proxied ☁️)
-
-# Bật: SSL Full (Strict), Always Use HTTPS, HSTS
-# Bật: Under Attack Mode (khi cần chống DDoS)
-```
-
-</details>
-
-<details>
-<summary>📋 <strong>Bước 5: Secrets & Monitoring</strong></summary>
-
-```bash
-# Lưu secrets vào Google Secret Manager
-echo -n "your_db_url" | gcloud secrets create yag-db-url --data-file=-
-echo -n "your_secret_key" | gcloud secrets create yag-secret-key --data-file=-
-echo -n "your_gemini_key" | gcloud secrets create yag-gemini-key --data-file=-
-
-# Cấu hình Cloud Logging alerts cho 5xx errors
-# Console → Logging → Log-based Metrics → Create Alert Policy
-```
-
-</details>
-
----
-
-## ⚙ CI/CD Pipeline
-
-```mermaid
-graph LR
-    classDef trigger fill:#6366F1,stroke:#4338CA,stroke-width:2px,color:#fff;
-    classDef job fill:#3B82F6,stroke:#1D4ED8,stroke-width:2px,color:#fff;
-    classDef deploy fill:#10B981,stroke:#047857,stroke-width:2px,color:#fff;
-    classDef fail fill:#EF4444,stroke:#B91C1C,stroke-width:2px,color:#fff;
-
-    Push["Push / PR to dev, main"]:::trigger
-    
-    Backend["🐍 Backend CI<br/>Python 3.11<br/>Flake8 + pytest --cov"]:::job
-    Frontend["⚛ Frontend CI<br/>Node.js 20<br/>ESLint + next build"]:::job
-    
-    Deploy["🚀 Auto Deploy<br/>Migrations → Production DB<br/>Vercel rebuild<br/>Cloud Run redeploy"]:::deploy
-    
-    Push --> Backend
-    Push --> Frontend
-    Backend -->|"✅ Pass"| Deploy
-    Frontend -->|"✅ Pass"| Deploy
-```
-
-| Branch | CI | CD |
-|---|---|---|
-| `dev` | ✅ Lint + Test + Build | ❌ |
-| `main` | ✅ Lint + Test + Build | ✅ Auto-deploy migrations + Vercel + Cloud Run |
-| Feature branches | ✅ (on PR) | ❌ |
-
----
-
-## 🧪 Kiểm thử & Chất lượng
-
-### Backend Test Suite (pytest — 14 test files)
+The backend uses a custom versioned SQL migration runner instead of Alembic.
 
 ```bash
 cd src/backend
-pytest --cov=app --cov-report=term-missing -v
+python -m app.manage_migrations
+python -m app.manage_migrations --check
 ```
 
-| Test File | Module | Coverage |
-|---|---|---|
-| `test_auth.py` | F1: Authentication | Register, Login, JWT, Password Reset |
-| `test_payment.py` | F2: VNPAY/PayOS | Checkout, IPN/Webhook Verify |
-| `test_membership.py` | F2: Membership | Plans, Status |
-| `test_ai_suggestions.py` | F3: AI Engine | Plot Suggestions |
-| `test_ai_search_and_recommendations.py` | F3: AI Search | Semantic Search, Recommendations |
-| `test_database.py` | Core: DB | Models, Relationships, Migrations |
-| `test_moderation.py` | F5: Moderation | AI Content Pipeline |
-| `test_publish.py` | F4: Publishing | Chapter Publish Workflow |
-| `test_admin.py` | F5: Admin | Dashboard, Queue, Audit |
-| `test_notifications.py` | Notifications | CRUD, WebSocket Push |
-| `test_profile.py` | F1: Profile | Update, Avatar |
-| `test_schedule.py` | F4: Schedule | Cron Jobs, Reminders |
-| `test_role_separation.py` | Core: RBAC | Role-based Access Control |
-| `test_main.py` | Core: App | Startup, Health Checks |
+Rules:
 
-### Frontend Checks
+- Do not edit already-applied migration files.
+- Add new schema changes as `src/backend/migrations/V{N}__description.sql`.
+- The `schema_migrations` table stores filename, version, checksum, and apply time.
+- Membership plans are initialized by `V4__init_membership_plans.sql`.
+- `app.seed` is for development data only and must not be used for production initialization.
+
+## Testing
+
+### Backend
+
+```bash
+cd src/backend
+python -m pytest -q
+python -m pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml
+python -m flake8 app tests --count --select=E9,F63,F7,F82 --show-source --statistics
+```
+
+### Frontend
 
 ```bash
 cd src/frontend
-npm run lint          # ESLint
-npm run build         # Type-safe compilation check
+npm run lint
+npm run build
 ```
 
-### Tài liệu QA chuyên sâu
-- 📋 [Kế hoạch Kiểm thử (Test_Plan.md)](docs/test/Test_Plan.md) — Môi trường, thiết bị, chỉ tiêu chất lượng
-- 🎨 [Kiểm thử UX (Usability Tests)](docs/test/UX_Usability_Tests.md) — 10 kịch bản theo Nguyên lý Nielsen
-- ♿ [Kiểm thử A11y (Accessibility)](docs/test/Accessibility_A11y_Tests.md) — WCAG 2.1 AA compliance
-
----
-
-## 🤝 Quy trình đóng góp
-
-### Branching Strategy
-
-```
-main ─────────────────────────────── (stable, auto-deploy)
-  │
-  ├── dev ────────────────────────── (integration branch)
-  │     │
-  │     ├── feature/WebSocketAutosave
-  │     ├── feature/AISemanticSearch
-  │     └── fix/VNPAYSignature
-  │
-  └── hotfix/critical-bug ────────── (emergency fixes)
-```
-
-### Conventional Commits
-
-```
-feat: tích hợp trợ lý Miu AI vào Author Studio
-fix: khắc phục lỗi trễ hẹn lịch đăng chương
-docs: bổ sung kịch bản kiểm thử WCAG A11y
-refactor: tối ưu hóa câu lệnh so khớp vector pgvector
-perf: thêm Redis cache cho chapter content
-test: bổ sung test case cho VNPAY IPN verification
-```
-
-### Database Migration Rules
+### Docker config validation
 
 ```bash
-# ⚠ KHÔNG BAO GIỜ sửa file migration đã apply
-# Luôn tạo file MỚI cho thay đổi schema:
-migrations/
-├── V1__initial_schema.sql          # ✅ Đã apply — KHÔNG SỬA
-├── V2__hotfix_users_lock_columns.sql
-├── V3__p1_schema_alignment.sql
-└── V4__add_new_feature.sql         # ← Thêm ở đây
+docker compose config
+docker compose --profile prod config
 ```
 
----
+## Docker Compose
 
-## 👥 Tác giả
+### Profiles
 
-<div align="center">
-
-Dự án được phát triển bởi **Nhóm 1** — Nhập môn Công nghệ Phần mềm, HCMUS 2025-2026.
-
-Mỗi thành viên đảm nhận **20%** khối lượng công việc, phối hợp nhịp nhàng.
-
-</div>
-
-| Thành viên | Vai trò | Module |
+| Command | Services | Use |
 |---|---|---|
-| **Trần Gia Hiển** | Product Owner & Testing Lead | F1 — Authentication |
-| **Nguyễn Duy Trường** | Software Architect & DB Designer | F2 — Payment & Membership |
-| **Phạm Hương Trà** | Business Analyst & QA Engineer | F3 — AI Engine |
-| **Huỳnh Yến Nhi** | UI/UX Designer & Conceptualizer | F4 — Stories & Editor |
-| **Nguyễn Phú Thọ** | DevOps & Infrastructure Lead | F5 — Admin & Moderation |
+| `docker compose up -d` | `postgres`, `redis`, `rabbitmq` | Local infrastructure |
+| `docker compose --profile app up -d --build` | Full stack | Local full-stack container test |
+| `docker compose --profile prod up -d --build` | Full stack | VM/VPS production deployment |
 
----
+For the `app` profile, create a root `.env` from `.env.example` and keep `ENVIRONMENT=development`.
 
-## 📄 Giấy phép
+For the `prod` profile:
 
-Dự án được phân phối công khai dưới **MIT License**. Xem chi tiết tại file `LICENSE`.
+- Set `ENVIRONMENT=production`.
+- Use strong non-default secrets.
+- Set HTTPS `CORS_ORIGINS`, `FRONTEND_PUBLIC_URL`, `API_PUBLIC_URL`, and `WS_PUBLIC_URL`.
+- Place TLS files at:
+  - `nginx/certs/fullchain.pem`
+  - `nginx/certs/privkey.pem`
 
----
+## Production Deployment
 
-<div align="center">
+### Self-hosted Docker Compose
 
-**⭐ Star repo nếu bạn thấy dự án hữu ích!**
+1. Prepare a server with Docker and Docker Compose.
+2. Clone the repository.
+3. Copy `.env.example` to `.env` at the repository root.
+4. Fill all production variables.
+5. Add TLS certificates under `nginx/certs/`.
+6. Start the production profile:
 
-Được xây dựng với ❤️ bởi Nhóm 1 — HCMUS
+```bash
+docker compose --profile prod up -d --build
+docker compose ps
+docker compose logs -f backend moderation-worker nginx
+curl -fsS https://your-domain.com/health/ready
+```
 
-</div>
+### Required production values
+
+Production startup validation rejects unsafe configuration. At minimum:
+
+```env
+ENVIRONMENT=production
+SECRET_KEY=<strong random value>
+ALLOW_WEBSOCKET_QUERY_TOKEN=false
+CORS_ORIGINS=https://your-domain.com
+FRONTEND_PUBLIC_URL=https://your-domain.com
+API_PUBLIC_URL=https://your-domain.com
+WS_PUBLIC_URL=wss://your-domain.com/ws
+REDIS_PASSWORD=<strong password or use REDIS_URL>
+RABBITMQ_USER=<non-default user or use RABBITMQ_URL>
+RABBITMQ_PASSWORD=<strong password or use RABBITMQ_URL>
+GEMINI_API_KEY=<production key>
+CLOUDINARY_CLOUD_NAME=<production value>
+CLOUDINARY_API_KEY=<production value>
+CLOUDINARY_API_SECRET=<production value>
+VNP_TMN_CODE=<production merchant code>
+VNP_HASH_SECRET=<production hash secret>
+VNP_URL=<production VNPAY payment URL>
+VNP_RETURN_URL=https://your-domain.com/payment/result
+VNP_API_URL=<production VNPAY API URL>
+```
+
+Important: `API_PUBLIC_URL` is the origin only, for example `https://your-domain.com`, because the frontend client appends `/api/v1`.
+
+## CI/CD
+
+GitHub Actions runs on pushes and pull requests to `dev` and `main`.
+
+### Validation jobs
+
+- Backend: install Python dependencies, flake8 critical lint, migrations, pytest with coverage.
+- Frontend: install Node dependencies, ESLint, Next.js build.
+- Security: `pip-audit`, `npm audit`, Bandit.
+- Docker: backend/frontend Docker build check on pull requests.
+- SonarQube: optional when `SONAR_TOKEN` and `SONAR_HOST_URL` are configured.
+
+### Deployment jobs
+
+Production deployment jobs run only on `push` to `main`.
+
+Current automated deployment path:
+
+- Apply production migrations when `DATABASE_URL` GitHub secret exists.
+- Build and deploy the backend image to Google Cloud Run when GCP Workload Identity Federation secrets exist.
+- Frontend production deploy is expected to be handled by the hosting provider integration, such as Vercel connected to `main`.
+
+Required GitHub secrets for Cloud Run backend deploy:
+
+```text
+GCP_WORKLOAD_IDENTITY_PROVIDER
+GCP_SERVICE_ACCOUNT
+GCP_PROJECT_ID
+DATABASE_URL
+```
+
+Optional GitHub secrets:
+
+```text
+GCP_REGION
+GCP_GAR_REPO
+SONAR_TOKEN
+SONAR_HOST_URL
+```
+
+Cloud Run deployment expects these Google Secret Manager secrets:
+
+```text
+yag-database-url
+yag-secret-key
+yag-cors-origins
+yag-redis-url
+yag-rabbitmq-url
+yag-gemini-key
+yag-cloudinary-name
+yag-cloudinary-key
+yag-cloudinary-secret
+yag-vnp-tmn-code
+yag-vnp-hash-secret
+yag-vnp-url
+yag-vnp-return-url
+yag-vnp-api-url
+```
+
+If those secrets are not configured, CI validation still runs and deployment jobs are skipped or fail clearly at the deployment boundary.
+
+## API Map
+
+All API routes are mounted under `/api/v1`.
+
+| Prefix | Module |
+|---|---|
+| `/auth` | Authentication, profile auth helpers, password flows |
+| `/stories` | Story CRUD, story detail, reviews, library/history helpers |
+| `/chapters` | Chapter CRUD, comments, reading, view count |
+| `/author/chapters` | Author autosave and draft editing helpers |
+| `/publish` | Publish and moderation submission flows |
+| `/payment` | VNPAY and payment history |
+| `/payments` | Frontend-compatible payment alias |
+| `/membership` | Membership plans and checkout alias |
+| `/ai` | AI suggestions and semantic search helpers |
+| `/recommendations` | Recommendation endpoints |
+| `/admin` | Admin dashboard, moderation, audit, alerts |
+| `/notifications` | Notification listing and read state |
+
+WebSocket routes:
+
+| Route | Purpose |
+|---|---|
+| `/ws/notifications/{user_id}` | User notification stream |
+| `/api/v1/ws/notifications/{user_id}` | Versioned notification stream alias |
+| `/ws/stories/{story_id}/chapters/{chapter_id}` | Author chapter draft autosave |
+
+Health routes:
+
+| Route | Purpose |
+|---|---|
+| `/health` | Basic health |
+| `/health/live` | Liveness |
+| `/health/ready` | DB, Redis, RabbitMQ readiness |
+
+## Project Hygiene
+
+- Do not commit `.env`, `.venv`, `node_modules`, `.next`, generated coverage, cache files, uploads, or TLS private keys.
+- Keep production certificates outside Git; only `nginx/certs/.gitignore` is tracked.
+- Keep root README as the canonical public documentation.
+- Use `AGENTS.md` as the detailed internal engineering map for AI agents and project maintainers.
+- Add new database changes through new migration files only.
+
+## Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| Backend cannot start in production | Read the production validation error from `app/core/config.py` |
+| Migration checksum mismatch | A migration already applied to DB was edited; create a new migration instead |
+| AI moderation stays pending | Check `moderation-worker` logs and RabbitMQ queues |
+| Semantic search returns weak results | Check `story_embeddings` data and Gemini embedding calls |
+| VNPAY result fails | Check `VNP_HASH_SECRET`, secure hash, transaction amount, and response/status codes |
+| WebSocket fails in production | Check Nginx `/ws/` routing, cookies, and `ALLOW_WEBSOCKET_QUERY_TOKEN=false` |
+| Frontend API URL is wrong | `NEXT_PUBLIC_API_BASE_URL` must be the origin only, without `/api/v1` |
+
+## Team
+
+| Member | Main module | API prefix |
+|---|---|---|
+| Tran Gia Hien | F1 - Authentication | `/api/v1/auth` |
+| Nguyen Duy Truong | F2 - VNPAY Payment and Membership | `/api/v1/payment`, `/api/v1/membership` |
+| Pham Huong Tra | F3 - AI Engine | `/api/v1/ai`, `/api/v1/recommendations` |
+| Huynh Yen Nhi | F4 - Stories, Chapters, Editor | `/api/v1/stories`, `/api/v1/chapters` |
+| Nguyen Phu Tho | F5 - Admin, Moderation | `/api/v1/admin` |
+
+## License
+
+No license file is currently included. Add a `LICENSE` file before distributing the project publicly under a specific open-source license.

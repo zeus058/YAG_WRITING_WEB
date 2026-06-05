@@ -23,8 +23,12 @@ def _require_admin(current_user: User = Depends(deps.get_current_user)) -> User:
     return AdminService.require_admin(current_user)
 
 
-@router.get("/stats", response_model=AdminStatsResponse, summary="U015 - Admin quick statistics")
-@router.get("/dashboard/stats", response_model=AdminStatsResponse, include_in_schema=False)
+@router.get(
+    "/stats", response_model=AdminStatsResponse, summary="U015 - Admin quick statistics"
+)
+@router.get(
+    "/dashboard/stats", response_model=AdminStatsResponse, include_in_schema=False
+)
 def get_stats(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(_require_admin),
@@ -32,7 +36,11 @@ def get_stats(
     return AdminService.get_dashboard_stats(db)
 
 
-@router.get("/revenue-series", response_model=AdminRevenueSeriesResponse, summary="U015 - Revenue chart series")
+@router.get(
+    "/revenue-series",
+    response_model=AdminRevenueSeriesResponse,
+    summary="U015 - Revenue chart series",
+)
 def get_revenue_series(
     range: str = "month",
     db: Session = Depends(deps.get_db),
@@ -43,13 +51,19 @@ def get_revenue_series(
     return AdminService.get_revenue_series(db, range)
 
 
-@router.post("/reports", response_model=AdminReportResponse, summary="U015 - Admin report chart data")
+@router.post(
+    "/reports",
+    response_model=AdminReportResponse,
+    summary="U015 - Admin report chart data",
+)
 def get_report_data(
     request: AdminReportRequest,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(_require_admin),
 ):
-    return AdminService.get_report_data(db, request.from_date, request.to_date, request.report_type)
+    return AdminService.get_report_data(
+        db, request.from_date, request.to_date, request.report_type
+    )
 
 
 @router.post("/users/{user_id}/lock", summary="U015 - Lock a violating user account")
@@ -93,7 +107,10 @@ def get_moderation_queue(
     return AdminService.get_moderation_queue(db)
 
 
-@router.post("/moderation/{chapter_id}/override", summary="U015 - Override AI moderation decision")
+@router.post(
+    "/moderation/{chapter_id}/override",
+    summary="U015 - Override AI moderation decision",
+)
 def override_moderation(
     chapter_id: str,
     request: ModerationOverrideRequest,
@@ -116,7 +133,9 @@ def override_moderation(
     }
 
 
-@router.post("/moderation/{chapter_id}", summary="U015 - Frontend moderation decision alias")
+@router.post(
+    "/moderation/{chapter_id}", summary="U015 - Frontend moderation decision alias"
+)
 def review_moderation_decision(
     chapter_id: str,
     request: ModerationOverrideRequest,
@@ -139,7 +158,10 @@ def review_moderation_decision(
     }
 
 
-@router.post("/moderation/{chapter_id}/approve", summary="U015 - Manually approve flagged chapter")
+@router.post(
+    "/moderation/{chapter_id}/approve",
+    summary="U015 - Manually approve flagged chapter",
+)
 def approve_moderation(
     chapter_id: str,
     request: AdminReasonRequest,
@@ -161,7 +183,9 @@ def approve_moderation(
     }
 
 
-@router.post("/moderation/{chapter_id}/reject", summary="U015 - Manually reject chapter")
+@router.post(
+    "/moderation/{chapter_id}/reject", summary="U015 - Manually reject chapter"
+)
 def reject_moderation(
     chapter_id: str,
     request: AdminReasonRequest,
@@ -189,7 +213,12 @@ def get_audit_logs(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(_require_admin),
 ):
-    logs = db.query(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(100).all()
+    logs = (
+        db.query(AdminAuditLog)
+        .order_by(AdminAuditLog.created_at.desc())
+        .limit(100)
+        .all()
+    )
     return [
         {
             "id": str(log.id),
@@ -205,7 +234,9 @@ def get_audit_logs(
     ]
 
 
-@router.get("/schedule-alerts", summary="U014 - List missed schedule alerts for Admin Dashboard")
+@router.get(
+    "/schedule-alerts", summary="U014 - List missed schedule alerts for Admin Dashboard"
+)
 def get_schedule_alerts(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(_require_admin),

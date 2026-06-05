@@ -10,7 +10,6 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ---------------------------------------------------------------------------
 # Request schemas
 # ---------------------------------------------------------------------------
@@ -26,7 +25,8 @@ class CommentCreate(BaseModel):
         description="Nội dung bình luận (1-2000 ký tự)",
     )
     parent_id: Optional[uuid.UUID] = Field(
-        default=None, description="ID bình luận cha (null = bình luận gốc, có giá trị = reply)"
+        default=None,
+        description="ID bình luận cha (null = bình luận gốc, có giá trị = reply)",
     )
 
 

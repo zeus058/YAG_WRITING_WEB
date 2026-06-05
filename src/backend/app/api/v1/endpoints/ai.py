@@ -2,6 +2,7 @@
 AI Smart Novel Engine & pgvector Search Routing Handler.
 Assigned Member: Pham Huong Tra (U006, U008, U009 - TC-013 to TC-015).
 """
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 

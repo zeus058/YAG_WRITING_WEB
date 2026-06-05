@@ -4,13 +4,23 @@ Assigned Member: Huỳnh Yến Nhi (U004, U007, U010 - TC-016, TC-017, TC-019, T
 
 Premium RBAC integration by: Nguyễn Duy Trường (U011).
 """
+
 from datetime import datetime, timezone
 import asyncio
 import json
 from typing import Any, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status, Request
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+    Request,
+)
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 import redis
 from sqlalchemy.orm import Session
@@ -82,19 +92,26 @@ class AutosaveMessage(BaseModel):
 def get_story_or_404(db: Session, story_id: UUID) -> Story:
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Story not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Story not found"
+        )
     return story
 
 
 def ensure_author_owns_story(story: Story, current_author) -> None:
     if story.author_id != current_author.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized for this story")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized for this story",
+        )
 
 
 def get_author_chapter_or_404(db: Session, chapter_id: UUID, current_author) -> Chapter:
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found"
+        )
     ensure_author_owns_story(chapter.story, current_author)
     return chapter
 
@@ -108,7 +125,9 @@ def apply_chapter_update(chapter: Chapter, update: ChapterUpdate) -> None:
 
 
 def normalize_autosave_payload(payload: dict[str, Any]) -> AutosaveMessage:
-    if payload.get("type") == "draft.patch" and isinstance(payload.get("payload"), dict):
+    if payload.get("type") == "draft.patch" and isinstance(
+        payload.get("payload"), dict
+    ):
         payload = payload["payload"]
     return AutosaveMessage.model_validate(payload)
 
@@ -124,7 +143,9 @@ def get_websocket_author(websocket: WebSocket, db: Session) -> User:
     """
     token = None
     if settings.ALLOW_WEBSOCKET_QUERY_TOKEN:
-        token = websocket.query_params.get("token") or websocket.query_params.get("access_token")
+        token = websocket.query_params.get("token") or websocket.query_params.get(
+            "access_token"
+        )
     if not token:
         auth_header = websocket.headers.get("authorization")
         if auth_header and auth_header.startswith("Bearer "):
@@ -175,8 +196,25 @@ def get_websocket_author(websocket: WebSocket, db: Session) -> User:
 
 
 def get_redis_client():
-    redis_url = settings.REDIS_URL or f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/0"
-    return redis.Redis.from_url(redis_url, decode_responses=True, socket_connect_timeout=1, socket_timeout=1)
+    if settings.REDIS_URL:
+        return redis.Redis.from_url(
+            settings.REDIS_URL,
+            decode_responses=True,
+            socket_connect_timeout=1,
+            socket_timeout=1,
+        )
+    redis_kwargs = {
+        "host": settings.REDIS_HOST,
+        "port": settings.REDIS_PORT,
+        "db": 0,
+        "decode_responses": True,
+        "socket_connect_timeout": 1,
+        "socket_timeout": 1,
+    }
+    redis_password = getattr(settings, "REDIS_PASSWORD", None)
+    if isinstance(redis_password, str) and redis_password:
+        redis_kwargs["password"] = redis_password
+    return redis.Redis(**redis_kwargs)
 
 
 def chapter_cache_key(chapter_id: UUID) -> str:
@@ -262,19 +300,27 @@ def is_future_datetime(value: datetime) -> bool:
 
 
 def ensure_chapter_is_available(chapter_data: dict[str, Any], current_user) -> None:
-    is_author = str(getattr(current_user, "id", "")) == str(chapter_data["story_author_id"])
+    is_author = str(getattr(current_user, "id", "")) == str(
+        chapter_data["story_author_id"]
+    )
     if chapter_data["moderation_status"] != "approved" and not is_author:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not available")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not available"
+        )
 
     publish_at = datetime.fromisoformat(chapter_data["publish_at"])
     if is_future_datetime(publish_at) and not is_author:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not published yet")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not published yet"
+        )
 
 
 def update_reading_history(db: Session, user_id: UUID, chapter_id: UUID) -> None:
     history = (
         db.query(ReadingHistory)
-        .filter(ReadingHistory.user_id == user_id, ReadingHistory.chapter_id == chapter_id)
+        .filter(
+            ReadingHistory.user_id == user_id, ReadingHistory.chapter_id == chapter_id
+        )
         .first()
     )
     if history:
@@ -332,7 +378,11 @@ def serialize_comment(comment: Comment) -> dict[str, Any]:
         "id": str(comment.id),
         "user_id": str(comment.user_id),
         "username": user.username if user else "unknown",
-        "display_name": profile.display_name if profile else (user.username if user else "Người dùng"),
+        "display_name": (
+            profile.display_name
+            if profile
+            else (user.username if user else "Người dùng")
+        ),
         "avatar_url": profile.avatar_url if profile else None,
         "chapter_id": str(comment.chapter_id),
         "content": comment.content,
@@ -408,7 +458,9 @@ def flush_story_view_counts(db: Session, redis_client) -> int:
     return flushed_total
 
 
-@router.post("/", response_model=ChapterResponse, summary="U004 - Tạo chương mới dạng bản nháp")
+@router.post(
+    "/", response_model=ChapterResponse, summary="U004 - Tạo chương mới dạng bản nháp"
+)
 def create_chapter(
     chapter_in: ChapterCreate,
     db: Session = Depends(deps.get_db),
@@ -426,7 +478,10 @@ def create_chapter(
         .first()
     )
     if existing_chapter:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Chapter number already exists")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Chapter number already exists",
+        )
 
     chapter = Chapter(
         story_id=chapter_in.story_id,
@@ -442,7 +497,9 @@ def create_chapter(
     return chapter
 
 
-@router.put("/{chapter_id}", response_model=ChapterResponse, summary="U004 - Lưu nháp chương")
+@router.put(
+    "/{chapter_id}", response_model=ChapterResponse, summary="U004 - Lưu nháp chương"
+)
 def update_chapter(
     chapter_id: UUID,
     chapter_in: ChapterUpdate,
@@ -458,7 +515,11 @@ def update_chapter(
 
 
 @router.post("/views/flush", summary="U007 - Flush Redis view counters về PostgreSQL")
-def flush_views(db: Session = Depends(deps.get_db)):
+def flush_views(
+    db: Session = Depends(deps.get_db),
+    current_admin=Depends(deps.require_role("admin")),
+):
+    _ = current_admin
     flushed_total = flush_story_view_counts(db, get_redis_client())
     return {
         "message": "View counters flushed",
@@ -466,7 +527,11 @@ def flush_views(db: Session = Depends(deps.get_db)):
     }
 
 
-@router.get("/{chapter_id}", response_model=ChapterReadResponse, summary="U007 - Đọc nội dung chương truyện với Redis cache")
+@router.get(
+    "/{chapter_id}",
+    response_model=ChapterReadResponse,
+    summary="U007 - Đọc nội dung chương truyện với Redis cache",
+)
 def get_chapter(
     chapter_id: UUID,
     request: Request,
@@ -487,22 +552,38 @@ def get_chapter(
     if not chapter_data:
         chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
         if not chapter:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found"
+            )
 
         is_author = current_user and chapter.story.author_id == current_user.id
         if chapter.moderation_status != "approved" and not is_author:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not available")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not available"
+            )
         if is_future_datetime(chapter.publish_at) and not is_author:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chapter is not published yet")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Chapter is not published yet",
+            )
         chapter_data = serialize_chapter(chapter)
         cache_chapter(redis_client, chapter_data)
 
     ensure_chapter_is_available(chapter_data, current_user)
     ensure_reader_can_read(chapter_data, current_user)
 
-    identifier = str(current_user.id) if current_user else (
-        request.client.host if (request.client and request.client.host) else "unknown_ip")
-    view_count_buffered = increment_story_view(redis_client, chapter_data["story_id"], identifier)
+    identifier = (
+        str(current_user.id)
+        if current_user
+        else (
+            request.client.host
+            if (request.client and request.client.host)
+            else "unknown_ip"
+        )
+    )
+    view_count_buffered = increment_story_view(
+        redis_client, chapter_data["story_id"], identifier
+    )
 
     if current_user:
         update_reading_history(db, current_user.id, chapter_id)
@@ -537,7 +618,9 @@ def get_comments(
 ):
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found"
+        )
 
     offset = (page - 1) * limit
     comments = (
@@ -564,7 +647,9 @@ def get_comment_tree(
 ):
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found"
+        )
 
     offset = (page - 1) * limit
     comments = (
@@ -597,20 +682,30 @@ async def add_comment(
         )
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found"
+        )
 
     content = comment_in.content.strip()
     if not content:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Comment content cannot be empty")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Comment content cannot be empty",
+        )
 
     if comment_in.parent_id:
         parent = (
             db.query(Comment)
-            .filter(Comment.id == comment_in.parent_id, Comment.chapter_id == chapter_id)
+            .filter(
+                Comment.id == comment_in.parent_id, Comment.chapter_id == chapter_id
+            )
             .first()
         )
         if not parent:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Parent comment is invalid")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Parent comment is invalid",
+            )
 
     comment = Comment(
         user_id=current_user.id,
@@ -649,13 +744,21 @@ async def update_comment(
         .first()
     )
     if not comment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found"
+        )
     if comment.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to edit this comment")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to edit this comment",
+        )
 
     content = comment_in.content.strip()
     if not content:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Comment content cannot be empty")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Comment content cannot be empty",
+        )
 
     comment.content = content
     comment.updated_at = datetime.utcnow()
@@ -688,9 +791,14 @@ def delete_comment(
         .first()
     )
     if not comment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found"
+        )
     if comment.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this comment")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this comment",
+        )
 
     db.delete(comment)
     db.commit()
@@ -742,7 +850,11 @@ async def websocket_comments(websocket: WebSocket, chapter_id: UUID):
         comment_manager.disconnect(chapter_id, websocket)
 
 
-@author_router.put("/{chapter_id}/draft", response_model=ChapterResponse, summary="U004 - Autosave draft fallback qua REST")
+@author_router.put(
+    "/{chapter_id}/draft",
+    response_model=ChapterResponse,
+    summary="U004 - Autosave draft fallback qua REST",
+)
 def save_author_draft(
     chapter_id: UUID,
     draft_in: ChapterUpdate,

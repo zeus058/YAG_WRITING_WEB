@@ -11,7 +11,6 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ---------------------------------------------------------------------------
 # Request schemas
 # ---------------------------------------------------------------------------
@@ -20,11 +19,11 @@ from pydantic import BaseModel, ConfigDict, Field
 class ReviewCreate(BaseModel):
     """Schema tạo đánh giá tác phẩm."""
 
-    rating: int = Field(
-        ..., ge=1, le=5, description="Điểm đánh giá (1-5 sao)"
-    )
+    rating: int = Field(..., ge=1, le=5, description="Điểm đánh giá (1-5 sao)")
     content: Optional[str] = Field(
-        default=None, max_length=2000, description="Nhận xét (tùy chọn, tối đa 2000 ký tự)"
+        default=None,
+        max_length=2000,
+        description="Nhận xét (tùy chọn, tối đa 2000 ký tự)",
     )
 
 

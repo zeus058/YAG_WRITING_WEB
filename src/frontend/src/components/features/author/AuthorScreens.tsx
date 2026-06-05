@@ -351,7 +351,6 @@ export function AuthorStudioScreen() {
   const params = useParams();
   const storyId = params?.id as string;
 
-  const [story, setStory] = useState<any>(null);
   const [chapters, setChapters] = useState<any[]>([]);
   const [activeChapter, setActiveChapter] = useState<any>(null);
   const [editorTitle, setEditorTitle] = useState("");
@@ -360,7 +359,6 @@ export function AuthorStudioScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isCreatingChapter, setIsCreatingChapter] = useState(false);
   const [offlineDraft, setOfflineDraft] = useState<{ title: string; content: string; id: string } | null>(null);
 
@@ -392,7 +390,6 @@ export function AuthorStudioScreen() {
         throw new Error("MISSING_STORY_ID");
       }
       if (appEnv.useMocks) {
-        setStory({ title: "Mưa Trên Thành Cũ" });
         const mockChaps = [
           { id: "c1", chapter_number: 13, title: "Tiếng còi cuối mùa", content: "Mưa đã ngừng rơi trên các thềm đá cũ. Những ánh đèn đường nhạt nhòa hắt bóng dài xuống lòng đường sũng nước. An đưa tay đón lấy những giọt nước cuối cùng từ mái ngói đỏ...", moderation_status: "draft" },
           { id: "c2", chapter_number: 12, title: "Ga nhỏ hoàng hôn", content: "Tiếng còi tàu hú vang vọng kéo An ra khỏi miền ký ức xa xăm...", moderation_status: "approved" }
@@ -405,8 +402,7 @@ export function AuthorStudioScreen() {
         return;
       }
 
-      const storyRes = await yagApi.reader.getStoryDetail(storyId);
-      setStory(storyRes.data);
+      await yagApi.reader.getStoryDetail(storyId);
 
       const chapsRes = await yagApi.author.getChapters(storyId);
       const chaps = chapsRes.data || [];
@@ -509,7 +505,6 @@ export function AuthorStudioScreen() {
 
     const markSaved = (label: string) => {
       setSavingStatus(label);
-      setLastSavedAt(new Date());
       setChapters((prev) => prev.map((c) => c.id === chapterId ? { ...c, title: newTitle, content: newBody } : c));
       setActiveChapter((current: any) => current?.id === chapterId ? { ...current, title: newTitle, content: newBody } : current);
     };
@@ -841,7 +836,6 @@ export function AuthorStudioScreen() {
     setEditorTitle(chap.title);
     setEditorContent(chap.content);
     setSaveError(null);
-    setLastSavedAt(null);
     setHistoryStack([]);
     setRedoStack([]);
   };
@@ -1555,9 +1549,8 @@ export function ScheduleScreen() {
   const [manualWords, setManualWords] = useState("");
   const [manualNotes, setManualNotes] = useState("");
   const [sessions, setSessions] = useState<any[]>([]);
-
   // Commitments targets
-  const [commitments, setCommitments] = useState<any[]>([
+  const [commitments] = useState<any[]>([
     { id: "com-1", novel: "Mưa Trên Thành Cũ", targetChaps: 100, currentChaps: 72, deadline: "30/08/2026" },
     { id: "com-2", novel: "Cánh Cửa Sau Sao Băng", targetChaps: 60, currentChaps: 48, deadline: "15/07/2026" }
   ]);
@@ -1567,7 +1560,7 @@ export function ScheduleScreen() {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("yag.author.sessions");
       if (stored) {
-        try { setSessions(JSON.parse(stored)); } catch (e) { setSessions([]); }
+        try { setSessions(JSON.parse(stored)); } catch { setSessions([]); }
       } else {
         const initialMock = [
           { id: "s1", date: "02/06/2026", duration: 45, words: 1200, notes: "Chỉnh sửa thô chương 12" },
@@ -1578,7 +1571,6 @@ export function ScheduleScreen() {
       }
     }
   }, []);
-
   // Generate June 2026 calendar days
   useEffect(() => {
     const daysList = Array.from({ length: 30 }, (_, index) => {

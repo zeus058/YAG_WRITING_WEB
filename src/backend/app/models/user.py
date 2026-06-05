@@ -26,10 +26,16 @@ class User(Base):
     last_login_at = Column(DateTime(timezone=True), nullable=True)
     email_verified_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
-    profile = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    stories = relationship("Story", back_populates="author", cascade="all, delete-orphan")
+    profile = relationship(
+        "Profile", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    stories = relationship(
+        "Story", back_populates="author", cascade="all, delete-orphan"
+    )
     transactions = relationship("Transaction", back_populates="user")
     comments = relationship("Comment", back_populates="user")
     reviews = relationship("Review", back_populates="user")

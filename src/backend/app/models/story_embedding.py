@@ -16,11 +16,17 @@ class StoryEmbedding(Base):
     )
     plot_summary = Column(Text, nullable=False)
     embedding = Column(Vector(1536), nullable=False)
-    embedding_model = Column(String(100), nullable=False, default="text-embedding-004",
-                             server_default="text-embedding-004")
+    embedding_model = Column(
+        String(100),
+        nullable=False,
+        default="text-embedding-004",
+        server_default="text-embedding-004",
+    )
     source_hash = Column(String(64), nullable=True)
     last_embedded_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     story = relationship("Story", back_populates="embedding_record")
 

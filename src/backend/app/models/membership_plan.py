@@ -1,4 +1,13 @@
-from sqlalchemy import Boolean, Column, String, Integer, Numeric, DateTime, Text, CheckConstraint
+from sqlalchemy import (
+    Boolean,
+    Column,
+    String,
+    Integer,
+    Numeric,
+    DateTime,
+    Text,
+    CheckConstraint,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -7,7 +16,9 @@ from app.core.database import Base
 class MembershipPlan(Base):
     __tablename__ = "membership_plans"
 
-    id = Column(String(30), primary_key=True)  # Primary key is VARCHAR(30) (e.g. 'MONTHLY', 'YEARLY')
+    id = Column(
+        String(30), primary_key=True
+    )  # Primary key is VARCHAR(30) (e.g. 'MONTHLY', 'YEARLY')
     name = Column(String(100), nullable=False)
     duration_days = Column(Integer, nullable=False)
     price = Column(Numeric(12, 2), nullable=False)  # price in VND
@@ -15,7 +26,9 @@ class MembershipPlan(Base):
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")
     sort_order = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     transactions = relationship("Transaction", back_populates="membership_plan")
 

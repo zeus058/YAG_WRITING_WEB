@@ -139,3 +139,18 @@ def test_ai_suggestion_context_exceeds_limit():
         assert "Context length cannot exceed 1000 words" in response.text
     finally:
         app.dependency_overrides.clear()
+
+
+def test_unused_ai_suggest_request_schema():
+    from app.schemas.ai import AISuggestRequest
+    import uuid
+    import pytest
+    from pydantic import ValidationError
+
+    req = AISuggestRequest(chapter_id=uuid.uuid4(), context="valid context")
+    assert req.context == "valid context"
+
+    long_context = "a " * 1001
+    with pytest.raises(ValidationError) as exc_info:
+        AISuggestRequest(chapter_id=uuid.uuid4(), context=long_context)
+    assert "Context length cannot exceed 1000 words" in str(exc_info.value)

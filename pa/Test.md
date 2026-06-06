@@ -708,11 +708,11 @@ Dưới đây là danh sách chi tiết 33 test cases ứng với từng mã tí
 | *Test case* | TC-031 |
 | :--- | :--- |
 | Related feature | U001 — Đăng ký tài khoản |
-| Context | Kiểm tra tính năng xác thực độ mạnh mật khẩu và hiển thị cảnh báo trực quan ngay trên giao diện đăng ký tài khoản |
-| Input Data | Nhập các chuỗi mật khẩu yếu trên UI: <br> 1. `12345` (quá ngắn) <br> 2. `p@ssword123` (thiếu chữ hoa) <br> 3. `Passwordabc` (thiếu ký tự đặc biệt/số) <br> Và mật khẩu mạnh hợp lệ: `StrongP@ssw0rd!123` |
-| Expected Output | - Giao diện hiển thị cảnh báo lỗi màu đỏ (validation message) dưới trường mật khẩu đối với mật khẩu yếu, nút Đăng ký bị disabled. <br> - Mật khẩu mạnh hợp lệ hiển thị trạng thái hợp lệ (viền xanh lá/đánh dấu check) và cho phép nhấn Đăng ký. |
-| Test steps | 1. Mở trang Đăng ký (S03). <br> 2. Nhập lần lượt các mật khẩu yếu vào ô mật khẩu -> Xác nhận UI hiển thị thông điệp cảnh báo lỗi cụ thể cho từng loại mật khẩu yếu. <br> 3. Nhập mật khẩu mạnh hợp lệ -> Xác nhận cảnh báo lỗi biến mất và nút Đăng ký được kích hoạt hoạt động. |
-| Actual Output | Giao diện hiển thị cảnh báo màu đỏ trực quan khi nhập mật khẩu yếu. Nút đăng ký mở khóa và cho phép submit khi nhập mật khẩu mạnh. |
+| Context | Kiểm định tính chính xác của cơ chế validate độ mạnh mật khẩu phía Backend khi có yêu cầu đăng ký tài khoản |
+| Input Data | Gửi `POST /api/v1/auth/register` với các mật khẩu yếu: <br> 1. `12345` (quá ngắn) <br> 2. `p@ssword123` (thiếu chữ hoa) <br> 3. `Passwordabc` (thiếu ký tự đặc biệt/số) |
+| Expected Output | Hệ thống trả về lỗi validate dữ liệu `HTTP 422 Unprocessable Entity` (hoặc `HTTP 400 Bad Request`) kèm thông điệp báo lỗi chi tiết của từng quy tắc |
+| Test steps | 1. Gửi request đăng ký với mật khẩu yếu `12345` -> kiểm tra status = 422/400. <br> 2. Gửi request đăng ký với mật khẩu thiếu chữ hoa `p@ssword123` -> kiểm tra status = 422/400. <br> 3. Gửi request đăng ký với mật khẩu thiếu ký tự đặc biệt `Passwordabc` -> kiểm tra status = 422/400. |
+| Actual Output | API trả về lỗi HTTP 422 Unprocessable Entity kèm mô tả quy tắc mật khẩu không thỏa mãn. |
 | Result | Passed |
 
 #### 3.2.32. TC-032: Registration duplicate email/username check
@@ -723,11 +723,11 @@ Dưới đây là danh sách chi tiết 33 test cases ứng với từng mã tí
 | *Test case* | TC-032 |
 | :--- | :--- |
 | Related feature | U001 — Đăng ký tài khoản |
-| Context | Đảm bảo giao diện đăng ký hiển thị thông báo lỗi phù hợp khi người dùng cố gắng nhập Email hoặc Username đã tồn tại trong hệ thống |
-| Input Data | - Tài khoản đã tồn tại: username `trangiahien058`, email `trangiahien058@gmail.com` <br> - Nhập trùng email: `{ "username": "newuser", "email": "trangiahien058@gmail.com" }` <br> - Nhập trùng username: `{ "username": "trangiahien058", "email": "new@yag.dev" }` |
-| Expected Output | Giao diện hiển thị cảnh báo lỗi (validation banner/toast) ngay khi submit form, thông báo tài khoản/email đã tồn tại và giữ nguyên thông tin đã điền để người dùng chỉnh sửa |
-| Test steps | 1. Truy cập trang Đăng ký (S03). <br> 2. Điền thông tin đăng ký với email trùng `trangiahien058@gmail.com` và nhấn Đăng ký -> Xác nhận giao diện hiển thị thông báo lỗi trùng email. <br> 3. Điền thông tin đăng ký với username trùng `trangiahien058` -> Xác nhận giao diện hiển thị thông báo lỗi trùng username. |
-| Actual Output | Giao diện hiển thị thông báo toast lỗi màu đỏ báo trùng email/username chính xác khi submit, giữ nguyên form nhập. |
+| Context | Đảm bảo hệ thống trả về lỗi trùng lặp khi người dùng cố gắng đăng ký với Email hoặc Username đã tồn tại trong CSDL |
+| Input Data | - Tài khoản đã tồn tại trong hệ thống: username `trangiahien058`, email `trangiahien058@gmail.com` <br> - Đăng ký trùng email: `POST /api/v1/auth/register` với `{ "username": "newuser", "email": "trangiahien058@gmail.com", "password": "StrongP@ssw0rd!123" }` <br> - Đăng ký trùng username: `POST /api/v1/auth/register` với `{ "username": "trangiahien058", "email": "new@yag.dev", "password": "StrongP@ssw0rd!123" }` |
+| Expected Output | API từ chối đăng ký và trả về mã lỗi `HTTP 400 Bad Request` kèm theo thông điệp thông báo email/username đã được sử dụng |
+| Test steps | 1. Đảm bảo username `trangiahien058` and email `trangiahien058@gmail.com` đã tồn tại trong CSDL. <br> 2. Gửi request đăng ký trùng email -> kiểm tra response status = 400 và thông điệp thông báo email trùng. <br> 3. Gửi request đăng ký trùng username -> kiểm tra response status = 400 và thông điệp thông báo username trùng. |
+| Actual Output | API chặn đăng ký trùng lặp và phản hồi đúng HTTP 400 Bad Request cùng thông báo lỗi tương ứng. |
 | Result | Passed |
 
 #### 3.2.33. TC-033: JWT token refresh flow

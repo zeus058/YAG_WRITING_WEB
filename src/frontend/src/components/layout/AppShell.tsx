@@ -73,6 +73,34 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
   const { user: authUser, logout } = useAuth();
   const pathname = usePathname();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Initialize theme from localStorage or document class
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isDark = document.documentElement.classList.contains("dark") || localStorage.getItem("theme") === "dark";
+      setIsDarkMode(isDark);
+      if (isDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    if (typeof window !== "undefined") {
+      const newDark = !isDarkMode;
+      setIsDarkMode(newDark);
+      if (newDark) {
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("theme", "light");
+      }
+    }
+  };
 
   const role = modeOverride || (authUser?.role === "admin" ? "admin" : getRoleForPage(activeId));
   const [isPremium, setIsPremium] = useState(false);
@@ -276,6 +304,15 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
                 </span>
               )}
             </Link>
+            <button
+              className="button icon-button"
+              type="button"
+              onClick={toggleDarkMode}
+              aria-label={isDarkMode ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"}
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <Icon name={isDarkMode ? "sun" : "moon"} />
+            </button>
             <div className="account-menu">
               <button
                 className="user-chip account-menu-button"

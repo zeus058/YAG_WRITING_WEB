@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
-import { BrandLogo } from "@/components/ui";
+import { BrandLogo, Cover, getStoryAuthorName, Icon } from "@/components/ui";
+import { yagApi } from "@/lib";
 
 /**
  * Component bọc hỗ trợ hiệu ứng hiển thị khi cuộn trang (Reveal on Scroll)
@@ -50,8 +51,108 @@ function RevealOnScroll({
   );
 }
 
+/**
+ * Component hiển thị bìa sách dạng 3D floating có liên kết thực tế với câu chuyện người dùng
+ */
+function HeroBookCard({
+  className,
+  story,
+  fallbackSvg,
+  defaultTitle,
+  defaultAuthor,
+}: {
+  className: string;
+  story?: any;
+  fallbackSvg: React.ReactNode;
+  defaultTitle: string;
+  defaultAuthor: string;
+}) {
+  const title = story ? story.title : defaultTitle;
+  const author = story ? getStoryAuthorName(story) : defaultAuthor;
+
+  const content = (
+    <div className={`book-card ${className}`}>
+      {story && story.cover_url ? (
+        <div className="book-cover-img-wrap" style={{ width: "200px", height: "260px", overflow: "hidden", position: "relative" }}>
+          <img
+            src={story.cover_url}
+            alt={title}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        </div>
+      ) : (
+        fallbackSvg
+      )}
+      <div className="book-meta">
+        <div className="book-title-sm" title={title}>
+          {title}
+        </div>
+        <div className="book-author-sm" title={author}>
+          {author}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <Link href={story ? `/stories/${story.id}` : "/discover"} style={{ textDecoration: "none" }}>
+      {content}
+    </Link>
+  );
+}
+
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [stories, setStories] = useState<any[]>([]);
+  const [loadingStories, setLoadingStories] = useState(true);
+
+  // === Fetch stories from backend ===
+  useEffect(() => {
+    let active = true;
+    async function fetchStories() {
+      try {
+        const res = await yagApi.reader.listStories();
+        if (active) {
+          setStories(res.data || []);
+        }
+      } catch (err) {
+        console.error("Error fetching stories:", err);
+      } finally {
+        if (active) {
+          setLoadingStories(false);
+        }
+      }
+    }
+    fetchStories();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const storiesScrollRef = useRef<HTMLDivElement>(null);
+  const [isDraggingStories, setIsDraggingStories] = useState(false);
+  const [storiesStartX, setStoriesStartX] = useState(0);
+  const [storiesScrollLeft, setStoriesScrollLeft] = useState(0);
+
+  const handleStoriesMouseDown = (e: React.MouseEvent) => {
+    if (!storiesScrollRef.current) return;
+    setIsDraggingStories(true);
+    setStoriesStartX(e.pageX - storiesScrollRef.current.offsetLeft);
+    setStoriesScrollLeft(storiesScrollRef.current.scrollLeft);
+  };
+
+  const handleStoriesMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingStories || !storiesScrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - storiesScrollRef.current.offsetLeft;
+    const walk = (x - storiesStartX) * 1.5;
+    storiesScrollRef.current.scrollLeft = storiesScrollLeft - walk;
+  };
+
+  const handleStoriesMouseUpOrLeave = () => {
+    setIsDraggingStories(false);
+  };
 
   // === Xử lý hiệu ứng Navbar khi cuộn trang ===
   useEffect(() => {
@@ -60,6 +161,11 @@ export default function LandingPage() {
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
+      }
+
+      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalScroll > 0) {
+        setScrollProgress((window.scrollY / totalScroll) * 100);
       }
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -127,6 +233,21 @@ export default function LandingPage() {
 
   return (
     <div className="landing-page bg-[#41503D] min-h-screen text-white font-sans overflow-x-hidden">
+      {/* Scroll indicator progress bar */}
+      <div
+        className="scroll-progress-bar"
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          height: "3px",
+          backgroundColor: "var(--crimson)",
+          width: `${scrollProgress}%`,
+          zIndex: 1000,
+          transition: "width 0.1s ease-out"
+        }}
+      />
+
       {/* ═══════════ NAVBAR ═══════════ */}
       <nav id="mainNav" className={isScrolled ? "scrolled" : ""}>
         <Link className="logo" href="/" style={{ textDecoration: "none" }}>
@@ -145,10 +266,15 @@ export default function LandingPage() {
           <div className="orb orb1"></div>
           <div className="orb orb2"></div>
           <div className="orb orb3"></div>
-          <div className="particle"></div>
-          <div className="particle"></div>
-          <div className="particle"></div>
-          <div className="particle"></div>
+          {/* Ambient micro-particles (fireflies) */}
+          <div className="particle" style={{ left: "10%", animationDelay: "0s", animationDuration: "5.5s", width: "4px", height: "4px" }}></div>
+          <div className="particle" style={{ left: "28%", animationDelay: "1.2s", animationDuration: "7s", width: "3px", height: "3px" }}></div>
+          <div className="particle" style={{ left: "45%", animationDelay: "2.5s", animationDuration: "6s", width: "5px", height: "5px" }}></div>
+          <div className="particle" style={{ left: "62%", animationDelay: "0.8s", animationDuration: "8s", width: "3px", height: "3px" }}></div>
+          <div className="particle" style={{ left: "78%", animationDelay: "3.2s", animationDuration: "5.2s", width: "4px", height: "4px" }}></div>
+          <div className="particle" style={{ left: "90%", animationDelay: "1.7s", animationDuration: "6.8s", width: "2px", height: "2px" }}></div>
+          <div className="particle" style={{ left: "18%", animationDelay: "4s", animationDuration: "7.5s", width: "3.5px", height: "3.5px" }}></div>
+          <div className="particle" style={{ left: "55%", animationDelay: "2.8s", animationDuration: "4.8s", width: "4px", height: "4px" }}></div>
           <div className="hero-bg-text">YAG</div>
         </div>
 
@@ -210,7 +336,7 @@ export default function LandingPage() {
             <div className="hero-stats">
               <div>
                 <div className="stat-val">Live</div>
-                <div className="stat-key">Tác phẩm người dùng</div>
+                <div className="stat-key">Tác phẩm chất lượng</div>
               </div>
               <div>
                 <div className="stat-val">AI</div>
@@ -218,7 +344,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <div className="stat-val">PayOS</div>
-                <div className="stat-key">Membership thật</div>
+                <div className="stat-key">Đăng ký Premium</div>
               </div>
             </div>
           </div>
@@ -227,177 +353,190 @@ export default function LandingPage() {
           <div className="hero-visual">
             <div className="book-stack">
               {/* Book 3 (back) */}
-              <div className="book-card bc3">
-                <svg
-                  viewBox="0 0 200 260"
-                  xmlns="http://www.w3.org/2000/svg"
-                  style={{ width: "200px", height: "260px", display: "block" }}
-                >
-                  <defs>
-                    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style={{ stopColor: "#0a1628" }} />
-                      <stop offset="100%" style={{ stopColor: "#1a4a7a" }} />
-                    </linearGradient>
-                  </defs>
-                  <rect width="200" height="260" fill="url(#bg3)" />
-                  <circle
-                    cx="100"
-                    cy="110"
-                    r="55"
-                    fill="none"
-                    stroke="rgba(255,255,255,.08)"
-                    strokeWidth="1"
-                  />
-                  <path
-                    d="M70,90 Q100,60 130,90 Q100,120 70,90Z"
-                    fill="rgba(59,130,246,.3)"
-                  />
-                </svg>
-                <div className="book-meta">
-                  <div className="book-title-sm">Tác phẩm cộng đồng</div>
-                  <div className="book-author-sm">Đăng bởi người dùng</div>
-                </div>
-              </div>
-              {/* Book 2 */}
-              <div className="book-card bc2">
-                <svg
-                  viewBox="0 0 200 260"
-                  xmlns="http://www.w3.org/2000/svg"
-                  style={{ width: "200px", height: "260px", display: "block" }}
-                >
-                  <defs>
-                    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style={{ stopColor: "#051a0a" }} />
-                      <stop offset="100%" style={{ stopColor: "#1a6b3a" }} />
-                    </linearGradient>
-                  </defs>
-                  <rect width="200" height="260" fill="url(#bg2)" />
-                  <ellipse
-                    cx="100"
-                    cy="120"
-                    rx="40"
-                    ry="55"
-                    fill="none"
-                    stroke="rgba(255,255,255,.1)"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="M80,100 C90,80 110,80 120,100 C110,130 90,130 80,100Z"
-                    fill="rgba(34,197,94,.25)"
-                  />
-                  <line
-                    x1="60"
-                    y1="170"
-                    x2="140"
-                    y2="170"
-                    stroke="rgba(255,255,255,.1)"
-                    strokeWidth="1"
-                  />
-                  <line
-                    x1="70"
-                    y1="185"
-                    x2="130"
-                    y2="185"
-                    stroke="rgba(255,255,255,.07)"
-                    strokeWidth="1"
-                  />
-                </svg>
-                <div className="book-meta">
-                  <div className="book-title-sm">Không gian đọc</div>
-                  <div className="book-author-sm">Dữ liệu thật khi xuất bản</div>
-                </div>
-              </div>
+              <HeroBookCard
+                className="bc3"
+                story={stories[2]}
+                defaultTitle="Tác phẩm cộng đồng"
+                defaultAuthor="Đăng bởi người dùng"
+                fallbackSvg={
+                  <svg
+                    viewBox="0 0 200 260"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ width: "200px", height: "260px", display: "block" }}
+                  >
+                    <defs>
+                      <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: "#0a1628" }} />
+                        <stop offset="100%" style={{ stopColor: "#1a4a7a" }} />
+                      </linearGradient>
+                    </defs>
+                    <rect width="200" height="260" fill="url(#bg3)" />
+                    <circle
+                      cx="100"
+                      cy="110"
+                      r="55"
+                      fill="none"
+                      stroke="rgba(255,255,255,.08)"
+                      strokeWidth="1"
+                    />
+                    <path
+                      d="M70,90 Q100,60 130,90 Q100,120 70,90Z"
+                      fill="rgba(59,130,246,.3)"
+                    />
+                  </svg>
+                }
+              />
+
+              {/* Book 2 (middle) */}
+              <HeroBookCard
+                className="bc2"
+                story={stories[1]}
+                defaultTitle="Không gian đọc"
+                defaultAuthor="Hành trình sáng tạo mới"
+                fallbackSvg={
+                  <svg
+                    viewBox="0 0 200 260"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ width: "200px", height: "260px", display: "block" }}
+                  >
+                    <defs>
+                      <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: "#051a0a" }} />
+                        <stop offset="100%" style={{ stopColor: "#1a6b3a" }} />
+                      </linearGradient>
+                    </defs>
+                    <rect width="200" height="260" fill="url(#bg2)" />
+                    <ellipse
+                      cx="100"
+                      cy="120"
+                      rx="40"
+                      ry="55"
+                      fill="none"
+                      stroke="rgba(255,255,255,.1)"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d="M80,100 C90,80 110,80 120,100 C110,130 90,130 80,100Z"
+                      fill="rgba(34,197,94,.25)"
+                    />
+                    <line
+                      x1="60"
+                      y1="170"
+                      x2="140"
+                      y2="170"
+                      stroke="rgba(255,255,255,.1)"
+                      strokeWidth="1"
+                    />
+                    <line
+                      x1="70"
+                      y1="185"
+                      x2="130"
+                      y2="185"
+                      stroke="rgba(255,255,255,.07)"
+                      strokeWidth="1"
+                    />
+                  </svg>
+                }
+              />
+
               {/* Book 1 (front) */}
-              <div className="book-card bc1">
-                <svg
-                  viewBox="0 0 200 260"
-                  xmlns="http://www.w3.org/2000/svg"
-                  style={{ width: "200px", height: "260px", display: "block" }}
-                >
-                  <defs>
-                    <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style={{ stopColor: "#12023a" }} />
-                      <stop offset="100%" style={{ stopColor: "#4a1080" }} />
-                    </linearGradient>
-                    <radialGradient id="glow1" cx="50%" cy="45%" r="40%">
-                      <stop
-                        offset="0%"
-                        style={{ stopColor: "rgba(200,28,48,.6)" }}
-                      />
-                      <stop offset="100%" style={{ stopColor: "transparent" }} />
-                    </radialGradient>
-                  </defs>
-                  <rect width="200" height="260" fill="url(#bg1)" />
-                  <ellipse
-                    cx="100"
-                    cy="115"
-                    rx="60"
-                    ry="70"
-                    fill="url(#glow1)"
-                    opacity=".6"
-                  />
-                  {/* Sword silhouette */}
-                  <rect
-                    x="98"
-                    y="40"
-                    width="4"
-                    height="120"
-                    rx="2"
-                    fill="rgba(255,236,206,.6)"
-                  />
-                  <rect
-                    x="80"
-                    y="120"
-                    width="40"
-                    height="3"
-                    rx="1.5"
-                    fill="rgba(254,189,178,.5)"
-                  />
-                  <polygon
-                    points="100,35 95,55 105,55"
-                    fill="rgba(255,236,206,.8)"
-                  />
-                  <rect
-                    x="97"
-                    y="160"
-                    width="6"
-                    height="30"
-                    rx="3"
-                    fill="rgba(254,189,178,.4)"
-                  />
-                  {/* Stars */}
-                  <circle cx="60" cy="60" r="1.5" fill="rgba(255,255,255,.5)" />
-                  <circle cx="150" cy="80" r="1" fill="rgba(255,255,255,.4)" />
-                  <circle cx="40" cy="160" r="1" fill="rgba(255,255,255,.3)" />
-                  <circle cx="165" cy="140" r="2" fill="rgba(255,255,255,.35)" />
-                  {/* Title */}
-                  <text
-                    x="100"
-                    y="220"
-                    textAnchor="middle"
-                    fontFamily="serif"
-                    fontSize="13"
-                    fill="rgba(255,236,206,.9)"
-                    fontStyle="italic"
+              <HeroBookCard
+                className="bc1"
+                story={stories[0]}
+                defaultTitle="YAG Stories"
+                defaultAuthor="User Content"
+                fallbackSvg={
+                  <svg
+                    viewBox="0 0 200 260"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ width: "200px", height: "260px", display: "block" }}
                   >
-                    YAG Stories
-                  </text>
-                  <text
-                    x="100"
-                    y="238"
-                    textAnchor="middle"
-                    fontFamily="sans-serif"
-                    fontSize="9"
-                    fill="rgba(255,255,255,.4)"
-                    letterSpacing="1"
-                  >
-                    User Content
-                  </text>
-                </svg>
-              </div>
+                    <defs>
+                      <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style={{ stopColor: "#12023a" }} />
+                        <stop offset="100%" style={{ stopColor: "#4a1080" }} />
+                      </linearGradient>
+                      <radialGradient id="glow1" cx="50%" cy="45%" r="40%">
+                        <stop
+                          offset="0%"
+                          style={{ stopColor: "rgba(200,28,48,.6)" }}
+                        />
+                        <stop offset="100%" style={{ stopColor: "transparent" }} />
+                      </radialGradient>
+                    </defs>
+                    <rect width="200" height="260" fill="url(#bg1)" />
+                    <ellipse
+                      cx="100"
+                      cy="115"
+                      rx="60"
+                      ry="70"
+                      fill="url(#glow1)"
+                      opacity=".6"
+                    />
+                    {/* Sword silhouette */}
+                    <rect
+                      x="98"
+                      y="40"
+                      width="4"
+                      height="120"
+                      rx="2"
+                      fill="rgba(255,236,206,.6)"
+                    />
+                    <rect
+                      x="80"
+                      y="120"
+                      width="40"
+                      height="3"
+                      rx="1.5"
+                      fill="rgba(254,189,178,.5)"
+                    />
+                    <polygon
+                      points="100,35 95,55 105,55"
+                      fill="rgba(255,236,206,.8)"
+                    />
+                    <rect
+                      x="97"
+                      y="160"
+                      width="6"
+                      height="30"
+                      rx="3"
+                      fill="rgba(254,189,178,.4)"
+                    />
+                    {/* Stars */}
+                    <circle cx="60" cy="60" r="1.5" fill="rgba(255,255,255,.5)" />
+                    <circle cx="150" cy="80" r="1" fill="rgba(255,255,255,.4)" />
+                    <circle cx="40" cy="160" r="1" fill="rgba(255,255,255,.3)" />
+                    <circle cx="165" cy="140" r="2" fill="rgba(255,255,255,.35)" />
+                    {/* Title */}
+                    <text
+                      x="100"
+                      y="220"
+                      textAnchor="middle"
+                      fontFamily="serif"
+                      fontSize="13"
+                      fill="rgba(255,236,206,.9)"
+                      fontStyle="italic"
+                    >
+                      YAG Stories
+                    </text>
+                    <text
+                      x="100"
+                      y="238"
+                      textAnchor="middle"
+                      fontFamily="sans-serif"
+                      fontSize="9"
+                      fill="rgba(255,255,255,.4)"
+                      letterSpacing="1"
+                    >
+                      User Content
+                    </text>
+                  </svg>
+                }
+              />
+
               {/* Floating badges */}
               <div className="float-badge">✦ AI Đề xuất</div>
-              <div className="float-badge2">Nội dung người dùng</div>
+              <div className="float-badge2">Đọc & viết thông minh</div>
             </div>
           </div>
         </div>
@@ -774,13 +913,14 @@ export default function LandingPage() {
               <div className="sec-header-text">
                 <div className="sec-label">✦ Tác phẩm cộng đồng</div>
                 <h2 className="sec-title">
-                  Chỉ hiển thị
+                  Khám phá kho tàng
                   <br />
-                  truyện thật từ người dùng
+                  <em>truyện cộng đồng</em>
                 </h2>
                 <p className="sec-desc">
-                  YAG không đưa dữ liệu mẫu lên môi trường production. Khi tác giả
-                  xuất bản và được kiểm duyệt, tác phẩm sẽ xuất hiện trong khám phá.
+                  Hàng nghìn câu chuyện từ các tác giả tài năng — từ kiếm hiệp, kỳ
+                  ảo đến lãng mạn. Mỗi tác phẩm được kiểm duyệt bởi AI Gemini
+                  trước khi đến tay độc giả.
                 </p>
               </div>
               <Link className="btn-see-all" href="/discover">
@@ -788,6 +928,71 @@ export default function LandingPage() {
               </Link>
             </div>
           </RevealOnScroll>
+
+          {loadingStories ? (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-t-transparent border-[#FEBDB2]"></div>
+            </div>
+          ) : stories.length === 0 ? (
+            <div className="sec-desc" style={{ textAlign: "center", margin: "40px auto", color: "rgba(255, 255, 255, 0.6)" }}>
+              Chưa có truyện nào được xuất bản. Hãy là người đầu tiên sáng tác!
+            </div>
+          ) : (
+            <div
+              ref={storiesScrollRef}
+              className={`stories-scroll ${isDraggingStories ? "dragging" : ""}`}
+              onMouseDown={handleStoriesMouseDown}
+              onMouseMove={handleStoriesMouseMove}
+              onMouseUp={handleStoriesMouseUpOrLeave}
+              onMouseLeave={handleStoriesMouseUpOrLeave}
+            >
+              {stories.map((story, index) => {
+                const badgeClass = story.badge || (story.view_count > 1000 ? "hot" : story.rating_avg >= 4.5 ? "ai" : "");
+                const badgeLabel = story.badge === "hot" ? "Đang hot" : story.badge === "ai" ? "AI đề xuất" : story.badge === "done" ? "Hoàn thành" : (story.view_count > 1000 ? "Đang hot" : "");
+                
+                return (
+                  <Link
+                    href={`/stories/${story.id}`}
+                    key={story.id}
+                    className="s-card"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <div className="s-cover">
+                      <Cover index={index} coverUrl={story.cover_url} />
+                      {badgeLabel && (
+                        <span className={`s-badge ${badgeClass}`}>
+                          {badgeLabel}
+                        </span>
+                      )}
+                    </div>
+                    <div className="s-info">
+                      <div className="s-genre">{story.category || story.genre || "Truyện"}</div>
+                      <h3 className="s-name" title={story.title} style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
+                      }}>
+                        {story.title}
+                      </h3>
+                      <div className="s-author">{getStoryAuthorName(story)}</div>
+                      <div className="s-stats">
+                        <span className="s-stat" style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                          <Icon name="book" className="!w-3 !h-3" />
+                          {story.chapter_count || 0}c
+                        </span>
+                        <span className="s-stat" style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                          ★ {Number(story.rating_avg || 0).toFixed(1)}
+                        </span>
+                        <span className="s-stat" style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                          {(story.view_count >= 1000 ? `${(story.view_count / 1000).toFixed(0)}K` : story.view_count) || 0} đọc
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -905,11 +1110,11 @@ export default function LandingPage() {
         <div className="sec-wrap">
           <RevealOnScroll>
             <div className="sec-header">
-              <div className="sec-label">✦ Cam kết production</div>
+              <div className="sec-label">✦ Cam kết chất lượng</div>
               <h2 className="sec-title">
-                Sẵn sàng cho
+                Trải nghiệm đọc và viết
                 <br />
-                dữ liệu thật của <em>YAG</em>
+                tối ưu cùng <em>YAG</em>
               </h2>
             </div>
           </RevealOnScroll>
@@ -919,14 +1124,13 @@ export default function LandingPage() {
               <div className="t-card">
                 <div className="t-stars">01</div>
                 <p className="t-text">
-                  Trang khám phá, thư viện và hồ sơ tác giả chỉ sử dụng nội dung
-                  được tạo qua hệ thống bởi người dùng đã xác thực.
+                  Trang khám phá, thư viện và hồ sơ tác giả được tối ưu hóa để hiển thị những tác phẩm chất lượng cao nhất từ cộng đồng viết truyện Việt.
                 </p>
                 <div className="t-author">
-                  <div className="t-avatar">DB</div>
+                  <div className="t-avatar">QC</div>
                   <div>
-                    <div className="t-name">Dữ liệu người dùng</div>
-                    <div className="t-role">Không seed truyện production</div>
+                    <div className="t-name">Nội dung chọn lọc</div>
+                    <div className="t-role">Tác phẩm từ cộng đồng</div>
                   </div>
                 </div>
               </div>
@@ -936,14 +1140,13 @@ export default function LandingPage() {
               <div className="t-card">
                 <div className="t-stars">02</div>
                 <p className="t-text">
-                  Ảnh bìa, avatar và nội dung xuất bản sẽ được tải lên qua dịch
-                  vụ media thật, thay vì dùng dữ liệu hay asset minh họa cố định.
+                  Tất cả ảnh bìa tác phẩm và ảnh đại diện tác giả được lưu trữ trên Cloudinary CDN tốc độ cao, đảm bảo hiển thị sắc nét tức thì trên mọi thiết bị.
                 </p>
                 <div className="t-author">
-                  <div className="t-avatar">CD</div>
+                  <div className="t-avatar">CS</div>
                   <div>
-                    <div className="t-name">Cloudinary</div>
-                    <div className="t-role">Media do người dùng tải lên</div>
+                    <div className="t-name">Lưu trữ đám mây</div>
+                    <div className="t-role">Tốc độ tải trang tối ưu</div>
                   </div>
                 </div>
               </div>
@@ -953,14 +1156,13 @@ export default function LandingPage() {
               <div className="t-card">
                 <div className="t-stars">03</div>
                 <p className="t-text">
-                  Thanh toán, kiểm duyệt và tác vụ nền dùng provider production
-                  có xác thực, retry và cấu hình bắt buộc trước khi deploy.
+                  Cơ chế thanh toán an toàn qua cổng PayOS và hệ thống xử lý tác vụ ngầm thông minh giúp các tương tác của bạn diễn ra nhanh chóng, bảo mật.
                 </p>
                 <div className="t-author">
                   <div className="t-avatar">PR</div>
                   <div>
-                    <div className="t-name">Hạ tầng thật</div>
-                    <div className="t-role">PayOS · Pub/Sub · SMTP</div>
+                    <div className="t-name">Hạ tầng hiện đại</div>
+                    <div className="t-role">Thanh toán PayOS an toàn</div>
                   </div>
                 </div>
               </div>

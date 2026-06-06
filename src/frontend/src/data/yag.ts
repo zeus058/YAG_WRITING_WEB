@@ -41,7 +41,9 @@ export type IconName =
   | "eyeOff"
   | "github"
   | "menu"
-  | "lock";
+  | "lock"
+  | "sun"
+  | "moon";
 
 export type PageInfo = {
   id: ScreenId;

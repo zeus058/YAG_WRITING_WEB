@@ -1,247 +1,209 @@
-from app.services.publish_service import PUBLISH_QUEUE_NAME, get_rabbitmq_connection
-from app.services.notification_service import create_notification
-from app.services.moderation_service import (
-    ModerationResult,
-    apply_moderation_result,
-    moderate_content,
-)
-from app.models.story import Story
-from app.models.chapter import Chapter
-from app.core.database import SessionLocal
-from app.core.config import settings
-from app.ai.gateway import gemini_api_key_configured
-import json
-import logging
-import sys
-import time
 import asyncio
+from contextlib import asynccontextmanager
+from pathlib import Path
 from uuid import UUID
+from uuid import uuid4
 
+from fastapi import FastAPI, Request, WebSocket
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import pika
-
-sys.path.append("/app")
-
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+import redis
+from sqlalchemy import text
+from app.core.config import settings
+from app.api.v1.router import api_router
+from app.api.v1.endpoints.chapters import (
+    flush_story_view_counts,
+    get_redis_client,
+    websocket_editor,
 )
-logger = logging.getLogger("worker")
-
-REQUEUE_DELAY_SECONDS = 60
-
-
-class RetryableModerationError(Exception):
-    pass
-
-
-class PermanentWorkerError(Exception):
-    pass
+from app.core.database import engine, SessionLocal
+import app.models as _models  # noqa: F401  # Ensure models are loaded before creating tables
+from app.services.notification_service import stream_user_notifications
+from app.services.publish_service import get_rabbitmq_connection
+from app.services.schedule_service import (
+    shutdown_schedule_scheduler,
+    start_schedule_scheduler,
+)
 
 
-def declare_moderation_queues(channel) -> None:
-    channel.queue_declare(queue=settings.RABBITMQ_MODERATION_DLQ, durable=True)
-    channel.queue_declare(
-        queue=settings.RABBITMQ_MODERATION_RETRY_QUEUE,
-        durable=True,
-        arguments={
-            "x-message-ttl": REQUEUE_DELAY_SECONDS * 1000,
-            "x-dead-letter-exchange": "",
-            "x-dead-letter-routing-key": PUBLISH_QUEUE_NAME,
-        },
-    )
-    channel.queue_declare(queue=PUBLISH_QUEUE_NAME, durable=True)
-
-
-def _retry_count(properties) -> int:
-    headers = getattr(properties, "headers", None) or {}
-    try:
-        return int(headers.get("x-retry-count", 0))
-    except (TypeError, ValueError):
-        return 0
-
-
-def _publish_retry(channel, payload: dict, properties, reason: str) -> bool:
-    retry_count = _retry_count(properties) + 1
-    headers = dict(getattr(properties, "headers", None) or {})
-    headers["x-retry-count"] = retry_count
-    headers["x-last-error"] = reason[:500]
-
-    target_queue = settings.RABBITMQ_MODERATION_RETRY_QUEUE
-    if retry_count > settings.RABBITMQ_MODERATION_MAX_RETRIES:
-        target_queue = settings.RABBITMQ_MODERATION_DLQ
-        logger.error(
-            "Moving moderation task to DLQ after %s retries: %s",
-            retry_count - 1,
-            reason,
-        )
-    else:
-        logger.warning(
-            "Retrying moderation task in %ss (attempt %s/%s): %s",
-            REQUEUE_DELAY_SECONDS,
-            retry_count,
-            settings.RABBITMQ_MODERATION_MAX_RETRIES,
-            reason,
-        )
-
-    channel.basic_publish(
-        exchange="",
-        routing_key=target_queue,
-        body=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        properties=pika.BasicProperties(
-            delivery_mode=pika.DeliveryMode.Persistent,
-            content_type="application/json",
-            headers=headers,
-        ),
-    )
-    return target_queue != settings.RABBITMQ_MODERATION_DLQ
-
-
-def _load_chapter(db, chapter_id: str) -> Chapter:
-    chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
-    if not chapter:
-        raise PermanentWorkerError(f"Chapter {chapter_id} not found")
-    return chapter
-
-
-def _load_story_author_id(db, story_id) -> str | None:
-    story = db.query(Story).filter(Story.id == story_id).first()
-    return str(story.author_id) if story else None
-
-
-def _build_notification(chapter: Chapter, report) -> dict:
-    return {
-        "type": "chapter_moderation_result",
-        "chapter_id": str(chapter.id),
-        "story_id": str(chapter.story_id),
-        "moderation_status": chapter.moderation_status,
-        "is_violation": report.result
-        in {ModerationResult.REJECTED, ModerationResult.FLAGGED},
-        "confidence_score": report.confidence,
-        "reason": report.reason,
-        "flagged_categories": report.flagged_categories,
-    }
-
-
-def _sync_embedding_if_approved(db, chapter: Chapter, report) -> None:
-    if report.result != ModerationResult.APPROVED or not gemini_api_key_configured():
-        return
-
-    story = db.query(Story).filter(Story.id == chapter.story_id).first()
-    if not story:
-        return
-
-    try:
-        from app.services.ai_service import sync_story_embedding
-
-        asyncio.run(
-            sync_story_embedding(
-                db, story_id=str(story.id), description=story.description
-            )
-        )
-    except Exception as exc:
-        logger.warning(
-            "Failed to sync embedding for story %s after moderation: %s", story.id, exc
-        )
-
-
-def handle_publish_chapter(payload: dict, db=None) -> None:
-    chapter_id = payload.get("chapter_id")
-    if not chapter_id:
-        raise PermanentWorkerError("Missing chapter_id")
-
-    owns_db = db is None
-    db = db or SessionLocal()
-
-    try:
-        chapter = _load_chapter(db, chapter_id)
-        content = (chapter.content or payload.get("content") or "").strip()
-        if not content:
-            raise PermanentWorkerError(f"Chapter {chapter_id} has empty content")
-
-        logger.info("Moderating chapter %s", chapter_id)
-        report = moderate_content(content=content, chapter_id=chapter_id)
-
-        if report.result == ModerationResult.ERROR:
-            raise RetryableModerationError(report.reason)
-
-        chapter = apply_moderation_result(chapter_id=chapter_id, report=report, db=db)
-        _sync_embedding_if_approved(db, chapter, report)
-
-        author_id = payload.get("requested_by") or _load_story_author_id(
-            db, chapter.story_id
-        )
-        if author_id:
-            notification_payload = _build_notification(chapter, report)
-            create_notification(
-                db=db,
-                user_id=UUID(str(author_id)),
-                type="chapter_moderation_result",
-                title="Ket qua kiem duyet chuong",
-                message=f"Chuong '{chapter.title}' da duoc cap nhat trang thai: {chapter.moderation_status}.",
-                payload=notification_payload,
-            )
-
-        logger.info(
-            "Finished moderation for chapter %s with status=%s",
-            chapter_id,
-            chapter.moderation_status,
-        )
-    finally:
-        if owns_db:
+async def periodic_view_count_flush() -> None:
+    while True:
+        await asyncio.sleep(600)
+        db = SessionLocal()
+        try:
+            flush_story_view_counts(db, get_redis_client())
+        except Exception:
+            pass
+        finally:
             db.close()
 
 
-def on_message(channel, method, properties, body) -> None:
-    try:
-        payload = json.loads(body.decode("utf-8"))
-    except json.JSONDecodeError as exc:
-        logger.error("Invalid JSON message: %s", exc)
-        channel.basic_ack(delivery_tag=method.delivery_tag)
-        return
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Schema lifecycle is owned by versioned SQL migrations. Startup only starts
+    # configured background tasks and checks are exposed through /health/ready.
+    start_schedule_scheduler()
 
-    task_type = payload.get("task_type")
-    try:
-        if task_type == "publish_chapter":
-            handle_publish_chapter(payload)
-            channel.basic_ack(delivery_tag=method.delivery_tag)
-            return
-
-        logger.warning("Unknown task type: %s", task_type)
-        channel.basic_ack(delivery_tag=method.delivery_tag)
-    except RetryableModerationError as exc:
-        _publish_retry(channel, payload, properties, str(exc))
-        channel.basic_ack(delivery_tag=method.delivery_tag)
-    except PermanentWorkerError as exc:
-        logger.error("Permanent worker error, dropping message: %s", exc)
-        channel.basic_ack(delivery_tag=method.delivery_tag)
-    except Exception as exc:
-        logger.error("Unexpected worker error: %s", exc)
-        _publish_retry(channel, payload, properties, str(exc))
-        channel.basic_ack(delivery_tag=method.delivery_tag)
-
-
-def start_worker() -> None:
-    while True:
+    flush_task = None
+    if settings.VIEW_COUNT_FLUSH_ENABLED:
+        flush_task = asyncio.create_task(periodic_view_count_flush())
+    yield
+    if flush_task:
+        flush_task.cancel()
         try:
-            logger.info("Connecting RabbitMQ at %s", settings.RABBITMQ_HOST)
-            connection = get_rabbitmq_connection()
-            channel = connection.channel()
-            declare_moderation_queues(channel)
-            channel.basic_qos(prefetch_count=1)
-            channel.basic_consume(
-                queue=PUBLISH_QUEUE_NAME, on_message_callback=on_message
-            )
+            await flush_task
+        except asyncio.CancelledError:
+            pass
 
-            logger.info("Worker listening on queue '%s'", PUBLISH_QUEUE_NAME)
-            channel.start_consuming()
-        except pika.exceptions.AMQPConnectionError as exc:
-            logger.error("RabbitMQ connection lost: %s. Retrying in 5 seconds.", exc)
-            time.sleep(5)
-        except KeyboardInterrupt:
-            logger.info("Worker stopped.")
-            break
+    # Shutdown scheduler
+    shutdown_schedule_scheduler()
 
 
-if __name__ == "__main__":
-    start_worker()
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    description="Backend API services for YAG Smart Novel Platform.",
+    version="1.0.0",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
+)
+
+# Set CORS middleware origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Register all API endpoints
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.middleware("http")
+async def request_context_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or uuid4().hex
+    try:
+        response = await call_next(request)
+    except Exception:
+        if settings.ENVIRONMENT == "development":
+            raise
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error", "request_id": request_id},
+            headers={"X-Request-ID": request_id},
+        )
+
+    response.headers["X-Request-ID"] = request_id
+    if not response.headers.get("X-Content-Type-Options"):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+    if not response.headers.get("X-Frame-Options"):
+        response.headers["X-Frame-Options"] = "DENY"
+    if not response.headers.get("Referrer-Policy"):
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if settings.ENVIRONMENT == "production" and not response.headers.get(
+        "Strict-Transport-Security"
+    ):
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+    return response
+
+
+# Serve local uploads only outside production. Internet deployment uses Cloudinary URLs.
+if settings.ENVIRONMENT != "production":
+    uploads_dir = Path(__file__).resolve().parents[1] / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/media", StaticFiles(directory=str(uploads_dir)), name="media")
+
+
+@app.get("/", tags=["Main"])
+def read_root():
+    return {"status": "online", "project": settings.PROJECT_NAME, "docs": "/docs"}
+
+
+@app.get("/health", tags=["Main"])
+def health_check():
+    return {
+        "status": "ok",
+        "service": settings.PROJECT_NAME,
+        "version": "1.0.0",
+    }
+
+
+@app.get("/health/live", tags=["Main"])
+def liveness_check():
+    return {"status": "ok"}
+
+
+@app.get("/health/ready", tags=["Main"])
+def readiness_check():
+    checks: dict[str, str] = {}
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as exc:
+        checks["database"] = f"error: {exc.__class__.__name__}"
+
+    try:
+        get_redis_client().ping()
+        checks["redis"] = "ok"
+    except redis.RedisError as exc:
+        checks["redis"] = f"error: {exc.__class__.__name__}"
+    except Exception as exc:
+        checks["redis"] = f"error: {exc.__class__.__name__}"
+
+    if settings.QUEUE_PROVIDER == "rabbitmq":
+        rabbit_connection = None
+        try:
+            rabbit_connection = get_rabbitmq_connection()
+            checks["queue"] = "ok (rabbitmq)"
+        except pika.exceptions.AMQPError as exc:
+            checks["queue"] = f"error: {exc.__class__.__name__}"
+        except Exception as exc:
+            checks["queue"] = f"error: {exc.__class__.__name__}"
+        finally:
+            if rabbit_connection and not rabbit_connection.is_closed:
+                rabbit_connection.close()
+    elif settings.QUEUE_PROVIDER == "pubsub":
+        try:
+            from google.cloud import pubsub_v1  # noqa: F401
+
+            if not (
+                (settings.PUBSUB_PROJECT_ID or settings.GCP_PROJECT_ID)
+                and settings.PUBSUB_MODERATION_TOPIC
+            ):
+                checks["queue"] = "error: PubSubNotConfigured"
+            else:
+                checks["queue"] = "ok (pubsub)"
+        except Exception as exc:
+            checks["queue"] = f"error: {exc.__class__.__name__}"
+    else:
+        checks["queue"] = f"error: unsupported provider {settings.QUEUE_PROVIDER}"
+
+    status_value = (
+        "ok" if all(value.startswith("ok") for value in checks.values()) else "degraded"
+    )
+    return {"status": status_value, "checks": checks}
+
+
+@app.websocket("/ws/notifications/{user_id}")
+async def websocket_notifications(websocket: WebSocket, user_id: str):
+    await stream_user_notifications(websocket, user_id)
+
+
+@app.websocket(f"{settings.API_V1_STR}/ws/notifications/{{user_id}}")
+async def websocket_notifications_v1(websocket: WebSocket, user_id: str):
+    await stream_user_notifications(websocket, user_id)
+
+
+@app.websocket("/ws/stories/{story_id}/chapters/{chapter_id}")
+async def websocket_story_chapter_draft(
+    websocket: WebSocket, story_id: str, chapter_id: str
+):
+    _ = story_id
+    await websocket_editor(websocket, UUID(chapter_id))

@@ -4,71 +4,83 @@
 
 *Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy/2025-2026.*
 
-**Mục lục**`
-- [1. Member Contribution Assessment](#member-contribution-assessment)
-- [2. Test plan](#test-plan)
-- [3. Test cases](#test-cases)
-  - [3.1. List of test cases](#list-of-test-cases)
-  - [3.2. Test case specifications](#test-case-specifications)
-- [4. AI Usage Declaration](#ai-usage-declaration)
-- [5. Presentation](#presentation)
-- [6. Reflective Report](#reflective-report)
+**Mục lục**
+- [Objectives](#objectives)
+- [1. Member Contribution Assessment](#1-member-contribution-assessment)
+- [2. Test plan](#2-test-plan)
+- [3. Test cases](#3-test-cases)
+  - [3.1. List of test cases](#31-list-of-test-cases)
+  - [3.2. Test case specifications](#32-test-case-specifications)
+- [4. AI Usage Declaration](#4-ai-usage-declaration)
+- [5. Presentation](#5-presentation)
+- [6. Reflective Report](#6-reflective-report)
+
+## **Objectives** {#objectives}
+
+This document focus on the following topics:
+
+* Completing the Software Testing document with the following sections:  
+  * Test Plan  
+  * Test Cases  
+* Understanding the Software Testing document.  
+* This document will be used as input for AI tools to verify the quality of subsequent project artifacts.
+
+All project artifacts must remain consistent and synchronized.   
+For example, if the project proposal is modified during this phase, a new version of the proposal must be documented.   
+By the conclusion of the project, all versions of every artifact must be submitted to demonstrate the evolution of your work.
 
 ## 1. Member Contribution Assessment
 
-### 23120123 - Trần Gia Hiển (25%)
+### 23120123 - Trần Gia Hiển (20%)
 
 | Nhiệm vụ | Mô tả chi tiết |
 | :--- | :--- |
-| ***TC-001 Bcrypt hash password*** | Viết và chạy unit test hàm băm mật khẩu |
-| ***TC-002 Register -> JWT*** | Viết integration test luồng đăng ký -> JWT -> gọi API |
-| ***TC-003 Login Rate Limit*** | Viết security test brute-force đăng nhập |
-| ***TC-004 OTP Reset Flow*** | Viết integration test luồng reset mật khẩu OTP |
-| ***TC-005 Avatar Upload*** | Viết integration test upload avatar Cloudinary |
-| ***TC-006 Admin API Reject Reader*** | Viết security test JWT role check Admin API |
-| ***TC-029 Expired/Invalid JWT*** | Viết security test từ chối Access Token hết hạn hoặc không hợp lệ |
-| ***TC-030 User Password Change*** | Viết integration test luồng đổi mật khẩu người dùng |
-| ***TC-031 Password Strength*** | Viết security test kiểm tra độ mạnh mật khẩu đăng ký |
-| ***TC-032 Register Duplicate*** | Viết integration test chặn đăng ký trùng email/username |
-| ***TC-033 JWT Token Refresh*** | Viết integration test làm mới token qua Refresh Token |
+| **SWW-58** | [DB] Thiết kế các bảng cơ sở dữ liệu liên quan đến bảo mật và người dùng (users, profiles, admin). |
+| **SWW-59** | [BE] U001 - Xây dựng các API Đăng ký / Đăng nhập & Khôi phục mật khẩu (OTP). |
+| **SWW-60** | [BE] U002 - Xây dựng các API Quản lý hồ sơ (Cập nhật Profile, upload avatar lên Cloudinary). |
+| **SWW-61** | [FE] Hoàn thiện giao diện các trang S01 (Landing Page), S02 (Đăng nhập), S03 (Đăng ký), S04 (Home Feed), S07 (Reader Mode), S11 (Thư viện), S12 (Hồ sơ), S13 (Cài đặt tài khoản). |
+| **SWW-63** | [CODE] Viết script SQL nạp dữ liệu mẫu ban đầu (Database Seed) cho môi trường phát triển. |
+| **Thực hiện TC-001 đến TC-006 & TC-029 đến TC-033** | [TEST/DOC] Viết mục 2 (Test Plan), thiết lập tài liệu Bug Report, Test Report, viết và chạy các test case TC-001 đến TC-006 & TC-029 đến TC-033 cho module Authentication & Account Security (F1). |
 
 ![Task Hien](images_test/hien_task.png)
 
-### 23120151 - Huỳnh Yến Nhi (15%)
+### 23120151 - Huỳnh Yến Nhi (19%)
 
 | Nhiệm vụ | Mô tả chi tiết |
 | :--- | :--- |
-| ***TC-016 Redis Cache Hit/Miss*** | Viết integration test cache chapter Redis |
-| ***TC-017 Bookmark + History*** | Viết integration test bookmark và lịch sử đọc |
-| ***TC-018 Create Story + Cover*** | Viết integration test tạo truyện và upload cover |
-| ***TC-019 WebSocket Autosave*** | Viết integration test autosave dừng 5s -> DB update |
-| ***TC-020 Comment Real-time*** | Viết integration test broadcast bình luận WebSocket |
-| ***TC-021 Responsive Mobile*** | Usability test responsive <768px (5 trang core) |
-| ***TC-022 Responsive Tablet*** | Usability test responsive 768-1023px |
-| ***TC-023 A11y Color Contrast*** | Accessibility test tương phản màu 3 chế độ đọc |
-| ***TC-024 Cross-browser*** | Compatibility test Chrome/Edge/Firefox/Safari |
+| **SWW-87** | [BE] U003 - Xây dựng các API Tạo & Quản lý Tác phẩm (Tạo truyện, cập nhật thông tin, upload cover lên Cloudinary). |
+| **SWW-88** | [BE] U004 - Xây dựng các API Soạn thảo chương truyện (Kết nối WebSocket autosave). |
+| **SWW-89** | [BE] U007 - Xây dựng các API Đọc truyện & Caching Redis (Cache hit/miss, Bookmark, Reading history). |
+| **SWW-90** | [BE] U010 - Xây dựng các API Bình luận & Đánh giá (Bình luận phân cấp, Realtime WebSocket). |
+| **SWW-91** | [FE] Hoàn thiện giao diện các trang S06 (Chi tiết truyện), S08 (Diễn đàn), S14 (Trung tâm thông báo), S16 (Trợ lý AI Sidebar). |
+| **Thực hiện TC-016 đến TC-024** | [TEST/DOC] Viết và chạy các test case TC-016 đến TC-024 (Redis cache, Bookmark, Lịch sử đọc, WebSocket autosave/comment, Responsive Mobile/Tablet, Accessibility Contrast, Tương thích đa trình duyệt) và viết báo cáo test chi tiết liên quan. |
 
 ![Task Nhi](images_test/nhi_task.png)
 
-### 23120169 - Nguyễn Phú Thọ (20%)
+### 23120169 - Nguyễn Phú Thọ (22%)
 
 | Nhiệm vụ | Mô tả chi tiết |
 | :--- | :--- |
-| ***TC-025 Publish -> RabbitMQ -> Worker*** | Viết integration test luồng xuất bản qua message queue |
-| ***TC-026 AI Content Flag*** | Viết integration test worker AI phát hiện vi phạm |
-| ***TC-027 Cron Reputation*** | Viết integration test cron trừ điểm reputation trễ lịch |
-| ***TC-028 CI/CD Auto Test*** | Viết integration test pipeline lint + pytest tự động |
+| **SWW-79** | [BE] U005 - Xây dựng API Xuất bản truyện (Đẩy hàng đợi bất đồng bộ RabbitMQ). |
+| **SWW-80** | [BE] U013 - Xây dựng module Kiểm duyệt nội dung AI (Background Worker RabbitMQ kết nối Gemini API). |
+| **SWW-81** | [BE] U014 - Xây dựng module Giám sát cam kết lộ trình (Cron Job tự động trừ điểm uy tín khi trễ lịch đăng). |
+| **SWW-82** | [BE] U015 - Xây dựng các API Quản trị hệ thống (Admin APIs, thống kê hệ thống, quản lý người dùng/truyện). |
+| **SWW-83** | [FE] Hoàn thiện giao diện các trang S17 (Publish Chapter), S18 (Schedule Publish), S19 (Admin Dashboard), S20 (Moderation Queue), S21 (System Stats). |
+| **SWW-85** | [CODE] Quản lý và cấu hình Docker Local (Postgres, Redis, RabbitMQ, Worker, Nginx reverse proxy). |
+| **Thực hiện TC-025 đến TC-028** | [TEST/DOC] Viết và chạy các test case TC-025 đến TC-028 (Publish RabbitMQ, AI Content Flag, Cron Reputation, CI/CD pipeline) và viết báo cáo test chi tiết liên quan. |
 
 ![Task Tho](images_test/tho_task.png)
 
-### 23120177 - Phạm Hương Trà (20%)
+### 23120177 - Phạm Hương Trà (19%)
 
 | Nhiệm vụ | Mô tả chi tiết |
 | :--- | :--- |
-| ***Write Test Plan*** | Soạn toàn bộ kế hoạch kiểm thử: phạm vi, kỹ thuật, đối tượng |
-| ***TC-013 pgvector Cosine Unit Test*** | Viết unit test độ chính xác cosine distance |
-| ***TC-014 AI Semantic Search E2E*** | Viết integration test tìm kiếm ngữ nghĩa AI |
-| ***TC-015 Miu AI Suggestion*** | Viết integration test gợi ý AI Miu Sidebar |
+| **SWW-72** | [DB] Cài đặt extension pgvector và thiết lập bảng story_embedding lưu trữ vector cốt truyện. |
+| **SWW-73** | [BE] U006 - Xây dựng các API Gợi ý tình tiết AI (Tích hợp Gemini API). |
+| **SWW-74** | [BE] U008 - Xây dựng các API AI Tìm kiếm ngữ nghĩa (Tích hợp pgvector, tính khoảng cách cosine distance). |
+| **SWW-75** | [BE] U009 - Xây dựng các API AI Đề xuất truyện (Gợi ý cá nhân hóa dựa trên lịch sử đọc). |
+| **SWW-76** | [FE] Hoàn thiện giao diện các trang S05 (Khám phá & Tìm kiếm), S16 (Trợ lý Miu AI Sidebar). |
+| **Thực hiện TC-013 đến TC-015** | [TEST/DOC] Soạn thảo kế hoạch kiểm thử (Test Plan), viết và chạy các test case TC-013 đến TC-015 (pgvector Cosine, AI semantic search E2E, Miu AI Suggestion) và viết báo cáo test chi tiết liên quan. |
 
 ![Task Tra](images_test/tra_task.png)
 
@@ -76,12 +88,12 @@
 
 | Nhiệm vụ | Mô tả chi tiết |
 | :--- | :--- |
-| ***TC-007 VNPAY HMAC Unit Test*** | Viết unit test sinh chữ ký HMAC-SHA512 |
-| ***TC-008 RBAC Premium 403*** | Viết security test RBAC chapter premium hết hạn |
-| ***TC-009 VNPAY Checkout URL*** | Viết integration test tạo URL thanh toán |
-| ***TC-010 VNPAY IPN Success*** | Viết integration test xác thực IPN + cấp Premium |
-| ***TC-011 vnp_txn_ref Uniqueness*** | Viết unit test sinh mã giao dịch không trùng lặp |
-| ***TC-012 VNPAY Invalid Checksum*** | Viết security test từ chối IPN sai checksum |
+| **SWW-65** | [DB] Thiết kế các bảng cơ sở dữ liệu liên quan đến truyện và giao dịch (stories, chapters, transactions, membership_plans). |
+| **SWW-66** | [BE] U011 - Xây dựng các API Đăng ký Membership (API danh mục gói, middleware kiểm tra quyền premium). |
+| **SWW-67** | [BE] U012 - Xây dựng các API Thanh toán VNPAY IPN (Tạo URL thanh toán checkout, callback webhook IPN). |
+| **SWW-68** | [FE] Hoàn thiện giao diện các trang S09 (Membership), S10 (Kết quả thanh toán), S13 (Cài đặt tài khoản), S15 (Publish Story). |
+| **SWW-70** | [CODE] Viết script SQL Migrations (CREATE TABLE, ALTER TABLE, thiết lập ràng buộc database). |
+| **Thực hiện TC-007 đến TC-012** | [TEST/DOC] Viết và chạy các test case TC-007 đến TC-012 (Chữ ký HMAC-SHA512, RBAC premium, checkout URL VNPAY, IPN webhook success, vnp_txn_ref uniqueness, IPN invalid checksum) và viết báo cáo test chi tiết liên quan. |
 
 ![Task Truong](images_test/truong_task.png)
 
@@ -92,57 +104,92 @@
 
 ### 2.1 Scope
 
-Dự án YAG là nền tảng đọc và sáng tác truyện với các tính năng cốt lõi: xác thực người dùng, thanh toán Premium (VNPAY), AI gợi ý nội dung và tìm kiếm ngữ nghĩa, xuất bản và kiểm duyệt nội dung tự động, WebSocket real-time và giao diện responsive.
+Dự án YAG là nền tảng đọc và sáng tác truyện tích hợp AI. Phạm vi kiểm thử tập trung vào việc xác minh tính chính xác, tính ổn định và tính bảo mật của toàn bộ các thành phần hệ thống bao gồm API Backend, Giao diện Frontend, các dịch vụ lưu trữ đệm, hàng đợi thông điệp bất đồng bộ và các tác vụ chạy tự động.
 
-- **Trong phạm vi kiểm thử:**
-  - Toàn bộ API backend (FastAPI): xác thực, thanh toán, AI engine, RBAC
-  - Frontend (Next.js): 5 trang core, responsive, accessibility
-  - Luồng async: RabbitMQ, Celery worker, cron job
-  - Bảo mật: JWT, RBAC, rate limit, checksum validation
-  - Tích hợp hệ thống: Redis, Cloudinary, VNPAY IPN, Gemini API
+- **Trong phạm vi kiểm thử (In Scope):**
+  1. **Kiểm thử Cấu hình & Môi trường (Config Validation):**
+     * Kiểm tra tính hợp lệ của cấu hình hệ thống (`Settings` qua Pydantic).
+     * Đảm bảo các ràng buộc bảo mật trong cấu hình chạy Production: ngăn chặn việc tự động sinh bảng (auto-migration) trên Prod, độ dài `SECRET_KEY` tối thiểu 32 ký tự, bắt buộc giao thức bảo mật HTTPS đối với `DATABASE_URL`, `REDIS_URL`, định cấu hình chính xác `GCP_PUBSUB_PROJECT_ID` cho GCP Pub/Sub, `CORS_ORIGINS`, `VNPAY_RETURN_URL`, và chặn tính năng mock thanh toán (`VNPAY_MOCK_ENABLED=False`) trên môi trường sản xuất.
+  2. **Kiểm thử Tích hợp & Kiểm tra Cơ sở dữ liệu (Database Integration & Integrity):**
+     * Xác minh sự tồn tại và cấu trúc cột của toàn bộ **13 bảng** dữ liệu.
+     * Kiểm tra tính hoạt động của extension `pgvector` phục vụ lưu trữ embeddings.
+     * Xác minh sự tồn tại của các Index tối ưu hóa truy vấn: B-Tree Index trên tên tác phẩm/thể loại, B-Tree Composite Index trên chapter và câu truy vấn thanh toán, IVFFlat Index trên vector embedding cốt truyện.
+     * Kiểm định các ràng buộc dữ liệu mức DB (CHECK Constraints): Trạng thái truyện (`status` phải thuộc ongoing/completed/paused), lượt xem không âm (`view_count >= 0`), điểm đánh giá (`rating_avg` trong khoảng [0, 5]), trạng thái kiểm duyệt chương (`moderation_status` phải thuộc pending/approved/rejected/flagged), số chương (`chapter_number > 0`), trạng thái giao dịch (`status` phải thuộc pending/success/failed), giá tiền gói dịch vụ không âm.
+     * Xác minh tính toàn vẹn dữ liệu qua cơ chế Cascade Delete (Xóa tác phẩm tự động xóa toàn bộ chương tương ứng).
+  3. **Kiểm thử Phân quyền & Cách ly vai trò (Role Separation & RBAC):**
+     * Xác minh tài khoản quyền Quản trị viên (Admin) bị từ chối truy cập không gian tác giả, không thể đọc chương truyện, bình luận, đánh giá tác phẩm hay thực hiện mua gói VIP.
+     * Xác minh tài khoản Độc giả thường (Reader) và Tác giả (Author) bị chặn gọi các API Admin như lấy thống kê hệ thống (`GET /api/v1/admin/stats`), quản lý hàng đợi kiểm duyệt và lịch sử kiểm toán (Audit Logs).
+  4. **Kiểm thử Luồng Xác thực & Bảo mật (Auth & Security Flow):**
+     * Quy trình Đăng ký, Đăng nhập, Reset mật khẩu qua mã OTP lưu trong Redis, Đổi mật khẩu cá nhân.
+     * Ràng buộc độ mạnh mật khẩu và chặn thông tin trùng lặp (Email, Username).
+     * Middleware xác thực: Chặn các Access Token hết hạn, sai cấu trúc hoặc không trùng khớp chữ ký bảo mật.
+     * Cơ chế hạn chế tần suất request (Rate Limit) qua Redis để chống brute-force tấn công API đăng nhập.
+  5. **Kiểm thử AI Engine & Đề xuất (AI Semantic Search & Assistant):**
+     * Tích hợp cổng Gemini API sinh embedding và phản hồi gợi ý viết truyện.
+     * Tính toán khoảng cách Cosine Distance chính xác để phục vụ Semantic Search bằng ngôn ngữ tự nhiên.
+     * Mô hình đề xuất cá nhân hóa (Personalized Recommendations) tự động lọc bỏ các tác phẩm người dùng đã đọc trong lịch sử.
+  6. **Kiểm thử Giao dịch & Hội viên (VNPAY Payment & Membership):**
+     * Tính toán chữ ký bảo mật giao dịch (HMAC-SHA512) gửi sang cổng VNPAY.
+     * Quy trình Checkout sinh URL thanh toán và tiếp nhận Webhook IPN xử lý giao dịch thành công để gia hạn VIP (`premium_until`).
+     * Chặn giao dịch trùng lặp nhờ cơ chế kiểm tra tính duy nhất của mã đơn hàng (`vnp_txn_ref`).
+     * Từ chối các IPN Webhook có chữ ký checksum sai lệch.
+  7. **Kiểm thử Bất đồng bộ & Tác vụ nền (Async Worker & Scheduler):**
+     * Xuất bản chương đẩy thông điệp vào GCP Pub/Sub topic, Worker nhận tin và thực thi kiểm duyệt nội dung (Gemini Moderation).
+     * Cơ chế Worker tự động retry khi gặp lỗi mạng/vượt hạn mức rate limit (`RetryableModerationError`) và đẩy vào hàng đợi retry có đánh số thứ tự số lần thử lại; tự động bỏ qua (Acknowledge) đối với các thông điệp có cấu trúc JSON không hợp lệ để tránh deadlock.
+     * Cron Job lập lịch tự động quét hằng ngày kiểm tra các tác phẩm trễ cam kết lịch đăng để tự động phạt trừ điểm uy tín (`reputation_score`) của tác giả và bắn cảnh báo về Admin Dashboard.
+  8. **Kiểm thử Hiển thị & Thời gian thực (Frontend, WS & Responsive):**
+     * WebSocket Autosave tự động đồng bộ bản soạn thảo sau 5 giây ngưng gõ.
+     * WebSocket Comments phát broadcast bình luận thời gian thực cho độc giả.
+     * Hiển thị Responsive mượt mà trên Mobile và Tablet, độ tương phản văn bản đạt chuẩn tiếp cận Web AA trên 3 chế độ đọc, và tương thích trên 4 trình duyệt lớn.
 
-- **Ngoài phạm vi:**
-  - Kiểm thử hiệu năng tải cao (load testing)
-  - Kiểm thử thâm nhập chuyên sâu (penetration testing)
-  - Các dịch vụ bên thứ ba ngoài môi trường sandbox
+- **Ngoài phạm vi kiểm thử (Out of Scope):**
+  - Kiểm thử hiệu năng chịu tải đồng thời vượt ngưỡng 10,000 requests/giây.
+  - Các cổng thanh toán nằm ngoài cổng VNPAY sandbox.
+  - Tấn công mạng hạ tầng phần cứng vật lý và hệ điều hành máy chủ CDN.
 
 ### 2.2 Testing Techniques
 
-| Kỹ thuật | Áp dụng trên | Công cụ |
+| Kỹ thuật kiểm thử | Đối tượng áp dụng | Công cụ kiểm thử |
 | :--- | :--- | :--- |
-| ***Unit Testing*** | Hàm băm Bcrypt, sinh chữ ký HMAC-SHA512, tính khoảng cách cosine pgvector, sinh vnp_txn_ref | pytest, unittest.mock |
-| ***Integration Testing*** | Luồng API end-to-end, Redis cache, VNPAY IPN, RabbitMQ -> Worker, WebSocket autosave | pytest, httpx, TestClient (FastAPI) |
-| ***Security Testing*** | JWT authentication, RBAC, rate limiting, checksum validation, Admin access control | pytest, httpx, Postman |
-| ***Usability Testing*** | Responsive layout Mobile <768px và Tablet 768-1023px, 5 trang core | Browser DevTools, manual |
-| ***Accessibility Testing*** | Tương phản màu sắc chế độ Light/Dark/Sepia (WCAG 2.1 AA) | Lighthouse, axe DevTools |
-| ***Compatibility Testing*** | Cross-browser: Chrome, Edge, Firefox, Safari | BrowserStack / manual |
+| ***Unit Testing*** | - Thuật toán băm mật khẩu Bcrypt.<br>- Sinh mã chữ ký bảo mật VNPAY (HMAC-SHA512).<br>- Phép toán khoảng cách Cosine Distance pgvector.<br>- Kiểm tra tính hợp lệ của Model cấu hình hệ thống (Settings). | pytest, unittest.mock |
+| ***Integration Testing*** | - Toàn bộ API Endpoint Backend (FastAPI).<br>- Cơ chế ghi nhớ bộ đệm và truy hồi Redis Cache.<br>- Tải lên và tối ưu hóa tệp tin qua Cloudinary.<br>- Đồng bộ cơ sở dữ liệu qua Webhook IPN.<br>- Giao tiếp hàng đợi bất đồng bộ GCP Pub/Sub Worker.<br>- Tác vụ tự động chạy ngầm APScheduler.<br>- Đồng bộ thời gian thực qua WebSocket. | pytest, httpx, TestClient |
+| ***Security Testing*** | - Xác thực Token JWT (độ mạnh chữ ký, xử lý token hết hạn).<br>- Phân quyền người dùng (Admin vs Author vs Reader).<br>- Chống brute-force bằng Rate Limiter (Redis sliding window).<br>- Ràng buộc dữ liệu mức CSDL (CHECK Constraints). | pytest, TestClient |
+| ***System Integrity Testing*** | - Kiểm tra cấu trúc CSDL (13 bảng, kiểu dữ liệu, ràng buộc).<br>- Xác minh cấu trúc indexes tối ưu hóa hiệu năng SQL. | pytest, inspect (SQLAlchemy) |
 
 ### 2.3 Test Objects
 
-- **Functions / Modules:**
-  - `auth.utils.hash_password()` - Bcrypt rounds=12
-  - `payment.utils.generate_hmac_signature()` - VNPAY HMAC-SHA512
-  - `ai.search.compute_cosine_distance()` - pgvector
-  - `payment.utils.generate_txn_ref()` - unique transaction ID
-  - `auth.middleware.rate_limiter()` - Redis sliding window
+- **Các hàm & Module nội bộ (Functions / Modules):**
+  - `app.core.security.get_password_hash()` và `verify_password()` - Xử lý băm và kiểm tra mật khẩu.
+  - `app.core.security.create_access_token()` - Sinh JWT access token.
+  - `app.services.vnpay_service.verify_vnpay_checksum()` - Xác thực chữ ký checksum từ VNPAY.
+  - `app.services.vnpay_service.generate_txn_ref()` - Sinh mã hóa đơn vnp_txn_ref duy nhất.
+  - `app.services.moderation_service.moderate_content()` - Kiểm duyệt chương truyện tự động.
+  - `app.services.schedule_service.scan_publish_schedules()` - Quét trễ hạn cam kết xuất bản.
+  - `app.ai.gateway.GeminiGateway.generate_json_sync()` - Gateway gửi yêu cầu dạng JSON đến Gemini API.
 
-- **API Endpoints:**
-  - `POST /api/v1/auth/register` và `/login`
-  - `GET /api/v1/chapters/{chapter_id}` (Redis cache + RBAC)
-  - `POST /api/v1/payment/vnpay/checkout`
-  - `POST /api/v1/payment/vnpay/ipn`
-  - `POST /api/v1/stories/{id}/publish`
-  - `WS /ws/editor/{story_id}` (WebSocket autosave)
+- **Các API Endpoints & Giao tiếp thời gian thực:**
+  - `/api/v1/auth/register` và `/login` - Đăng ký, đăng nhập tài khoản.
+  - `/api/v1/auth/password-reset/request` và `/confirm` - Quy trình cấp mã OTP và khôi phục mật khẩu.
+  - `/api/v1/auth/password/change` - Thay đổi mật khẩu người dùng đã xác thực.
+  - `/api/v1/profiles/me` và `/api/v1/profiles/me/avatar` - Quản lý hồ sơ và cập nhật ảnh đại diện.
+  - `/api/v1/chapters/{chapter_id}` - Đọc chương truyện (áp dụng Redis Cache và phân quyền VIP).
+  - `/api/v1/stories/search` và `/api/v1/recommendations` - Tìm kiếm pgvector và đề xuất AI.
+  - `/api/v1/payment/vnpay/checkout` - Khởi tạo cổng liên kết thanh toán.
+  - `/api/v1/payment/vnpay/ipn` - Nhận phản hồi thanh toán bất đồng bộ (IPN callback).
+  - `/api/v1/admin/stats` và `/api/v1/admin/moderation` - Dashboard quản trị và hàng đợi kiểm duyệt.
+  - WebSocket: `/ws/editor/{story_id}` (Soạn thảo) và `/ws/comments/{chapter_id}` (Bình luận).
 
-- **Documents / Tài liệu:**
-  - SRS - kiểm tra các use case được triển khai đúng yêu cầu
-  - API specification - kiểm tra response schema đúng contract
+- **Tài liệu kiểm thử (Documents):**
+  - **YAG_TestCases** (File Excel kịch bản kiểm thử): Đặc tả chi tiết toàn bộ các kịch bản kiểm thử (Test cases specifications) bao gồm điều kiện tiên quyết, các bước thực hiện, dữ liệu thử nghiệm và kết quả kỳ vọng.
+  - **YAG_TestReport** (File Excel báo cáo kết quả kiểm thử): Tổng hợp chi tiết kết quả thực thi các test cases, tỷ lệ đạt/lỗi (Pass/Fail) và các lỗi phát hiện được ghi nhận.
 
 ### 2.4 Environment
 
-- **Backend:** FastAPI (Python 3.10+), PostgreSQL (with pgvector), Redis, RabbitMQ, Celery
-- **Frontend:** Next.js (React), HTML5, CSS3, WebSocket
-- **Testing Libraries:** pytest, httpx, TestClient, Lighthouse, axe DevTools, Browser DevTools
+- **Backend Stack (Dev):** FastAPI (Python 3.11+), PostgreSQL 16 (với ext pgvector), Redis 7 (Alpine).
+- **Backend Stack (Production):** GCP Cloud Run (Backend), Supabase (PostgreSQL + pgvector), GCP Pub/Sub (Async Messaging), Cloudinary (Media CDN), Vercel (Frontend Next.js).
+- **Frontend Stack:** Next.js (React), HTML5, CSS3, TailwindCSS v4, WebSocket native Client.
+- **Thư viện & Công cụ kiểm thử:** pytest, httpx, TestClient (FastAPI), Lighthouse (Google Chrome), axe DevTools, Browser DevTools.
+
 
 ## 3. Test cases
 
@@ -159,24 +206,24 @@ Nhóm tập trung kiểm thử toàn diện cho **5 tính năng cốt lõi (5 Cr
 | ***F2*** | Premium Membership Payment (VNPAY Integration) |
 | ***F3*** | AI Novel Assistant & Semantic Search (AI Novel Engine) |
 | ***F4*** | Collaborative Editor & Responsive UI/UX (WebSocket & UI/UX) |
-| ***F5*** | Async Queue Publishing & AI Moderation (RabbitMQ & Worker) |
+| ***F5*** | Async Queue Publishing & AI Moderation (GCP Pub/Sub & Worker) |
 
-Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tính năng:
+Dưới đây là danh sách chi tiết 33 test cases ứng với từng mã tính năng:
 
 | Seq | Test case | Feature | Description |
 | :--- | :--- | :--- | :--- |
 | 1 | TC-001: Bcrypt hash password | F1 | Kiểm nghiệm tính chính xác của thuật toán băm mật khẩu Bcrypt với độ phức tạp cao |
-| 2 | TC-002: Register -> JWT -> Call protected API | F1 | Luồng tích hợp Đăng ký, sinh mã Access Token JWT và gọi tài nguyên bảo vệ thành công |
-| 3 | TC-003: Login brute-force rate limit | F1 | Kiểm tra cơ chế tự động chặn brute-force và hạn chế request đăng nhập sai liên tiếp |
-| 4 | TC-004: OTP password reset flow | F1 | Quy trình khôi phục mật khẩu thông qua mã xác thực OTP gửi qua email |
-| 5 | TC-005: Avatar upload validation + Cloudinary | F1 | Xác thực định dạng ảnh avatar, tự động resize và tải lên lưu trữ đám mây Cloudinary |
-| 6 | TC-006: Admin API reject reader JWT | F1 | Chặn độc giả thường hoặc tác giả cố gắng gọi các API thao tác nghiệp vụ của Admin |
-| 7 | TC-007: VNPAY HMAC-SHA512 signature | F2 | Kiểm định tính chuẩn xác trong sinh mã chữ ký bảo mật giao dịch HMAC-SHA512 |
-| 8 | TC-008: RBAC premium chapter 403 expired | F2 | Chặn quyền đọc chương truyện VIP đối với tài khoản độc giả thường hoặc gói đã hết hạn |
+| 2 | TC-002: Register -> JWT -> Call protected API | F1 | Luồng đăng ký, tự động đăng nhập, lưu trữ token và truy cập trang cá nhân trên UI |
+| 3 | TC-003: Login brute-force rate limit | F1 | Kiểm tra hiển thị chặn đăng nhập brute-force và disable form 60 giây trên giao diện |
+| 4 | TC-004: OTP password reset flow | F1 | Quy trình khôi phục mật khẩu thông qua form Quên mật khẩu và nhập OTP trên giao diện |
+| 5 | TC-005: Avatar upload validation + Cloudinary | F1 | Xác thực định dạng, dung lượng và upload ảnh đại diện mới thành công qua giao diện |
+| 6 | TC-006: Admin API reject reader JWT | F1 | Chặn độc giả thường cố gắng truy cập trực tiếp bằng đường dẫn URL admin trên giao diện |
+| 7 | TC-007: VNPAY HMAC-SHA512 signature | F2 | Kiểm định tính chuẩn xác trong sinh mã chữ ký bảo mật giao dịch HMAC-SHA512 / VNPAY Signature |
+| 8 | TC-008: RBAC premium chapter 403 expired | F2 | Giao diện Reader Mode mờ/khóa nội dung chương VIP và hiển thị banner yêu cầu mua gói VIP |
 | 9 | TC-009: VNPAY checkout URL generation | F2 | Khởi tạo giao dịch mua gói Premium thành công và trả về URL thanh toán VNPAY hợp lệ |
-| 10 | TC-010: VNPAY IPN success -> premium_until update | F2 | Tiếp nhận phản hồi IPN callback thành công, cập nhật trạng thái cước Premium |
+| 10 | TC-010: VNPAY IPN success -> premium_until update | F2 | Tiếp nhận phản hồi IPN webhook callback thành công, cập nhật trạng thái cước Premium |
 | 11 | TC-011: vnp_txn_ref uniqueness | F2 | Đảm bảo tính duy nhất và không trùng lặp của mã hóa đơn thanh toán trên hệ thống |
-| 12 | TC-012: VNPAY IPN invalid checksum -> reject | F2 | Từ chối xác nhận cập nhật gói hội viên khi chữ ký checksum của VNPAY sai lệch |
+| 12 | TC-012: VNPAY IPN invalid checksum -> reject | F2 | Từ chối xác nhận cập nhật gói hội viên khi chữ ký checksum của IPN Webhook sai lệch |
 | 13 | TC-013: pgvector Cosine distance accuracy | F3 | Đánh giá tính chính xác của hàm đo khoảng cách Vector phục vụ AI Search |
 | 14 | TC-014: AI semantic search end-to-end | F3 | Luồng tìm kiếm cốt truyện bằng ngôn ngữ tự nhiên sử dụng pgvector |
 | 15 | TC-015: Miu AI suggestion 3 options JSON | F3 | Tác giả yêu cầu AI Miu Sidebar gợi ý tình tiết kế tiếp trả về cấu trúc 3 phương án |
@@ -189,15 +236,17 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
 | 22 | TC-022: Responsive Tablet 768-1023px | F4 | Kiểm nghiệm bố cục, tương thích hiển thị trên kích thước màn hình máy tính bảng |
 | 23 | TC-023: A11y color contrast Light/Dark/Sepia | F4 | Kiểm định độ tương phản phông chữ đạt chuẩn bảo vệ mắt trên 3 chế độ nền đọc |
 | 24 | TC-024: Cross-browser compatibility 4 browsers | F4 | Đảm bảo website hoạt động mượt mà đồng nhất trên Chrome, Edge, Firefox, và Safari |
-| 25 | TC-025: Publish -> RabbitMQ -> Worker -> Approved | F5 | Quy trình xuất bản chương, đẩy hàng đợi bất đồng bộ RabbitMQ và tự động phê duyệt |
+| 25 | TC-025: Publish -> GCP Pub/Sub -> Worker -> Approved | F5 | Quy trình xuất bản chương, đẩy hàng đợi bất đồng bộ GCP Pub/Sub và tự động phê duyệt |
 | 26 | TC-026: Worker AI flags violating content | F5 | Hệ thống Worker AI phát hiện nội dung độc hại/nhạy cảm và gắn cờ cảnh báo chương truyện |
 | 27 | TC-027: Cron trừ reputation khi trễ lịch | F5 | Bộ lập lịch tự động quét trễ lịch đăng cam kết và phạt trừ điểm uy tín của tác giả |
 | 28 | TC-028: CI/CD lint + pytest auto-block on fail | F5 | Tự động hóa chạy kiểm thử tích hợp trên GitHub Actions để chặn code lỗi khi push |
 | 29 | TC-029: Expired/Invalid JWT rejection | F1 | Đảm bảo middleware từ chối các request mang Access Token JWT đã hết hạn hoặc không hợp lệ |
 | 30 | TC-030: User password change flow | F1 | Luồng người dùng đăng nhập tự đổi mật khẩu cá nhân sau khi xác thực mật khẩu cũ |
-| 31 | TC-031: Register password strength validation | F1 | Kiểm tra tính năng kiểm soát chất lượng và độ phức tạp mật khẩu đăng ký tài khoản |
-| 32 | TC-032: Registration duplicate email/username check | F1 | Đảm bảo tính duy nhất bằng cách chặn đăng ký trùng email hoặc username đã tồn tại |
+| 31 | TC-031: Register password strength validation | F1 | Kiểm tra độ mạnh mật khẩu và hiển thị cảnh báo lỗi trực quan trên giao diện Đăng ký |
+| 32 | TC-032: Registration duplicate email/username check | F1 | Kiểm tra hiển thị thông báo lỗi trùng lặp Email/Username khi thực hiện đăng ký trên UI |
 | 33 | TC-033: JWT token refresh flow | F1 | Cơ chế làm mới Access Token bằng Refresh Token mà không cần người dùng nhập lại thông tin |
+
+---
 
 ### 3.2. Test case specifications
 
@@ -284,11 +333,11 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
 | *Test case* | TC-006 |
 | :--- | :--- |
 | Related feature | U015 — Bảo mật phân quyền Admin |
-| Context | Người dùng thông thường sử dụng Access Token JWT của mình để gọi các API thuộc quyền quản lý của Admin |
-| Input Data | Request gọi API lấy báo cáo tài chính hoặc duyệt cờ chương kèm theo Bearer JWT Token của tài khoản có role là reader/author |
-| Expected Output | API từ chối thực thi và phản hồi mã lỗi HTTP 403 (Forbidden) bảo vệ tài nguyên hệ thống |
-| Test steps | 1. Đăng nhập tài khoản độc giả thường để lấy JWT Token <br> 2. Gửi request gọi API Admin (ví dụ: `/api/v1/admin/reports`) kèm token trên <br> 3. Kiểm tra response có trả về đúng mã lỗi HTTP 403 hay không |
-| Actual Output | Đăng nhập tài khoản reader, gửi request lấy reports nhận lỗi HTTP 403 Forbidden. Trình chặn quyền hoạt động chính xác. |
+| Context | Độc giả thường cố gắng truy cập thủ công vào đường dẫn trang quản trị Admin để bảo đảm giao diện chặn quyền truy cập |
+| Input Data | Đăng nhập tài khoản Reader `trangiahien058@gmail.com` / `0987285722Tgh@` và truy cập URL quản trị: `http://localhost:3000/admin/dashboard` |
+| Expected Output | Giao diện hiển thị trang lỗi 403 Forbidden hoặc tự động redirect về trang chủ và báo lỗi không có quyền truy cập |
+| Test steps | 1. Đăng nhập bằng tài khoản Reader `trangiahien058@gmail.com`. <br> 2. Gõ trực tiếp URL trang quản trị `/admin` trên thanh địa chỉ của trình duyệt. <br> 3. Nhấn Enter và xác nhận giao diện hiển thị trang từ chối truy cập hoặc tự động chuyển hướng về trang chủ `/home` kèm thông báo cảnh báo. |
+| Actual Output | Giao diện chặn thành công khi cố truy cập URL admin, tự động redirect độc giả thường về trang chủ và hiển thị cảnh báo không đủ quyền. |
 | Result | Passed |
 
 #### 3.2.7. TC-007: VNPAY HMAC-SHA512 signature
@@ -659,11 +708,11 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
 | *Test case* | TC-031 |
 | :--- | :--- |
 | Related feature | U001 — Đăng ký tài khoản |
-| Context | Kiểm tra các ràng buộc bảo mật về độ mạnh và độ phức tạp của mật khẩu khi đăng ký tài khoản mới nhằm chống tấn công mật khẩu yếu |
-| Input Data | Các trường hợp mật khẩu yếu thử đăng ký: <br> 1. Dưới 8 ký tự: `12345` <br> 2. Thiếu chữ hoa: `p@ssword123` <br> 3. Thiếu ký tự đặc biệt hoặc số: `Passwordabc` <br> Mật khẩu mạnh hợp lệ: `StrongP@ssw0rd!123` |
-| Expected Output | - Các trường hợp mật khẩu yếu bị từ chối đăng ký và trả về HTTP 400 Bad Request hoặc 422 Unprocessable Entity kèm mô tả lỗi cụ thể. <br> - Mật khẩu mạnh hợp lệ đăng ký thành công trả về HTTP 201 Created. |
-| Test steps | 1. Gửi request `POST /api/v1/auth/register` với các mật khẩu yếu tương ứng -> Xác nhận hệ thống trả về lỗi HTTP 400 hoặc 422. <br> 2. Gửi request `POST /api/v1/auth/register` với mật khẩu mạnh hợp lệ -> Xác nhận status = 201. |
-| Actual Output | Thử đăng ký với mật khẩu ngắn, không viết hoa, không ký tự đặc biệt đều bị trả về lỗi HTTP 400/422. Mật khẩu mạnh hợp lệ đăng ký thành công (201). |
+| Context | Kiểm tra tính năng xác thực độ mạnh mật khẩu và hiển thị cảnh báo trực quan ngay trên giao diện đăng ký tài khoản |
+| Input Data | Nhập các chuỗi mật khẩu yếu trên UI: <br> 1. `12345` (quá ngắn) <br> 2. `p@ssword123` (thiếu chữ hoa) <br> 3. `Passwordabc` (thiếu ký tự đặc biệt/số) <br> Và mật khẩu mạnh hợp lệ: `StrongP@ssw0rd!123` |
+| Expected Output | - Giao diện hiển thị cảnh báo lỗi màu đỏ (validation message) dưới trường mật khẩu đối với mật khẩu yếu, nút Đăng ký bị disabled. <br> - Mật khẩu mạnh hợp lệ hiển thị trạng thái hợp lệ (viền xanh lá/đánh dấu check) và cho phép nhấn Đăng ký. |
+| Test steps | 1. Mở trang Đăng ký (S03). <br> 2. Nhập lần lượt các mật khẩu yếu vào ô mật khẩu -> Xác nhận UI hiển thị thông điệp cảnh báo lỗi cụ thể cho từng loại mật khẩu yếu. <br> 3. Nhập mật khẩu mạnh hợp lệ -> Xác nhận cảnh báo lỗi biến mất và nút Đăng ký được kích hoạt hoạt động. |
+| Actual Output | Giao diện hiển thị cảnh báo màu đỏ trực quan khi nhập mật khẩu yếu. Nút đăng ký mở khóa và cho phép submit khi nhập mật khẩu mạnh. |
 | Result | Passed |
 
 #### 3.2.32. TC-032: Registration duplicate email/username check
@@ -674,11 +723,11 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
 | *Test case* | TC-032 |
 | :--- | :--- |
 | Related feature | U001 — Đăng ký tài khoản |
-| Context | Kiểm tra ràng buộc duy nhất đối với các thông tin tài khoản quan trọng (Email và Username) khi có người đăng ký mới |
-| Input Data | - Tài khoản đã tồn tại trong hệ thống: username `existuser`, email `existing@yag.dev` <br> - Đăng ký trùng email: `{ "username": "newuser", "email": "existing@yag.dev", "password": "P@ssw0rd!123" }` <br> - Đăng ký trùng username: `{ "username": "existuser", "email": "new@yag.dev", "password": "P@ssw0rd!123" }` |
-| Expected Output | Hệ thống từ chối đăng ký trùng lặp và trả về mã lỗi HTTP 400 Bad Request kèm thông báo email hoặc username đã tồn tại |
-| Test steps | 1. Đảm bảo tài khoản `existuser` và email `existing@yag.dev` đã có trong CSDL. <br> 2. Gửi request đăng ký trùng email -> Xác nhận status = 400 và nội dung lỗi chỉ ra trùng email. <br> 3. Gửi request đăng ký trùng username -> Xác nhận status = 400 và nội dung lỗi chỉ ra trùng username. |
-| Actual Output | Request đăng ký trùng email và trùng username hiện tại đều bị CSDL/API chặn lại và phản hồi mã lỗi HTTP 400 Bad Request. |
+| Context | Đảm bảo giao diện đăng ký hiển thị thông báo lỗi phù hợp khi người dùng cố gắng nhập Email hoặc Username đã tồn tại trong hệ thống |
+| Input Data | - Tài khoản đã tồn tại: username `trangiahien058`, email `trangiahien058@gmail.com` <br> - Nhập trùng email: `{ "username": "newuser", "email": "trangiahien058@gmail.com" }` <br> - Nhập trùng username: `{ "username": "trangiahien058", "email": "new@yag.dev" }` |
+| Expected Output | Giao diện hiển thị cảnh báo lỗi (validation banner/toast) ngay khi submit form, thông báo tài khoản/email đã tồn tại và giữ nguyên thông tin đã điền để người dùng chỉnh sửa |
+| Test steps | 1. Truy cập trang Đăng ký (S03). <br> 2. Điền thông tin đăng ký với email trùng `trangiahien058@gmail.com` và nhấn Đăng ký -> Xác nhận giao diện hiển thị thông báo lỗi trùng email. <br> 3. Điền thông tin đăng ký với username trùng `trangiahien058` -> Xác nhận giao diện hiển thị thông báo lỗi trùng username. |
+| Actual Output | Giao diện hiển thị thông báo toast lỗi màu đỏ báo trùng email/username chính xác khi submit, giữ nguyên form nhập. |
 | Result | Passed |
 
 #### 3.2.33. TC-033: JWT token refresh flow
@@ -692,21 +741,32 @@ Dưới đây là danh sách chi tiết 28 test cases ứng với từng mã tí
 | Context | Cơ chế tự động làm mới mã Access Token bằng mã Refresh Token hợp lệ giúp người dùng duy trì trạng thái đăng nhập mà không cần nhập mật khẩu liên tục |
 | Input Data | - Endpoint: `POST /api/v1/auth/refresh` <br> - Mã Refresh Token hợp lệ (đã được cấp khi đăng nhập thành công) <br> - Mã Refresh Token giả lập hoặc hết hạn |
 | Expected Output | - Refresh Token hợp lệ: Hệ thống trả về HTTP 200, chứa Access Token mới. <br> - Refresh Token không hợp lệ hoặc hết hạn: Trả về HTTP 401 Unauthorized. |
-| Test steps | 1. Thực hiện gọi `POST /api/v1/auth/login` với tài khoản hợp lệ -> Lưu lại `refresh_token`. <br> 2. Gửi request `POST /api/v1/auth/refresh` với `refresh_token` hợp lệ trên -> Xác nhận status = 200, nhận Access Token mới. <br> 3. Thử gọi API bảo vệ bằng Access Token mới nhận được -> Xác nhận status = 200. <br> 4. Gửi request `POST /api/v1/auth/refresh` with Refresh Token sai cấu trúc hoặc hết hạn -> Xác nhận status = 401. |
+| Test steps | 1. Thực hiện gọi `POST /api/v1/auth/login` với tài khoản hợp lệ -> Lưu lại `refresh_token`. <br> 2. Gửi request `POST /api/v1/auth/refresh` với `refresh_token` hợp lệ trên -> Xác nhận status = 200, nhận Access Token mới. <br> 3. Thử gọi API bảo vệ bằng Access Token mới nhận được -> Xác nhận status = 200. <br> 4. Gửi request `POST /api/v1/auth/refresh` với Refresh Token sai cấu trúc hoặc hết hạn -> Xác nhận status = 401. |
 | Actual Output | Gửi refresh_token hợp lệ nhận về access_token mới (HTTP 200) và dùng access_token mới gọi protected API thành công. Gửi refresh_token sai bị chặn trả về 401. |
 | Result | Passed |
 
 ## 4. AI Usage Declaration
 
-Chưa cần viết.
+| STT | Công cụ | Thời gian | Prompt được chọn | Mục đích sử dụng | Nội dung AI hỗ trợ tạo ra | Sinh viên/nhóm review và chỉnh sửa |
+| :---: | :---: | :---: | :--- | :--- | :--- | :--- |
+| 1 | Claude 3.5 Opus | 01/06/2026 14:23 | **Thiết lập test case kiểm thử backend API bằng pytest cho luồng Authentication (F1)**<br><br>"Xây dựng các test case kiểm thử backend API bằng pytest cho luồng Authentication (Đăng ký, Đăng nhập, Reset password qua OTP, Token Refresh, Rate limiting). Sử dụng tài khoản test reader..." | Tạo các đặc tả test case chi tiết cho module Authentication & Account Security (F1). | AI tạo ra cấu trúc 11 đặc tả test case (TC-001 đến TC-006, TC-029 đến TC-033) sử dụng mock API và token giả lập. | Phát hiện AI dùng tài khoản mock. Nhóm đã gửi prompt tiếp theo để điều chỉnh: *"Hãy viết lại các test case sử dụng tài khoản reader thật `trangiahien058@gmail.com` và mật khẩu `0987285722Tgh@` và thay thế các bước kiểm thử UI thành pytest API backend để đồng bộ mã nguồn."* |
+| 2 | Gemini 3.5 Flash | 01/06/2026 09:15 | **Xây dựng test case tích hợp (Integration Test) API thanh toán VNPAY (F2)**<br><br>"Viết các test case tích hợp (Integration Test) kiểm thử API thanh toán VNPAY (checkout URL, IPN callback, HMAC-SHA512) dựa trên FastAPI payment router..." | Thiết kế test case kiểm thử cổng thanh toán cho module F2. | AI tạo ra 6 test case (TC-007 đến TC-012) nhưng sử dụng sai mã hóa chữ ký HMAC-SHA256 và orderCode thay vì HMAC-SHA512 và vnp_txn_ref của VNPAY. | Phát hiện sai lệch thuật toán mã hóa. Nhóm gửi prompt điều chỉnh: *"Sửa lại toàn bộ các test case F2 sử dụng VNPAY IPN, tính chữ ký bảo mật HMAC-SHA512 và mã giao dịch vnp_txn_ref để phù hợp với code backend của Duy Trường."* |
+| 3 | Gemini 3.1 Pro | 03/06/2026 16:40 | **Tạo test case cho AI Engine gồm pgvector, AI Semantic Search và Miu AI suggestions (F3)**<br><br>"Tạo các test case cho AI Engine gồm đo khoảng cách cosine distance pgvector, AI Semantic Search qua API `/search` và Miu AI gợi ý JSON..." | Lập test case cho module AI Engine & Recommendations (F3). | AI tạo ra đặc tả các ca kiểm thử TC-013 đến TC-015 sử dụng mock API và các bước kiểm tra trực quan trên giao diện. | Phát hiện các bước kiểm thử UI không khớp với unit/integration test. Nhóm gửi prompt điều chỉnh: *"Hãy chỉnh sửa các test case này, chuyển sang unit test cho cosine distance mức SQL/pgvector và integration test E2E cho API backend `/api/v1/stories/search`."* |
+| 4 | Claude 3.5 Sonnet | 03/06/2026 10:11 | **Xây dựng đặc tả test case tích hợp cho Redis cache, Bookmark và WebSockets (F4)**<br><br>"Xây dựng các đặc tả test case tích hợp cho Redis cache chapter, Bookmark/History, WebSocket Autosave và WebSocket Comment..." | Viết các ca kiểm thử cho module Stories, Chapters & Collaborative Editor (F4). | AI tạo ra đặc tả 9 test case (TC-016 đến TC-024) bao gồm cache hit/miss, real-time comment và các test responsive layout trên mobile/tablet. | Phát hiện AI viết các bước test responsive chung chung. Nhóm gửi prompt tiếp theo để tối ưu: *"Cập nhật test steps của TC-021 và TC-022 chỉ rõ 5 trang core cần test (S05, S06, S07, S16, S17) và các viewport mobile/tablet cụ thể để Nhi chạy test thủ công dễ hơn."* |
+| 5 | Gemini 3.5 Flash | 04/06/2026 15:30 | **Thiết lập test case cho luồng xuất bản chương truyện đẩy RabbitMQ, Worker AI kiểm duyệt (F5)**<br><br>"Thiết lập test case cho luồng xuất bản chương truyện đẩy RabbitMQ, Worker AI kiểm duyệt Gemini, cron trễ hạn và CI/CD GitHub Actions..." | Thiết kế test case cho module Admin, Moderation & CI/CD (F5). | AI tạo ra đặc tả TC-025 đến TC-028 sử dụng RabbitMQ làm message broker để duyệt tự động. | Phát hiện hệ thống thực tế dùng GCP Pub/Sub chứ không dùng RabbitMQ trên môi trường production. Nhóm gửi prompt sửa đổi: *"Thay đổi toàn bộ RabbitMQ thành GCP Pub/Sub trong TC-025 và TC-026 để khớp với infra deploy trên production của Phú Thọ."* |
+| 6 | Gemini 3.5 Flash | 06/06/2026 07:00 | **Rà soát tổng thể báo cáo kiểm thử theo mẫu template**<br><br>"Rà soát tổng thể toàn bộ báo cáo Test.md dựa trên file Template3-Testing.docx.md. Chỉ ra các phần còn thiếu, sai định dạng tiêu đề hoặc thiếu thông tin minh chứng và đề xuất cách sửa." | Kiểm tra tính hoàn thiện của tài liệu trước khi nộp bài. | AI phát hiện thiếu mục Objectives ở đầu file, thiếu đặc tả chi tiết của TC-007 đến TC-028 ở mục 3 (do lỗi merge), và thiếu Reflective Report cho phần unnecessary/tedious. | Nhóm tiến hành thêm mục Objectives, khôi phục nội dung mục 3 từ Git history và điền Reflective Report dựa trên checklist của AI. Nhóm gửi tiếp prompt: *"Hãy viết lại phần Reflective Report chi tiết và chuyên nghiệp, nhận xét về tính hữu ích của Test Plan/Test cases và tính rườm rà của đặc tả ca kiểm thử."* |
 
 ## 5. Presentation
 
-Chưa cần viết.
+Link Video:
 
 ## 6. Reflective Report
+
 ### 6.1 Most helpful sections
-Chưa cần viết.
+
+**Mục 2 — Test Plan**: Đây là mục có giá trị thực tiễn cao nhất trong toàn bộ báo cáo. Trước khi bắt tay vào viết test, nhóm phải thống nhất phạm vi kiểm thử, phân loại các nhóm chức năng cần kiểm tra (Authentication, Payment, AI Engine, Stories/Chapters, Admin), và xác định rõ môi trường thực thi (GCP Cloud Run, Supabase, Cloudinary, Vercel, GCP Pub/Sub thật). Nếu không có mục này, các thành viên dễ bị chồng chéo hoặc bỏ sót các module quan trọng — đặc biệt với dự án YAG có kiến trúc phức tạp gồm 5 module độc lập do 5 người khác nhau phụ trách. Mục Test Plan đóng vai trò như bản đồ định hướng chung, giúp toàn nhóm hiểu rõ *kiểm thử cái gì*, *theo thứ tự nào*, và *ai chịu trách nhiệm phần nào*.
+
+**Mục 3.1 — Test Cases**: Với 33 test case trải dài từ Unit Test, Integration Test đến System Test và UI/Accessibility Test, mỗi test case buộc nhóm phải tra cứu kỹ source code thực tế — endpoint cụ thể, field name trong request body, response message, error code — thay vì chỉ mô tả chung chung. Quá trình này giúp phát hiện ra nhiều sai lệch nhỏ giữa tài liệu thiết kế ban đầu và code đã được triển khai (ví dụ: endpoint đổi mật khẩu thực tế là `/api/v1/auth/password/change` với field `old_password`, khác so với tên gọi ban đầu trong thiết kế). Nhờ đó, mục 3 không chỉ là tài liệu kiểm thử mà còn đóng vai trò kiểm tra tính nhất quán giữa thiết kế và hiện thực của toàn bộ hệ thống.
 
 ### 6.2 Unnecessary/Tedious sections
-Chưa cần viết.
+NULL.

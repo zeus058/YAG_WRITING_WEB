@@ -744,13 +744,13 @@ export function ReaderScreen() {
 
   const [fontSize, setFontSize] = useState(18);
   const [isDark, setIsDark] = useState(false);
-  const [isWide, setIsWide] = useState(false);
+  const [isWide, setIsWide] = useState(true);
 
   useEffect(() => {
     const syncSettings = () => {
       setFontSize(Number(localStorage.getItem("yag.reader.fontSize") || 18));
       setIsDark(localStorage.getItem("yag.reader.isDark") === "true");
-      setIsWide(localStorage.getItem("yag.reader.isWide") === "true");
+      setIsWide(localStorage.getItem("yag.reader.isWide") !== "false");
     };
     if (typeof window !== "undefined") {
       syncSettings();
@@ -776,12 +776,6 @@ export function ReaderScreen() {
     window.dispatchEvent(new Event("yag:reader-settings-changed"));
   };
 
-  const toggleWidth = () => {
-    const val = !isWide;
-    setIsWide(val);
-    localStorage.setItem("yag.reader.isWide", String(val));
-    window.dispatchEvent(new Event("yag:reader-settings-changed"));
-  };
 
   useEffect(() => {
     if (!storyId) return;
@@ -1047,12 +1041,9 @@ export function ReaderScreen() {
                 onChange={(e) => saveFontSize(Number(e.target.value))}
                 aria-label="Cỡ chữ"
               />
-              <div className="grid grid-2 reader-compact-grid">
-                <button className={`button ${isDark ? "button-primary" : ""}`} type="button" onClick={toggleTheme}>
-                  {isDark ? "Nền sáng" : "Nền tối"}
-                </button>
-                <button className={`button ${isWide ? "button-primary" : ""}`} type="button" onClick={toggleWidth}>
-                  {isWide ? "Cột vừa" : "Mở rộng"}
+              <div className="stack" style={{ gap: 8 }}>
+                <button className={`button ${isDark ? "button-primary" : ""}`} type="button" onClick={toggleTheme} style={{ width: "100%" }}>
+                  {isDark ? "Chuyển sang Nền sáng" : "Chuyển sang Nền tối"}
                 </button>
               </div>
             </div>

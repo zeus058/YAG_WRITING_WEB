@@ -158,6 +158,7 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
 
   useEffect(() => {
     setIsAccountMenuOpen(false);
+    document.querySelector(".prototype-sidebar")?.classList.remove("open");
   }, [pathname]);
 
   // Handle outside pointer/scroll to close account menu before it can block page actions.
@@ -243,6 +244,7 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
       </aside>
 
       <main className="prototype-main">
+        <div className="ambient-bg-layer" />
         <header className="topbar">
           <div className="topbar-left">
             <button className="button icon-button mobile-menu-button" type="button" data-sidebar-open aria-label="Mở sidebar">
@@ -282,7 +284,7 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
                 aria-expanded={isAccountMenuOpen}
                 onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
                 aria-label="Thông tin người dùng"
-                style={{ border: 0, padding: "4px 10px 4px 4px", display: "inline-flex", alignItems: "center", gap: 10, background: "#FFFFFF", cursor: "pointer" }}
+                style={{ border: 0, padding: "4px 10px 4px 4px", display: "inline-flex", alignItems: "center", gap: 10, background: "var(--surface)", cursor: "pointer" }}
               >
                 <span className="user-avatar" style={{ overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {userDisp.avatarUrl ? (

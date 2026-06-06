@@ -221,6 +221,12 @@ export function ClientInteractions() {
       const sidebarClose = target.closest("[data-sidebar-close]");
       if (sidebarClose) document.querySelector(".prototype-sidebar")?.classList.remove("open");
 
+      // Close sidebar if open and clicked outside on mobile
+      const sidebar = document.querySelector(".prototype-sidebar");
+      if (sidebar && sidebar.classList.contains("open") && !target.closest(".prototype-sidebar") && !sidebarOpen) {
+        sidebar.classList.remove("open");
+      }
+
       const passwordToggle = target.closest<HTMLElement>("[data-password-toggle]");
       if (passwordToggle) {
         const input = passwordToggle.parentElement?.querySelector<HTMLInputElement>("[data-password-input]");

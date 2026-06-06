@@ -15,7 +15,7 @@
   --crimson: #C81C30;
   --crimson-dark: #9e1526;
   --coral: #FEBDB2;
-  --petal: #FFECCE;
+  --petal: #FAF5EB;
   --petal-dark: #f5dba8;
   --jungle: #41503D;
   --jungle-dark: #2e3829;
@@ -26,11 +26,11 @@
   --blue-info: #3B82F6;
   --star-gold: #FFD166;
   --ink: #2b3328;
-  --r: 16px;
-  --shadow-card: 0 4px 24px rgba(65,80,61,.1);
-  --shadow-hover: 0 12px 40px rgba(65,80,61,.18);
+  --r: 8px;
+  --shadow-card: 0 4px 20px rgba(65,80,61,.08);
+  --shadow-hover: 0 10px 32px rgba(65,80,61,.14);
 
-  --background: #FFECCE;
+  --background: #FAF5EB;
   --foreground: #41503D;
   --transition-base: 200ms ease-in-out;
 }
@@ -48,8 +48,8 @@
 /* === CHẾ ĐỘ TỐI (Dark Mode) === */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #41503D;
-    --foreground: #FFECCE;
+    --background: #151B16;
+    --foreground: #FAF5EB;
   }
 }
 
@@ -73,6 +73,85 @@ body {
   background: var(--crimson);
   border-radius: 99px;
 }
+
+
+/* === DÂN NGUYÊN KEYFRAMES TOÀN CỤC === */
+
+@keyframes orbFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-30px) scale(1.05); }
+}
+@keyframes particleRise {
+  0% { bottom: -10px; opacity: 0; }
+  20% { opacity: 0.8; }
+  100% { bottom: 110%; opacity: 0; transform: translateX(30px); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes bobY {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+@keyframes logoPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(226, 92, 114, 0.6);
+  }
+  70% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 8px rgba(226, 92, 114, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(226, 92, 114, 0);
+  }
+}
+
+/* === SKELETON === */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #E8D5B5 25%, #F0DFC4 50%, #E8D5B5 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 0.375rem;
+}
+
+
+
+/* Hide IE/Edge native password reveal & clear actions to avoid double icon rendering */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+/* Accessibility outline styles for focus-visible elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--crimson, #C81C30) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(254, 189, 178, 0.6) !important;
+}
+
+
+/* === LANDING PAGE SCOPED STYLES === */
+.landing-page {
 
 /* === NAVBAR === */
 nav {
@@ -244,10 +323,7 @@ nav.scrolled {
   animation-delay: -5s;
   opacity: 0.15;
 }
-@keyframes orbFloat {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-30px) scale(1.05); }
-}
+
 
 .hero-bg-text {
   position: absolute;
@@ -278,11 +354,7 @@ nav.scrolled {
 .particle:nth-child(3) { left: 60%; animation-delay: 3s; background: var(--petal); }
 .particle:nth-child(4) { left: 80%; animation-delay: 4.5s; width: 5px; height: 5px; }
 
-@keyframes particleRise {
-  0% { bottom: -10px; opacity: 0; }
-  20% { opacity: 0.8; }
-  100% { bottom: 110%; opacity: 0; transform: translateX(30px); }
-}
+
 
 .hero-inner {
   position: relative;
@@ -320,10 +392,7 @@ nav.scrolled {
   border-radius: 50%;
   animation: pulse 2s infinite;
 }
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
-}
+
 
 .hero-title {
   font-family: var(--font-playfair), ui-serif, Georgia, serif;
@@ -488,15 +557,9 @@ nav.scrolled {
   animation: floatY 3.5s ease-in-out infinite;
   animation-delay: -1.5s;
 }
-@keyframes floatY {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(28px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+
+
 
 .scroll-cue {
   position: absolute;
@@ -514,10 +577,7 @@ nav.scrolled {
   animation: fadeUp 0.9s 1.2s both, bobY 2.5s 2.5s ease-in-out infinite;
   z-index: 10;
 }
-@keyframes bobY {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(8px); }
-}
+
 .scroll-cue svg {
   width: 20px;
   height: 20px;
@@ -1439,6 +1499,7 @@ footer {
   stroke: currentColor;
 }
 
+
 /* === INTERSECTION OBSERVER REVEAL === */
 .reveal {
   opacity: 0;
@@ -1453,17 +1514,7 @@ footer {
 .reveal-delay-2 { transition-delay: 0.2s; }
 .reveal-delay-3 { transition-delay: 0.3s; }
 
-/* === SKELETON === */
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-.skeleton {
-  background: linear-gradient(90deg, #E8D5B5 25%, #F0DFC4 50%, #E8D5B5 75%);
-  background-size: 200% 100%;
-  animation: skeleton-pulse 1.5s ease-in-out infinite;
-  border-radius: 0.375rem;
-}
+
 
 /* === RESPONSIVE === */
 @media(max-width: 900px) {
@@ -1481,39 +1532,11 @@ footer {
   .how-connector { display: none; }
 }
 
-@keyframes logoPulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(226, 92, 114, 0.6);
-  }
-  70% {
-    transform: scale(1.15);
-    box-shadow: 0 0 0 8px rgba(226, 92, 114, 0);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(226, 92, 114, 0);
-  }
-}
+
 
 .logo-dot {
   animation: logoPulse 2s infinite;
 }
 
-/* Hide IE/Edge native password reveal & clear actions to avoid double icon rendering */
-input::-ms-reveal,
-input::-ms-clear {
-  display: none;
-}
 
-/* Accessibility outline styles for focus-visible elements */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-[role="button"]:focus-visible {
-  outline: 2px solid var(--crimson, #C81C30) !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 4px rgba(254, 189, 178, 0.6) !important;
 }

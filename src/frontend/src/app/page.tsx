@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
+import { BrandLogo } from "@/components/ui";
 
 /**
  * Component bọc hỗ trợ hiệu ứng hiển thị khi cuộn trang (Reveal on Scroll)
@@ -125,11 +126,11 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="bg-[#41503D] min-h-screen text-white font-sans overflow-x-hidden">
+    <div className="landing-page bg-[#41503D] min-h-screen text-white font-sans overflow-x-hidden">
       {/* ═══════════ NAVBAR ═══════════ */}
       <nav id="mainNav" className={isScrolled ? "scrolled" : ""}>
-        <Link className="logo" href="/">
-          Y<span className="logo-accent">A</span>G<div className="logo-dot"></div>
+        <Link className="logo" href="/" style={{ textDecoration: "none" }}>
+          <BrandLogo />
         </Link>
         {/* Nav links removed for Landing Page per BUG-LP-001 */}
         <div className="nav-actions">
@@ -1273,7 +1274,7 @@ export default function LandingPage() {
           <div className="footer-top">
             <div className="footer-brand">
               <div className="footer-logo">
-                Y<span>A</span>G
+                <BrandLogo />
               </div>
               <p className="footer-tagline">
                 Nền tảng đọc và viết truyện thông minh dành cho người Việt, tích

@@ -2,7 +2,7 @@
   --crimson: #C81C30;
   --crimson-dark: #9E1526;
   --coral: #FEBDB2;
-  --petal: #FFECCE;
+  --petal: #FAF5EB;
   --jungle: #41503D;
   --jungle-dark: #2E3829;
   --near-white: #FAFAF8;
@@ -14,10 +14,44 @@
   --muted: #6B7468;
   --line: rgba(65, 80, 61, 0.16);
   --surface: #FFFFFF;
-  --shadow: 0 16px 40px rgba(65, 80, 61, 0.10);
-  --shadow-lift: 0 24px 64px rgba(65, 80, 61, 0.16);
+  --shadow: 0 10px 30px rgba(65, 80, 61, 0.08);
+  --shadow-lift: 0 16px 48px rgba(65, 80, 61, 0.12);
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --focus: 0 0 0 3px rgba(254, 189, 178, 0.64);
+
+  --surface-panel: rgba(255, 255, 255, 0.78);
+  --surface-panel-hover: rgba(255, 255, 255, 0.88);
+  --topbar-bg: rgba(250, 250, 248, 0.88);
+  --button-hover-bg: #FFF7F4;
+  --main-bg-start: #FFF7E8;
+  --main-bg-end: #FFF9EF;
+  --sidebar-bg: var(--jungle);
+  --sidebar-color: var(--petal);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #151B16;
+    --foreground: #FAF5EB;
+    --petal: #151B16;
+    --jungle: #E2ECE0;
+    --jungle-dark: #FFFFFF;
+    --near-white: #1C241D;
+    --ink: #E2ECE0;
+    --muted: #8E998B;
+    --line: rgba(255, 255, 255, 0.08);
+    --surface: #1E2620;
+    --surface-panel: rgba(30, 38, 32, 0.82);
+    --surface-panel-hover: rgba(38, 48, 40, 0.92);
+    --topbar-bg: rgba(26, 32, 27, 0.88);
+    --button-hover-bg: #2C352E;
+    --main-bg-start: #151B16;
+    --main-bg-end: #171E18;
+    --sidebar-bg: #111512;
+    --sidebar-color: #FAF5EB;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    --shadow-lift: 0 16px 48px rgba(0, 0, 0, 0.5);
+  }
 }
 
 *,
@@ -101,8 +135,8 @@ svg {
   padding: 24px 16px;
   overflow-y: auto;
   border-right: 1px solid rgba(255, 236, 206, 0.12);
-  background: var(--jungle);
-  color: var(--petal);
+  background: var(--sidebar-bg);
+  color: var(--sidebar-color);
   animation: sidebarEnter 0.58s var(--motion-ease) both;
 }
 
@@ -331,7 +365,7 @@ svg {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: linear-gradient(180deg, #FFF7E8 0%, var(--petal) 46%, #FFF9EF 100%);
+  background: linear-gradient(180deg, var(--main-bg-start) 0%, var(--petal) 46%, var(--main-bg-end) 100%);
 }
 
 .prototype-main::before {
@@ -369,7 +403,7 @@ svg {
   min-height: 64px;
   padding: 12px 48px;
   border-bottom: 1px solid rgba(65, 80, 61, 0.12);
-  background: rgba(250, 250, 248, 0.88);
+  background: var(--topbar-bg);
   backdrop-filter: blur(16px);
   animation: topbarDrop 0.48s var(--motion-ease) both;
 }
@@ -411,7 +445,7 @@ svg {
   padding: 0 12px;
   border: 1px solid rgba(65, 80, 61, 0.14);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface-panel);
   color: var(--jungle);
   font-size: 13px;
   font-weight: 800;
@@ -422,7 +456,7 @@ svg {
 
 .topbar-status-chip:hover {
   border-color: rgba(254, 189, 178, 0.78);
-  background: #FFFFFF;
+  background: var(--surface);
   box-shadow: 0 10px 28px rgba(65, 80, 61, 0.10);
   transform: translateY(-2px);
 }
@@ -645,7 +679,7 @@ svg {
 
 .button:hover {
   border-color: var(--coral);
-  background: #FFF7F4;
+  background: var(--button-hover-bg);
   box-shadow: 0 10px 24px rgba(65, 80, 61, 0.10);
   transform: translateY(-1px);
 }
@@ -727,7 +761,7 @@ svg {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--surface-panel);
   box-shadow: var(--shadow);
   transition: border-color 0.24s ease, box-shadow 0.24s ease, background 0.24s ease;
 }
@@ -753,7 +787,7 @@ svg {
 
 .panel:hover {
   border-color: rgba(254, 189, 178, 0.74);
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--surface-panel-hover);
   box-shadow: var(--shadow-lift);
 }
 
@@ -6063,3 +6097,51 @@ svg {
     text-align: left;
   }
 }
+
+/* === PREVENT REPETITIVE ANIMATIONS & DEFINE drifts === */
+@keyframes paperDrift {
+  0% {
+    background-position: 0px 0px, 0px 0px, 0% 0%;
+  }
+  100% {
+    background-position: 96px 96px, 96px 96px, 100% 100%;
+  }
+}
+
+@keyframes ambientDrift {
+  0% {
+    transform: scale(1) translate(0px, 0px);
+  }
+  50% {
+    transform: scale(1.04) translate(10px, -8px);
+  }
+  100% {
+    transform: scale(1) translate(-8px, 10px);
+  }
+}
+
+/* Ambient Background Layer */
+.ambient-bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: 
+    radial-gradient(circle at 15% 25%, rgba(200, 28, 48, 0.02) 0%, transparent 45%),
+    radial-gradient(circle at 85% 75%, rgba(254, 189, 178, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(65, 80, 61, 0.015) 0%, transparent 60%);
+  opacity: 0.82;
+  animation: ambientDrift 30s ease-in-out infinite alternate;
+}
+
+/* Reduced motion support for sensitive users */
+@media (prefers-reduced-motion: reduce) {
+  .ambient-bg-layer {
+    animation: none !important;
+    transform: none !important;
+  }
+  .prototype-main::before {
+    animation: none !important;
+  }
+}
+

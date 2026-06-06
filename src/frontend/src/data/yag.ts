@@ -37,6 +37,7 @@ export type IconName =
   | "arrow"
   | "check"
   | "close"
+  | "trash"
   | "eye"
   | "eyeOff"
   | "github"

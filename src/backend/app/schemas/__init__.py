@@ -77,6 +77,9 @@ from app.schemas.ai import (
     AISemanticSearchResponse,
     AIRecommendationItem,
     AIRecommendationResponse,
+    AIToolDefinition,
+    AISkillDefinition,
+    AIMcpManifestResponse,
 )
 from app.schemas.auth import (
     UserRegister,
@@ -150,4 +153,7 @@ __all__ = [
     "AISemanticSearchResponse",
     "AIRecommendationItem",
     "AIRecommendationResponse",
+    "AIToolDefinition",
+    "AISkillDefinition",
+    "AIMcpManifestResponse",
 ]

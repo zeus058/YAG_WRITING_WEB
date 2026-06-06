@@ -304,19 +304,19 @@ export function AuthorWorksScreen() {
         </button>
       }
     >
-      <div className="author-header-panel panel panel-pad" style={{ marginBottom: 24, background: "linear-gradient(135deg, var(--jungle-dark) 0%, #163020 100%)", color: "#fff", borderRadius: 12 }}>
+      <div className="author-header-panel panel panel-pad" style={{ marginBottom: 24, borderRadius: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <span className="user-avatar" style={{ background: "var(--crimson)", color: "#fff", width: 64, height: 64, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: 24 }}>
             {avatarInitials}
           </span>
           <div>
             <h2 style={{ fontSize: 22, fontWeight: "bold", margin: 0, color: "#fff" }}>Chào mừng trở lại, {displayName}!</h2>
-            <p style={{ margin: "4px 0 0 0", opacity: 0.8, fontSize: 13 }}>Không gian quản lý tác phẩm & theo dõi hành trình sáng tác.</p>
+            <p style={{ margin: "4px 0 0 0", color: "rgba(255, 255, 255, 0.75)", fontSize: 13 }}>Không gian quản lý tác phẩm & theo dõi hành trình sáng tác.</p>
           </div>
         </div>
       </div>
 
-      <section className="metric-grid" style={{ marginBottom: 24 }}>
+      <section className="metric-grid" style={{ marginBottom: 24, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
         <MetricCard label="Tác phẩm" value={String(works.length)} />
         <MetricCard label="Số chương nháp" value={String(works.reduce((acc, story) => acc + (story.draft_count || 0), 0))} />
         <MetricCard label="Chờ duyệt AI" value={String(works.reduce((acc, story) => acc + (story.pending_count || 0), 0))} />
@@ -383,42 +383,70 @@ export function AuthorWorksScreen() {
                 <Cover index={index} coverUrl={story.cover_url} />
                 <div className="compact-stack author-card-body" style={{ flexGrow: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "16px 0 0 0" }}>
                   <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <span className={`badge ${story.status === "completed" ? "badge-green" : story.status === "paused" ? "badge-amber" : "badge-blue"}`}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+                      <h3 className="story-title" style={{ fontSize: 21, fontWeight: "950", margin: 0, color: "var(--ink)", lineHeight: 1.25 }}>{story.title}</h3>
+                      <span className={`badge ${story.status === "completed" ? "badge-green" : story.status === "paused" ? "badge-amber" : "badge-blue"}`} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 4, whiteSpace: "nowrap" }}>
                         {story.status === "completed" ? "Hoàn thành" : story.status === "paused" ? "Tạm ngưng" : "Đang viết"}
                       </span>
-                      <span className={`badge ${story.moderation_status === "approved" ? "badge-green" : story.moderation_status === "pending" ? "badge-blue" : "badge-red"}`} style={{ fontSize: 10 }}>
-                        {story.moderation_status === "approved" ? "Đã duyệt" : story.moderation_status === "pending" ? "Chờ duyệt" : "Vi phạm"}
-                      </span>
                     </div>
-                    <h3 className="story-title" style={{ fontSize: 16, fontWeight: "bold", margin: "0 0 6px 0" }}>{story.title}</h3>
-                    <p style={{ fontSize: 12, color: "var(--muted)", height: 32, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", margin: "0 0 10px 0", lineHeight: 1.4 }}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                      <span className="author-category-badge">
+                        {story.category}
+                      </span>
+                      {story.tags && story.tags.slice(0, 2).map((t: string) => (
+                        <span key={t} className="author-tag-badge">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: 12.5, color: "var(--muted)", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", margin: "0 0 12px 0", lineHeight: 1.45 }}>
                       {story.description || "Chưa có mô tả ngắn."}
                     </p>
-                    <div className="story-meta" style={{ fontSize: 11, color: "var(--muted)", margin: "0 0 12px 0" }}>
-                      <strong>{chapCount}</strong> chương · <span>{story.category}</span> · <strong>{(story.view_count || 0).toLocaleString()}</strong> đọc · <strong>{story.rating_avg || 0}★</strong>
+                    <div className="author-stats-grid">
+                      <div className="author-stat-chip">
+                        <Icon name="book" />
+                        <span>{chapCount} chương</span>
+                      </div>
+                      <div className="author-stat-chip">
+                        <Icon name="eye" />
+                        <span>{(story.view_count || 0).toLocaleString()} đọc</span>
+                      </div>
+                      <div className="author-stat-chip author-stat-chip-orange">
+                        <span>★</span>
+                        <span>{story.rating_avg || 0} sao</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-2 author-card-actions">
-                    <Link className="button button-primary author-card-action" href={editHref} onClick={guardMissingStoryId}>
-                      Viết tiếp
-                    </Link>
-                    <Link className="button button-soft author-card-action" href={publishHref} onClick={guardMissingStoryId}>
-                      Đăng chương
-                    </Link>
-                    <Link className="button author-card-action" href={detailHref} onClick={guardMissingStoryId}>
-                      Chi tiết
-                    </Link>
-                    <Link className="button author-card-action" href="/author/schedule">
-                      Xem lịch
-                    </Link>
-                    <button
-                      className="button button-danger author-card-action"
-                      style={{ gridColumn: "span 2", marginTop: 8 }}
-                      onClick={() => handleDeleteStory(story)}
-                    >
-                      Xóa truyện
-                    </button>
+                  <div className="author-card-actions-group">
+                    <div className="author-card-main-row">
+                      <Link className="button button-primary author-card-action author-card-action-write" href={editHref} onClick={guardMissingStoryId} aria-label={`Viết tiếp ${story.title}`}>
+                        <Icon name="edit" />
+                        <span>Viết tiếp</span>
+                      </Link>
+                      <Link className="button button-soft author-card-action author-card-action-publish" href={publishHref} onClick={guardMissingStoryId} aria-label={`Đăng chương mới cho ${story.title}`}>
+                        <Icon name="arrow" />
+                        <span>Đăng chương</span>
+                      </Link>
+                    </div>
+                    <div className="author-card-sub-row">
+                      <Link className="button author-card-action author-card-action-preview" href={detailHref} onClick={guardMissingStoryId} aria-label={`Xem trang chi tiết của ${story.title}`}>
+                        <Icon name="eye" />
+                        <span>Xem truyện</span>
+                      </Link>
+                      <Link className="button author-card-action author-card-action-schedule" href="/author/schedule" aria-label={`Mở lịch đăng cho ${story.title}`}>
+                        <Icon name="calendar" />
+                        <span>Lịch đăng</span>
+                      </Link>
+                      <button
+                        className="button button-danger author-card-action author-card-action-delete"
+                        onClick={() => handleDeleteStory(story)}
+                        type="button"
+                        aria-label={`Xóa truyện ${story.title}`}
+                      >
+                        <Icon name="close" />
+                        <span>Xóa</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </article>

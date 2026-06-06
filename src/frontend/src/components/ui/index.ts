@@ -5,6 +5,7 @@ export { ErrorGuide } from "./Feedback";
 export { Icon } from "./Icon";
 export { MetricCard } from "./Metrics";
 export {
+  AIRecommendationStories,
   HomeStoryCard,
   getStoryAuthorName,
   QuickStories,

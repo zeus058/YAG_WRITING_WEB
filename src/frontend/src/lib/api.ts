@@ -156,6 +156,11 @@ export const yagApi = {
       apiFetch<any[]>("/api/v1/stories/library/me", { method: "GET" }),
   },
 
+  ai: {
+    getTools: () => apiFetch<any[]>("/api/v1/ai/tools", { method: "GET" }),
+    getMcpManifest: () => apiFetch<any>("/api/v1/ai/mcp/manifest", { method: "GET" }),
+  },
+
   chapters: {
     getChapter: (chapterId: string) =>
       apiFetch<any>(`/api/v1/chapters/${chapterId}`, { method: "GET" }),
@@ -191,7 +196,14 @@ export const yagApi = {
         method: "PUT",
         body,
       }),
-    requestAiSuggestion: (body: { chapterId?: string; context: string; mode: string }) =>
+    requestAiSuggestion: (body: {
+      chapterId?: string;
+      storyId?: string;
+      context: string;
+      mode: string;
+      selectedText?: string;
+      targetWords?: number;
+    }) =>
       apiFetch("/api/v1/ai/suggestions", {
         method: "POST",
         body,

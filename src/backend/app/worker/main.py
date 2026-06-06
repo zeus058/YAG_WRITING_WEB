@@ -9,6 +9,7 @@ from app.models.story import Story
 from app.models.chapter import Chapter
 from app.core.database import SessionLocal
 from app.core.config import settings
+from app.ai.gateway import gemini_api_key_configured
 import json
 import logging
 import sys
@@ -123,7 +124,7 @@ def _build_notification(chapter: Chapter, report) -> dict:
 
 
 def _sync_embedding_if_approved(db, chapter: Chapter, report) -> None:
-    if report.result != ModerationResult.APPROVED or not settings.GEMINI_API_KEY:
+    if report.result != ModerationResult.APPROVED or not gemini_api_key_configured():
         return
 
     story = db.query(Story).filter(Story.id == chapter.story_id).first()

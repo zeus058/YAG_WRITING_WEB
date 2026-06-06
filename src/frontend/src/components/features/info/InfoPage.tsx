@@ -182,22 +182,22 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
   const renderInteractiveAbout = () => (
     <div className="stack" style={{ gap: 24 }}>
       {/* Ecosystem Visual Stats */}
-      <section className="panel panel-pad info-focus-panel" style={{ background: "rgba(255, 255, 255, 0.86)", border: "1px solid var(--line)" }}>
+      <section className="panel panel-pad info-focus-panel" style={{ background: "var(--surface-panel)", border: "1px solid var(--line)" }}>
         <h2 className="section-title" style={{ gridColumn: "1 / -1", marginBottom: 12 }}>Chỉ số hệ sinh thái YAG</h2>
         <div className="grid grid-4" style={{ gridColumn: "1 / -1", width: "100%", gap: 16 }}>
-          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "#FFFFFF", padding: 16 }}>
-            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--crimson)" }}>100K+</span>
+          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
+            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--accent-text, var(--crimson))" }}>100K+</span>
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Độc giả hoạt động</small>
           </div>
-          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "#FFFFFF", padding: 16 }}>
+          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
             <span style={{ fontSize: 32, fontWeight: 900, color: "var(--green)" }}>5,000+</span>
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Tác phẩm hoàn thiện</small>
           </div>
-          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "#FFFFFF", padding: 16 }}>
+          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
             <span style={{ fontSize: 32, fontWeight: 900, color: "var(--amber)" }}>98.6%</span>
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Độ hài lòng UX</small>
           </div>
-          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "#FFFFFF", padding: 16 }}>
+          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
             <span style={{ fontSize: 32, fontWeight: 900, color: "var(--blue)" }}>Realtime</span>
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Bình luận & Thông báo</small>
           </div>
@@ -229,12 +229,12 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
       </section>
 
       {/* Visual Timeline Section */}
-      <section className="panel panel-pad stack" style={{ background: "rgba(255, 255, 255, 0.78)" }}>
+      <section className="panel panel-pad stack" style={{ background: "var(--surface-panel)" }}>
         <h2 className="section-title">Lộ trình nâng cấp nền tảng</h2>
         <div className="stack" style={{ gap: 20, marginTop: 16, position: "relative", paddingLeft: 24 }}>
-          <div style={{ position: "absolute", left: 8, top: 0, bottom: 0, width: 2, background: "rgba(65, 80, 61, 0.16)" }}></div>
+          <div style={{ position: "absolute", left: 8, top: 0, bottom: 0, width: 2, background: "var(--line)" }}></div>
           <div style={{ position: "relative" }}>
-            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--crimson)", border: "3px fill #FFF" }}></div>
+            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--crimson)", border: "3px solid var(--surface)" }}></div>
             <strong>Quý 1 - Quý 2 / 2026: Phiên bản 1.0 (Hiện tại)</strong>
             <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>Ra mắt giao diện đọc tối giản, split-screen soạn thảo dành cho tác giả, kiểm duyệt AI thời gian thực và tích hợp ví điện tử PayOS.</p>
           </div>
@@ -256,7 +256,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
   const renderInteractiveTerms = () => (
     <div className="stack" style={{ gap: 24 }}>
       {/* Interactive Tabs Accordion */}
-      <section className="info-focus-panel" style={{ display: "grid", gridTemplateColumns: "1fr", background: "rgba(255, 255, 255, 0.86)", gap: 16 }}>
+      <section className="info-focus-panel" style={{ display: "grid", gridTemplateColumns: "1fr", background: "var(--surface-panel)", gap: 16 }}>
         <h2 className="section-title">Xem nhanh các điều khoản cốt lõi</h2>
         <div className="grid grid-4" style={{ gap: 8 }}>
           {page.sections.map((section, idx) => (
@@ -271,7 +271,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             </button>
           ))}
         </div>
-        <div className="panel panel-pad stack" style={{ background: "#FFFFFF", border: "1px solid var(--line)", padding: 20 }}>
+        <div className="panel panel-pad stack" style={{ background: "var(--surface)", border: "1px solid var(--line)", padding: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
             <span className="info-card-icon"><Icon name={page.sections[activeTab].icon} /></span>
             <strong style={{ fontSize: 18, color: "var(--jungle)" }}>{page.sections[activeTab].title}</strong>
@@ -285,7 +285,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
       </section>
 
       {/* Focus Panel */}
-      <section className="panel panel-pad stack" style={{ background: "rgba(255, 255, 255, 0.78)" }}>
+      <section className="panel panel-pad stack" style={{ background: "var(--surface-panel)" }}>
         <h2 className="section-title">{page.focusTitle}</h2>
         <p style={{ color: "var(--muted)", margin: "8px 0 0" }}>{page.focusBody}</p>
       </section>
@@ -295,7 +295,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
   const renderInteractivePrivacy = () => (
     <div className="stack" style={{ gap: 24 }}>
       {/* Security Health Dashboard */}
-      <section className="panel panel-pad info-focus-panel" style={{ background: "rgba(255, 255, 255, 0.86)" }}>
+      <section className="panel panel-pad info-focus-panel" style={{ background: "var(--surface-panel)" }}>
         <div className="stack" style={{ gap: 12 }}>
           <span className="badge badge-green"><Icon name="shield" /> An toàn tuyệt đối</span>
           <h2 className="section-title">Chỉ số bảo mật YAG</h2>
@@ -324,7 +324,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             key={section.title} 
             className="panel panel-pad stack" 
             style={{ 
-              background: "rgba(255, 255, 255, 0.78)",
+              background: "var(--surface-panel)",
               cursor: "pointer",
               transition: "transform 0.2s",
               border: activeTab === idx ? "1px solid var(--coral)" : ""
@@ -346,7 +346,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
   const renderInteractiveContact = () => (
     <div className="stack" style={{ gap: 24 }}>
       {/* Visual Ticketing Guide Stepper */}
-      <section className="panel panel-pad stack" style={{ background: "rgba(255, 255, 255, 0.86)" }}>
+      <section className="panel panel-pad stack" style={{ background: "var(--surface-panel)" }}>
         <h2 className="section-title">Gửi phiếu yêu cầu hỗ trợ (Support Ticket)</h2>
         <div className="stepper" style={{ marginTop: 12, marginBottom: 12 }}>
           <div className={`step ${ticketStep >= 1 ? "active" : ""}`}>1. Chọn chủ đề</div>
@@ -369,7 +369,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
                     justifyContent: "center",
                     padding: 16,
                     border: ticketSubject === subject ? "2px solid var(--coral)" : "1px solid var(--line)",
-                    background: ticketSubject === subject ? "var(--petal)" : "#FFFFFF",
+                    background: ticketSubject === subject ? "var(--petal)" : "var(--surface)",
                     transition: "all 0.2s"
                   }}
                 >
@@ -428,7 +428,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
       {/* Support FAQ Cards */}
       <section className="grid grid-2" style={{ gap: 16 }}>
         {page.sections.map((section) => (
-          <article className="panel panel-pad stack info-card" key={section.title} style={{ background: "rgba(255, 255, 255, 0.78)" }}>
+          <article className="panel panel-pad stack info-card" key={section.title} style={{ background: "var(--surface-panel)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <span className="info-card-icon"><Icon name={section.icon} /></span>
               <h2 className="section-title" style={{ margin: 0, fontSize: 16 }}>{section.title}</h2>

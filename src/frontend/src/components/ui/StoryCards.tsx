@@ -55,6 +55,45 @@ export function HomeStoryCard({ story, index }: { story: any; index: number }) {
   );
 }
 
+export function AIRecommendationCard({ story, index }: { story: any; index: number }) {
+  const storyId = story.id || story.story_id;
+  const href = storyId ? `/stories/${storyId}` : "/discover";
+  const genre = story.category || story.genre || "Truyện";
+  const reason = story.ai_reason || story.reason || "Phù hợp với gu đọc và tín hiệu truyện gần đây.";
+  const tags = story.match_tags || story.ai_match_tags || [];
+  const source = story.source || story.ai_source || "llm_rerank";
+  const sourceLabel = source === "llm_rerank"
+    ? "LLM rerank"
+    : source === "semantic"
+      ? "Semantic"
+      : source === "popular"
+        ? "Popular"
+        : source;
+  const similarity = Number(story.similarity ?? story.ai_similarity);
+  const confidence = Number.isFinite(similarity) ? Math.round(similarity * 100) : null;
+
+  return (
+    <Link className="ai-recommend-card" href={href}>
+      <Cover index={index + 8} coverUrl={story.cover_url} small />
+      <div className="ai-recommend-body">
+        <div className="ai-recommend-title-row">
+          <h3 className="story-title">{story.title || "Truyện được đề xuất"}</h3>
+          <span className="badge badge-blue">{confidence ? `${confidence}%` : "AI"}</span>
+        </div>
+        <div className="story-meta">{genre} · {sourceLabel}</div>
+        <p>{reason}</p>
+        {tags.length > 0 && (
+          <div className="ai-tag-row">
+            {tags.slice(0, 4).map((tag: string) => (
+              <span key={tag}>{tag}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </Link>
+  );
+}
+
 export function ReadingCard({ story, index }: { story: any; index: number }) {
   const chapterCount = Math.max(Number(story.chapter_count ?? story.chapters ?? 1), 1);
   const rawCurrent = Number(story.current_chapter_number ?? story.last_read_chapter ?? story.chapters_read ?? 0);
@@ -134,6 +173,18 @@ export function QuickStories({ count = 6, storiesList }: { count?: number; stori
     <div className="home-story-grid">
       {displayList.map((story, index) => (
         <HomeStoryCard story={story} index={index} key={story.id || story.title} />
+      ))}
+    </div>
+  );
+}
+
+export function AIRecommendationStories({ count = 6, storiesList }: { count?: number; storiesList?: any[] }) {
+  const displayList = (storiesList ?? []).slice(0, count);
+
+  return (
+    <div className="ai-recommend-grid">
+      {displayList.map((story, index) => (
+        <AIRecommendationCard story={story} index={index} key={story.id || story.story_id || story.title} />
       ))}
     </div>
   );

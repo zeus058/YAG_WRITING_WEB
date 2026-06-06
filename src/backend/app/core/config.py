@@ -120,6 +120,13 @@ class Settings(BaseSettings):
 
     GEMINI_TIMEOUT_SECONDS: float = 10.0
     AI_CONTEXT_WORD_LIMIT: int = 1000
+    AI_AGENT_ENABLED: bool = True
+    AI_TOOL_TRACE_ENABLED: bool = False
+    AI_MODERATION_STRICT_MODE: bool = True
+    AI_MAX_CONTEXT_CHARS: int = 12000
+    AI_RECOMMENDATION_CANDIDATE_LIMIT: int = 20
+    AI_MODERATION_APPROVE_THRESHOLD: float = 0.72
+    AI_MODERATION_REJECT_THRESHOLD: float = 0.82
 
     # Scheduler Settings
     SCHEDULER_ENABLED: bool = False
@@ -147,6 +154,24 @@ class Settings(BaseSettings):
             raise ValueError(f"Invalid SERVICE_ROLE: {self.SERVICE_ROLE}")
         if self.QUEUE_PROVIDER not in VALID_QUEUE_PROVIDERS:
             raise ValueError(f"Invalid QUEUE_PROVIDER: {self.QUEUE_PROVIDER}")
+        if self.AI_MAX_CONTEXT_CHARS < 1000:
+            raise ValueError("AI_MAX_CONTEXT_CHARS must be at least 1000")
+        if self.AI_RECOMMENDATION_CANDIDATE_LIMIT < 5:
+            raise ValueError(
+                "AI_RECOMMENDATION_CANDIDATE_LIMIT must be at least 5"
+            )
+        for threshold_name in (
+            "AI_MODERATION_APPROVE_THRESHOLD",
+            "AI_MODERATION_REJECT_THRESHOLD",
+        ):
+            threshold = getattr(self, threshold_name)
+            if threshold < 0.0 or threshold > 1.0:
+                raise ValueError(f"{threshold_name} must be between 0.0 and 1.0")
+        if self.AI_MODERATION_REJECT_THRESHOLD < self.AI_MODERATION_APPROVE_THRESHOLD:
+            raise ValueError(
+                "AI_MODERATION_REJECT_THRESHOLD must be greater than or equal to "
+                "AI_MODERATION_APPROVE_THRESHOLD"
+            )
 
         if self.ENVIRONMENT == "production":
             if (
@@ -167,9 +192,14 @@ class Settings(BaseSettings):
 
             for var_name, default_val in required_prod_vars.items():
                 val = getattr(self, var_name)
-                if not val or val == default_val or str(val).lower() in PLACEHOLDER_VALUES:
+                if (
+                    not val
+                    or val == default_val
+                    or str(val).lower() in PLACEHOLDER_VALUES
+                ):
                     raise ValueError(
-                        f"Field '{var_name}' must be explicitly set and different from default in production environment"
+                        f"Field '{var_name}' must be explicitly set and different "
+                        "from default in production environment"
                     )
 
             essential_uris = {"CORS_ORIGINS", "GEMINI_API_KEY"}

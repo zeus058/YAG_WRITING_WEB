@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { stories, type IconName } from "@/data/yag";
-import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, RankingItem, ReadingCard, StoryBadge, UpdateStoryRow, getStoryAuthorName } from "@/components/ui";
+import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, AIRecommendationStories, RankingItem, ReadingCard, StoryBadge, UpdateStoryRow, getStoryAuthorName } from "@/components/ui";
 import { AppShell } from "@/components/layout";
 import { yagApi, appEnv, useAuth, getStoredJsonArray } from "@/lib";
 
@@ -72,8 +72,24 @@ export function HomeFeedScreen() {
 
         const rawRecs = recsRes.data.recommendations || [];
         const mappedRecs = rawRecs.map((rec: any) => {
-          return fullStories.find((s: any) => s.id === rec.story_id);
-        }).filter(Boolean);
+          const fullStory = fullStories.find((s: any) => s.id === rec.story_id);
+          return {
+            ...(fullStory || {}),
+            id: fullStory?.id || rec.story_id,
+            title: fullStory?.title || rec.title,
+            description: fullStory?.description || rec.plot_summary,
+            category: fullStory?.category || rec.category,
+            badge: "ai",
+            ai_reason: rec.reason,
+            ai_match_tags: rec.match_tags || [],
+            ai_source: rec.source,
+            ai_similarity: rec.similarity,
+            reason: rec.reason,
+            match_tags: rec.match_tags || [],
+            source: rec.source,
+            similarity: rec.similarity,
+          };
+        }).filter((story: any) => story.id || story.title);
 
         setRecommendations(mappedRecs.length > 0 ? mappedRecs : fullStories.slice(0, 4));
       } catch (err) {
@@ -162,10 +178,10 @@ export function HomeFeedScreen() {
         <main className="stack">
           <section className="panel panel-pad stack">
             <div className="home-section-head">
-              <h2 className="section-title">Dành cho bạn</h2>
+              <h2 className="section-title">AI đề xuất cho bạn</h2>
               <Link href="/discover">Xem thêm</Link>
             </div>
-            <QuickStories count={12} storiesList={recommendations} />
+            <AIRecommendationStories count={6} storiesList={recommendations} />
           </section>
           <section className="panel panel-pad stack">
             <div className="home-section-head">

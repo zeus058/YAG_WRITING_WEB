@@ -165,11 +165,16 @@ SE_Writing_Web/
 │           │           ├── stories.py        # F4: CRUD Stories, Chapters listing, Reviews
 │           │           ├── chapters.py       # F4: CRUD Chapters, Comments, Autosave WS, Search
 │           │           ├── payment.py        # F2: PayOS checkout, webhook, Membership plans
-│           │           ├── ai.py             # F3: AI suggest (plot suggestions)
+│           │           ├── ai.py             # F3: AI suggestions, tools, MCP manifest
 │           │           ├── recommendations.py # F3: AI recommendations
 │           │           ├── admin.py          # F5: Moderation queue, Stats, User/Story management
 │           │           ├── publish.py        # Publishing: submit chapter for moderation
 │           │           └── notifications.py  # Notification listing, mark read
+│           ├── ai/                   # Gemini agent core
+│           │   ├── gateway.py        # Shared Gemini REST adapter, retries, JSON parsing, embeddings
+│           │   ├── tools.py          # Typed internal tools + MCP-compatible manifest
+│           │   ├── skills.py         # writing_coach, recommendation_curator, safety_moderator prompts
+│           │   └── orchestrator.py   # Writing agent + recommendation reranker
 │           ├── core/                 # Infrastructure
 │           │   ├── config.py         # Pydantic Settings + production validator
 │           │   ├── database.py       # SQLAlchemy engine & SessionLocal factory
@@ -200,8 +205,8 @@ SE_Writing_Web/
 │           │   └── common.py         # Shared schemas (pagination, error responses)
 │           ├── services/             # Business logic layer
 │           │   ├── auth_service.py   # Register, login, password reset, profile CRUD
-│           │   ├── ai_service.py     # Gemini API calls (suggest, embed, moderate, recommend)
-│           │   ├── moderation_service.py # Content moderation logic
+│           │   ├── ai_service.py     # AI service facade: suggestions, search, recommendations, embeddings
+│           │   ├── moderation_service.py # Layered AI moderation logic
 │           │   ├── payos_service.py   # PayOS payment processing and verification
 │           │   ├── membership_service.py # Membership plan queries
 │           │   ├── publish_service.py # Chapter publish → RabbitMQ, connection factory
@@ -1633,7 +1638,7 @@ docker-compose logs -f postgres
 1. Xác định Use Case ID (U001-U015) liên quan
 2. Tìm table cần thao tác trong mục 5.2
 3. Kiểm tra luồng nghiệp vụ ở mục 9 trước khi viết handler
-4. Với mọi task AI: đẩy RabbitMQ, không gọi Gemini trong request handler
+4. Với AI: moderation luôn đi qua RabbitMQ/PubSub worker; suggestion/search/recommendation có thể gọi Gemini qua `app/ai/gateway.py` với timeout, fallback và không log raw content/secrets
 5. Với payment: xác minh signature/PayOS API status trước khi cập nhật DB
 6. Endpoint mới: thêm vào file tương ứng trong `endpoints/`, đăng ký trong `router.py`
 7. Model mới: thêm vào `models/`, import trong `models/__init__.py`

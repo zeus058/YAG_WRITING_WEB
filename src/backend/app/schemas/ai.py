@@ -66,8 +66,23 @@ class AISuggestionRequest(BaseModel):
         validation_alias=AliasChoices("chapter_id", "chapterId"),
         min_length=1,
     )
+    story_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("story_id", "storyId"),
+    )
     context: str = Field(min_length=1, description="Recent draft context for Gemini.")
     mode: AiMode = Field(default="kịch tính")
+    target_words: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("target_words", "targetWords"),
+        ge=50,
+        le=1200,
+    )
+    selected_text: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("selected_text", "selectedText"),
+        max_length=5000,
+    )
 
     @field_validator("context")
     @classmethod
@@ -81,6 +96,8 @@ class AISuggestionItem(BaseModel):
     title: str
     content: str
     reason: str | None = None
+    insertable_text: str | None = None
+    quality_score: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class AISuggestionResponse(BaseModel):
@@ -153,6 +170,9 @@ class AIRecommendationItem(BaseModel):
     plot_summary: str
     distance: float
     similarity: float
+    reason: str | None = None
+    match_tags: list[str] = Field(default_factory=list)
+    source: str | None = None
 
 
 class AIRecommendationResponse(BaseModel):
@@ -161,3 +181,27 @@ class AIRecommendationResponse(BaseModel):
     fallback: bool = False
     recommendations: list[AIRecommendationItem]
     message: str | None = None
+
+
+class AIToolDefinition(BaseModel):
+    name: str
+    description: str
+    allowed_roles: list[str]
+    input_schema: dict
+    output_schema: dict
+
+
+class AISkillDefinition(BaseModel):
+    name: str
+    description: str
+    prompt: str
+
+
+class AIMcpManifestResponse(BaseModel):
+    name: str
+    version: str
+    description: str
+    provider: str
+    tools: list[AIToolDefinition]
+    skills: list[AISkillDefinition]
+    execution: dict

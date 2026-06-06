@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from app.models.chapter import Chapter
 from app.models.story import Story
+from app.services import moderation_service
 from app.services.moderation_service import (
     ModerationReport,
     ModerationResult,
@@ -51,16 +52,22 @@ class FakeDB:
 
 
 def _mock_gemini_response(result: str, reason: str, categories: list, confidence: float):
-    mock_resp = MagicMock()
-    mock_resp.text = json.dumps(
+    return (
         {
             "result": result,
             "reason": reason,
             "flagged_categories": categories,
             "confidence_score": confidence,
-        }
+        },
+        json.dumps(
+            {
+                "result": result,
+                "reason": reason,
+                "flagged_categories": categories,
+                "confidence_score": confidence,
+            }
+        ),
     )
-    return mock_resp
 
 
 def _chapter():
@@ -74,39 +81,33 @@ def _chapter():
     )
 
 
-@patch("app.services.moderation_service.settings")
-@patch("app.services.moderation_service._get_gemini_client")
-def test_moderate_content_approved(mock_client_factory, mock_settings):
-    mock_settings.GEMINI_API_KEY = "fake-key"
-    mock_client = MagicMock()
-    mock_client.models.generate_content.return_value = _mock_gemini_response(
-        "approved",
-        "Safe content",
-        [],
-        0.97,
+def test_moderate_content_approved(monkeypatch):
+    monkeypatch.setattr(moderation_service.settings, "GEMINI_API_KEY", "fake-key")
+    monkeypatch.setattr(
+        moderation_service.GeminiGateway,
+        "generate_json_sync",
+        lambda *args, **kwargs: _mock_gemini_response("approved", "Safe content", [], 0.97),
     )
-    mock_client_factory.return_value = mock_client
 
     report = moderate_content("Safe chapter", chapter_id="chap-001")
 
     assert report.result == ModerationResult.APPROVED
     assert report.flagged_categories == []
     assert report.confidence == 0.97
-    mock_client.models.generate_content.assert_called_once()
 
 
-@patch("app.services.moderation_service.settings")
-@patch("app.services.moderation_service._get_gemini_client")
-def test_moderate_content_rejected(mock_client_factory, mock_settings):
-    mock_settings.GEMINI_API_KEY = "fake-key"
-    mock_client = MagicMock()
-    mock_client.models.generate_content.return_value = _mock_gemini_response(
-        "Rejected",
-        "Severe sexual content",
-        ["sexual_content"],
-        0.91,
+def test_moderate_content_rejected(monkeypatch):
+    monkeypatch.setattr(moderation_service.settings, "GEMINI_API_KEY", "fake-key")
+    monkeypatch.setattr(
+        moderation_service.GeminiGateway,
+        "generate_json_sync",
+        lambda *args, **kwargs: _mock_gemini_response(
+            "Rejected",
+            "Severe sexual content",
+            ["sexual_content"],
+            0.91,
+        ),
     )
-    mock_client_factory.return_value = mock_client
 
     report = moderate_content("Unsafe chapter", chapter_id="chap-002")
 
@@ -115,15 +116,18 @@ def test_moderate_content_rejected(mock_client_factory, mock_settings):
     assert report.confidence == 0.91
 
 
-@patch("app.services.moderation_service.settings")
-@patch("app.services.moderation_service._get_gemini_client")
-def test_moderate_content_flagged_json_fence(mock_client_factory, mock_settings):
-    mock_settings.GEMINI_API_KEY = "fake-key"
-    mock_client = MagicMock()
-    mock_resp = MagicMock()
-    mock_resp.text = '```json\n{"result":"flagged","reason":"violence","flagged_categories":["violence"],"confidence_score":0.88}\n```'
-    mock_client.models.generate_content.return_value = mock_resp
-    mock_client_factory.return_value = mock_client
+def test_moderate_content_flagged_json_fence(monkeypatch):
+    monkeypatch.setattr(moderation_service.settings, "GEMINI_API_KEY", "fake-key")
+    monkeypatch.setattr(
+        moderation_service.GeminiGateway,
+        "generate_json_sync",
+        lambda *args, **kwargs: _mock_gemini_response(
+            "flagged",
+            "violence",
+            ["violence"],
+            0.88,
+        ),
+    )
 
     report = moderate_content("Violent chapter", chapter_id="chap-003")
 
@@ -132,28 +136,56 @@ def test_moderate_content_flagged_json_fence(mock_client_factory, mock_settings)
     assert report.confidence == 0.88
 
 
-@patch("app.services.moderation_service.settings")
-@patch("app.services.moderation_service._get_gemini_client")
-def test_moderate_content_invalid_json_returns_error(mock_client_factory, mock_settings):
-    mock_settings.GEMINI_API_KEY = "fake-key"
-    mock_client = MagicMock()
-    mock_client.models.generate_content.return_value.text = "not json"
-    mock_client_factory.return_value = mock_client
+def test_moderate_content_invalid_json_flags_for_review(monkeypatch):
+    monkeypatch.setattr(moderation_service.settings, "GEMINI_API_KEY", "fake-key")
+
+    def fake_generate(*args, **kwargs):
+        raise json.JSONDecodeError("bad json", "not json", 0)
+
+    monkeypatch.setattr(
+        moderation_service.GeminiGateway,
+        "generate_json_sync",
+        fake_generate,
+    )
 
     report = moderate_content("Any chapter", chapter_id="chap-004")
 
-    assert report.result == ModerationResult.ERROR
+    assert report.result == ModerationResult.FLAGGED
     assert report.flagged_categories == []
 
 
-@patch("app.services.moderation_service.settings")
-def test_moderate_content_no_api_key_auto_approved(mock_settings):
-    mock_settings.GEMINI_API_KEY = ""
+def test_moderate_content_no_api_key_auto_approved(monkeypatch):
+    monkeypatch.setattr(moderation_service.settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(moderation_service.settings, "ENVIRONMENT", "development")
 
     report = moderate_content("Any content", chapter_id="chap-005")
 
     assert report.result == ModerationResult.APPROVED
     assert report.confidence == 1.0
+
+
+def test_moderate_content_missing_key_is_error_in_production(monkeypatch):
+    monkeypatch.setattr(moderation_service.settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(moderation_service.settings, "ENVIRONMENT", "production")
+
+    report = moderate_content("Any content", chapter_id="chap-006")
+
+    assert report.result == ModerationResult.ERROR
+    assert report.confidence == 0.0
+
+
+def test_moderate_content_low_confidence_approval_is_flagged(monkeypatch):
+    monkeypatch.setattr(moderation_service.settings, "GEMINI_API_KEY", "fake-key")
+    monkeypatch.setattr(
+        moderation_service.GeminiGateway,
+        "generate_json_sync",
+        lambda *args, **kwargs: _mock_gemini_response("approved", "Probably safe", [], 0.4),
+    )
+
+    report = moderate_content("Ambiguous chapter", chapter_id="chap-007")
+
+    assert report.result == ModerationResult.FLAGGED
+    assert report.confidence == 0.4
 
 
 def test_apply_result_approved_logs_non_violation():

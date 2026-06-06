@@ -48,6 +48,11 @@ def test_production_config_accepts_secure_url_based_settings():
     assert settings.DATABASE_URL.startswith("postgresql://")
     assert settings.REDIS_URL.startswith("rediss://")
     assert settings.RABBITMQ_URL.startswith("amqps://")
+    assert settings.AI_AGENT_ENABLED is True
+    assert settings.AI_MODERATION_STRICT_MODE is True
+    assert settings.AI_MODERATION_REJECT_THRESHOLD >= (
+        settings.AI_MODERATION_APPROVE_THRESHOLD
+    )
 
 
 def test_production_config_accepts_secure_component_settings():
@@ -122,6 +127,16 @@ def test_production_config_accepts_pubsub_oidc_settings():
         ({"ENVIRONMENT": "qa"}, "Invalid ENVIRONMENT"),
         ({"SERVICE_ROLE": "cron"}, "Invalid SERVICE_ROLE"),
         ({"QUEUE_PROVIDER": "local"}, "Invalid QUEUE_PROVIDER"),
+        ({"AI_MAX_CONTEXT_CHARS": 999}, "AI_MAX_CONTEXT_CHARS"),
+        ({"AI_RECOMMENDATION_CANDIDATE_LIMIT": 4}, "AI_RECOMMENDATION"),
+        ({"AI_MODERATION_APPROVE_THRESHOLD": 1.2}, "AI_MODERATION"),
+        (
+            {
+                "AI_MODERATION_APPROVE_THRESHOLD": 0.9,
+                "AI_MODERATION_REJECT_THRESHOLD": 0.8,
+            },
+            "AI_MODERATION_REJECT_THRESHOLD",
+        ),
         ({"SECRET_KEY": "dev_secret_key"}, "SECRET_KEY"),
         ({"GEMINI_API_KEY": ""}, "GEMINI_API_KEY"),
         ({"GEMINI_API_KEY": "your_gemini_api_key_here"}, "GEMINI_API_KEY"),

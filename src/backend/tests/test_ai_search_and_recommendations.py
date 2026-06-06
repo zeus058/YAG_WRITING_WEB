@@ -4,9 +4,9 @@ Tests for U008 semantic search and U009 recommendations.
 from fastapi.testclient import TestClient
 
 from app.api import deps
+from app.ai import gateway as ai_gateway
 from app.core.config import settings
 from app.main import app
-from app.services import ai_service
 
 client = TestClient(app)
 
@@ -78,7 +78,7 @@ def test_semantic_search_returns_ranked_results(monkeypatch):
         return FakeResponse()
 
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
-    monkeypatch.setattr(ai_service.httpx.AsyncClient, "post", fake_post)
+    monkeypatch.setattr(ai_gateway.httpx.AsyncClient, "post", fake_post)
     app.dependency_overrides[deps.get_db] = lambda: fake_db
     try:
         response = client.post(

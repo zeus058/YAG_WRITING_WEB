@@ -3,6 +3,7 @@ Tests for U006 AI suggestion flow.
 """
 
 from app.api import deps
+from app.ai import gateway as ai_gateway
 from app.core.config import settings
 from app.main import app
 from app.schemas.ai import AISuggestionItem, AISuggestionResponse
@@ -50,7 +51,7 @@ def test_generate_ai_suggestions_truncates_context(monkeypatch):
 
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
     monkeypatch.setattr(settings, "AI_CONTEXT_WORD_LIMIT", 3)
-    monkeypatch.setattr(ai_service.httpx.AsyncClient, "post", fake_post)
+    monkeypatch.setattr(ai_gateway.httpx.AsyncClient, "post", fake_post)
 
     request = ai_service.AISuggestionRequest(
         chapter_id="chapter-1",
@@ -113,6 +114,7 @@ def test_fallback_library_has_three_items():
     items = ai_service.build_fallback_items("kịch tính")
     assert len(items) == 3
     assert all(isinstance(item, AISuggestionItem) for item in items)
+    assert all(item.insertable_text for item in items)
     response = AISuggestionResponse(
         chapter_id="chapter-1",
         mode="kịch tính",
@@ -121,6 +123,28 @@ def test_fallback_library_has_three_items():
         suggestions=items,
     )
     assert response.fallback is True
+
+
+def test_ai_tools_and_mcp_manifest_are_authenticated():
+    response = client.get("/api/v1/ai/tools")
+    assert response.status_code == 401
+
+    app.dependency_overrides[deps.require_authenticated_user] = (
+        lambda: {"sub": "reader-1", "role": "reader"}
+    )
+    try:
+        tools_response = client.get("/api/v1/ai/tools")
+        manifest_response = client.get("/api/v1/ai/mcp/manifest")
+
+        assert tools_response.status_code == 200
+        assert manifest_response.status_code == 200
+        tools = tools_response.json()
+        manifest = manifest_response.json()
+        assert any(tool["name"] == "get_story_context" for tool in tools)
+        assert manifest["name"] == "yag-ai-agent"
+        assert any(skill["name"] == "writing_coach" for skill in manifest["skills"])
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_ai_suggestion_context_exceeds_limit():

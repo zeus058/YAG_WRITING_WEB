@@ -314,6 +314,10 @@ def build_fallback_items(
     normalized_mode = normalize_mode(mode)
     story = (story_context or {}).get("story") or {}
     category = story.get("category") or "thể loại hiện tại"
+    reference = story.get("style_reference") or {}
+    reference_hint = ", ".join(
+        str(value).strip() for value in reference.values() if str(value or "").strip()
+    )
     context_hint = safe_truncate(context, 220)
 
     items = []
@@ -325,7 +329,14 @@ def build_fallback_items(
             AISuggestionItem(
                 title=title,
                 content=detail,
-                reason=f"{reason} Phù hợp với {category}.",
+                reason=(
+                    f"{reason} Phù hợp với {category}."
+                    + (
+                        f" Có thể dùng reference metadata ({reference_hint}) như cảm hứng cấp cao."
+                        if reference_hint
+                        else ""
+                    )
+                ),
                 insertable_text=insertable_text,
                 quality_score=score,
             )
@@ -386,6 +397,7 @@ def build_fallback_response(
         chapter_id=request.chapter_id,
         mode=request.mode,
         provider="fallback",
+        model=None,
         fallback=True,
         suggestions=build_fallback_items(
             request.mode,
@@ -415,6 +427,15 @@ class WritingAgent:
             "requested_mode": normalized_mode,
             "target_words": request.target_words,
             "selected_text": safe_truncate(request.selected_text, 1600),
+            "style_reference": {
+                "story_title": request.style_reference_story_title,
+                "series_title": request.style_reference_series_title,
+                "author": request.style_reference_author,
+                "copyright_safety": (
+                    "Reference is metadata only. Use it for genre/tempo/high-level "
+                    "tone, never copied text, scenes, or protected expression."
+                ),
+            },
         }
         system_prompt = (
             WRITING_COACH_SKILL.strip()
@@ -428,8 +449,11 @@ class WritingAgent:
             f"Author draft context:\n{context}\n\n"
             f"Tool outputs:\n{json.dumps(tool_bundle, ensure_ascii=False)}\n\n"
             "Task: act as the main writing program. Produce three useful options "
-            "that the author can apply immediately. Respect continuity and avoid "
-            "adding unsupported facts."
+            "that the author can apply immediately. Prefer approved same-story "
+            "chapters and the author's previous approved works for style. If there "
+            "is no author history, use only the reference metadata as broad "
+            "inspiration and do not imitate or copy protected expression. Respect "
+            "continuity and avoid adding unsupported facts."
         )
         return system_prompt, user_prompt
 
@@ -445,6 +469,9 @@ class WritingAgent:
             mode=request.mode,
             target_words=request.target_words,
             selected_text=request.selected_text,
+            style_reference_story_title=request.style_reference_story_title,
+            style_reference_series_title=request.style_reference_series_title,
+            style_reference_author=request.style_reference_author,
         )
         story_context = get_story_context(
             db,
@@ -469,12 +496,14 @@ class WritingAgent:
                 user_prompt=user_prompt,
                 temperature=0.75,
                 max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
+                model=settings.GEMINI_STRONG_MODEL,
             )
             suggestions = normalize_suggestions(parsed, request.mode)
             return AISuggestionResponse(
                 chapter_id=sanitized_request.chapter_id,
                 mode=request.mode,
                 provider="gemini",
+                model=settings.GEMINI_STRONG_MODEL,
                 fallback=False,
                 suggestions=suggestions,
                 message=(
@@ -605,6 +634,7 @@ class RecommendationAgent:
                 user_prompt=user_prompt,
                 temperature=0.25,
                 max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
+                model=settings.GEMINI_FAST_MODEL,
             )
         except (GeminiConfigurationError, GeminiGatewayError, ValueError) as exc:
             logger.warning("Recommendation rerank fell back: %s", type(exc).__name__)

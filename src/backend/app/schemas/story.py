@@ -55,6 +55,21 @@ class StoryCreate(BaseModel):
     is_mature: bool = Field(default=False, description="Đánh dấu nội dung trưởng thành")
     main_characters: Optional[str] = Field(default=None, description="Các nhân vật chính")
     target_audience: Optional[str] = Field(default=None, description="Độc giả mục tiêu")
+    style_reference_story_title: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Tên tác phẩm muốn tham chiếu phong cách ở mức metadata",
+    )
+    style_reference_series_title: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Tên series muốn tham chiếu phong cách ở mức metadata",
+    )
+    style_reference_author: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Tên tác giả/series muốn tham chiếu phong cách ở mức metadata",
+    )
     cover_url: Optional[str] = Field(
         default=None, description="URL ảnh bìa (Cloudinary)"
     )
@@ -77,6 +92,21 @@ class StoryUpdate(BaseModel):
     is_mature: Optional[bool] = Field(default=None, description="Nội dung trưởng thành")
     main_characters: Optional[str] = Field(default=None, description="Các nhân vật chính")
     target_audience: Optional[str] = Field(default=None, description="Độc giả mục tiêu")
+    style_reference_story_title: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Tên tác phẩm tham chiếu phong cách",
+    )
+    style_reference_series_title: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Tên series tham chiếu phong cách",
+    )
+    style_reference_author: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Tên tác giả tham chiếu phong cách",
+    )
     status: Optional[StoryStatus] = Field(
         default=None, description="Trạng thái tác phẩm"
     )
@@ -104,6 +134,9 @@ class StoryResponse(BaseModel):
     is_mature: bool = Field(default=False, description="Nội dung trưởng thành")
     main_characters: Optional[str] = Field(default=None, description="Các nhân vật chính")
     target_audience: Optional[str] = Field(default=None, description="Độc giả mục tiêu")
+    style_reference_story_title: Optional[str] = Field(default=None, description="Tác phẩm tham chiếu phong cách")
+    style_reference_series_title: Optional[str] = Field(default=None, description="Series tham chiếu phong cách")
+    style_reference_author: Optional[str] = Field(default=None, description="Tác giả tham chiếu phong cách")
     status: str = Field(..., description="Trạng thái (ongoing / completed / paused)")
     view_count: int = Field(..., description="Lượt xem")
     rating_avg: float = Field(..., description="Điểm đánh giá trung bình (0-5)")
@@ -152,6 +185,9 @@ class StoryListItem(BaseModel):
     is_mature: bool = Field(default=False, description="Nội dung trưởng thành")
     main_characters: Optional[str] = Field(default=None, description="Các nhân vật chính")
     target_audience: Optional[str] = Field(default=None, description="Độc giả mục tiêu")
+    style_reference_story_title: Optional[str] = Field(default=None, description="Tác phẩm tham chiếu phong cách")
+    style_reference_series_title: Optional[str] = Field(default=None, description="Series tham chiếu phong cách")
+    style_reference_author: Optional[str] = Field(default=None, description="Tác giả tham chiếu phong cách")
     status: str = Field(..., description="Trạng thái")
     view_count: int = Field(..., description="Lượt xem")
     rating_avg: float = Field(..., description="Điểm đánh giá trung bình")

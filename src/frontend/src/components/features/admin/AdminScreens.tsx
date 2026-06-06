@@ -58,6 +58,10 @@ type ModerationItem = {
   content?: string;
   moderation_status: ModerationStatus;
   reason?: string;
+  violation_category?: string | null;
+  confidence_score?: number | null;
+  is_violation?: boolean | null;
+  model_name?: string | null;
   updated_at?: string;
   story?: { title?: string };
   author?: { username?: string };
@@ -569,8 +573,10 @@ export function ModerationScreen() {
                           </div>
                         </td>
                         <td>
-                          {item.reason || "Cần admin đánh giá ngữ cảnh"}
-                          <div className="list-meta">{formatDateTime(item.updated_at)}</div>
+                          <strong>{item.reason || "Cần admin đánh giá ngữ cảnh"}</strong>
+                          <div className="list-meta">
+                            {item.violation_category || "policy_review"} · {item.confidence_score != null ? `${Math.round(item.confidence_score * 100)}%` : "chưa có điểm"} · {formatDateTime(item.updated_at)}
+                          </div>
                         </td>
                         <td><span className={`badge ${statusBadgeClass(item.moderation_status)}`}>{statusLabel(item.moderation_status)}</span></td>
                       </tr>
@@ -594,6 +600,21 @@ export function ModerationScreen() {
                 <span className={`badge ${statusBadgeClass(selectedItem.moderation_status)}`}>{statusLabel(selectedItem.moderation_status)}</span>
                 <h3>{selectedItem.title}</h3>
                 <p>{selectedItem.story?.title || "Truyện chưa xác định"} · Chương {selectedItem.chapter_number || "?"}</p>
+              </div>
+
+              <div className="admin-ai-report">
+                <div>
+                  <span>AI confidence</span>
+                  <strong>{selectedItem.confidence_score != null ? `${Math.round(selectedItem.confidence_score * 100)}%` : "Chưa có"}</strong>
+                </div>
+                <div>
+                  <span>Category</span>
+                  <strong>{selectedItem.violation_category || "policy_review"}</strong>
+                </div>
+                <div>
+                  <span>Model</span>
+                  <strong>{selectedItem.model_name || "Gemini / fallback"}</strong>
+                </div>
               </div>
 
               <div className="field">

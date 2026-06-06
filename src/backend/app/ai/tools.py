@@ -64,6 +64,78 @@ def safe_truncate(value: str | None, limit: int | None = None) -> str:
     return text_value[-max_chars:].strip()
 
 
+def _style_reference_from_story(story: dict[str, Any]) -> dict[str, str | None]:
+    return {
+        "story_title": story.get("style_reference_story_title"),
+        "series_title": story.get("style_reference_series_title"),
+        "author": story.get("style_reference_author"),
+    }
+
+
+def _has_reference(reference: dict[str, str | None]) -> bool:
+    return any(str(value or "").strip() for value in reference.values())
+
+
+def get_author_previous_works(
+    db: Any,
+    *,
+    author_id: str | None = None,
+    current_story_id: str | None = None,
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
+    """Fetch approved excerpts from the author's previous stories."""
+
+    if db is None or not author_id:
+        return []
+
+    row_limit = limit or settings.AI_AUTHOR_STYLE_CHAPTER_LIMIT
+    if row_limit <= 0:
+        return []
+
+    try:
+        result = db.execute(
+            text("""
+                SELECT
+                    s.id AS story_id,
+                    s.title AS story_title,
+                    s.category,
+                    c.id AS chapter_id,
+                    c.chapter_number,
+                    c.title AS chapter_title,
+                    c.content
+                FROM stories AS s
+                JOIN chapters AS c ON c.story_id = s.id
+                WHERE s.author_id = :author_id
+                  AND (:current_story_id IS NULL OR s.id != :current_story_id)
+                  AND c.moderation_status = 'approved'
+                ORDER BY s.updated_at DESC, c.chapter_number DESC
+                LIMIT :limit
+                """),
+            {
+                "author_id": author_id,
+                "current_story_id": current_story_id,
+                "limit": row_limit,
+            },
+        )
+        rows = result_rows(result)
+    except Exception as exc:  # pragma: no cover - production defensive path
+        logger.warning("AI author previous works tool failed: %s", type(exc).__name__)
+        return []
+
+    return [
+        {
+            "story_id": str(row.get("story_id") or ""),
+            "story_title": row.get("story_title"),
+            "category": row.get("category"),
+            "chapter_id": str(row.get("chapter_id") or ""),
+            "chapter_number": row.get("chapter_number"),
+            "chapter_title": row.get("chapter_title"),
+            "excerpt": safe_truncate(str(row.get("content") or ""), 1200),
+        }
+        for row in rows
+    ]
+
+
 def get_story_context(
     db: Any,
     *,
@@ -86,12 +158,16 @@ def get_story_context(
                         c.content AS current_chapter_content,
                         c.moderation_status,
                         s.id AS story_id,
+                        s.author_id,
                         s.title AS story_title,
                         s.description,
                         s.category,
                         s.tags,
                         s.main_characters,
                         s.target_audience,
+                        s.style_reference_story_title,
+                        s.style_reference_series_title,
+                        s.style_reference_author,
                         s.status
                     FROM chapters AS c
                     JOIN stories AS s ON s.id = c.story_id
@@ -111,12 +187,16 @@ def get_story_context(
                 text("""
                     SELECT
                         s.id AS story_id,
+                        s.author_id,
                         s.title AS story_title,
                         s.description,
                         s.category,
                         s.tags,
                         s.main_characters,
                         s.target_audience,
+                        s.style_reference_story_title,
+                        s.style_reference_series_title,
+                        s.style_reference_author,
                         s.status
                     FROM stories AS s
                     WHERE s.id = :story_id
@@ -139,6 +219,7 @@ def get_story_context(
                         c.moderation_status
                     FROM chapters AS c
                     WHERE c.story_id = :story_id
+                      AND c.moderation_status = 'approved'
                     ORDER BY c.chapter_number DESC
                     LIMIT 5
                     """),
@@ -156,15 +237,23 @@ def get_story_context(
             }
             for row in recent_rows
         ]
+        previous_author_chapters = get_author_previous_works(
+            db,
+            author_id=str(story.get("author_id") or ""),
+            current_story_id=str(story_id or ""),
+        )
+        style_reference = _style_reference_from_story(story)
         return {
             "story": {
                 "story_id": str(story.get("story_id") or story_id or ""),
+                "author_id": str(story.get("author_id") or ""),
                 "title": story.get("story_title"),
                 "description": safe_truncate(story.get("description"), 1600),
                 "category": story.get("category"),
                 "tags": story.get("tags"),
                 "main_characters": story.get("main_characters"),
                 "target_audience": story.get("target_audience"),
+                "style_reference": style_reference,
                 "status": story.get("status"),
             },
             "current_chapter": {
@@ -177,6 +266,7 @@ def get_story_context(
                 ),
             },
             "recent_chapters": recent_chapters,
+            "previous_author_chapters": previous_author_chapters,
         }
     except Exception as exc:  # pragma: no cover - production defensive path
         logger.warning("AI story context tool failed: %s", type(exc).__name__)
@@ -184,24 +274,47 @@ def get_story_context(
 
 
 def get_author_style_profile(context: dict[str, Any]) -> dict[str, Any]:
-    chapters = context.get("recent_chapters") or []
+    story = context.get("story") or {}
+    reference = story.get("style_reference") or {}
+    same_story_chapters = context.get("recent_chapters") or []
+    previous_author_chapters = context.get("previous_author_chapters") or []
+    chapters = [*same_story_chapters, *previous_author_chapters]
     excerpts = [str(chapter.get("excerpt") or "") for chapter in chapters]
     joined = " ".join(excerpts).strip()
     if not joined:
+        if _has_reference(reference):
+            return {
+                "voice": "reference metadata only",
+                "density": "balanced",
+                "dialogue_ratio": "unknown",
+                "source": "reference_metadata",
+                "has_author_history": False,
+                "reference": reference,
+                "usage_note": (
+                    "Use reference metadata as high-level inspiration only. "
+                    "Do not copy protected text, scenes, character arcs, or phrasing."
+                ),
+            }
         return {
             "voice": "Vietnamese web novel prose",
             "density": "balanced",
             "dialogue_ratio": "unknown",
+            "source": "default",
+            "has_author_history": False,
         }
 
     dialogue_marks = joined.count('"') + joined.count("'")
     sentence_count = max(1, joined.count(".") + joined.count("!") + joined.count("?"))
     avg_sentence_words = len(joined.split()) / sentence_count
     return {
-        "voice": "inferred from recent chapters",
+        "voice": "inferred from approved author history",
         "density": "lyrical" if avg_sentence_words > 24 else "direct",
         "dialogue_ratio": "high" if dialogue_marks >= 8 else "moderate",
         "avg_sentence_words": round(avg_sentence_words, 1),
+        "source": "author_history",
+        "has_author_history": True,
+        "same_story_chapter_count": len(same_story_chapters),
+        "previous_work_chapter_count": len(previous_author_chapters),
     }
 
 
@@ -292,10 +405,24 @@ def list_tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "get_author_style_profile",
-            "description": "Infer lightweight style signals from recent chapter excerpts.",
+            "description": "Infer style from approved same-story chapters and previous author works.",
             "allowed_roles": ["author", "admin"],
             "input_schema": {"context": "object"},
-            "output_schema": {"voice": "string", "density": "string"},
+            "output_schema": {"voice": "string", "source": "string", "has_author_history": "boolean"},
+        },
+        {
+            "name": "get_author_previous_works",
+            "description": "Fetch approved excerpts from other works by the same author.",
+            "allowed_roles": ["author", "admin"],
+            "input_schema": {"author_id": "string", "current_story_id": "string?"},
+            "output_schema": {"previous_author_chapters": "array"},
+        },
+        {
+            "name": "get_style_reference",
+            "description": "Read author-provided reference metadata when no author history exists.",
+            "allowed_roles": ["author", "admin"],
+            "input_schema": {"story_id": "string"},
+            "output_schema": {"story_title": "string?", "series_title": "string?", "author": "string?"},
         },
         {
             "name": "semantic_story_search",
@@ -327,6 +454,12 @@ def build_mcp_manifest() -> dict[str, Any]:
         "version": "1.0.0",
         "description": "MCP-compatible manifest for YAG Gemini agent tools and skills.",
         "provider": "gemini",
+        "model_routing": {
+            "writing": settings.GEMINI_STRONG_MODEL,
+            "recommendations": settings.GEMINI_FAST_MODEL,
+            "moderation": settings.GEMINI_MODERATION_MODEL,
+            "embeddings": settings.GEMINI_EMBEDDING_MODEL,
+        },
         "tools": list_tool_definitions(),
         "skills": list_ai_skills(),
         "execution": {

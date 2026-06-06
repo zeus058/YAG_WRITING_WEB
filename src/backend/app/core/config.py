@@ -75,7 +75,10 @@ class Settings(BaseSettings):
 
     # AI Engine & Gemini API
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_STRONG_MODEL: str = "gemini-2.5-pro"
+    GEMINI_FAST_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODERATION_MODEL: str = "gemini-2.5-pro"
     GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
     GEMINI_MAX_OUTPUT_TOKENS: int = 1024
 
@@ -124,6 +127,7 @@ class Settings(BaseSettings):
     AI_TOOL_TRACE_ENABLED: bool = False
     AI_MODERATION_STRICT_MODE: bool = True
     AI_MAX_CONTEXT_CHARS: int = 12000
+    AI_AUTHOR_STYLE_CHAPTER_LIMIT: int = 12
     AI_RECOMMENDATION_CANDIDATE_LIMIT: int = 20
     AI_MODERATION_APPROVE_THRESHOLD: float = 0.72
     AI_MODERATION_REJECT_THRESHOLD: float = 0.82
@@ -156,6 +160,11 @@ class Settings(BaseSettings):
             raise ValueError(f"Invalid QUEUE_PROVIDER: {self.QUEUE_PROVIDER}")
         if self.AI_MAX_CONTEXT_CHARS < 1000:
             raise ValueError("AI_MAX_CONTEXT_CHARS must be at least 1000")
+        if (
+            self.AI_AUTHOR_STYLE_CHAPTER_LIMIT < 0
+            or self.AI_AUTHOR_STYLE_CHAPTER_LIMIT > 50
+        ):
+            raise ValueError("AI_AUTHOR_STYLE_CHAPTER_LIMIT must be between 0 and 50")
         if self.AI_RECOMMENDATION_CANDIDATE_LIMIT < 5:
             raise ValueError(
                 "AI_RECOMMENDATION_CANDIDATE_LIMIT must be at least 5"
@@ -202,7 +211,15 @@ class Settings(BaseSettings):
                         "from default in production environment"
                     )
 
-            essential_uris = {"CORS_ORIGINS", "GEMINI_API_KEY"}
+            essential_uris = {
+                "CORS_ORIGINS",
+                "GEMINI_API_KEY",
+                "GEMINI_MODEL",
+                "GEMINI_STRONG_MODEL",
+                "GEMINI_FAST_MODEL",
+                "GEMINI_MODERATION_MODEL",
+                "GEMINI_EMBEDDING_MODEL",
+            }
 
             for uri_name in essential_uris:
                 val = getattr(self, uri_name)

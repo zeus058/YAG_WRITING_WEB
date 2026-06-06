@@ -4,7 +4,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.admin_alert import AdminAlert
 from app.models.admin_audit_log import AdminAuditLog
@@ -293,23 +293,38 @@ class AdminService:
     def get_moderation_queue(db: Session) -> list[dict]:
         chapters = (
             db.query(Chapter)
+            .options(joinedload(Chapter.moderation_log), joinedload(Chapter.story))
             .filter(Chapter.moderation_status.in_(["pending", "flagged", "rejected"]))
             .order_by(Chapter.updated_at.desc())
             .limit(100)
             .all()
         )
-        return [
-            {
-                "chapter_id": str(chapter.id),
-                "story_id": str(chapter.story_id),
-                "chapter_number": chapter.chapter_number,
-                "title": chapter.title,
-                "content": chapter.content,
-                "moderation_status": chapter.moderation_status,
-                "updated_at": chapter.updated_at,
-            }
-            for chapter in chapters
-        ]
+        queue = []
+        for chapter in chapters:
+            moderation_log = chapter.moderation_log
+            story = chapter.story
+            queue.append(
+                {
+                    "chapter_id": str(chapter.id),
+                    "story_id": str(chapter.story_id),
+                    "chapter_number": chapter.chapter_number,
+                    "title": chapter.title,
+                    "content": chapter.content,
+                    "moderation_status": chapter.moderation_status,
+                    "updated_at": chapter.updated_at,
+                    "reason": moderation_log.reason if moderation_log else None,
+                    "violation_category": (
+                        moderation_log.violation_category if moderation_log else None
+                    ),
+                    "confidence_score": (
+                        moderation_log.confidence_score if moderation_log else None
+                    ),
+                    "is_violation": moderation_log.is_violation if moderation_log else None,
+                    "model_name": moderation_log.model_name if moderation_log else None,
+                    "story": {"title": story.title} if story else None,
+                }
+            )
+        return queue
 
     @staticmethod
     def lock_user(db: Session, admin: User, user_id: str, reason: str) -> User:
@@ -411,6 +426,8 @@ class AdminService:
         moderation_log.violation_category = violation_category
         moderation_log.confidence_score = confidence_score
         moderation_log.reason = f"Admin override: {reason}"
+        moderation_log.model_name = "admin_override"
+        moderation_log.created_by = "admin"
         db.add(chapter)
         db.add(moderation_log)
         AdminService.create_audit_log(

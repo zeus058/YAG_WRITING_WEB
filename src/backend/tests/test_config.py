@@ -50,6 +50,9 @@ def test_production_config_accepts_secure_url_based_settings():
     assert settings.RABBITMQ_URL.startswith("amqps://")
     assert settings.AI_AGENT_ENABLED is True
     assert settings.AI_MODERATION_STRICT_MODE is True
+    assert settings.GEMINI_STRONG_MODEL == "gemini-2.5-pro"
+    assert settings.GEMINI_FAST_MODEL == "gemini-2.5-flash"
+    assert settings.GEMINI_MODERATION_MODEL == "gemini-2.5-pro"
     assert settings.AI_MODERATION_REJECT_THRESHOLD >= (
         settings.AI_MODERATION_APPROVE_THRESHOLD
     )
@@ -140,6 +143,9 @@ def test_production_config_accepts_pubsub_oidc_settings():
         ({"SECRET_KEY": "dev_secret_key"}, "SECRET_KEY"),
         ({"GEMINI_API_KEY": ""}, "GEMINI_API_KEY"),
         ({"GEMINI_API_KEY": "your_gemini_api_key_here"}, "GEMINI_API_KEY"),
+        ({"GEMINI_STRONG_MODEL": ""}, "GEMINI_STRONG_MODEL"),
+        ({"GEMINI_FAST_MODEL": ""}, "GEMINI_FAST_MODEL"),
+        ({"GEMINI_MODERATION_MODEL": ""}, "GEMINI_MODERATION_MODEL"),
         ({"CLOUDINARY_API_SECRET": ""}, "CLOUDINARY_API_SECRET"),
         ({"PAYOS_MOCK_ENABLED": True}, "PAYOS_MOCK_ENABLED"),
         ({"SMTP_HOST": ""}, "SMTP_HOST"),

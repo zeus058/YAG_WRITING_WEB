@@ -39,6 +39,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def build_story_embedding_text(story: Story) -> str:
+    parts = [
+        story.title,
+        story.description,
+        story.category,
+        story.tags,
+        story.main_characters,
+        story.target_audience,
+    ]
+    return "\n".join(str(part).strip() for part in parts if str(part or "").strip())
+
+
 def get_story_or_404(db: Session, story_id: UUID) -> Story:
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
@@ -61,6 +73,9 @@ async def create_story(
     is_mature: bool = Form(False),
     main_characters: Optional[str] = Form(None),
     target_audience: Optional[str] = Form(None),
+    style_reference_story_title: Optional[str] = Form(None),
+    style_reference_series_title: Optional[str] = Form(None),
+    style_reference_author: Optional[str] = Form(None),
     status_value: StoryStatus = Form("ongoing", alias="status"),
     cover_file: Optional[UploadFile] = File(None),
     db: Session = Depends(deps.get_db),
@@ -88,6 +103,9 @@ async def create_story(
         is_mature=is_mature,
         main_characters=main_characters,
         target_audience=target_audience,
+        style_reference_story_title=style_reference_story_title,
+        style_reference_series_title=style_reference_series_title,
+        style_reference_author=style_reference_author,
         status=status_value,
         cover_url=cover_url,
     )
@@ -98,7 +116,7 @@ async def create_story(
     # Sync embedding
     try:
         await sync_story_embedding(
-            db, story_id=str(new_story.id), description=new_story.description
+            db, story_id=str(new_story.id), description=build_story_embedding_text(new_story)
         )
     except Exception:
         logger.exception("Failed to sync story embedding during creation")
@@ -220,6 +238,9 @@ def get_story_detail(story_id: UUID, db: Session = Depends(deps.get_db)):
         "is_mature": story.is_mature,
         "main_characters": story.main_characters,
         "target_audience": story.target_audience,
+        "style_reference_story_title": story.style_reference_story_title,
+        "style_reference_series_title": story.style_reference_series_title,
+        "style_reference_author": story.style_reference_author,
         "status": story.status,
         "cover_url": story.cover_url,
         "view_count": story.view_count,
@@ -452,6 +473,9 @@ async def update_story(
     is_mature: Optional[bool] = Form(None),
     main_characters: Optional[str] = Form(None),
     target_audience: Optional[str] = Form(None),
+    style_reference_story_title: Optional[str] = Form(None),
+    style_reference_series_title: Optional[str] = Form(None),
+    style_reference_author: Optional[str] = Form(None),
     status_value: Optional[StoryStatus] = Form(None, alias="status"),
     cover_file: Optional[UploadFile] = File(None),
     db: Session = Depends(deps.get_db),
@@ -478,6 +502,18 @@ async def update_story(
             is_mature = payload.get("is_mature", is_mature)
             main_characters = payload.get("main_characters", main_characters)
             target_audience = payload.get("target_audience", target_audience)
+            style_reference_story_title = payload.get(
+                "style_reference_story_title",
+                payload.get("styleReferenceStoryTitle", style_reference_story_title),
+            )
+            style_reference_series_title = payload.get(
+                "style_reference_series_title",
+                payload.get("styleReferenceSeriesTitle", style_reference_series_title),
+            )
+            style_reference_author = payload.get(
+                "style_reference_author",
+                payload.get("styleReferenceAuthor", style_reference_author),
+            )
             status_value = payload.get("status", status_value)
 
     story_in = StoryUpdate(
@@ -491,6 +527,9 @@ async def update_story(
         is_mature=is_mature,
         main_characters=main_characters,
         target_audience=target_audience,
+        style_reference_story_title=style_reference_story_title,
+        style_reference_series_title=style_reference_series_title,
+        style_reference_author=style_reference_author,
         status=status_value,
     )
 
@@ -524,7 +563,7 @@ async def update_story(
     if description:
         try:
             await sync_story_embedding(
-                db, story_id=str(story.id), description=story.description
+                db, story_id=str(story.id), description=build_story_embedding_text(story)
             )
         except Exception:
             logger.exception("Failed to sync story embedding during update")

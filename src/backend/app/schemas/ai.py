@@ -71,7 +71,7 @@ class AISuggestionRequest(BaseModel):
         validation_alias=AliasChoices("story_id", "storyId"),
     )
     context: str = Field(min_length=1, description="Recent draft context for Gemini.")
-    mode: AiMode = Field(default="kịch tính")
+    mode: AiMode = Field(default="plot")
     target_words: int | None = Field(
         default=None,
         validation_alias=AliasChoices("target_words", "targetWords"),
@@ -82,6 +82,30 @@ class AISuggestionRequest(BaseModel):
         default=None,
         validation_alias=AliasChoices("selected_text", "selectedText"),
         max_length=5000,
+    )
+    style_reference_story_title: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "style_reference_story_title",
+            "styleReferenceStoryTitle",
+        ),
+        max_length=255,
+    )
+    style_reference_series_title: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "style_reference_series_title",
+            "styleReferenceSeriesTitle",
+        ),
+        max_length=255,
+    )
+    style_reference_author: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "style_reference_author",
+            "styleReferenceAuthor",
+        ),
+        max_length=255,
     )
 
     @field_validator("context")
@@ -104,6 +128,7 @@ class AISuggestionResponse(BaseModel):
     chapter_id: str
     mode: AiMode
     provider: str = "gemini"
+    model: str | None = None
     fallback: bool = False
     suggestions: list[AISuggestionItem]
     message: str | None = None
@@ -178,6 +203,7 @@ class AIRecommendationItem(BaseModel):
 class AIRecommendationResponse(BaseModel):
     user_id: str
     provider: str = "gemini"
+    model: str | None = None
     fallback: bool = False
     recommendations: list[AIRecommendationItem]
     message: str | None = None
@@ -202,6 +228,7 @@ class AIMcpManifestResponse(BaseModel):
     version: str
     description: str
     provider: str
+    model_routing: dict | None = None
     tools: list[AIToolDefinition]
     skills: list[AISkillDefinition]
     execution: dict

@@ -72,6 +72,37 @@ const targetAudienceOptions = [
 ];
 const storyDescriptionMinLength = 50;
 
+type AiModeId = "plot" | "rewrite" | "continue" | "outline" | "dialogue" | "pacing";
+
+type AiModeOption = {
+  id: AiModeId;
+  label: string;
+  short: string;
+  description: string;
+};
+
+const aiModeOptions: AiModeOption[] = [
+  { id: "plot", label: "Tình tiết", short: "Plot", description: "Gợi ý hướng phát triển và lựa chọn khó cho chương." },
+  { id: "rewrite", label: "Viết lại", short: "Rewrite", description: "Viết lại đoạn đang chọn theo giọng văn tốt hơn." },
+  { id: "continue", label: "Viết tiếp", short: "Next", description: "Sinh đoạn tiếp nối dựa trên mạch truyện gần nhất." },
+  { id: "outline", label: "Dàn ý", short: "Outline", description: "Tạo cấu trúc cảnh, cao trào và móc chương sau." },
+  { id: "dialogue", label: "Đối thoại", short: "Talk", description: "Đề xuất thoại có ẩn ý và đúng tính cách nhân vật." },
+  { id: "pacing", label: "Nhịp truyện", short: "Pace", description: "Chẩn đoán nhịp nhanh/chậm và cách chỉnh đoạn." },
+];
+
+type AiResponseMeta = {
+  provider?: string;
+  model?: string | null;
+  fallback?: boolean;
+  message?: string | null;
+};
+
+type StyleReferenceState = {
+  storyTitle: string;
+  seriesTitle: string;
+  author: string;
+};
+
 export function AuthorWorksScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -662,11 +693,27 @@ export function AuthorStudioScreen() {
   const [editorLineHeight, setEditorLineHeight] = useState("1.6");
 
   // AI Suggestion & Agent states
-  const [activeAiTab, setActiveAiTab] = useState("plot");
+  const [activeAiPanel, setActiveAiPanel] = useState<"coach" | "tools">("coach");
+  const [aiMode, setAiMode] = useState<AiModeId>("continue");
+  const [aiTargetWords, setAiTargetWords] = useState(240);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiResponseMeta, setAiResponseMeta] = useState<AiResponseMeta | null>(null);
+  const [selectedDraftText, setSelectedDraftText] = useState("");
+  const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
+  const [aiTools, setAiTools] = useState<any[]>([]);
+  const [aiManifest, setAiManifest] = useState<any>(null);
+  const [aiToolsError, setAiToolsError] = useState<string | null>(null);
+  const [storyProfile, setStoryProfile] = useState<any>(null);
+  const [styleReference, setStyleReference] = useState<StyleReferenceState>({
+    storyTitle: "",
+    seriesTitle: "",
+    author: "",
+  });
+  const [styleReferenceSaving, setStyleReferenceSaving] = useState(false);
+  const [styleReferenceMessage, setStyleReferenceMessage] = useState<string | null>(null);
 
   // History stack for Undo/Redo
   const [historyStack, setHistoryStack] = useState<string[]>([]);
@@ -686,15 +733,28 @@ export function AuthorStudioScreen() {
       if (appEnv.useMocks) {
         setChapters([]);
         setActiveChapter(null);
+        setStoryProfile(null);
+        setStyleReference({ storyTitle: "", seriesTitle: "", author: "" });
         setEditorTitle("");
         setEditorContent("");
         setIsLoading(false);
         return;
       }
 
-      const chapsRes = await yagApi.author.getChapters(storyId);
+      const [chapsRes, storyRes] = await Promise.all([
+        yagApi.author.getChapters(storyId),
+        yagApi.reader.getStoryDetail(storyId).catch(() => ({ data: null })),
+      ]);
       const chaps = chapsRes.data || [];
       setChapters(chaps);
+      setStoryProfile(storyRes.data || null);
+      if (storyRes.data) {
+        setStyleReference({
+          storyTitle: storyRes.data.style_reference_story_title || "",
+          seriesTitle: storyRes.data.style_reference_series_title || "",
+          author: storyRes.data.style_reference_author || "",
+        });
+      }
 
       if (chaps.length > 0) {
         const preferredChapter = [...chaps].reverse().find(isAuthorDraftChapter) || chaps[chaps.length - 1];
@@ -717,6 +777,41 @@ export function AuthorStudioScreen() {
   useEffect(() => {
     void loadStudioData();
   }, [storyId]);
+
+  useEffect(() => {
+    const loadAiTooling = async () => {
+      setAiToolsError(null);
+      if (appEnv.useMocks) {
+        setAiTools([
+          { name: "get_story_context", description: "Đọc metadata truyện và mạch chương gần nhất." },
+          { name: "get_author_style_profile", description: "Suy luận giọng văn từ các chương đã duyệt." },
+          { name: "semantic_story_search", description: "Tìm truyện bằng ngữ nghĩa để gợi ý tốt hơn." },
+        ]);
+        setAiManifest({
+          skills: [
+            { name: "writing_coach", description: "Huấn luyện viết sáu chế độ cho tác giả." },
+            { name: "recommendation_curator", description: "Xếp hạng truyện theo gu đọc." },
+            { name: "safety_moderator", description: "Kiểm duyệt nội dung theo chính sách YAG." },
+          ],
+        });
+        return;
+      }
+
+      try {
+        const [toolsRes, manifestRes] = await Promise.all([
+          yagApi.ai.getTools(),
+          yagApi.ai.getMcpManifest(),
+        ]);
+        setAiTools(toolsRes.data || []);
+        setAiManifest(manifestRes.data || null);
+      } catch (err) {
+        console.error("Failed to load AI tooling manifest:", err);
+        setAiToolsError("Không tải được manifest AI tools/MCP.");
+      }
+    };
+
+    void loadAiTooling();
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && activeChapter?.id) {
@@ -871,6 +966,33 @@ export function AuthorStudioScreen() {
     }
   };
 
+  const syncSelectedDraftText = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.substring(start, end).trim();
+    setSelectionRange(end > start ? { start, end } : null);
+    setSelectedDraftText(selected.slice(0, 2000));
+  };
+
+  const commitEditorContent = (updated: string, cursorPosition?: number) => {
+    setHistoryStack((prev) => [...prev.slice(-49), editorContent]);
+    setRedoStack([]);
+    setEditorContent(updated);
+    triggerAutosave(editorTitle, updated);
+
+    if (cursorPosition != null) {
+      setTimeout(() => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        textarea.focus();
+        textarea.setSelectionRange(cursorPosition, cursorPosition);
+        syncSelectedDraftText();
+      }, 50);
+    }
+  };
+
   const insertSuggestion = (text: string) => {
     const textarea = textareaRef.current;
     if (!textarea) {
@@ -890,13 +1012,66 @@ export function AuthorStudioScreen() {
     const after = value.substring(end);
     const updated = `${before}${text}${after}`;
 
-    setEditorContent(updated);
-    triggerAutosave(editorTitle, updated);
+    commitEditorContent(updated, start + text.length);
+  };
 
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + text.length, start + text.length);
-    }, 50);
+  const replaceSelectionWithSuggestion = (text: string) => {
+    if (!selectionRange) {
+      insertSuggestion(text);
+      return;
+    }
+    const updated = `${editorContent.substring(0, selectionRange.start)}${text}${editorContent.substring(selectionRange.end)}`;
+    commitEditorContent(updated, selectionRange.start + text.length);
+    setSelectedDraftText("");
+    setSelectionRange(null);
+  };
+
+  const copySuggestion = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      triggerLiveToast("Đã sao chép gợi ý từ Miu AI.");
+    } catch (err) {
+      console.error(err);
+      triggerLiveToast("Không thể sao chép gợi ý trên trình duyệt này.", "warning");
+    }
+  };
+
+  const handleSaveStyleReference = async () => {
+    const cleanReference = {
+      storyTitle: styleReference.storyTitle.trim(),
+      seriesTitle: styleReference.seriesTitle.trim(),
+      author: styleReference.author.trim(),
+    };
+    if (!cleanReference.storyTitle && !cleanReference.seriesTitle && !cleanReference.author) {
+      setStyleReferenceMessage("Nhập ít nhất một trường tham chiếu để Miu dùng khi chưa có lịch sử tác giả.");
+      return;
+    }
+
+    setStyleReferenceSaving(true);
+    setStyleReferenceMessage(null);
+    try {
+      if (!appEnv.useMocks) {
+        await yagApi.author.updateStory(storyId, {
+          style_reference_story_title: cleanReference.storyTitle,
+          style_reference_series_title: cleanReference.seriesTitle,
+          style_reference_author: cleanReference.author,
+        });
+      }
+      setStoryProfile((current: any) => ({
+        ...(current || {}),
+        style_reference_story_title: cleanReference.storyTitle,
+        style_reference_series_title: cleanReference.seriesTitle,
+        style_reference_author: cleanReference.author,
+      }));
+      setStyleReferenceMessage("Đã lưu metadata tham chiếu cho Writing Agent.");
+      triggerLiveToast("Đã cập nhật reference metadata cho AI.");
+    } catch (err) {
+      console.error(err);
+      setStyleReferenceMessage("Không thể lưu reference metadata. Vui lòng thử lại.");
+      triggerLiveToast("Không thể lưu reference metadata.", "warning");
+    } finally {
+      setStyleReferenceSaving(false);
+    }
   };
 
   const applyMarkdownFormat = (type: "bold" | "italic" | "underline" | "highlight") => {
@@ -990,70 +1165,73 @@ export function AuthorStudioScreen() {
 
   const handleAiSuggest = async () => {
     if (!editorContent.trim() || aiLoading) return;
+    if (aiMode === "rewrite" && !selectedDraftText.trim()) {
+      setAiError("Chọn một đoạn văn trong editor trước khi dùng chế độ Viết lại.");
+      triggerLiveToast("Hãy bôi chọn đoạn cần viết lại trước.", "warning");
+      return;
+    }
     setAiLoading(true);
     setAiError(null);
+    setAiResponseMeta(null);
     try {
       if (appEnv.useMocks) {
         setTimeout(() => {
           setAiSuggestions([
-            { title: "Kịch bản kịch tính", content: "Linh khẽ kéo chiếc khăn quàng cổ màu lam. Từ trong túi áo khoác rơi ra một mẩu giấy gấp nhỏ. Nét chữ quen thuộc của mười năm trước hiện lên nhạt nhòa: 'Hẹn gặp em nơi thềm ga cũ.'", style: "drama" },
-            { title: "Kịch bản bí ẩn", content: "Từ phía góc khuất ga tàu, một người đàn ông trung niên mặc áo gió sẫm màu bước ra. Ông ta nhìn chăm chú vào chiếc vali của An và khẽ gật đầu.", style: "mystery" },
+            {
+              title: "Tiếp nối bằng hệ quả",
+              content: "Đẩy cảnh kế tiếp bằng phản ứng trực tiếp của nhân vật trước biến cố cuối đoạn.",
+              reason: "Giữ mạch nhân quả rõ và giúp chương không bị ngắt cảm xúc.",
+              insertable_text: "Tiếng động vừa tắt, cả căn phòng lập tức hiểu rằng không ai còn đường quay lại.",
+              quality_score: 0.82,
+            },
+            {
+              title: "Cài một lựa chọn khó",
+              content: "Cho nhân vật phải chọn giữa lời hứa cá nhân và sự an toàn của người khác.",
+              reason: "Lựa chọn có giá phải trả sẽ tạo lực kéo cho chương sau.",
+              insertable_text: "Nhân vật đứng yên rất lâu, bởi dù chọn cánh cửa nào, một điều quan trọng cũng sẽ mất đi.",
+              quality_score: 0.78,
+            },
+            {
+              title: "Đổi nhịp bằng đối thoại",
+              content: "Mở một câu thoại ngắn để chuyển từ miêu tả sang xung đột trực tiếp.",
+              reason: "Đối thoại giúp cảnh sống động và bộc lộ quan hệ nhân vật nhanh hơn.",
+              insertable_text: "\"Ngươi biết từ đầu?\" Giọng người kia khẽ run, nhưng ánh mắt lại không hề tránh né.",
+              quality_score: 0.76,
+            },
           ]);
+          setAiResponseMeta({ provider: "mock-gemini", fallback: false });
           setAiLoading(false);
-          setActiveAiTab("plot");
         }, 1000);
         return;
       }
 
-      const contextText = editorContent.slice(-4000);
+      const contextText = [
+        editorContent.slice(-4000),
+        aiInput.trim() ? `Yêu cầu thêm của tác giả: ${aiInput.trim()}` : "",
+      ].filter(Boolean).join("\n\n");
       const res = await yagApi.author.requestAiSuggestion({
         chapterId: activeChapter.id,
+        storyId,
         context: contextText,
-        mode: aiInput || "kịch tính",
+        mode: aiMode,
+        selectedText: selectedDraftText || undefined,
+        targetWords: aiTargetWords,
+        styleReferenceStoryTitle: styleReference.storyTitle.trim() || undefined,
+        styleReferenceSeriesTitle: styleReference.seriesTitle.trim() || undefined,
+        styleReferenceAuthor: styleReference.author.trim() || undefined,
       });
 
       setAiSuggestions(res.data.suggestions || []);
-      setActiveAiTab("plot");
+      setAiResponseMeta({
+        provider: res.data.provider,
+        model: res.data.model,
+        fallback: res.data.fallback,
+        message: res.data.message,
+      });
     } catch (err) {
       console.error(err);
       setAiError("Gemini API bận hoặc đã vượt hạn ngạch cuộc gọi (Rate Limit / Quota Exceeded). Vui lòng thử lại sau ít phút.");
       triggerLiveToast("AI Suggestion tạm thời gián đoạn.", "warning");
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const handleRequestVoiceRewrite = async () => {
-    if (!editorContent.trim() || aiLoading) return;
-    setAiLoading(true);
-    setAiError(null);
-    try {
-      if (appEnv.useMocks) {
-        setTimeout(() => {
-          setAiSuggestions([
-            { title: "Giọng văn trữ tình", content: "Thềm ga cũ sũng nước, loang loáng ánh đèn vàng hư ảo hắt xuống từ những cột sắt rỉ sét, tựa như những kỷ niệm buồn loang ra trong ký ức của An.", style: "lyrical" },
-            { title: "Giọng văn sâu lắng", content: "Giọt nước cuối mùa đọng lại trên mái ngói đỏ như chút tiếc nuối muộn màng của thời gian, An lặng lẽ buông tay đón lấy sự cô độc.", style: "reflective" }
-          ]);
-          setAiLoading(false);
-          setActiveAiTab("plot");
-          triggerLiveToast("Miu AI đã đề xuất các câu thay thế trong tab Tình tiết.");
-        }, 1000);
-        return;
-      }
-
-      const contextText = editorContent.slice(-4000);
-      const res = await yagApi.author.requestAiSuggestion({
-        chapterId: activeChapter.id,
-        context: contextText,
-        mode: "giọng văn trữ tình, sâu lắng",
-      });
-
-      setAiSuggestions(res.data.suggestions || []);
-      setActiveAiTab("plot");
-      triggerLiveToast("Miu AI đã đề xuất các câu thay thế trong tab Tình tiết.");
-    } catch (err) {
-      console.error(err);
-      setAiError("Không thể tải gợi ý giọng văn từ Gemini.");
     } finally {
       setAiLoading(false);
     }
@@ -1398,7 +1576,7 @@ export function AuthorStudioScreen() {
             </aside>
 
             {/* Center Editor Paper */}
-            <div className="editor-paper" style={{ background: "#FFF", borderRadius: 8, padding: 24, minHeight: 500, display: "flex", flexDirection: "column", border: "1px solid var(--line)" }}>
+            <div className="editor-paper" style={{ background: "var(--surface)", borderRadius: 8, padding: 24, minHeight: 500, display: "flex", flexDirection: "column", border: "1px solid var(--line)" }}>
               {isEditingDisabled && (
                 <div className="notice warning" style={{ marginBottom: 16, padding: "10px 16px", borderRadius: 6, fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
                   <Icon name="lock" />
@@ -1430,7 +1608,7 @@ export function AuthorStudioScreen() {
                   outline: "none",
                   width: "100%",
                   background: "transparent",
-                  color: "var(--jungle-dark)"
+                  color: "var(--jungle)"
                 }}
               />
               <textarea
@@ -1438,6 +1616,9 @@ export function AuthorStudioScreen() {
                 className="editor-body"
                 value={editorContent}
                 onChange={handleContentChange}
+                onSelect={syncSelectedDraftText}
+                onMouseUp={syncSelectedDraftText}
+                onKeyUp={syncSelectedDraftText}
                 disabled={isEditingDisabled}
                 placeholder="Bắt đầu viết nội dung chương tại đây..."
                 style={{
@@ -1451,7 +1632,7 @@ export function AuthorStudioScreen() {
                   minHeight: 400,
                   width: "100%",
                   background: "transparent",
-                  color: "var(--jungle-dark)"
+                  color: "var(--ink)"
                 }}
               />
               <div className="editor-footer-row" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
@@ -1477,144 +1658,247 @@ export function AuthorStudioScreen() {
             <span className="badge badge-green">Online</span>
           </div>
 
-          <div className="agent-status" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", borderBottom: "1px solid var(--line)", paddingBottom: 12, marginBottom: 12 }}>
+          <div className="agent-status">
             <div>
-              <span>Context: </span>
+              <span>Context</span>
               <strong>{Math.min(editorWordCount, 1000).toLocaleString("vi-VN")} từ gần nhất</strong>
             </div>
             <div>
-              <span>Tone: </span>
-              <strong>{aiInput || "Tự nhiên"}</strong>
+              <span>Mode</span>
+              <strong>{aiModeOptions.find((item) => item.id === aiMode)?.label}</strong>
             </div>
           </div>
 
-          {/* AI Tabs */}
-          <div className="tabs ai-tabs" role="tablist" style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <div className="ai-panel-switch" role="tablist" aria-label="Miu AI panels">
             <button
-              className={`tab-button ${activeAiTab === "plot" ? "active" : ""}`}
-              onClick={() => setActiveAiTab("plot")}
+              className={`tab-button ${activeAiPanel === "coach" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveAiPanel("coach")}
             >
-              Tình tiết
+              Writing Agent
             </button>
             <button
-              className={`tab-button ${activeAiTab === "voice" ? "active" : ""}`}
-              onClick={() => setActiveAiTab("voice")}
+              className={`tab-button ${activeAiPanel === "tools" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveAiPanel("tools")}
             >
-              Giọng văn
-            </button>
-            <button
-              className={`tab-button ${activeAiTab === "edit" ? "active" : ""}`}
-              onClick={() => setActiveAiTab("edit")}
-            >
-              Biên tập
+              Tools / MCP
             </button>
           </div>
 
-          {/* Tab Panel: Plot */}
-          {activeAiTab === "plot" && (
-            <div className="tab-panel active stack" style={{ gap: 12 }}>
+          {activeAiPanel === "coach" ? (
+            <div className="tab-panel active stack ai-coach-panel">
               <div className="agent-bubble">
-                <strong>Miu nghĩ đoạn này cần một lựa chọn khó hơn.</strong>
-                <p>Miu AI sẵn sàng hỗ trợ bạn phát triển tình tiết dựa trên ngữ cảnh đã viết.</p>
+                <strong>Gemini Agent đang dùng ngữ cảnh chương, mode và đoạn chọn.</strong>
+                <p>Miu trả về nội dung có thể chèn trực tiếp, kèm lý do và điểm chất lượng để bạn quyết định nhanh.</p>
               </div>
 
-              {aiError && (
-                <div className="notice warning" style={{ padding: "8px 12px", borderRadius: 6, fontSize: 12 }}>
-                  {aiError}
+              <div className="style-reference-card">
+                <div className="style-reference-head">
+                  <div>
+                    <strong>Reference metadata</strong>
+                    <p>Dùng khi tác phẩm chưa có chương đã duyệt hoặc lịch sử tác giả đủ rõ.</p>
+                  </div>
+                  {storyProfile?.style_reference_author || storyProfile?.style_reference_story_title || storyProfile?.style_reference_series_title ? (
+                    <span className="badge badge-green">Đã lưu</span>
+                  ) : (
+                    <span className="badge badge-amber">Tuỳ chọn</span>
+                  )}
                 </div>
-              )}
-
-              <div className="agent-action-grid" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {aiSuggestions.length === 0 ? (
-                  <p style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", textAlign: "center" }}>
-                    Chưa có gợi ý nào được tạo. Điền yêu cầu bên dưới và bấm nút gửi.
-                  </p>
-                ) : (
-                  aiSuggestions.map((item, idx) => (
-                    <button
-                      className="agent-action"
-                      type="button"
-                      key={idx}
-                      onClick={() => insertSuggestion(item.content)}
-                      disabled={isEditingDisabled}
-                      style={{ textAlign: "left", cursor: "pointer", width: "100%" }}
-                    >
-                      <strong>{item.title} ({item.style})</strong>
-                      <span>{item.content}</span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Tab Panel: Voice */}
-          {activeAiTab === "voice" && (
-            <div className="tab-panel active stack" style={{ gap: 12 }}>
-              <div className="tone-meter" style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 6 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4 }}>
-                  <span>Trữ tình / Trầm lắng</span>
-                  <strong>82%</strong>
+                <div className="style-reference-grid">
+                  <input
+                    className="input"
+                    value={styleReference.storyTitle}
+                    onChange={(event) => setStyleReference((current) => ({ ...current, storyTitle: event.target.value }))}
+                    placeholder="Tên tác phẩm muốn gợi cảm hứng"
+                  />
+                  <input
+                    className="input"
+                    value={styleReference.seriesTitle}
+                    onChange={(event) => setStyleReference((current) => ({ ...current, seriesTitle: event.target.value }))}
+                    placeholder="Tên series"
+                  />
+                  <input
+                    className="input"
+                    value={styleReference.author}
+                    onChange={(event) => setStyleReference((current) => ({ ...current, author: event.target.value }))}
+                    placeholder="Tác giả / bút danh tham chiếu"
+                  />
                 </div>
-                <div className="progress" style={{ height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden" }}>
-                  <span style={{ display: "block", width: "82%", height: "100%", background: "var(--crimson)" }} />
-                </div>
-              </div>
-
-              <button
-                className="button button-soft"
-                type="button"
-                onClick={handleRequestVoiceRewrite}
-                disabled={aiLoading || isEditingDisabled || !editorContent.trim()}
-                style={{ width: "100%" }}
-              >
-                {aiLoading ? "Miu đang tìm câu..." : "Đề xuất câu thay thế"}
-              </button>
-            </div>
-          )}
-
-          {/* Tab Panel: Edit */}
-          {activeAiTab === "edit" && (
-            <div className="tab-panel active stack" style={{ gap: 12 }}>
-              <div className="agent-checklist" style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 6 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <strong>Lặp từ & nhịp điệu</strong>
-                  <span className="badge badge-amber">2 đoạn</span>
-                </div>
-                <p style={{ fontSize: 11, color: "var(--muted)", margin: "6px 0 0 0" }}>
-                  Phát hiện lặp lại hình ảnh mưa ở phần đầu và kết chương.
-                </p>
+                {styleReferenceMessage ? <small>{styleReferenceMessage}</small> : null}
                 <button
                   className="button button-soft"
                   type="button"
-                  style={{ marginTop: 8, padding: "4px 8px", fontSize: 11 }}
-                  onClick={() => triggerLiveToast("Đã đánh dấu các cụm từ lặp hình ảnh mưa.")}
+                  onClick={handleSaveStyleReference}
+                  disabled={styleReferenceSaving}
                 >
-                  Xem chi tiết
+                  {styleReferenceSaving ? "Đang lưu..." : "Lưu reference"}
+                </button>
+              </div>
+
+              <div className="ai-mode-grid" role="radiogroup" aria-label="Chế độ AI">
+                {aiModeOptions.map((item) => (
+                  <button
+                    className={`ai-mode-button ${aiMode === item.id ? "active" : ""}`}
+                    type="button"
+                    key={item.id}
+                    onClick={() => setAiMode(item.id)}
+                    aria-pressed={aiMode === item.id}
+                  >
+                    <em>{item.short}</em>
+                    <strong>{item.label}</strong>
+                    <span>{item.description}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="ai-target-control">
+                <label htmlFor="ai-target-words">Độ dài mục tiêu</label>
+                <input
+                  id="ai-target-words"
+                  className="input"
+                  type="number"
+                  min={50}
+                  max={1200}
+                  step={10}
+                  value={aiTargetWords}
+                  onChange={(event) => setAiTargetWords(Math.max(50, Math.min(1200, Number(event.target.value) || 240)))}
+                />
+                <span>{aiTargetWords.toLocaleString("vi-VN")} từ</span>
+              </div>
+
+              <div className={`selected-draft-card ${selectedDraftText ? "has-selection" : ""}`}>
+                <strong>Đoạn đang chọn</strong>
+                <p>{selectedDraftText || "Bôi chọn đoạn văn trong editor để dùng chế độ Viết lại hoặc thay thế trực tiếp."}</p>
+              </div>
+
+              {aiError ? (
+                <div className="notice warning">
+                  {aiError}
+                </div>
+              ) : null}
+
+              {aiResponseMeta ? (
+                <div className="ai-provider-strip">
+                  <span className={`badge ${aiResponseMeta.fallback ? "badge-amber" : "badge-green"}`}>
+                    {aiResponseMeta.fallback ? "Fallback" : "Gemini"}
+                  </span>
+                  <span>{aiResponseMeta.provider || "unknown"}</span>
+                  {aiResponseMeta.model ? <span>{aiResponseMeta.model}</span> : null}
+                  {aiResponseMeta.message ? <small>{aiResponseMeta.message}</small> : null}
+                </div>
+              ) : null}
+
+              <div className="agent-action-grid">
+                {aiSuggestions.length === 0 ? (
+                  <div className="ai-empty-result">
+                    Chưa có gợi ý nào. Chọn mode và gửi yêu cầu để Miu sinh nội dung.
+                  </div>
+                ) : (
+                  aiSuggestions.map((item, idx) => {
+                    const insertableText = item.insertable_text || item.content || "";
+                    const quality = Number(item.quality_score);
+                    const scoreLabel = Number.isFinite(quality) ? `${Math.round(quality * 100)}%` : "AI";
+                    return (
+                      <div className="agent-result-card" key={`${item.title || "suggestion"}-${idx}`}>
+                        <div className="agent-result-head">
+                          <strong>{item.title || `Gợi ý ${idx + 1}`}</strong>
+                          <span className="badge badge-blue">{scoreLabel}</span>
+                        </div>
+                        <p>{item.content}</p>
+                        {item.reason ? <small>{item.reason}</small> : null}
+                        {item.insertable_text ? <blockquote>{item.insertable_text}</blockquote> : null}
+                        <div className="agent-result-actions">
+                          <button
+                            className="button button-primary"
+                            type="button"
+                            onClick={() => insertSuggestion(insertableText)}
+                            disabled={isEditingDisabled || !insertableText}
+                          >
+                            Chèn
+                          </button>
+                          <button
+                            className="button button-soft"
+                            type="button"
+                            onClick={() => replaceSelectionWithSuggestion(insertableText)}
+                            disabled={isEditingDisabled || !insertableText}
+                          >
+                            Thay đoạn chọn
+                          </button>
+                          <button
+                            className="button"
+                            type="button"
+                            onClick={() => copySuggestion(insertableText)}
+                            disabled={!insertableText}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="agent-compose">
+                <textarea
+                  className="textarea"
+                  rows={3}
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  placeholder="Yêu cầu thêm: ví dụ tăng cảm giác tiếc nuối, giữ giọng văn nhẹ, thêm xung đột ở cuối cảnh..."
+                  disabled={isEditingDisabled}
+                />
+                <button
+                  className="button button-primary"
+                  type="button"
+                  onClick={handleAiSuggest}
+                  disabled={aiLoading || isEditingDisabled || !editorContent.trim()}
+                >
+                  <Icon name="arrow" /> {aiLoading ? "Miu đang viết..." : "Chạy AI agent"}
                 </button>
               </div>
             </div>
-          )}
+          ) : (
+            <div className="tab-panel active stack ai-tooling-panel">
+              <div className="agent-bubble">
+                <strong>MCP-compatible AI surface</strong>
+                <p>Manifest này cho thấy AI đang dùng tools và skills có kiểm soát phía server.</p>
+              </div>
 
-          {/* Prompt input and send button */}
-          <div className="agent-compose">
-            <textarea
-              className="textarea"
-              rows={3}
-              value={aiInput}
-              onChange={(e) => setAiInput(e.target.value)}
-              placeholder="Yêu cầu Miu: Ví dụ 'kịch tính', 'tiếc nuối', 'tả cảnh ga nhỏ hoàng hôn'..."
-              disabled={isEditingDisabled}
-            />
-            <button
-              className="button button-primary"
-              type="button"
-              onClick={handleAiSuggest}
-              disabled={aiLoading || isEditingDisabled || !editorContent.trim()}
-            >
-              <Icon name="arrow" /> {aiLoading ? "Đang gửi..." : "Gửi cho Miu"}
-            </button>
-          </div>
+              {aiToolsError ? <div className="notice warning">{aiToolsError}</div> : null}
+
+              <section className="ai-tool-section">
+                <h3>Tools</h3>
+                <div className="ai-tool-list">
+                  {aiTools.length > 0 ? aiTools.map((tool) => (
+                    <div className="ai-tool-card" key={tool.name}>
+                      <strong>{tool.name}</strong>
+                      <p>{tool.description}</p>
+                      {tool.allowed_roles ? <span>{tool.allowed_roles.join(", ")}</span> : null}
+                    </div>
+                  )) : (
+                    <div className="ai-empty-result">Chưa tải được danh sách tool.</div>
+                  )}
+                </div>
+              </section>
+
+              <section className="ai-tool-section">
+                <h3>Skills</h3>
+                <div className="ai-tool-list">
+                  {(aiManifest?.skills || []).map((skill: any) => (
+                    <div className="ai-skill-card" key={skill.name}>
+                      <strong>{skill.name}</strong>
+                      <p>{skill.description}</p>
+                    </div>
+                  ))}
+                  {!aiManifest?.skills?.length ? (
+                    <div className="ai-empty-result">Chưa tải được skill manifest.</div>
+                  ) : null}
+                </div>
+              </section>
+            </div>
+          )}
         </aside>
       </main>
     </div>

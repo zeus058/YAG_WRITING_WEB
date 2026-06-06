@@ -51,6 +51,9 @@ class Story(Base):
     is_mature = Column(Boolean, nullable=False, default=False, server_default="false")
     main_characters = Column(Text, nullable=True)
     target_audience = Column(String(50), nullable=True)
+    style_reference_story_title = Column(String(255), nullable=True)
+    style_reference_series_title = Column(String(255), nullable=True)
+    style_reference_author = Column(String(255), nullable=True)
     status = Column(
         String(20), nullable=False, default="ongoing", server_default="ongoing"
     )

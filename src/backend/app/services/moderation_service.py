@@ -236,6 +236,7 @@ def moderate_content(content: str, chapter_id: str) -> ModerationReport:
             user_prompt=_build_user_prompt(content),
             temperature=0.1,
             max_output_tokens=min(settings.GEMINI_MAX_OUTPUT_TOKENS, 512),
+            model=settings.GEMINI_MODERATION_MODEL,
         )
     except (json.JSONDecodeError, GeminiResponseError, ValueError) as exc:
         logger.warning(
@@ -303,6 +304,12 @@ def apply_moderation_result(chapter_id: str, report: ModerationReport, db) -> Ch
     log.violation_category = ", ".join(categories)[:50] if categories else None
     log.confidence_score = report.confidence
     log.reason = safe_truncate(report.reason, 2000)
+    log.model_name = settings.GEMINI_MODERATION_MODEL
+    log.raw_response = {
+        "result": report.result.value,
+        "flagged_categories": categories,
+        "confidence_score": report.confidence,
+    }
 
     db.add(chapter)
     db.add(log)

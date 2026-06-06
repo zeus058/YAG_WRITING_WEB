@@ -4152,6 +4152,349 @@ svg {
   font-size: 12px;
 }
 
+.ai-panel-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(65, 80, 61, 0.06);
+}
+
+.ai-coach-panel,
+.ai-tooling-panel {
+  gap: 12px;
+}
+
+.ai-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ai-mode-button {
+  min-height: 86px;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid rgba(65, 80, 61, 0.14);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--jungle);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s var(--motion-ease), border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ai-mode-button:hover,
+.ai-mode-button.active {
+  border-color: rgba(200, 28, 48, 0.34);
+  background: rgba(200, 28, 48, 0.06);
+  box-shadow: 0 12px 26px rgba(65, 80, 61, 0.10);
+  transform: translateY(-2px);
+}
+
+.ai-mode-button strong {
+  color: var(--jungle);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.ai-mode-button em {
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(200, 28, 48, 0.10);
+  color: var(--accent-text, var(--crimson));
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.ai-mode-button span,
+.selected-draft-card p,
+.agent-result-card small,
+.ai-tool-card p,
+.ai-skill-card p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ai-target-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 94px auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.ai-target-control label,
+.selected-draft-card strong,
+.style-reference-head strong,
+.ai-tool-section h3 {
+  color: var(--jungle);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ai-target-control .input {
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.ai-target-control span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.selected-draft-card,
+.style-reference-card,
+.ai-provider-strip,
+.ai-empty-result,
+.agent-result-card,
+.ai-tool-card,
+.ai-skill-card {
+  padding: 12px;
+  border: 1px solid rgba(65, 80, 61, 0.12);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.selected-draft-card {
+  display: grid;
+  gap: 6px;
+}
+
+.style-reference-card {
+  display: grid;
+  gap: 10px;
+}
+
+.style-reference-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.style-reference-head p,
+.style-reference-card small {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.style-reference-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.style-reference-card .button {
+  justify-content: center;
+  min-height: 36px;
+}
+
+.selected-draft-card.has-selection {
+  border-color: rgba(59, 130, 246, 0.34);
+  background: rgba(59, 130, 246, 0.07);
+}
+
+.selected-draft-card p {
+  max-height: 92px;
+  margin: 0;
+  overflow: auto;
+}
+
+.ai-provider-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ai-provider-strip small {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.ai-empty-result {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.agent-result-card {
+  display: grid;
+  gap: 9px;
+  box-shadow: 0 12px 26px rgba(65, 80, 61, 0.07);
+}
+
+.agent-result-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.agent-result-head strong {
+  min-width: 0;
+  color: var(--jungle);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.agent-result-card p {
+  margin: 0;
+  color: var(--jungle);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.agent-result-card blockquote {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--crimson);
+  border-radius: 6px;
+  background: rgba(200, 28, 48, 0.06);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.agent-result-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.agent-result-actions .button {
+  min-height: 36px;
+  padding: 7px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ai-tool-section {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-tool-section h3 {
+  margin: 0;
+}
+
+.ai-tool-list {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-tool-card,
+.ai-skill-card {
+  display: grid;
+  gap: 5px;
+}
+
+.ai-tool-card strong,
+.ai-skill-card strong {
+  color: var(--jungle);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.ai-tool-card span {
+  color: var(--accent-text, var(--crimson));
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.dark .ai-panel-switch {
+  border-color: rgba(244, 240, 231, 0.14);
+  background: rgba(244, 240, 231, 0.06);
+}
+
+.dark .ai-mode-button,
+.dark .ai-target-control,
+.dark .selected-draft-card,
+.dark .style-reference-card,
+.dark .ai-provider-strip,
+.dark .ai-empty-result,
+.dark .agent-result-card,
+.dark .ai-tool-card,
+.dark .ai-skill-card {
+  border-color: rgba(244, 240, 231, 0.14);
+  background: var(--surface);
+  color: #F4F0E7;
+}
+
+.dark .ai-mode-button:hover,
+.dark .ai-mode-button.active,
+.dark .selected-draft-card.has-selection {
+  border-color: rgba(252, 165, 165, 0.36);
+  background: rgba(252, 165, 165, 0.10);
+}
+
+.dark .ai-mode-button strong,
+.dark .ai-mode-button em,
+.dark .ai-target-control label,
+.dark .selected-draft-card strong,
+.dark .style-reference-head strong,
+.dark .ai-tool-section h3,
+.dark .agent-result-head strong,
+.dark .agent-result-card p,
+.dark .ai-tool-card strong,
+.dark .ai-skill-card strong {
+  color: #F4F0E7;
+}
+
+.dark .ai-mode-button em {
+  background: rgba(252, 165, 165, 0.14);
+  color: #FCA5A5;
+}
+
+.dark .ai-mode-button span,
+.dark .selected-draft-card p,
+.dark .style-reference-head p,
+.dark .style-reference-card small,
+.dark .agent-result-card small,
+.dark .ai-target-control span,
+.dark .ai-provider-strip,
+.dark .ai-provider-strip small,
+.dark .ai-empty-result,
+.dark .ai-tool-card p,
+.dark .ai-skill-card p {
+  color: #BAC4B4;
+}
+
+.dark .agent-result-card blockquote {
+  background: rgba(252, 165, 165, 0.10);
+  color: #F4F0E7;
+}
+
+@media (max-width: 640px) {
+  .ai-mode-grid,
+  .agent-result-actions,
+  .ai-target-control {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-panel-switch {
+    grid-template-columns: 1fr;
+  }
+}
+
 .tone-meter {
   display: grid;
   gap: 8px;
@@ -6159,7 +6502,7 @@ svg {
 
 .admin-moderation-table tr:hover td,
 .admin-moderation-table tr.selected-row td {
-  background: #FFF7F4;
+  background: var(--button-hover-bg);
 }
 
 .admin-decision-panel {
@@ -6173,7 +6516,7 @@ svg {
   padding: 12px;
   border: 1px solid rgba(65, 80, 61, 0.12);
   border-radius: 8px;
-  background: #FFFFFF;
+  background: var(--surface);
 }
 
 .admin-selected-summary h3,
@@ -6182,7 +6525,7 @@ svg {
 }
 
 .admin-selected-summary h3 {
-  color: var(--jungle-dark);
+  color: var(--jungle);
   font-size: 18px;
 }
 
@@ -6198,10 +6541,55 @@ svg {
   border: 1px solid rgba(65, 80, 61, 0.12);
   border-radius: 8px;
   background: rgba(65, 80, 61, 0.04);
-  color: var(--foreground);
+  color: var(--ink);
   font-size: 14px;
   line-height: 1.7;
   white-space: pre-wrap;
+}
+
+.admin-ai-report {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-ai-report > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(65, 80, 61, 0.12);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.admin-ai-report span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-ai-report strong {
+  color: var(--jungle);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.dark .admin-selected-summary,
+.dark .admin-ai-report > div {
+  border-color: rgba(244, 240, 231, 0.14);
+  background: var(--surface);
+}
+
+.dark .admin-ai-report strong {
+  color: #F4F0E7;
+}
+
+.dark .admin-content-preview {
+  border-color: rgba(244, 240, 231, 0.14);
+  background: rgba(244, 240, 231, 0.06);
+  color: #F4F0E7;
 }
 
 .admin-decision-actions {

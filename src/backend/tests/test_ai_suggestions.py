@@ -4,6 +4,7 @@ Tests for U006 AI suggestion flow.
 
 from app.api import deps
 from app.ai import gateway as ai_gateway
+from app.ai.tools import get_author_style_profile
 from app.core.config import settings
 from app.main import app
 from app.schemas.ai import AISuggestionItem, AISuggestionResponse
@@ -46,6 +47,7 @@ def test_generate_ai_suggestions_truncates_context(monkeypatch):
                     ]
                 }
 
+        captured["url"] = url
         captured["payload"] = json
         return FakeResponse()
 
@@ -57,6 +59,9 @@ def test_generate_ai_suggestions_truncates_context(monkeypatch):
         chapter_id="chapter-1",
         context="one two three four five six",
         mode="bí ẩn",
+        styleReferenceStoryTitle="Example Reference Story",
+        styleReferenceSeriesTitle="Example Series",
+        styleReferenceAuthor="Example Author",
     )
 
     response = client.post(
@@ -77,12 +82,15 @@ def test_generate_ai_suggestions_truncates_context(monkeypatch):
         body = response.json()
         assert response.status_code == 200
         assert body["fallback"] is False
+        assert body["model"] == settings.GEMINI_STRONG_MODEL
         assert body["mode"] == "bí ẩn"
         assert len(body["suggestions"]) == 3
         assert body["suggestions"][0]["title"] == "A"
+        assert settings.GEMINI_STRONG_MODEL in captured["url"]
         prompt_text = captured["payload"]["contents"][0]["parts"][0]["text"]
         assert "one two three" not in prompt_text
         assert "four five six" in prompt_text
+        assert "Example Reference Story" in prompt_text
     finally:
         app.dependency_overrides.clear()
 
@@ -125,6 +133,49 @@ def test_fallback_library_has_three_items():
     assert response.fallback is True
 
 
+def test_author_style_profile_prefers_history_over_reference():
+    profile = get_author_style_profile(
+        {
+            "story": {
+                "style_reference": {
+                    "story_title": "Reference Story",
+                    "series_title": "Reference Series",
+                    "author": "Reference Author",
+                }
+            },
+            "recent_chapters": [
+                {"excerpt": "Nhân vật bước vào phòng. Một câu thoại vang lên."}
+            ],
+            "previous_author_chapters": [
+                {"excerpt": "Tác phẩm cũ có nhịp câu ngắn và đối thoại trực tiếp."}
+            ],
+        }
+    )
+
+    assert profile["source"] == "author_history"
+    assert profile["has_author_history"] is True
+
+
+def test_author_style_profile_uses_reference_when_no_history():
+    profile = get_author_style_profile(
+        {
+            "story": {
+                "style_reference": {
+                    "story_title": "Reference Story",
+                    "series_title": "Reference Series",
+                    "author": "Reference Author",
+                }
+            },
+            "recent_chapters": [],
+            "previous_author_chapters": [],
+        }
+    )
+
+    assert profile["source"] == "reference_metadata"
+    assert profile["has_author_history"] is False
+    assert profile["reference"]["author"] == "Reference Author"
+
+
 def test_ai_tools_and_mcp_manifest_are_authenticated():
     response = client.get("/api/v1/ai/tools")
     assert response.status_code == 401
@@ -142,6 +193,7 @@ def test_ai_tools_and_mcp_manifest_are_authenticated():
         manifest = manifest_response.json()
         assert any(tool["name"] == "get_story_context" for tool in tools)
         assert manifest["name"] == "yag-ai-agent"
+        assert manifest["model_routing"]["writing"] == settings.GEMINI_STRONG_MODEL
         assert any(skill["name"] == "writing_coach" for skill in manifest["skills"])
     finally:
         app.dependency_overrides.clear()

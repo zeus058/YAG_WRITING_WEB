@@ -234,6 +234,16 @@ def _with_similarity_and_source(
         distance = float(enriched.get("distance", 0.0) or 0.0)
         enriched.setdefault("similarity", _clamp_similarity(distance))
         enriched.setdefault("source", source)
+        category = str(enriched.get("category") or "").strip()
+        if not enriched.get("reason"):
+            if source == "semantic":
+                enriched["reason"] = "Phù hợp với gu đọc gần đây dựa trên vector ngữ nghĩa."
+            elif source == "popular":
+                enriched["reason"] = "Tác phẩm đã được duyệt và đang có tín hiệu phổ biến tốt."
+            elif source == "category":
+                enriched["reason"] = "Cùng thể loại với các truyện bạn đã đọc hoặc lưu."
+        if category and not enriched.get("match_tags"):
+            enriched["match_tags"] = [category]
         enriched_rows.append(enriched)
     return enriched_rows
 
@@ -384,8 +394,9 @@ async def recommend_stories_for_user(
             )
             return AIRecommendationResponse(
                 user_id=user_id,
-                provider="gemini",
-                fallback=False,
+                provider="gemini" if used_llm else "fallback",
+                model=settings.GEMINI_FAST_MODEL if used_llm else None,
+                fallback=not used_llm,
                 recommendations=[
                     build_recommendation_item(row) for row in ranked_rows[:limit]
                 ],
@@ -404,6 +415,7 @@ async def recommend_stories_for_user(
         return AIRecommendationResponse(
             user_id=user_id,
             provider="gemini" if used_llm else "fallback",
+            model=settings.GEMINI_FAST_MODEL if used_llm else None,
             fallback=not used_llm,
             recommendations=[build_recommendation_item(row) for row in ranked_rows],
             message=llm_message
@@ -411,9 +423,24 @@ async def recommend_stories_for_user(
         )
     except Exception as exc:
         logger.warning("Recommendation generation fallback: %s", type(exc).__name__)
+        try:
+            popular_rows = await _load_popular_candidates(db, limit)
+            return AIRecommendationResponse(
+                user_id=user_id,
+                provider="fallback",
+                model=None,
+                fallback=True,
+                recommendations=[
+                    build_recommendation_item(row) for row in popular_rows[:limit]
+                ],
+                message="AI recommendation pipeline used deterministic fallback.",
+            )
+        except Exception:
+            logger.warning("Recommendation fallback candidates were unavailable.")
         return AIRecommendationResponse(
             user_id=user_id,
             provider="fallback",
+            model=None,
             fallback=True,
             recommendations=[],
             message=str(exc),

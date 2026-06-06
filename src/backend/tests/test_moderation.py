@@ -82,11 +82,17 @@ def _chapter():
 
 
 def test_moderate_content_approved(monkeypatch):
+    captured = {}
+
+    def fake_generate(*args, **kwargs):
+        captured["model"] = kwargs.get("model")
+        return _mock_gemini_response("approved", "Safe content", [], 0.97)
+
     monkeypatch.setattr(moderation_service.settings, "GEMINI_API_KEY", "fake-key")
     monkeypatch.setattr(
         moderation_service.GeminiGateway,
         "generate_json_sync",
-        lambda *args, **kwargs: _mock_gemini_response("approved", "Safe content", [], 0.97),
+        fake_generate,
     )
 
     report = moderate_content("Safe chapter", chapter_id="chap-001")
@@ -94,6 +100,7 @@ def test_moderate_content_approved(monkeypatch):
     assert report.result == ModerationResult.APPROVED
     assert report.flagged_categories == []
     assert report.confidence == 0.97
+    assert captured["model"] == moderation_service.settings.GEMINI_MODERATION_MODEL
 
 
 def test_moderate_content_rejected(monkeypatch):
@@ -200,6 +207,7 @@ def test_apply_result_approved_logs_non_violation():
     log = db.added[-1]
     assert log.is_violation is False
     assert log.confidence_score == 0.95
+    assert log.model_name == moderation_service.settings.GEMINI_MODERATION_MODEL
 
 
 def test_apply_result_flagged_logs_violation():

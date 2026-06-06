@@ -203,6 +203,9 @@ export const yagApi = {
       mode: string;
       selectedText?: string;
       targetWords?: number;
+      styleReferenceStoryTitle?: string;
+      styleReferenceSeriesTitle?: string;
+      styleReferenceAuthor?: string;
     }) =>
       apiFetch("/api/v1/ai/suggestions", {
         method: "POST",

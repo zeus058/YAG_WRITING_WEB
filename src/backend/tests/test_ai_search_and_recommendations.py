@@ -104,6 +104,38 @@ def _override_reader_token():
 def test_recommendations_filter_seen_stories(monkeypatch):
     fake_db = FakeDb()
 
+    async def fake_post(self, url, json):
+        class FakeResponse:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {
+                    "candidates": [
+                        {
+                            "content": {
+                                "parts": [
+                                    {
+                                        "text": (
+                                            '{"ranking": ['
+                                            '{"story_id": "story-2", "reason": "Matches recent reading.", '
+                                            '"match_tags": ["semantic", "same mood"], "source": "llm_rerank"},'
+                                            '{"story_id": "hallucinated", "reason": "Invalid id", '
+                                            '"match_tags": ["bad"], "source": "llm_rerank"}'
+                                            "]}"
+                                        )
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+
+        assert "generateContent" in url
+        return FakeResponse()
+
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(ai_gateway.httpx.AsyncClient, "post", fake_post)
     app.dependency_overrides[deps.get_db] = lambda: fake_db
     app.dependency_overrides[deps.require_authenticated_user] = _override_reader_token
     try:
@@ -113,8 +145,14 @@ def test_recommendations_filter_seen_stories(monkeypatch):
         assert response.status_code == 200
         assert body["fallback"] is False
         assert body["provider"] == "gemini"
+        assert body["model"] == settings.GEMINI_FAST_MODEL
         assert body["user_id"] == "reader-1"
         assert len(body["recommendations"]) >= 1
         assert body["recommendations"][0]["story_id"] != "seen-1"
+        assert body["recommendations"][0]["story_id"] == "story-2"
+        assert body["recommendations"][0]["source"] == "llm_rerank"
+        assert "hallucinated" not in {
+            item["story_id"] for item in body["recommendations"]
+        }
     finally:
         app.dependency_overrides.clear()

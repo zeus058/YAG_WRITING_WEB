@@ -84,7 +84,7 @@ async def request_publish_chapter(
         )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Cannot connect to RabbitMQ at {settings.RABBITMQ_HOST}. Try again later.",
+            detail=f"Cannot queue moderation task with provider '{settings.QUEUE_PROVIDER}'. Try again later.",
         )
 
     invalidate_chapter_cache(get_redis_client(), chapter_id)

@@ -121,7 +121,7 @@ def apply_chapter_update(chapter: Chapter, update: ChapterUpdate) -> None:
     for key, value in update_data.items():
         setattr(chapter, key, value)
     chapter.moderation_status = "draft"
-    chapter.updated_at = datetime.utcnow()
+    chapter.updated_at = datetime.now(timezone.utc)
 
 
 def normalize_autosave_payload(payload: dict[str, Any]) -> AutosaveMessage:
@@ -274,7 +274,7 @@ def ensure_reader_can_read(chapter_data: dict[str, Any], current_user) -> None:
     premium_until = current_user.premium_until
     if premium_until is not None:
         if premium_until.tzinfo is None:
-            now_naive = datetime.utcnow()
+            now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
             if premium_until < now_naive:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -295,7 +295,7 @@ def ensure_reader_can_read(chapter_data: dict[str, Any], current_user) -> None:
 
 def is_future_datetime(value: datetime) -> bool:
     if value.tzinfo is None:
-        return value > datetime.utcnow()
+        return value > datetime.now(timezone.utc).replace(tzinfo=None)
     return value > datetime.now(timezone.utc)
 
 
@@ -324,7 +324,7 @@ def update_reading_history(db: Session, user_id: UUID, chapter_id: UUID) -> None
         .first()
     )
     if history:
-        history.read_at = datetime.utcnow()
+        history.read_at = datetime.now(timezone.utc)
     else:
         db.add(ReadingHistory(user_id=user_id, chapter_id=chapter_id))
 
@@ -761,7 +761,7 @@ async def update_comment(
         )
 
     comment.content = content
-    comment.updated_at = datetime.utcnow()
+    comment.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(comment)
 

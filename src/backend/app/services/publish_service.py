@@ -68,29 +68,39 @@ def get_rabbitmq_connection() -> pika.BlockingConnection:
     return pika.BlockingConnection(params)
 
 
-def push_publish_task_to_queue(payload: PublishTaskPayload) -> bool:
-    """Publish the moderation task to RabbitMQ, or run it asynchronously if not using RabbitMQ."""
-    if settings.QUEUE_PROVIDER != "rabbitmq":
-        logger.info("Using async local fallback for chapter %s", payload.chapter_id)
-        try:
-            import asyncio
-            import threading
-            from app.worker.main import handle_publish_chapter
+def _pubsub_project_id() -> str | None:
+    return settings.PUBSUB_PROJECT_ID or settings.GCP_PROJECT_ID
 
-            payload_dict = payload.to_dict()
-            try:
-                loop = asyncio.get_running_loop()
-                loop.run_in_executor(None, handle_publish_chapter, payload_dict)
-            except RuntimeError:
-                thread = threading.Thread(
-                    target=handle_publish_chapter, args=(payload_dict,)
-                )
-                thread.daemon = True
-                thread.start()
-            return True
-        except Exception as exc:
-            logger.error("Failed to run local async worker fallback: %s", exc)
-            return False
+
+def push_publish_task_to_pubsub(payload: PublishTaskPayload) -> bool:
+    project_id = _pubsub_project_id()
+    topic_name = settings.PUBSUB_MODERATION_TOPIC
+    if not project_id or not topic_name:
+        logger.error("Pub/Sub moderation topic is not configured.")
+        return False
+
+    try:
+        from google.cloud import pubsub_v1
+
+        publisher = pubsub_v1.PublisherClient()
+        topic_path = publisher.topic_path(project_id, topic_name)
+        future = publisher.publish(
+            topic_path,
+            json.dumps(payload.to_dict(), ensure_ascii=False).encode("utf-8"),
+            task_type="publish_chapter",
+        )
+        future.result(timeout=15)
+        logger.info("Queued Pub/Sub moderation task for chapter %s", payload.chapter_id)
+        return True
+    except Exception as exc:
+        logger.error("Failed to publish Pub/Sub moderation task: %s", exc)
+        return False
+
+
+def push_publish_task_to_queue(payload: PublishTaskPayload) -> bool:
+    """Publish the moderation task to the configured durable queue."""
+    if settings.QUEUE_PROVIDER == "pubsub":
+        return push_publish_task_to_pubsub(payload)
 
     connection = None
     try:

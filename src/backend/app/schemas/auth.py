@@ -37,8 +37,7 @@ class UserResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserLogin(BaseModel):
@@ -52,8 +51,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user: UserResponse
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PasswordResetRequest(BaseModel):
@@ -102,8 +100,7 @@ class ProfileResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CurrentUserProfile(BaseModel):
@@ -112,8 +109,7 @@ class CurrentUserProfile(BaseModel):
     bio: Optional[str] = None
     reputation_score: int = 100
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CurrentUserResponse(UserResponse):

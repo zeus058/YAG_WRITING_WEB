@@ -3,15 +3,29 @@ System Configuration Module.
 Defines system-wide environment variables and app settings.
 """
 
-from pydantic_settings import BaseSettings
 from typing import Optional
-from pydantic import model_validator
+from pydantic import ConfigDict, model_validator
+from pydantic_settings import BaseSettings
 
 LOCAL_URL_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")  # nosec B104
 VALID_SERVICE_ROLES = {"api", "worker", "migrate", "scheduler"}
+VALID_QUEUE_PROVIDERS = {"rabbitmq", "pubsub"}
 INSECURE_SECRET_KEYS = {
     "dev_secret_key",
     "yag_development_secret_key_change_in_production",
+}
+PLACEHOLDER_VALUES = {
+    "",
+    "your_gemini_api_key_here",
+    "your_payos_client_id_here",
+    "your_payos_api_key_here",
+    "your_payos_checksum_key_here",
+    "your_cloudinary_cloud_name_here",
+    "your_cloudinary_api_key_here",
+    "your_cloudinary_api_secret_here",
+    "your_cloud_name_here",
+    "your_api_key_here",
+    "your_api_secret_here",
 }
 INSECURE_DB_PASSWORDS = {"postgres", "yag_secret", ""}
 INSECURE_RABBITMQ_CREDENTIALS = {
@@ -30,6 +44,12 @@ def _split_csv(value: str) -> list[str]:
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(
+        case_sensitive=True,
+        env_file=".env",
+        extra="ignore",
+    )
+
     PROJECT_NAME: str = "YAG - Smart Novel Writing Platform"
     API_V1_STR: str = "/api/v1"
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
@@ -43,13 +63,15 @@ class Settings(BaseSettings):
     PAYOS_API_KEY: Optional[str] = None
     PAYOS_CHECKSUM_KEY: Optional[str] = None
     PAYOS_RETURN_URL: Optional[str] = None
-
-
+    PAYOS_MOCK_ENABLED: bool = False
 
     # Security Settings
     SECRET_KEY: str = "yag_development_secret_key_change_in_production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     ALLOW_WEBSOCKET_QUERY_TOKEN: bool = True
+    INTERNAL_TASK_TOKEN: Optional[str] = None
+    INTERNAL_SERVICE_ACCOUNT_EMAIL: Optional[str] = None
+    INTERNAL_AUTH_AUDIENCE: Optional[str] = None
 
     # AI Engine & Gemini API
     GEMINI_API_KEY: str = ""
@@ -85,6 +107,11 @@ class Settings(BaseSettings):
     RABBITMQ_MODERATION_DLQ: str = "ai.moderation.dlq"
     RABBITMQ_MODERATION_MAX_RETRIES: int = 5
 
+    # Google Pub/Sub Settings (Cloud Run production queue option)
+    GCP_PROJECT_ID: Optional[str] = None
+    PUBSUB_PROJECT_ID: Optional[str] = None
+    PUBSUB_MODERATION_TOPIC: Optional[str] = None
+
     # Cloudinary Settings
     CLOUDINARY_CLOUD_NAME: Optional[str] = None
     CLOUDINARY_API_KEY: Optional[str] = None
@@ -99,6 +126,14 @@ class Settings(BaseSettings):
     SCHEDULE_SCAN_HOUR_UTC: int = 17
     SCHEDULE_SCAN_MINUTE_UTC: int = 5
     VIEW_COUNT_FLUSH_ENABLED: bool = False
+
+    # SMTP settings for production password reset and schedule notifications
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 465
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM: Optional[str] = None
+
     # Auto-create DB tables on startup (development only). Set to False in staging/production.
     AUTO_CREATE_TABLES: bool = False
     # If True, the app can automatically apply SQL files from migrations/ on startup (use carefully)
@@ -110,6 +145,8 @@ class Settings(BaseSettings):
             raise ValueError(f"Invalid ENVIRONMENT: {self.ENVIRONMENT}")
         if self.SERVICE_ROLE not in VALID_SERVICE_ROLES:
             raise ValueError(f"Invalid SERVICE_ROLE: {self.SERVICE_ROLE}")
+        if self.QUEUE_PROVIDER not in VALID_QUEUE_PROVIDERS:
+            raise ValueError(f"Invalid QUEUE_PROVIDER: {self.QUEUE_PROVIDER}")
 
         if self.ENVIRONMENT == "production":
             if (
@@ -130,17 +167,16 @@ class Settings(BaseSettings):
 
             for var_name, default_val in required_prod_vars.items():
                 val = getattr(self, var_name)
-                if not val or val == default_val:
+                if not val or val == default_val or str(val).lower() in PLACEHOLDER_VALUES:
                     raise ValueError(
                         f"Field '{var_name}' must be explicitly set and different from default in production environment"
                     )
 
             essential_uris = {"CORS_ORIGINS", "GEMINI_API_KEY"}
 
-
             for uri_name in essential_uris:
                 val = getattr(self, uri_name)
-                if not val:
+                if not val or str(val).lower() in PLACEHOLDER_VALUES:
                     raise ValueError(
                         f"Field '{uri_name}' must be explicitly set in production environment"
                     )
@@ -150,10 +186,22 @@ class Settings(BaseSettings):
                 "CLOUDINARY_API_KEY",
                 "CLOUDINARY_API_SECRET",
             ):
-                if not getattr(self, cloudinary_name):
+                cloudinary_value = getattr(self, cloudinary_name)
+                if (
+                    not cloudinary_value
+                    or str(cloudinary_value).lower() in PLACEHOLDER_VALUES
+                ):
                     raise ValueError(
                         f"Field '{cloudinary_name}' must be explicitly set in production environment"
                     )
+
+            if self.PAYOS_MOCK_ENABLED:
+                raise ValueError("PAYOS_MOCK_ENABLED must be false in production")
+
+            if not self.SMTP_HOST or not self.SMTP_USER or not self.SMTP_PASSWORD:
+                raise ValueError(
+                    "SMTP_HOST, SMTP_USER, and SMTP_PASSWORD must be set in production"
+                )
 
             if self.ALLOW_WEBSOCKET_QUERY_TOKEN:
                 raise ValueError(
@@ -200,24 +248,54 @@ class Settings(BaseSettings):
                         "REDIS_PASSWORD must be set when REDIS_URL is not used in production"
                     )
 
-            if self.QUEUE_PROVIDER == "rabbitmq" and _looks_local(
-                self.RABBITMQ_URL or ""
-            ):
-                raise ValueError(
-                    "RABBITMQ_URL must not point to localhost in production"
-                )
-            if self.QUEUE_PROVIDER == "rabbitmq" and not self.RABBITMQ_URL:
-                if _looks_local(self.RABBITMQ_HOST):
+            if self.QUEUE_PROVIDER == "rabbitmq":
+                if self.RABBITMQ_URL and _looks_local(self.RABBITMQ_URL):
+                    raise ValueError(
+                        "RABBITMQ_URL must not point to localhost in production"
+                    )
+                if not self.RABBITMQ_URL and _looks_local(self.RABBITMQ_HOST):
                     raise ValueError(
                         "RABBITMQ_HOST must not point to localhost in production"
                     )
-                if (
-                    self.RABBITMQ_USER,
-                    self.RABBITMQ_PASSWORD,
-                ) in INSECURE_RABBITMQ_CREDENTIALS or not self.RABBITMQ_PASSWORD:
+                if not self.RABBITMQ_URL and (
+                    (
+                        self.RABBITMQ_USER,
+                        self.RABBITMQ_PASSWORD,
+                    )
+                    in INSECURE_RABBITMQ_CREDENTIALS
+                    or not self.RABBITMQ_PASSWORD
+                ):
                     raise ValueError(
                         "RabbitMQ credentials must be changed from development defaults in production"
                     )
+            else:
+                pubsub_project = self.PUBSUB_PROJECT_ID or self.GCP_PROJECT_ID
+                if not pubsub_project:
+                    raise ValueError(
+                        "PUBSUB_PROJECT_ID or GCP_PROJECT_ID must be set when QUEUE_PROVIDER=pubsub"
+                    )
+                if not self.PUBSUB_MODERATION_TOPIC:
+                    raise ValueError(
+                        "PUBSUB_MODERATION_TOPIC must be set when QUEUE_PROVIDER=pubsub"
+                    )
+                has_static_token = (
+                    self.INTERNAL_TASK_TOKEN is not None
+                    and len(self.INTERNAL_TASK_TOKEN) >= 32
+                )
+                has_oidc_identity = bool(self.INTERNAL_SERVICE_ACCOUNT_EMAIL)
+                if not has_static_token and not has_oidc_identity:
+                    raise ValueError(
+                        "INTERNAL_TASK_TOKEN or INTERNAL_SERVICE_ACCOUNT_EMAIL must be set when QUEUE_PROVIDER=pubsub"
+                    )
+                if self.INTERNAL_AUTH_AUDIENCE:
+                    if _looks_local(self.INTERNAL_AUTH_AUDIENCE):
+                        raise ValueError(
+                            "INTERNAL_AUTH_AUDIENCE must not point to localhost in production"
+                        )
+                    if not self.INTERNAL_AUTH_AUDIENCE.startswith("https://"):
+                        raise ValueError(
+                            "INTERNAL_AUTH_AUDIENCE must be HTTPS in production"
+                        )
 
             if self.PAYMENT_PROVIDER == "payos":
                 if _looks_local(self.PAYOS_RETURN_URL or ""):
@@ -245,11 +323,6 @@ class Settings(BaseSettings):
         return [
             origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()
         ]
-
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
-        extra = "ignore"
 
 
 settings = Settings()

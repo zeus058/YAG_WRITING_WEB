@@ -12,6 +12,7 @@ Endpoints:
 
 import uuid
 from typing import List, Optional
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session, joinedload
@@ -37,6 +38,32 @@ from app.services import payos_service as payos_svc
 
 router = APIRouter()
 membership_router = APIRouter()
+
+
+def _allowed_return_origins() -> set[str]:
+    origins = set(settings.cors_origin_list)
+    if settings.PAYOS_RETURN_URL:
+        parsed = urlparse(settings.PAYOS_RETURN_URL)
+        if parsed.scheme and parsed.netloc:
+            origins.add(f"{parsed.scheme}://{parsed.netloc}")
+    return origins
+
+
+def _validate_return_url(return_url: str) -> None:
+    parsed = urlparse(return_url)
+    if not parsed.scheme or not parsed.netloc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="INVALID_RETURN_URL",
+        )
+
+    if settings.ENVIRONMENT == "production":
+        origin = f"{parsed.scheme}://{parsed.netloc}"
+        if parsed.scheme != "https" or origin not in _allowed_return_origins():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="RETURN_URL_NOT_ALLOWED",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -171,14 +198,24 @@ async def checkout(
     return_url = body.return_url or settings.PAYOS_RETURN_URL
     if not return_url:
         return_url = "http://localhost:3000/payment/result"
+    _validate_return_url(return_url)
     cancel_url = return_url.split("?")[0] + "?status=cancel"
-    payment_url, _ = await payos_svc.create_payos_payment_link(
-        order_code=order_code,
-        amount=int(plan.price),
-        description=order_info,
-        return_url=return_url,
-        cancel_url=cancel_url,
-    )
+    try:
+        payment_url, _ = await payos_svc.create_payos_payment_link(
+            order_code=order_code,
+            amount=int(plan.price),
+            description=order_info,
+            return_url=return_url,
+            cancel_url=cancel_url,
+        )
+    except Exception as exc:
+        transaction.status = "failed"
+        db.add(transaction)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="PAYOS_CHECKOUT_FAILED",
+        ) from exc
 
     return CheckoutResponse(
         payment_url=payment_url,
@@ -201,7 +238,7 @@ async def checkout(
 async def verify_checkout(
     query_params: dict,
     db: Session = Depends(deps.get_db),
-    current_user: Optional[User] = Depends(deps.get_current_user_optional),
+    current_user: User = Depends(deps.get_current_user),
 ):
     """
     Nhận tham số chuyển hướng từ PayOS, kiểm tra và trả về trạng thái chi tiết cho S10.
@@ -277,15 +314,10 @@ async def payos_webhook(
     return {"status": "ok", "message": "Confirm Success"}
 
 
-@router.post(
-    "/payos/verify",
-    response_model=PaymentResultResponse,
-    summary="Xác thực kết quả thanh toán PayOS cho Frontend",
-)
 async def verify_payos_checkout(
     query_params: dict,
     db: Session = Depends(deps.get_db),
-    current_user: Optional[User] = Depends(deps.get_current_user_optional),
+    current_user: User = Depends(deps.get_current_user),
 ):
     order_code = query_params.get("orderCode")
     status_param = query_params.get("status")
@@ -301,6 +333,11 @@ async def verify_payos_checkout(
     )
     if not transaction:
         return {"success": False, "message": "Giao dịch không tồn tại trên hệ thống."}
+    if str(transaction.user_id) != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Transaction not found",
+        )
 
     plan = (
         db.query(MembershipPlan)
@@ -323,11 +360,14 @@ async def verify_payos_checkout(
             db.commit()
             return {"success": False, "message": "Giao dịch thanh toán đã bị hủy hoặc thất bại."}
     else:
-        # Development fallback / mock mode
+        if settings.ENVIRONMENT == "production":
+            return {"success": False, "message": "PayOS is not configured."}
         is_success = (
             transaction.status == "success"
-            or status_param == "success"
-            or status_param == "PAID"
+            or (
+                settings.PAYOS_MOCK_ENABLED
+                and (status_param == "success" or status_param == "PAID")
+            )
         )
         if not is_success and status_param == "cancel":
             transaction.status = "failed"

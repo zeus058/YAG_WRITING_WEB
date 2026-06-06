@@ -116,7 +116,7 @@ def check_premium_access(chapter: Chapter, user: Optional[User]) -> None:
     if premium_until is not None:
         # Check if premium_until is offset-aware. If not, make naive comparison
         if premium_until.tzinfo is None:
-            now_naive = datetime.utcnow()
+            now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
             if premium_until < now_naive:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,

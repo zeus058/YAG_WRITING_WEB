@@ -15,6 +15,10 @@
 # ── YAML Anchors: Shared environment block (DRY) ─────────────────
 x-backend-env: &backend-env
   SECRET_KEY: ${SECRET_KEY:-dev_secret_key}
+  QUEUE_PROVIDER: ${QUEUE_PROVIDER:-rabbitmq}
+  INTERNAL_TASK_TOKEN: ${INTERNAL_TASK_TOKEN:-}
+  INTERNAL_SERVICE_ACCOUNT_EMAIL: ${INTERNAL_SERVICE_ACCOUNT_EMAIL:-}
+  INTERNAL_AUTH_AUDIENCE: ${INTERNAL_AUTH_AUDIENCE:-}
   
   # Database Configuration (PostgreSQL with pgvector)
   DATABASE_URL: ${DATABASE_URL:-}
@@ -44,6 +48,11 @@ x-backend-env: &backend-env
   RABBITMQ_MODERATION_DLQ: ${RABBITMQ_MODERATION_DLQ:-ai.moderation.dlq}
   RABBITMQ_MODERATION_MAX_RETRIES: ${RABBITMQ_MODERATION_MAX_RETRIES:-5}
 
+  # Google Pub/Sub queue option for Cloud Run production deployments
+  GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
+  PUBSUB_PROJECT_ID: ${PUBSUB_PROJECT_ID:-}
+  PUBSUB_MODERATION_TOPIC: ${PUBSUB_MODERATION_TOPIC:-yag-moderation}
+
   # CORS Settings
   CORS_ORIGINS: ${CORS_ORIGINS:-*}
 
@@ -61,6 +70,14 @@ x-backend-env: &backend-env
   PAYOS_API_KEY: ${PAYOS_API_KEY:-}
   PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
   PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-}
+  PAYOS_MOCK_ENABLED: ${PAYOS_MOCK_ENABLED:-false}
+
+  # SMTP for password reset and schedule notifications
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-465}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_FROM: ${SMTP_FROM:-}
 
   # Database Initialization Lifecycle (managed via migrate service)
   AUTO_CREATE_TABLES: "false"

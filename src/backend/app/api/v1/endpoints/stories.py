@@ -332,7 +332,7 @@ def submit_review(
     if review:
         review.rating = review_in.rating
         review.content = content
-        review.updated_at = datetime.utcnow()
+        review.updated_at = datetime.now(timezone.utc)
     else:
         review = Review(
             user_id=current_user.id,
@@ -394,7 +394,7 @@ def update_my_review(
 
     review.rating = review_in.rating
     review.content = review_in.content.strip() if review_in.content else None
-    review.updated_at = datetime.utcnow()
+    review.updated_at = datetime.now(timezone.utc)
     refresh_story_rating(db, story)
     db.commit()
     db.refresh(review)

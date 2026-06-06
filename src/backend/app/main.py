@@ -161,16 +161,29 @@ def readiness_check():
         rabbit_connection = None
         try:
             rabbit_connection = get_rabbitmq_connection()
-            checks["rabbitmq"] = "ok"
+            checks["queue"] = "ok (rabbitmq)"
         except pika.exceptions.AMQPError as exc:
-            checks["rabbitmq"] = f"error: {exc.__class__.__name__}"
+            checks["queue"] = f"error: {exc.__class__.__name__}"
         except Exception as exc:
-            checks["rabbitmq"] = f"error: {exc.__class__.__name__}"
+            checks["queue"] = f"error: {exc.__class__.__name__}"
         finally:
             if rabbit_connection and not rabbit_connection.is_closed:
                 rabbit_connection.close()
+    elif settings.QUEUE_PROVIDER == "pubsub":
+        try:
+            from google.cloud import pubsub_v1  # noqa: F401
+
+            if not (
+                (settings.PUBSUB_PROJECT_ID or settings.GCP_PROJECT_ID)
+                and settings.PUBSUB_MODERATION_TOPIC
+            ):
+                checks["queue"] = "error: PubSubNotConfigured"
+            else:
+                checks["queue"] = "ok (pubsub)"
+        except Exception as exc:
+            checks["queue"] = f"error: {exc.__class__.__name__}"
     else:
-        checks["rabbitmq"] = f"ok (skipped for {settings.QUEUE_PROVIDER})"
+        checks["queue"] = f"error: unsupported provider {settings.QUEUE_PROVIDER}"
 
     status_value = (
         "ok" if all(value.startswith("ok") for value in checks.values()) else "degraded"

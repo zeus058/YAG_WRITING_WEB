@@ -369,7 +369,12 @@ jobs:
             SERVICE_ROLE=api
             QUEUE_PROVIDER=pubsub
             PAYMENT_PROVIDER=payos
+            GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+            PUBSUB_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+            PUBSUB_MODERATION_TOPIC=yag-moderation
+            INTERNAL_SERVICE_ACCOUNT_EMAIL=${{ secrets.GCP_SERVICE_ACCOUNT }}
             ALLOW_WEBSOCKET_QUERY_TOKEN=false
+            PAYOS_MOCK_ENABLED=false
             AUTO_CREATE_TABLES=false
             APPLY_MIGRATIONS_ON_STARTUP=false
             SCHEDULER_ENABLED=false
@@ -387,6 +392,10 @@ jobs:
             PAYOS_API_KEY=YAG_PAYOS_API_KEY:latest
             PAYOS_CHECKSUM_KEY=YAG_PAYOS_CHECKSUM_KEY:latest
             PAYOS_RETURN_URL=YAG_PAYOS_RETURN_URL:latest
+            SMTP_HOST=YAG_SMTP_HOST:latest
+            SMTP_USER=YAG_SMTP_USER:latest
+            SMTP_PASSWORD=YAG_SMTP_PASSWORD:latest
+            SMTP_FROM=YAG_SMTP_FROM:latest
           flags: |
             --allow-unauthenticated
             --cpu=1
@@ -394,6 +403,66 @@ jobs:
             --min-instances=0
             --max-instances=3
             --timeout=300
+
+      - name: Configure Pub/Sub push moderation
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          BACKEND_URL: ${{ steps.deploy.outputs.url }}
+          PUBSUB_MODERATION_TOPIC: yag-moderation
+          PUBSUB_SUBSCRIPTION: yag-moderation-cloud-run
+        run: |
+          set -euo pipefail
+          gcloud pubsub topics create "$PUBSUB_MODERATION_TOPIC" \
+            --project "$GCP_PROJECT_ID" 2>/dev/null || true
+
+          PUSH_ENDPOINT="$BACKEND_URL/api/v1/internal/pubsub/moderation"
+          if gcloud pubsub subscriptions describe "$PUBSUB_SUBSCRIPTION" \
+            --project "$GCP_PROJECT_ID" >/dev/null 2>&1; then
+            gcloud pubsub subscriptions update "$PUBSUB_SUBSCRIPTION" \
+              --project "$GCP_PROJECT_ID" \
+              --push-endpoint "$PUSH_ENDPOINT" \
+              --push-auth-service-account "$GCP_SERVICE_ACCOUNT"
+          else
+            gcloud pubsub subscriptions create "$PUBSUB_SUBSCRIPTION" \
+              --project "$GCP_PROJECT_ID" \
+              --topic "$PUBSUB_MODERATION_TOPIC" \
+              --push-endpoint "$PUSH_ENDPOINT" \
+              --push-auth-service-account "$GCP_SERVICE_ACCOUNT" \
+              --ack-deadline 60
+          fi
+
+      - name: Configure Cloud Scheduler scan
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          REGION: ${{ steps.deploy_vars.outputs.region }}
+          BACKEND_URL: ${{ steps.deploy.outputs.url }}
+          SCHEDULER_JOB: yag-schedule-scan
+        run: |
+          set -euo pipefail
+          SCAN_ENDPOINT="$BACKEND_URL/api/v1/internal/schedule/scan"
+          if gcloud scheduler jobs describe "$SCHEDULER_JOB" \
+            --project "$GCP_PROJECT_ID" \
+            --location "$REGION" >/dev/null 2>&1; then
+            gcloud scheduler jobs update http "$SCHEDULER_JOB" \
+              --project "$GCP_PROJECT_ID" \
+              --location "$REGION" \
+              --schedule "5 17 * * *" \
+              --time-zone "UTC" \
+              --uri "$SCAN_ENDPOINT" \
+              --http-method POST \
+              --oidc-service-account-email "$GCP_SERVICE_ACCOUNT"
+          else
+            gcloud scheduler jobs create http "$SCHEDULER_JOB" \
+              --project "$GCP_PROJECT_ID" \
+              --location "$REGION" \
+              --schedule "5 17 * * *" \
+              --time-zone "UTC" \
+              --uri "$SCAN_ENDPOINT" \
+              --http-method POST \
+              --oidc-service-account-email "$GCP_SERVICE_ACCOUNT"
+          fi
 
       - name: Verify deployment health
         run: |

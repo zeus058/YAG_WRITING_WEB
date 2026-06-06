@@ -571,7 +571,11 @@ class TestChaptersHelpers:
 
     def test_ensure_reader_can_read_premium_expired_subscriber_naive(self):
         chapter_data = {"is_premium": True, "story_author_id": str(uuid.uuid4())}
-        expired_user = User(role="reader", premium_until=datetime.utcnow() - timedelta(days=1))
+        expired_user = User(
+            role="reader",
+            premium_until=datetime.now(timezone.utc).replace(tzinfo=None)
+            - timedelta(days=1),
+        )
         with pytest.raises(HTTPException) as exc_info:
             ensure_reader_can_read(chapter_data, expired_user)
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
@@ -587,7 +591,11 @@ class TestChaptersHelpers:
 
     def test_ensure_reader_can_read_premium_active_subscriber_naive(self):
         chapter_data = {"is_premium": True, "story_author_id": str(uuid.uuid4())}
-        active_user = User(role="reader", premium_until=datetime.utcnow() + timedelta(days=1))
+        active_user = User(
+            role="reader",
+            premium_until=datetime.now(timezone.utc).replace(tzinfo=None)
+            + timedelta(days=1),
+        )
         # Should allow
         ensure_reader_can_read(chapter_data, active_user)
 
@@ -643,7 +651,9 @@ class TestChaptersHelpers:
 
     def test_ensure_chapter_is_available_future_publish_naive(self):
         author_id = uuid.uuid4()
-        future_time_naive = datetime.utcnow() + timedelta(days=5)
+        future_time_naive = datetime.now(timezone.utc).replace(
+            tzinfo=None
+        ) + timedelta(days=5)
         chapter_data = {
             "moderation_status": "approved",
             "story_author_id": str(author_id),

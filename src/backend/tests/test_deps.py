@@ -152,7 +152,10 @@ def test_check_premium_access_no_user():
 
 def test_check_premium_access_expired_subscriber_naive():
     chapter = Chapter(is_premium=True)
-    expired_user = User(premium_until=datetime.utcnow() - timedelta(days=1))
+    expired_user = User(
+        premium_until=datetime.now(timezone.utc).replace(tzinfo=None)
+        - timedelta(days=1)
+    )
     
     with pytest.raises(HTTPException) as exc_info:
         check_premium_access(chapter, expired_user)
@@ -170,7 +173,10 @@ def test_check_premium_access_expired_subscriber_aware():
 
 def test_check_premium_access_active_subscriber_naive():
     chapter = Chapter(is_premium=True)
-    active_user = User(premium_until=datetime.utcnow() + timedelta(days=1))
+    active_user = User(
+        premium_until=datetime.now(timezone.utc).replace(tzinfo=None)
+        + timedelta(days=1)
+    )
     # Should pass
     check_premium_access(chapter, active_user)
 

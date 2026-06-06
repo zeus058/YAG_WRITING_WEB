@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     recommendations,
     publish,
     notifications,
+    internal,
 )
 
 api_router = APIRouter()
@@ -61,3 +62,4 @@ api_router.include_router(
     notifications.router, prefix="/notifications", tags=["Notifications"]
 )
 api_router.include_router(publish.router, tags=["Publishing"])
+api_router.include_router(internal.router, tags=["Internal"])

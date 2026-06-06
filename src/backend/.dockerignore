@@ -11,3 +11,5 @@ env/
 *.log
 uploads/
 tests/__pycache__/
+app/seed.py
+app/reset_dev_db.py

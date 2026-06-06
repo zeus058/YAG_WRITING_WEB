@@ -72,23 +72,23 @@ def send_schedule_warning_email(
         f"Diem uy tin hien tai: {reputation_score}\n"
     )
 
-    print(f"\n[U014 SCHEDULE WARNING] To: {recipient}\n{body}")
-
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-    if not smtp_user or not smtp_password:
+    smtp_host = settings.SMTP_HOST
+    smtp_user = settings.SMTP_USER or os.getenv("SMTP_USER")
+    smtp_password = settings.SMTP_PASSWORD or os.getenv("SMTP_PASSWORD")
+    smtp_from = settings.SMTP_FROM or smtp_user
+    if not smtp_host or not smtp_user or not smtp_password or not smtp_from:
         logger.info(
-            "SMTP credentials are not configured; schedule warning logged only."
+            "SMTP credentials are not configured; schedule warning email not sent."
         )
         return
 
     try:
         msg = MIMEText(body, "plain", "utf-8")
         msg["Subject"] = subject
-        msg["From"] = f"YAG Platform <{smtp_user}>"
+        msg["From"] = f"YAG Platform <{smtp_from}>"
         msg["To"] = recipient
 
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=5.0) as server:
+        with smtplib.SMTP_SSL(smtp_host, settings.SMTP_PORT, timeout=5.0) as server:
             server.login(smtp_user, smtp_password)
             server.sendmail(smtp_user, recipient, msg.as_string())
     except Exception as exc:

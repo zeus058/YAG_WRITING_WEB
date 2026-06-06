@@ -4,61 +4,6 @@ import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
 
 /**
- * Component Hiển thị hiệu ứng đếm số tăng dần (Count Up)
- */
-function StatCounter({ target, suffix }: { target: number; suffix: string }) {
-  const [count, setCount] = useState(0);
-  const elementRef = useRef<HTMLDivElement>(null);
-  const hasStarted = useRef(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting && !hasStarted.current) {
-          hasStarted.current = true;
-          let start = 0;
-          const duration = 1800;
-          const stepTime = 16;
-          const increment = target / (duration / stepTime);
-
-          const timer = setInterval(() => {
-            start += increment;
-            if (start >= target) {
-              setCount(target);
-              clearInterval(timer);
-            } else {
-              setCount(Math.floor(start));
-            }
-          }, stepTime);
-        }
-      },
-      { threshold: 0.5 }
-    );
-
-    if (elementRef.current) {
-      observer.observe(elementRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [target]);
-
-  // Định dạng số hiển thị (ví dụ 12000 thành 12.0K hoặc 12K+)
-  const formatNumber = (num: number) => {
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + "K";
-    }
-    return num.toString();
-  };
-
-  return (
-    <div ref={elementRef}>
-      <div className="stat-val">{formatNumber(count)}{suffix}</div>
-    </div>
-  );
-}
-
-/**
  * Component bọc hỗ trợ hiệu ứng hiển thị khi cuộn trang (Reveal on Scroll)
  */
 function RevealOnScroll({
@@ -179,31 +124,6 @@ export default function LandingPage() {
     setIsDraggingSlider(false);
   };
 
-  // === Logic kéo chuột cho Stories Scroll ===
-  const storiesScrollRef = useRef<HTMLDivElement>(null);
-  const [isDraggingStories, setIsDraggingStories] = useState(false);
-  const [storiesStartX, setStoriesStartX] = useState(0);
-  const [storiesScrollLeft, setStoriesScrollLeft] = useState(0);
-
-  const handleStoriesMouseDown = (e: React.MouseEvent) => {
-    if (!storiesScrollRef.current) return;
-    setIsDraggingStories(true);
-    setStoriesStartX(e.pageX - storiesScrollRef.current.offsetLeft);
-    setStoriesScrollLeft(storiesScrollRef.current.scrollLeft);
-  };
-
-  const handleStoriesMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingStories || !storiesScrollRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - storiesScrollRef.current.offsetLeft;
-    const walk = (x - storiesStartX) * 1.2;
-    storiesScrollRef.current.scrollLeft = storiesScrollLeft - walk;
-  };
-
-  const handleStoriesMouseUpOrLeave = () => {
-    setIsDraggingStories(false);
-  };
-
   return (
     <div className="bg-[#41503D] min-h-screen text-white font-sans overflow-x-hidden">
       {/* ═══════════ NAVBAR ═══════════ */}
@@ -246,8 +166,9 @@ export default function LandingPage() {
               bắt đầu hành trình
             </h1>
             <p className="hero-sub">
-              Đọc hàng ngàn tác phẩm, viết cùng trợ lý AI Gemini, tìm kiếm ngữ
-              nghĩa thông minh — tất cả trong một nền tảng dành cho người Việt.
+              Khám phá tác phẩm do cộng đồng đăng tải, viết cùng trợ lý AI
+              Gemini, tìm kiếm ngữ nghĩa thông minh — tất cả trong một nền tảng
+              dành cho người Việt.
             </p>
             <div className="hero-btns">
               <Link className="btn-primary" href="/auth?tab=register">
@@ -287,16 +208,16 @@ export default function LandingPage() {
             </div>
             <div className="hero-stats">
               <div>
-                <StatCounter target={12000} suffix="+" />
-                <div className="stat-key">Tác phẩm</div>
+                <div className="stat-val">Live</div>
+                <div className="stat-key">Tác phẩm người dùng</div>
               </div>
               <div>
-                <StatCounter target={48000} suffix="+" />
-                <div className="stat-key">Độc giả</div>
+                <div className="stat-val">AI</div>
+                <div className="stat-key">Tìm kiếm ngữ nghĩa</div>
               </div>
               <div>
-                <StatCounter target={3200} suffix="+" />
-                <div className="stat-key">Tác giả</div>
+                <div className="stat-val">PayOS</div>
+                <div className="stat-key">Membership thật</div>
               </div>
             </div>
           </div>
@@ -332,8 +253,8 @@ export default function LandingPage() {
                   />
                 </svg>
                 <div className="book-meta">
-                  <div className="book-title-sm">Tác phẩm minh họa 02</div>
-                  <div className="book-author-sm">Tác giả minh họa</div>
+                  <div className="book-title-sm">Tác phẩm cộng đồng</div>
+                  <div className="book-author-sm">Đăng bởi người dùng</div>
                 </div>
               </div>
               {/* Book 2 */}
@@ -381,8 +302,8 @@ export default function LandingPage() {
                   />
                 </svg>
                 <div className="book-meta">
-                  <div className="book-title-sm">Tác phẩm minh họa 03</div>
-                  <div className="book-author-sm">Tác giả minh họa</div>
+                  <div className="book-title-sm">Không gian đọc</div>
+                  <div className="book-author-sm">Dữ liệu thật khi xuất bản</div>
                 </div>
               </div>
               {/* Book 1 (front) */}
@@ -458,7 +379,7 @@ export default function LandingPage() {
                     fill="rgba(255,236,206,.9)"
                     fontStyle="italic"
                   >
-                    Tác phẩm minh họa
+                    YAG Stories
                   </text>
                   <text
                     x="100"
@@ -469,13 +390,13 @@ export default function LandingPage() {
                     fill="rgba(255,255,255,.4)"
                     letterSpacing="1"
                   >
-                    Tác giả YAG
+                    User Content
                   </text>
                 </svg>
               </div>
               {/* Floating badges */}
               <div className="float-badge">✦ AI Đề xuất</div>
-              <div className="float-badge2">📚 3.2K+ Tác giả</div>
+              <div className="float-badge2">Nội dung người dùng</div>
             </div>
           </div>
         </div>
@@ -850,279 +771,20 @@ export default function LandingPage() {
           <RevealOnScroll>
             <div className="sec-header">
               <div className="sec-header-text">
-                <div className="sec-label">✦ Tác phẩm nổi bật</div>
+                <div className="sec-label">✦ Tác phẩm cộng đồng</div>
                 <h2 className="sec-title">
-                  Hàng nghìn câu chuyện
+                  Chỉ hiển thị
                   <br />
-                  đang chờ bạn khám phá
+                  truyện thật từ người dùng
                 </h2>
                 <p className="sec-desc">
-                  Từ kiếm hiệp thần tiêu đến ngôn tình hiện đại — AI sẽ gợi ý đúng
-                  tác phẩm bạn muốn.
+                  YAG không đưa dữ liệu mẫu lên môi trường production. Khi tác giả
+                  xuất bản và được kiểm duyệt, tác phẩm sẽ xuất hiện trong khám phá.
                 </p>
               </div>
               <Link className="btn-see-all" href="/discover">
-                Xem tất cả →
+                Khám phá →
               </Link>
-            </div>
-          </RevealOnScroll>
-
-          <RevealOnScroll>
-            <div
-              className={`stories-scroll ${isDraggingStories ? "dragging" : ""}`}
-              ref={storiesScrollRef}
-              onMouseDown={handleStoriesMouseDown}
-              onMouseMove={handleStoriesMouseMove}
-              onMouseUp={handleStoriesMouseUpOrLeave}
-              onMouseLeave={handleStoriesMouseUpOrLeave}
-            >
-              {/* Card 1: Ngôn tình lịch sử */}
-              <div className="s-card">
-                <div className="s-cover">
-                  <div className="s-badge hot">Hot</div>
-                  <svg
-                    viewBox="0 0 190 130"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ width: "100%", height: "100%" }}
-                  >
-                    <defs>
-                      <linearGradient id="sc1" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#2b1055" }} />
-                        <stop offset="100%" style={{ stopColor: "#7597de" }} />
-                      </linearGradient>
-                    </defs>
-                    <rect width="190" height="130" fill="url(#sc1)" />
-                    {/* Stylized moon */}
-                    <circle cx="140" cy="40" r="16" fill="rgba(255, 236, 206, 0.4)" />
-                    <circle cx="146" cy="36" r="14" fill="#2b1055" />
-                    {/* Raindrops / stars */}
-                    <line x1="40" y1="20" x2="35" y2="40" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                    <line x1="80" y1="30" x2="75" y2="50" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                    <line x1="120" y1="25" x2="115" y2="45" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                    <line x1="60" y1="70" x2="55" y2="90" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                    <line x1="100" y1="80" x2="95" y2="100" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                    <line x1="150" y1="75" x2="145" y2="95" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                    {/* Ancient wall/gate silhouette sketch */}
-                    <path d="M20,130 L20,110 L40,110 L40,105 L60,105 L60,110 L130,110 L130,105 L150,105 L150,110 L170,110 L170,130 Z" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
-                    <path d="M80,130 L80,115 Q95,100 110,115 L110,130 Z" fill="#2b1055" stroke="rgba(255,255,255,0.2)" />
-                  </svg>
-                </div>
-                <div className="s-info">
-                  <div className="s-genre">Ngôn tình lịch sử</div>
-                  <div className="s-name">Tác phẩm minh họa 01</div>
-                  <div className="s-author">Tác giả minh họa</div>
-                  <div className="s-stats">
-                    <span className="s-stat">👁 0</span>
-                    <span className="s-stat">⭐ 0.0</span>
-                    <span className="s-stat">📚 0 ch.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: Khoa học viễn tưởng */}
-              <div className="s-card">
-                <div className="s-cover">
-                  <div className="s-badge ai">AI Pick</div>
-                  <svg
-                    viewBox="0 0 190 130"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ width: "100%", height: "100%" }}
-                  >
-                    <defs>
-                      <linearGradient id="sc2" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#0a1128" }} />
-                        <stop offset="100%" style={{ stopColor: "#001f3f" }} />
-                      </linearGradient>
-                    </defs>
-                    <rect width="190" height="130" fill="url(#sc2)" />
-                    {/* Shooting star lines */}
-                    <line x1="20" y1="20" x2="80" y2="50" stroke="rgba(59,130,246,0.4)" strokeWidth="2" strokeLinecap="round" />
-                    <line x1="80" y1="10" x2="150" y2="45" stroke="rgba(254,189,178,0.4)" strokeWidth="1.5" strokeLinecap="round" />
-                    <line x1="10" y1="60" x2="50" y2="80" stroke="rgba(59,130,246,0.3)" strokeWidth="1" />
-                    {/* Portal circle */}
-                    <circle cx="95" cy="65" r="30" fill="none" stroke="rgba(59,130,246,0.2)" strokeWidth="4" />
-                    <circle cx="95" cy="65" r="25" fill="none" stroke="rgba(254,189,178,0.3)" strokeWidth="2" strokeDasharray="5,5" />
-                    <circle cx="95" cy="65" r="8" fill="#FFF" opacity="0.8" />
-                  </svg>
-                </div>
-                <div className="s-info">
-                  <div className="s-genre">Khoa học viễn tưởng</div>
-                  <div className="s-name">Tác phẩm minh họa 02</div>
-                  <div className="s-author">Tác giả minh họa</div>
-                  <div className="s-stats">
-                    <span className="s-stat">👁 0</span>
-                    <span className="s-stat">⭐ 0.0</span>
-                    <span className="s-stat">📚 0 ch.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Trinh thám */}
-              <div className="s-card">
-                <div className="s-cover">
-                  <div className="s-badge done">Hoàn thành</div>
-                  <svg
-                    viewBox="0 0 190 130"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ width: "100%", height: "100%" }}
-                  >
-                    <defs>
-                      <linearGradient id="sc3" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#0d1b2a" }} />
-                        <stop offset="100%" style={{ stopColor: "#1b4931" }} />
-                      </linearGradient>
-                    </defs>
-                    <rect width="190" height="130" fill="url(#sc3)" />
-                    {/* Full glowing moon */}
-                    <circle cx="95" cy="65" r="35" fill="rgba(255, 255, 255, 0.05)" />
-                    <circle cx="95" cy="65" r="28" fill="rgba(255, 255, 255, 0.1)" />
-                    <circle cx="95" cy="65" r="20" fill="#FFECCE" opacity="0.9" />
-                    {/* Barren tree branch silhouette */}
-                    <path d="M0,130 Q40,110 70,100 T120,95" fill="none" stroke="#0d1b2a" strokeWidth="3" />
-                    <path d="M70,100 Q90,80 110,85" fill="none" stroke="#0d1b2a" strokeWidth="2" />
-                    <path d="M90,92 Q105,75 125,80" fill="none" stroke="#0d1b2a" strokeWidth="1.5" />
-                  </svg>
-                </div>
-                <div className="s-info">
-                  <div className="s-genre">Trinh thám</div>
-                  <div className="s-name">Tác phẩm minh họa 03</div>
-                  <div className="s-author">Tác giả minh họa</div>
-                  <div className="s-stats">
-                    <span className="s-stat">👁 0</span>
-                    <span className="s-stat">⭐ 0.0</span>
-                    <span className="s-stat">📚 0 ch.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 4: Đời thường */}
-              <div className="s-card">
-                <div className="s-cover">
-                  <div className="s-badge hot">Hot</div>
-                  <svg
-                    viewBox="0 0 190 130"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ width: "100%", height: "100%" }}
-                  >
-                    <defs>
-                      <linearGradient id="sc4" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#2d5a27" }} />
-                        <stop offset="100%" style={{ stopColor: "#8fbc8f" }} />
-                      </linearGradient>
-                    </defs>
-                    <rect width="190" height="130" fill="url(#sc4)" />
-                    {/* Sketchy leaf design */}
-                    <path d="M50,90 Q95,65 140,40 M50,90 Q95,115 140,40" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                    <path d="M70,78 Q95,70 120,52" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                    <path d="M85,85 Q110,80 130,68" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                    <path d="M95,45 Q70,55 60,72" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-                    {/* Little coffee/tea cup */}
-                    <rect x="140" y="95" width="25" height="18" rx="3" fill="#FFECCE" stroke="#2d5a27" strokeWidth="1.5" />
-                    <path d="M165,99 Q172,104 165,109" fill="none" stroke="#2d5a27" strokeWidth="1.5" />
-                    <path d="M148,90 Q150,85 152,90" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
-                    <path d="M153,90 Q155,85 157,90" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
-                  </svg>
-                </div>
-                <div className="s-info">
-                  <div className="s-genre">Đời thường</div>
-                  <div className="s-name">Tác phẩm minh họa 04</div>
-                  <div className="s-author">Tác giả minh họa</div>
-                  <div className="s-stats">
-                    <span className="s-stat">👁 0</span>
-                    <span className="s-stat">⭐ 0.0</span>
-                    <span className="s-stat">📚 0 ch.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 5: Huyền huyễn */}
-              <div className="s-card">
-                <div className="s-cover">
-                  <div className="s-badge ai">AI Pick</div>
-                  <svg
-                    viewBox="0 0 190 130"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ width: "100%", height: "100%" }}
-                  >
-                    <defs>
-                      <linearGradient id="sc5" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#3a0606" }} />
-                        <stop offset="100%" style={{ stopColor: "#d94e34" }} />
-                      </linearGradient>
-                    </defs>
-                    <rect width="190" height="130" fill="url(#sc5)" />
-                    {/* Phoenix flight path / flame shape */}
-                    <path
-                      d="M95,15 Q120,40 110,60 Q135,45 130,80 Q100,55 105,95 Q75,65 85,85 Q50,60 80,35 Q65,25 95,15 Z"
-                      fill="rgba(245,158,11,0.5)"
-                      stroke="#FFECCE"
-                      strokeWidth="1"
-                    />
-                    <circle cx="95" cy="50" r="10" fill="rgba(217,78,52,0.6)" />
-                    <circle cx="95" cy="50" r="4" fill="#FFECCE" />
-                  </svg>
-                </div>
-                <div className="s-info">
-                  <div className="s-genre">Huyền huyễn</div>
-                  <div className="s-name">Tác phẩm minh họa 05</div>
-                  <div className="s-author">Tác giả minh họa</div>
-                  <div className="s-stats">
-                    <span className="s-stat">👁 0</span>
-                    <span className="s-stat">⭐ 0.0</span>
-                    <span className="s-stat">📚 0 ch.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 6: Tâm lý */}
-              <div className="s-card">
-                <div className="s-cover">
-                  <div className="s-badge done">Hoàn thành</div>
-                  <svg
-                    viewBox="0 0 190 130"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ width: "100%", height: "100%" }}
-                  >
-                    <defs>
-                      <linearGradient id="sc6" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style={{ stopColor: "#0f2027" }} />
-                        <stop offset="100%" style={{ stopColor: "#203a43" }} />
-                      </linearGradient>
-                    </defs>
-                    <rect width="190" height="130" fill="url(#sc6)" />
-                    {/* Ocean wave paths */}
-                    <path d="M0,90 Q47,70 95,90 Q142,110 190,90 L190,130 L0,130 Z" fill="rgba(32,58,67,0.8)" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
-                    <path d="M0,105 Q47,90 95,105 Q142,120 190,105 L190,130 L0,130 Z" fill="rgba(44,119,143,0.5)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                    {/* Lonely sailboat */}
-                    <path d="M120,80 L128,60 L132,80 Z" fill="#FFECCE" />
-                    <rect x="115" y="80" width="22" height="3" rx="1.5" fill="#C81C30" />
-                  </svg>
-                </div>
-                <div className="s-info">
-                  <div className="s-genre">Tâm lý</div>
-                  <div className="s-name">Tác phẩm minh họa 06</div>
-                  <div className="s-author">Tác giả minh họa</div>
-                  <div className="s-stats">
-                    <span className="s-stat">👁 0</span>
-                    <span className="s-stat">⭐ 0.0</span>
-                    <span className="s-stat">📚 0 ch.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </RevealOnScroll>
-
-          {/* Thể loại nổi bật */}
-          <RevealOnScroll>
-            <div className="genre-pills">
-              <div className="genre-pill">⚔️ Kiếm hiệp</div>
-              <div className="genre-pill">💕 Ngôn tình</div>
-              <div className="genre-pill">🔥 Huyền huyễn</div>
-              <div className="genre-pill">🚀 Khoa học viễn tưởng</div>
-              <div className="genre-pill">🌙 Kinh dị</div>
-              <div className="genre-pill">🏯 Cổ trang</div>
-              <div className="genre-pill">🌏 Hiện đại</div>
-              <div className="genre-pill">🧠 Tâm lý</div>
             </div>
           </RevealOnScroll>
         </div>
@@ -1237,16 +899,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════ TESTIMONIALS ═══════════ */}
+      {/* ═══════════ PRODUCTION COMMITMENTS ═══════════ */}
       <section className="section section-testi" style={{ paddingTop: "64px" }}>
         <div className="sec-wrap">
           <RevealOnScroll>
             <div className="sec-header">
-              <div className="sec-label">✦ Cộng đồng nói gì</div>
+              <div className="sec-label">✦ Cam kết production</div>
               <h2 className="sec-title">
-                Hàng nghìn người đã
+                Sẵn sàng cho
                 <br />
-                tin tưởng <em>YAG</em>
+                dữ liệu thật của <em>YAG</em>
               </h2>
             </div>
           </RevealOnScroll>
@@ -1254,17 +916,16 @@ export default function LandingPage() {
           <div className="testi-grid">
             <RevealOnScroll delayClass="reveal-delay-1">
               <div className="t-card">
-                <div className="t-stars">★★★★★</div>
+                <div className="t-stars">01</div>
                 <p className="t-text">
-                  Reader Mode của YAG là tốt nhất tôi từng dùng. Đọc cả đêm mà
-                  mắt không mỏi, nền sepia nhìn rất dễ chịu và font chữ đẹp hơn
-                  các app khác nhiều.
+                  Trang khám phá, thư viện và hồ sơ tác giả chỉ sử dụng nội dung
+                  được tạo qua hệ thống bởi người dùng đã xác thực.
                 </p>
                 <div className="t-author">
-                  <div className="t-avatar">DG</div>
+                  <div className="t-avatar">DB</div>
                   <div>
-                    <div className="t-name">Độc giả YAG</div>
-                    <div className="t-role">Độc giả · TP.HCM</div>
+                    <div className="t-name">Dữ liệu người dùng</div>
+                    <div className="t-role">Không seed truyện production</div>
                   </div>
                 </div>
               </div>
@@ -1272,17 +933,16 @@ export default function LandingPage() {
 
             <RevealOnScroll delayClass="reveal-delay-2">
               <div className="t-card">
-                <div className="t-stars">★★★★★</div>
+                <div className="t-stars">02</div>
                 <p className="t-text">
-                  AI gợi ý tình tiết thực sự hữu ích. Khi tôi bí ý tưởng, sidebar
-                  AI luôn có vài gợi ý thú vị để tiếp tục mạch truyện. Không còn
-                  sợ bí không viết được nữa.
+                  Ảnh bìa, avatar và nội dung xuất bản sẽ được tải lên qua dịch
+                  vụ media thật, thay vì dùng dữ liệu hay asset minh họa cố định.
                 </p>
                 <div className="t-author">
-                  <div className="t-avatar">TG</div>
+                  <div className="t-avatar">CD</div>
                   <div>
-                    <div className="t-name">Tác giả YAG</div>
-                    <div className="t-role">Tác giả</div>
+                    <div className="t-name">Cloudinary</div>
+                    <div className="t-role">Media do người dùng tải lên</div>
                   </div>
                 </div>
               </div>
@@ -1290,17 +950,16 @@ export default function LandingPage() {
 
             <RevealOnScroll delayClass="reveal-delay-3">
               <div className="t-card">
-                <div className="t-stars">★★★★☆</div>
+                <div className="t-stars">03</div>
                 <p className="t-text">
-                  Tìm kiếm AI cực hay! Tôi chỉ gõ &quot;truyện về tình yêu thời chiến
-                  buồn&quot; là nó đề xuất đúng thứ tôi muốn đọc. Không cần biết tên
-                  hay tác giả.
+                  Thanh toán, kiểm duyệt và tác vụ nền dùng provider production
+                  có xác thực, retry và cấu hình bắt buộc trước khi deploy.
                 </p>
                 <div className="t-author">
-                  <div className="t-avatar">DG</div>
+                  <div className="t-avatar">PR</div>
                   <div>
-                    <div className="t-name">Độc giả YAG</div>
-                    <div className="t-role">Độc giả</div>
+                    <div className="t-name">Hạ tầng thật</div>
+                    <div className="t-role">PayOS · Pub/Sub · SMTP</div>
                   </div>
                 </div>
               </div>
@@ -1588,8 +1247,8 @@ export default function LandingPage() {
               <em>của riêng bạn</em> hôm nay
             </h2>
             <p className="cta-text">
-              Tham gia cùng hàng chục nghìn độc giả và tác giả đang viết nên
-              những câu chuyện đáng nhớ.
+              Tạo tài khoản để đọc, viết và xuất bản những câu chuyện của riêng
+              bạn trên một hệ thống dùng dữ liệu thật.
             </p>
             <div className="cta-btns">
               <Link
@@ -1675,7 +1334,7 @@ export default function LandingPage() {
           </div>
           <div className="footer-bottom">
             <div className="footer-copy">
-              © 2026 YAG Writing Web · HCMUS Intro2SE · Nhóm 1 · Prototype học thuật
+              © 2026 YAG Writing Web
             </div>
             <div className="footer-socials">
               <Link className="social-btn" href="/profile/me" aria-label="Hồ sơ cá nhân">
@@ -1683,7 +1342,7 @@ export default function LandingPage() {
                   <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
                 </svg>
               </Link>
-              <Link className="social-btn" href="/notifications" aria-label="Thông báo mẫu">
+              <Link className="social-btn" href="/notifications" aria-label="Thông báo">
                 <svg viewBox="0 0 24 24">
                   <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
                 </svg>

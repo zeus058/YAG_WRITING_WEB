@@ -18,6 +18,10 @@ def is_payos_configured() -> bool:
     )
 
 
+def is_payos_mock_enabled() -> bool:
+    return settings.ENVIRONMENT != "production" and settings.PAYOS_MOCK_ENABLED
+
+
 def compute_payos_signature(data: Dict[str, Any], checksum_key: str) -> str:
     """
     Sort keys alphabetically, join into a query string, and compute HMAC-SHA256 signature.
@@ -48,13 +52,12 @@ async def create_payos_payment_link(
     Create a payment link using PayOS API.
     Returns: Tuple of (payment_url, signature)
     """
-    # If not configured, run in mock mode
     if not is_payos_configured():
-        if settings.ENVIRONMENT == "production":
-            raise RuntimeError("PayOS is not configured for production.")
-        logger.info("PayOS is not configured. Returning mock payment URL.")
-        mock_url = f"{settings.PAYOS_RETURN_URL or return_url}?status=success&orderCode={order_code}&amount={amount}&txnRef=MOCK_PAYOS_{order_code}"
-        return mock_url, "mock_signature"
+        if is_payos_mock_enabled():
+            logger.info("PayOS is not configured. Returning mock payment URL.")
+            mock_url = f"{settings.PAYOS_RETURN_URL or return_url}?status=success&orderCode={order_code}&amount={amount}&txnRef=MOCK_PAYOS_{order_code}"
+            return mock_url, "mock_signature"
+        raise RuntimeError("PayOS is not configured.")
 
     pay_data = {
         "orderCode": order_code,
@@ -92,10 +95,10 @@ async def create_payos_payment_link(
             logger.error(
                 "Failed to connect to PayOS API: %s.", exc
             )
-            if settings.ENVIRONMENT == "production":
-                raise
-            mock_url = f"{return_url}?status=success&orderCode={order_code}&amount={amount}&txnRef=MOCK_PAYOS_{order_code}"
-            return mock_url, "mock_signature"
+            if is_payos_mock_enabled():
+                mock_url = f"{return_url}?status=success&orderCode={order_code}&amount={amount}&txnRef=MOCK_PAYOS_{order_code}"
+                return mock_url, "mock_signature"
+            raise
 
 
 def verify_payos_webhook_signature(payload: Dict[str, Any]) -> bool:
@@ -103,10 +106,7 @@ def verify_payos_webhook_signature(payload: Dict[str, Any]) -> bool:
     Verify the signature sent in PayOS webhook request.
     """
     if not is_payos_configured():
-        if settings.ENVIRONMENT == "production":
-            return False
-        # Bypass signature check in mock mode
-        return True
+        return is_payos_mock_enabled()
 
     received_signature = payload.get("signature", "")
     data = payload.get("data", {})

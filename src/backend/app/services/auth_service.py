@@ -1,6 +1,8 @@
 import random
 import smtplib
 import logging
+import hashlib
+import hmac
 from email.mime.text import MIMEText
 from fastapi import HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
@@ -17,6 +19,7 @@ from app.schemas.auth import UserRegister, UserLogin, PasswordResetConfirm
 logger = logging.getLogger("auth_service")
 AUTH_LOCKOUT_MAX_ATTEMPTS = 5
 AUTH_LOCKOUT_SECONDS = 15 * 60
+OTP_TTL_SECONDS = 300
 
 
 def _auth_attempt_key(identifier: str) -> str:
@@ -91,40 +94,53 @@ def get_redis_client():
     return redis.Redis(**redis_kwargs)
 
 
+def _otp_cache_key(email: str) -> str:
+    return f"otp:{email.strip().lower()}"
+
+
+def _hash_otp(email: str, otp: str) -> str:
+    message = f"{email.strip().lower()}:{otp}".encode("utf-8")
+    return hmac.new(settings.SECRET_KEY.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+
+def _otp_matches(email: str, otp: str, cached_value: str | None) -> bool:
+    if not cached_value:
+        return False
+    expected_hash = _hash_otp(email, otp)
+    return hmac.compare_digest(cached_value, expected_hash) or hmac.compare_digest(
+        cached_value, otp
+    )
+
+
 def send_otp_email(email: str, otp: str):
-    """Sends OTP email via SMTP or fallback logs to terminal."""
+    """Sends OTP email via SMTP; development may log only that an OTP was issued."""
     subject = "[YAG] Yêu cầu khôi phục mật khẩu"
     body = f"Mã OTP khôi phục mật khẩu của bạn là: {otp}\nHiệu lực trong 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai."
 
-    # We always print to terminal first so local testing is extremely simple
-    print("\n========================================================")
-    print(f" GỬI EMAIL KHÔI PHỤC MẬT KHẨU CHO: {email}")
-    print(f" MÃ OTP CỦA BẠN LÀ: {otp}")
-    print("========================================================\n")
+    smtp_host = settings.SMTP_HOST
+    smtp_user = settings.SMTP_USER
+    smtp_password = settings.SMTP_PASSWORD
+    smtp_from = settings.SMTP_FROM or smtp_user
 
-    # Get SMTP configs from environment if present, else fallback graceful
-    import os
-
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-
-    if smtp_user and smtp_password:
+    if smtp_host and smtp_user and smtp_password and smtp_from:
         try:
             msg = MIMEText(body, "plain", "utf-8")
             msg["Subject"] = subject
-            msg["From"] = f"YAG Platform <{smtp_user}>"
+            msg["From"] = f"YAG Platform <{smtp_from}>"
             msg["To"] = email
 
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=5.0) as server:
+            with smtplib.SMTP_SSL(
+                smtp_host, settings.SMTP_PORT, timeout=5.0
+            ) as server:
                 server.login(smtp_user, smtp_password)
                 server.sendmail(smtp_user, email, msg.as_string())
             logger.info(f"OTP successfully sent via SMTP to {email}")
         except Exception as e:
             logger.error(
-                f"Failed to send email via SMTP: {e}. Fallback console logging."
+                f"Failed to send email via SMTP: {e}."
             )
     else:
-        logger.info("SMTP credentials not configured. Email logged to console.")
+        logger.info("SMTP credentials not configured; OTP email was not sent.")
 
 
 class AuthService:
@@ -232,12 +248,9 @@ class AuthService:
         # Save in Redis with 5 minutes (300 seconds) expiration
         try:
             r = get_redis_client()
-            r.setex(f"otp:{email}", 300, otp)
+            r.setex(_otp_cache_key(email), OTP_TTL_SECONDS, _hash_otp(email, otp))
         except Exception as e:
             logger.error(f"Redis is offline, cannot store OTP: {e}")
-            # If Redis connection fails, we log the OTP directly so local dev is never blocked
-            print(f"\n[REDIS OFFLINE FALLBACK] OTP for {email} is: {otp}\n")
-            # We raise a graceful error since OTP won't be confirmable if Redis is offline
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY, detail="REDIS_OFFLINE_ERROR"
             )
@@ -252,7 +265,7 @@ class AuthService:
         # 1. Fetch OTP from Redis
         try:
             r = get_redis_client()
-            cached_otp = r.get(f"otp:{confirm_in.email}")
+            cached_otp = r.get(_otp_cache_key(confirm_in.email))
         except Exception as e:
             logger.error(f"Redis is offline, cannot confirm OTP: {e}")
             raise HTTPException(
@@ -260,7 +273,7 @@ class AuthService:
             )
 
         # 2. Match OTP
-        if not cached_otp or cached_otp != confirm_in.otp:
+        if not _otp_matches(confirm_in.email, confirm_in.otp, cached_otp):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="INVALID_OTP"
             )
@@ -278,7 +291,7 @@ class AuthService:
             db.commit()
 
             # Delete OTP from Redis immediately to prevent reuse
-            r.delete(f"otp:{confirm_in.email}")
+            r.delete(_otp_cache_key(confirm_in.email))
             return {"message": "Mật khẩu đã được cập nhật"}
         except Exception as e:
             db.rollback()

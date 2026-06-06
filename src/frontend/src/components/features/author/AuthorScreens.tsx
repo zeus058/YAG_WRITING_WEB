@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { stories } from "@/data/yag";
 import { Icon, Cover, MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
 import { yagApi, appEnv, createDraftSocket, useAuth, getStoredJsonArray } from "@/lib";
@@ -103,22 +102,7 @@ export function AuthorWorksScreen() {
   const loadWorks = async () => {
     try {
       if (appEnv.useMocks) {
-        setWorks(
-          stories.slice(0, 3).map((s, idx) => ({
-            id: `mock-story-${idx + 1}`,
-            title: s.title,
-            description: "Tác phẩm minh họa chỉ dùng khi bật chế độ mock.",
-            category: s.genre,
-            chapter_count: s.chapters,
-            cover_url: null,
-            status: idx === 2 ? "completed" : "ongoing",
-            moderation_status: idx === 1 ? "pending" : "approved",
-            view_count: 0,
-            rating_avg: 0,
-            updated_at: new Date(Date.now() - idx * 24 * 3600 * 1000).toISOString(),
-            draft_count: 0,
-          }))
-        );
+        setWorks([]);
       } else {
         const res = await yagApi.author.getStories();
         setWorks(res.data || []);
@@ -645,14 +629,10 @@ export function AuthorStudioScreen() {
         throw new Error("MISSING_STORY_ID");
       }
       if (appEnv.useMocks) {
-        const mockChaps = [
-          { id: "c1", chapter_number: 13, title: "Tiếng còi cuối mùa", content: "Mưa đã ngừng rơi trên các thềm đá cũ. Những ánh đèn đường nhạt nhòa hắt bóng dài xuống lòng đường sũng nước. An đưa tay đón lấy những giọt nước cuối cùng từ mái ngói đỏ...", moderation_status: "draft" },
-          { id: "c2", chapter_number: 12, title: "Ga nhỏ hoàng hôn", content: "Tiếng còi tàu hú vang vọng kéo An ra khỏi miền ký ức xa xăm...", moderation_status: "approved" }
-        ];
-        setChapters(mockChaps);
-        setActiveChapter(mockChaps[0]);
-        setEditorTitle(mockChaps[0].title);
-        setEditorContent(mockChaps[0].content);
+        setChapters([]);
+        setActiveChapter(null);
+        setEditorTitle("");
+        setEditorContent("");
         setIsLoading(false);
         return;
       }
@@ -1606,13 +1586,9 @@ export function PublishScreen() {
     setIsLoadingChapters(true);
     setLoadError(null);
     if (appEnv.useMocks) {
-      const mockDrafts = [
-        { id: "mock-draft-1", chapter_number: 14, title: "Đêm lạnh ga xưa", content: "Đêm mùa đông ga nhỏ đìu hiu, gió bấc rít qua từng khe cửa gỗ cũ kỹ. An ngồi co ro bên chiếc lò sưởi cũ kỹ bằng sắt rỉ sét, đôi tay lạnh cóng đan chéo vào nhau tìm chút hơi ấm ít ỏi. Cả thềm ga im lìm, không một bóng người qua lại...", moderation_status: "draft" },
-        { id: "mock-draft-2", chapter_number: 15, title: "Bức thư thất lạc", content: "Lá thư đã ngả màu ố vàng nằm im lìm dưới đáy ngăn kéo suốt mười năm ròng rã. Linh vô tình tìm thấy nó khi đang dọn dẹp lại đống tài liệu cũ của bố. Nét mực xanh đã phai màu nhưng những dòng chữ gửi gắm hoài bão tuổi trẻ vẫn rõ mồn một...", moderation_status: "draft" }
-      ];
-      setAllChapters(mockDrafts);
-      setChapters(mockDrafts);
-      setSelectedChapId(mockDrafts[0].id);
+      setAllChapters([]);
+      setChapters([]);
+      setSelectedChapId("");
       setIsLoadingChapters(false);
       return;
     }

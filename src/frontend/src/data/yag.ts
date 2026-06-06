@@ -64,8 +64,8 @@ export const pages: PageInfo[] = [
   { id: "s03", title: "Khôi phục mật khẩu", href: "/auth/recovery", group: "Public", icon: "lock" },
   { id: "s04", title: "Trang chủ đọc", href: "/home", group: "Độc giả", icon: "home" },
   { id: "s05", title: "Khám phá truyện", href: "/discover", group: "Độc giả", icon: "search" },
-  { id: "s06", title: "Chi tiết truyện", href: "/stories/422a2437-9e19-46d3-bcf0-2798ffffe3e7", group: "Độc giả", icon: "book" },
-  { id: "s07", title: "Đọc truyện", href: "/stories/422a2437-9e19-46d3-bcf0-2798ffffe3e7/chapters/1", group: "Độc giả", icon: "book" },
+  { id: "s06", title: "Chi tiết truyện", href: "/discover", group: "Độc giả", icon: "book" },
+  { id: "s07", title: "Đọc truyện", href: "/library", group: "Độc giả", icon: "book" },
   { id: "s08", title: "Diễn đàn", href: "/forum", group: "Độc giả", icon: "edit" },
   { id: "s09", title: "Membership", href: "/membership", group: "Độc giả", icon: "card" },
   { id: "s10", title: "Kết quả thanh toán", href: "/payment/result", group: "Độc giả", icon: "check" },
@@ -74,8 +74,8 @@ export const pages: PageInfo[] = [
   { id: "s13", title: "Cài đặt tài khoản", href: "/settings", group: "Tài khoản", icon: "settings" },
   { id: "s14", title: "Thông báo", href: "/notifications", group: "Tài khoản", icon: "bell" },
   { id: "s15", title: "Tác phẩm của tôi", href: "/author/stories", group: "Author Studio", icon: "book" },
-  { id: "s16", title: "Không gian viết", href: "/author/stories/422a2437-9e19-46d3-bcf0-2798ffffe3e7/edit", group: "Author Studio", icon: "edit" },
-  { id: "s17", title: "Xuất bản chương", href: "/author/stories/422a2437-9e19-46d3-bcf0-2798ffffe3e7/publish", group: "Author Studio", icon: "arrow" },
+  { id: "s16", title: "Không gian viết", href: "/author/stories", group: "Author Studio", icon: "edit" },
+  { id: "s17", title: "Xuất bản chương", href: "/author/stories", group: "Author Studio", icon: "arrow" },
   { id: "s18", title: "Lịch đăng & Cam kết", href: "/author/schedule", group: "Author Studio", icon: "calendar" },
   { id: "s19", title: "Tổng quan Admin", href: "/admin", group: "Admin", icon: "chart" },
   { id: "s20", title: "Kiểm duyệt AI", href: "/admin/moderation", group: "Admin", icon: "shield" },
@@ -105,10 +105,8 @@ export const screenRouteMap: Record<string, ScreenId> = {
   "s05-discover-search": "s05",
   "/discover": "s05",
   "s06-story-detail": "s06",
-  "/stories/422a2437-9e19-46d3-bcf0-2798ffffe3e7": "s06",
   "/story-detail": "s06",
   "s07-reader-mode": "s07",
-  "/stories/422a2437-9e19-46d3-bcf0-2798ffffe3e7/chapters/1": "s07",
   "/reader-mode": "s07",
   "s08-forum": "s08",
   "/forum": "s08",
@@ -134,10 +132,8 @@ export const screenRouteMap: Record<string, ScreenId> = {
   "/author/stories": "s15",
   "/author-works": "s15",
   "s16-author-studio": "s16",
-  "/author/stories/422a2437-9e19-46d3-bcf0-2798ffffe3e7/edit": "s16",
   "/author-studio": "s16",
   "s17-publish-chapter": "s17",
-  "/author/stories/422a2437-9e19-46d3-bcf0-2798ffffe3e7/publish": "s17",
   "/publish-chapter": "s17",
   "s18-schedule-commitment": "s18",
   "/author/schedule": "s18",
@@ -155,24 +151,7 @@ export const screenRouteMap: Record<string, ScreenId> = {
 
 export const screenStaticSlugs = Object.keys(screenRouteMap);
 
-export const stories: Story[] = [
-  { title: "Tác phẩm minh họa 01", author: "Tác giả minh họa", genre: "Ngôn tình lịch sử", chapters: 0, badge: "hot" },
-  { title: "Tác phẩm minh họa 02", author: "Tác giả minh họa", genre: "Khoa học viễn tưởng", chapters: 0, badge: "ai" },
-  { title: "Tác phẩm minh họa 03", author: "Tác giả minh họa", genre: "Trinh thám", chapters: 0, badge: "done" },
-  { title: "Tác phẩm minh họa 04", author: "Tác giả minh họa", genre: "Đời thường", chapters: 0, badge: "hot" },
-  { title: "Tác phẩm minh họa 05", author: "Tác giả minh họa", genre: "Huyền huyễn", chapters: 0, badge: "ai" },
-  { title: "Tác phẩm minh họa 06", author: "Tác giả minh họa", genre: "Tâm lý", chapters: 0, badge: "done" },
-  { title: "Tác phẩm minh họa 07", author: "Tác giả minh họa", genre: "Kỳ ảo", chapters: 0, badge: "hot" },
-  { title: "Tác phẩm minh họa 08", author: "Tác giả minh họa", genre: "Hiện đại", chapters: 0, badge: "ai" },
-  { title: "Tác phẩm minh họa 09", author: "Tác giả minh họa", genre: "Thanh xuân", chapters: 0, badge: "hot" },
-  { title: "Tác phẩm minh họa 10", author: "Tác giả minh họa", genre: "Phiêu lưu", chapters: 0, badge: "ai" },
-  { title: "Tác phẩm minh họa 11", author: "Tác giả minh họa", genre: "Cổ trang", chapters: 0, badge: "done" },
-  { title: "Tác phẩm minh họa 12", author: "Tác giả minh họa", genre: "Chữa lành", chapters: 0, badge: "hot" },
-  { title: "Tác phẩm minh họa 13", author: "Tác giả minh họa", genre: "Gia đình", chapters: 0, badge: "ai" },
-  { title: "Tác phẩm minh họa 14", author: "Tác giả minh họa", genre: "Kỳ ảo", chapters: 0, badge: "hot" },
-  { title: "Tác phẩm minh họa 15", author: "Tác giả minh họa", genre: "Lịch sử", chapters: 0, badge: "done" },
-  { title: "Tác phẩm minh họa 16", author: "Tác giả minh họa", genre: "Cyberpunk", chapters: 0, badge: "ai" },
-];
+export const stories: Story[] = [];
 
 export function getScreenId(slug: string) {
   return screenRouteMap[slug] ?? null;

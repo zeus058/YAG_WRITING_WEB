@@ -460,6 +460,8 @@ In the GCP Console (or using CLI), assign the following roles to the Service Acc
 2. **Cloud Run Admin**: To deploy services.
 3. **Service Account User**: To permit Cloud Run to run using the runtime service account.
 4. **Secret Manager Secret Accessor**: To allow the service account to access secrets.
+5. **Pub/Sub Admin**: To create/update the moderation topic and push subscription.
+6. **Cloud Scheduler Admin**: To create/update the scheduled publishing scan trigger.
 
 ---
 
@@ -485,8 +487,7 @@ Google Cloud Run retrieves production configurations from **Secret Manager** on 
 | `YAG_DATABASE_URL` | Production Supabase/PostgreSQL connection string |
 | `YAG_SECRET_KEY` | Strong random string (minimum 32 characters) for JWT encryption |
 | `YAG_CORS_ORIGINS` | Comma-separated allowed production frontend origins (e.g. `https://yag-frontend.vercel.app`) |
-| `YAG_REDIS_URL` | Production Redis URL (e.g., `redis://:password@host:port`) |
-| `YAG_RABBITMQ_URL` | Production RabbitMQ URL (e.g., `amqps://user:pass@host:port/vhost`) |
+| `YAG_REDIS_URL` | Production Redis URL, preferably TLS (e.g., `rediss://default:token@host:6379`) |
 | `YAG_GEMINI_API_KEY` | Google Gemini API Key |
 | `YAG_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `YAG_CLOUDINARY_API_KEY` | Cloudinary API Key |
@@ -495,6 +496,12 @@ Google Cloud Run retrieves production configurations from **Secret Manager** on 
 | `YAG_PAYOS_API_KEY` | PayOS merchant API key |
 | `YAG_PAYOS_CHECKSUM_KEY` | PayOS merchant checksum key |
 | `YAG_PAYOS_RETURN_URL` | PayOS return redirect URL (must be HTTPS in production) |
+| `YAG_SMTP_HOST` | SMTP host used for password reset and schedule notifications |
+| `YAG_SMTP_USER` | SMTP username |
+| `YAG_SMTP_PASSWORD` | SMTP password |
+| `YAG_SMTP_FROM` | Verified sender email |
+
+The Cloud Run workflow sets `QUEUE_PROVIDER=pubsub`, creates the `yag-moderation` Pub/Sub topic and push subscription, and creates the `yag-schedule-scan` Cloud Scheduler HTTP job. Push calls are authenticated with the deployment service account via Google OIDC; no demo queue worker or sample data is deployed.
 
 *Note: If these Secret Manager secrets are not configured or access is not granted, the Cloud Run deployment command will fail at the container setup phase.*
 

@@ -22,6 +22,11 @@ def production_config(**overrides):
         "PAYOS_API_KEY": "payos-api-key-prod",
         "PAYOS_CHECKSUM_KEY": "payos-checksum-key-prod",
         "PAYOS_RETURN_URL": "https://yag.example.com/payment/result",
+        "PAYOS_MOCK_ENABLED": False,
+        "SMTP_HOST": "smtp.prod.example.com",
+        "SMTP_USER": "noreply@yag.example.com",
+        "SMTP_PASSWORD": "smtp-password-prod",
+        "SMTP_FROM": "noreply@yag.example.com",
         "ALLOW_WEBSOCKET_QUERY_TOKEN": False,
         "AUTO_CREATE_TABLES": False,
         "APPLY_MIGRATIONS_ON_STARTUP": False,
@@ -81,14 +86,48 @@ def test_production_config_accepts_payos_settings():
     assert settings.PAYOS_RETURN_URL.startswith("https://")
 
 
+def test_production_config_accepts_pubsub_queue_settings():
+    settings = Settings(
+        **production_config(
+            QUEUE_PROVIDER="pubsub",
+            RABBITMQ_URL=None,
+            GCP_PROJECT_ID="yag-prod-project",
+            PUBSUB_MODERATION_TOPIC="yag-moderation",
+            INTERNAL_TASK_TOKEN="prod_internal_task_token_at_least_32_chars",
+        )
+    )
+
+    assert settings.QUEUE_PROVIDER == "pubsub"
+    assert settings.GCP_PROJECT_ID == "yag-prod-project"
+
+
+def test_production_config_accepts_pubsub_oidc_settings():
+    settings = Settings(
+        **production_config(
+            QUEUE_PROVIDER="pubsub",
+            RABBITMQ_URL=None,
+            GCP_PROJECT_ID="yag-prod-project",
+            PUBSUB_MODERATION_TOPIC="yag-moderation",
+            INTERNAL_SERVICE_ACCOUNT_EMAIL="yag-backend@yag-prod-project.iam.gserviceaccount.com",
+        )
+    )
+
+    assert settings.QUEUE_PROVIDER == "pubsub"
+    assert settings.INTERNAL_SERVICE_ACCOUNT_EMAIL.endswith(".gserviceaccount.com")
+
+
 @pytest.mark.parametrize(
     ("overrides", "message"),
     [
         ({"ENVIRONMENT": "qa"}, "Invalid ENVIRONMENT"),
         ({"SERVICE_ROLE": "cron"}, "Invalid SERVICE_ROLE"),
+        ({"QUEUE_PROVIDER": "local"}, "Invalid QUEUE_PROVIDER"),
         ({"SECRET_KEY": "dev_secret_key"}, "SECRET_KEY"),
         ({"GEMINI_API_KEY": ""}, "GEMINI_API_KEY"),
+        ({"GEMINI_API_KEY": "your_gemini_api_key_here"}, "GEMINI_API_KEY"),
         ({"CLOUDINARY_API_SECRET": ""}, "CLOUDINARY_API_SECRET"),
+        ({"PAYOS_MOCK_ENABLED": True}, "PAYOS_MOCK_ENABLED"),
+        ({"SMTP_HOST": ""}, "SMTP_HOST"),
         ({"ALLOW_WEBSOCKET_QUERY_TOKEN": True}, "ALLOW_WEBSOCKET_QUERY_TOKEN"),
         ({"AUTO_CREATE_TABLES": True}, "Database schema mutation"),
         ({"APPLY_MIGRATIONS_ON_STARTUP": True}, "Database schema mutation"),
@@ -142,6 +181,47 @@ def test_production_config_accepts_payos_settings():
                 "RABBITMQ_PASSWORD": "guest",
             },
             "RabbitMQ credentials",
+        ),
+        (
+            {
+                "QUEUE_PROVIDER": "pubsub",
+                "RABBITMQ_URL": None,
+                "GCP_PROJECT_ID": "",
+                "PUBSUB_MODERATION_TOPIC": "yag-moderation",
+                "INTERNAL_TASK_TOKEN": "prod_internal_task_token_at_least_32_chars",
+            },
+            "PUBSUB_PROJECT_ID or GCP_PROJECT_ID",
+        ),
+        (
+            {
+                "QUEUE_PROVIDER": "pubsub",
+                "RABBITMQ_URL": None,
+                "GCP_PROJECT_ID": "yag-prod-project",
+                "PUBSUB_MODERATION_TOPIC": "",
+                "INTERNAL_TASK_TOKEN": "prod_internal_task_token_at_least_32_chars",
+            },
+            "PUBSUB_MODERATION_TOPIC",
+        ),
+        (
+            {
+                "QUEUE_PROVIDER": "pubsub",
+                "RABBITMQ_URL": None,
+                "GCP_PROJECT_ID": "yag-prod-project",
+                "PUBSUB_MODERATION_TOPIC": "yag-moderation",
+                "INTERNAL_TASK_TOKEN": "short",
+            },
+            "INTERNAL_TASK_TOKEN or INTERNAL_SERVICE_ACCOUNT_EMAIL",
+        ),
+        (
+            {
+                "QUEUE_PROVIDER": "pubsub",
+                "RABBITMQ_URL": None,
+                "GCP_PROJECT_ID": "yag-prod-project",
+                "PUBSUB_MODERATION_TOPIC": "yag-moderation",
+                "INTERNAL_SERVICE_ACCOUNT_EMAIL": "yag-backend@yag-prod-project.iam.gserviceaccount.com",
+                "INTERNAL_AUTH_AUDIENCE": "http://localhost:8000/internal",
+            },
+            "INTERNAL_AUTH_AUDIENCE",
         ),
         ({"CORS_ORIGINS": "*"}, "CORS_ORIGINS"),
         ({"CORS_ORIGINS": "http://yag.example.com"}, "CORS_ORIGINS must be HTTPS"),

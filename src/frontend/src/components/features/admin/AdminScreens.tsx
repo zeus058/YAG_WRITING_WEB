@@ -90,64 +90,10 @@ const DEFAULT_STATS: AdminStats = {
   audit_logs_total: 0,
 };
 
-const MOCK_STATS: AdminStats = {
-  users_total: 1284,
-  users_new_7d: 96,
-  users_locked: 4,
-  stories_total: 328,
-  chapters_total: 4826,
-  premium_revenue_total: 84,
-  premium_revenue_30d: 18,
-  moderation_pending: 24,
-  moderation_flagged: 8,
-  moderation_rejected: 6,
-  moderation_approved: 1180,
-  unresolved_admin_alerts: 3,
-  audit_logs_total: 214,
-};
-
-const MOCK_REVENUE_SERIES: RevenuePoint[] = [
-  { label: "06/05", revenue: 2.4, revenue_vnd: 2400000, memberships: 18 },
-  { label: "13/05", revenue: 3.1, revenue_vnd: 3100000, memberships: 23 },
-  { label: "20/05", revenue: 5.8, revenue_vnd: 5800000, memberships: 41 },
-  { label: "27/05", revenue: 4.6, revenue_vnd: 4600000, memberships: 32 },
-  { label: "03/06", revenue: 6.2, revenue_vnd: 6200000, memberships: 48 },
-];
-
-const MOCK_ALERTS: ScheduleAlert[] = [
-  { id: "a1", severity: "warning", message: "Một tác phẩm minh họa trễ lịch đăng 1 chương.", is_resolved: false },
-  { id: "a2", severity: "critical", message: "Một tác giả minh họa trễ cam kết 3 ngày liên tiếp.", is_resolved: false },
-];
-
-const MOCK_AUDIT_LOGS: AuditLog[] = [
-  { id: "l1", action: "override_moderation", target_type: "chapter", target_id: "c1", reason: "Duyệt sau khi kiểm tra ngữ cảnh.", created_at: new Date().toISOString() },
-  { id: "l2", action: "lock_user", target_type: "user", target_id: "u18", reason: "Spam bình luận quảng cáo.", created_at: new Date(Date.now() - 86400000).toISOString() },
-];
-
-const MOCK_QUEUE: ModerationItem[] = [
-  {
-    chapter_id: "mock-c1",
-    title: "Bóng Đêm Sau Cửa Sổ",
-    chapter_number: 13,
-    story: { title: "Tác phẩm minh họa 01" },
-    author: { username: "Tác giả minh họa" },
-    moderation_status: "flagged",
-    reason: "Bạo lực mô tả chi tiết",
-    content:
-      "Đêm đó, mưa rơi dữ dội trên mái tôn của ga Bắc. An đứng nép dưới mái che, đôi vai run lên vì lạnh và vì sự sợ hãi tột cùng. Phía sau cô, bước chân nặng nề kia đang ngày một gần hơn...",
-  },
-  {
-    chapter_id: "mock-c2",
-    title: "Hành lang cuối khu nội trú",
-    chapter_number: 7,
-    story: { title: "Hồ Sơ Ánh Trăng" },
-    author: { username: "Lam Tử" },
-    moderation_status: "pending",
-    reason: "Đang chờ AI kiểm tra lần cuối",
-    content:
-      "Chiếc đèn hành lang nhấp nháy, để lộ từng mảng tường ố vàng. Minh mở điện thoại ghi âm, cố giữ giọng bình tĩnh khi đọc lại manh mối vừa tìm thấy.",
-  },
-];
+const MOCK_REVENUE_SERIES: RevenuePoint[] = [];
+const MOCK_ALERTS: ScheduleAlert[] = [];
+const MOCK_AUDIT_LOGS: AuditLog[] = [];
+const MOCK_QUEUE: ModerationItem[] = [];
 
 const reportTabs: { id: ReportType; label: string; metricLabel: string }[] = [
   { id: "revenue", label: "Doanh thu", metricLabel: "Doanh thu" },
@@ -276,7 +222,7 @@ function RevenueTrend({ rows }: { rows: RevenuePoint[] }) {
 }
 
 export function AdminDashboardScreen() {
-  const [stats, setStats] = useState<AdminStats>(appEnv.useMocks ? MOCK_STATS : DEFAULT_STATS);
+  const [stats, setStats] = useState<AdminStats>(DEFAULT_STATS);
   const [alerts, setAlerts] = useState<ScheduleAlert[]>(appEnv.useMocks ? MOCK_ALERTS : []);
   const [revenueSeries, setRevenueSeries] = useState<RevenuePoint[]>(appEnv.useMocks ? MOCK_REVENUE_SERIES : []);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(appEnv.useMocks ? MOCK_AUDIT_LOGS : []);
@@ -289,7 +235,7 @@ export function AdminDashboardScreen() {
     setError("");
     try {
       if (appEnv.useMocks) {
-        setStats(MOCK_STATS);
+        setStats(DEFAULT_STATS);
         setAlerts(MOCK_ALERTS);
         setRevenueSeries(MOCK_REVENUE_SERIES);
         setAuditLogs(MOCK_AUDIT_LOGS);

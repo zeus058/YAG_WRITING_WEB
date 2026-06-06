@@ -507,7 +507,7 @@ export function DiscoverScreen() {
 export function StoryDetailScreen() {
   const params = useParams();
   const rawId = params?.id;
-  const storyId = typeof rawId === "string" ? rawId : "422a2437-9e19-46d3-bcf0-2798ffffe3e7";
+  const storyId = typeof rawId === "string" ? rawId : "";
 
   const [story, setStory] = useState<any>(null);
   const [chapters, setChapters] = useState<any[]>([]);
@@ -521,25 +521,9 @@ export function StoryDetailScreen() {
 
   useEffect(() => {
     if (appEnv.useMocks) {
-      setStory({
-        id: "422a2437-9e19-46d3-bcf0-2798ffffe3e7",
-        title: "Tác phẩm minh họa",
-        description: "Bản ghi minh họa dùng cho chế độ mock của giao diện đọc truyện.",
-        category: "Minh họa",
-        status: "ongoing",
-        view_count: 0,
-        rating_avg: 0,
-        rating_count: 0,
-        author: { username: "Tác giả minh họa", profile: { display_name: "Tác giả minh họa" } }
-      });
-      setChapters([
-        { id: "c1", chapter_number: 1, title: "Chương minh họa 1", is_premium: false },
-        { id: "c2", chapter_number: 2, title: "Chương minh họa 2", is_premium: false },
-        { id: "c3", chapter_number: 3, title: "Chương minh họa 3", is_premium: false },
-      ]);
-      setReviews([
-        { id: "r1", rating: 5, content: "Đánh giá minh họa cho chế độ mock.", user: { username: "Độc giả minh họa" } }
-      ]);
+      setStory(null);
+      setChapters([]);
+      setReviews([]);
       setIsLoading(false);
       return;
     }
@@ -803,21 +787,10 @@ export function ReaderScreen() {
     if (!storyId) return;
 
     if (appEnv.useMocks) {
-      setStory({ title: "Tác phẩm minh họa" });
-      setChapter({
-        title: "Chương minh họa",
-        chapter_number: 12,
-        content: "Nội dung minh họa chỉ xuất hiện khi bật chế độ mock.",
-        is_premium: false,
-      });
-      setChapters([
-        { chapter_number: 11, title: "Chương minh họa 11" },
-        { chapter_number: 12, title: "Chương minh họa 12" },
-        { chapter_number: 13, title: "Chương minh họa 13" },
-      ]);
-      setComments([
-        { id: "cm1", user: { username: "Độc giả minh họa" }, content: "Bình luận minh họa cho chế độ mock." }
-      ]);
+      setStory(null);
+      setChapter(null);
+      setChapters([]);
+      setComments([]);
       setIsLoading(false);
       return;
     }
@@ -2221,16 +2194,7 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
       if (stored) {
         setAnnouncements(getStoredJsonArray("yag.author.announcements", appEnv.useMocks));
       } else {
-        if (appEnv.useMocks) {
-          const mockAnn = [
-            { id: "an-1", title: "Thông báo minh họa", content: "Đây là thông báo mẫu chỉ dùng khi bật chế độ mock.", date: "02/06/2026" },
-            { id: "an-2", title: "Cập nhật lịch đăng", content: "Lịch đăng chương mẫu đã được cập nhật cho giao diện thử nghiệm.", date: "03/06/2026" }
-          ];
-          setAnnouncements(mockAnn);
-          localStorage.setItem("yag.author.announcements", JSON.stringify(mockAnn));
-        } else {
-          setAnnouncements([]);
-        }
+        setAnnouncements([]);
       }
     }
   }, []);

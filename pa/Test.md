@@ -258,11 +258,11 @@ Dưới đây là danh sách chi tiết 33 test cases ứng với từng mã tí
 | *Test case* | TC-001 |
 | :--- | :--- |
 | Related feature | U001 — Bảo mật thông tin mật khẩu |
-| Context | Kiểm thử đơn vị (Unit Test) cho hàm băm mật khẩu người dùng nhằm đảm bảo tính bảo mật trước khi lưu vào CSDL |
-| Input Data | Mật khẩu thô dạng chuỗi văn bản cần mã hóa |
-| Expected Output | Kết quả băm của mật khẩu phải có độ dài chuẩn xác và không thể dịch ngược trở lại thành văn bản thô ban đầu |
-| Test steps | 1. Truyền chuỗi mật khẩu thô vào hàm băm mật khẩu <br> 2. Kiểm tra chuỗi trả về có bắt đầu bằng tiền tố ký hiệu đặc trưng của thuật toán Bcrypt hay không <br> 3. Thử đối chiếu mật khẩu thô với chuỗi băm để xác nhận khớp kết quả |
-| Actual Output | Hàm băm Bcrypt chạy thành công, trả về chuỗi băm 60 ký tự bắt đầu bằng `$2b$12$`. Kiểm tra đối sánh khớp mật khẩu thô chính xác. |
+| Context | Kiểm thử đơn vị (Unit Test) cho hàm băm mật khẩu người dùng sử dụng framework `pytest` |
+| Input Data | Mật khẩu thô dạng chuỗi: `"my_secure_password_123"` |
+| Expected Output | Hàm băm Bcrypt trả về chuỗi băm 60 ký tự, tiền tố `$2b$12$`, và hàm verify trả về `True` khi đối sánh |
+| Test steps | 1. Sử dụng thư viện `pytest` gọi hàm `hash_password("my_secure_password_123")`. <br> 2. Assert chuỗi băm trả về có độ dài 60 ký tự và bắt đầu bằng tiền tố ký hiệu thuật toán `$2b$12$`. <br> 3. Gọi hàm `verify_password("my_secure_password_123", hashed_password)` và assert kết quả trả về là `True`. |
+| Actual Output | Kiểm thử đơn vị qua `pytest` thành công, các assert kiểm tra độ dài chuỗi băm (60 ký tự), tiền tố và hàm đối sánh đều pass. |
 | Result | Passed |
 
 #### 3.2.2. TC-002: Register -> JWT -> Call protected API

@@ -5,7 +5,6 @@
 *Đồ án môn học Nhập môn Công nghệ phần mềm - HCMUS - Chính quy/2025-2026.*
 
 **Mục lục**
-- [Objectives](#objectives)
 - [1. Member Contribution Assessment](#1-member-contribution-assessment)
 - [2. Test plan](#2-test-plan)
 - [3. Test cases](#3-test-cases)
@@ -14,20 +13,6 @@
 - [4. AI Usage Declaration](#4-ai-usage-declaration)
 - [5. Presentation](#5-presentation)
 - [6. Reflective Report](#6-reflective-report)
-
-## **Objectives** {#objectives}
-
-This document focus on the following topics:
-
-* Completing the Software Testing document with the following sections:  
-  * Test Plan  
-  * Test Cases  
-* Understanding the Software Testing document.  
-* This document will be used as input for AI tools to verify the quality of subsequent project artifacts.
-
-All project artifacts must remain consistent and synchronized.   
-For example, if the project proposal is modified during this phase, a new version of the proposal must be documented.   
-By the conclusion of the project, all versions of every artifact must be submitted to demonstrate the evolution of your work.
 
 ## 1. Member Contribution Assessment
 

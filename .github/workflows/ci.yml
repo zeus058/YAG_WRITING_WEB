@@ -381,9 +381,8 @@ jobs:
             YAG_SMTP_FROM
           )
           for secret_name in "${REQUIRED_SECRETS[@]}"; do
-            gcloud secrets versions access latest \
-              --project "$GCP_PROJECT_ID" \
-              --secret "$secret_name" >/dev/null
+            gcloud secrets describe "$secret_name" \
+              --project "$GCP_PROJECT_ID" >/dev/null
           done
 
           echo "Checking existing Pub/Sub topic..."

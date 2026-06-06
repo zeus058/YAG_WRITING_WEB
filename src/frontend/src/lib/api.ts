@@ -170,7 +170,7 @@ export const yagApi = {
 
   author: {
     getStories: () => apiFetch("/api/v1/stories/my-stories"),
-    createStory: (body: FormData) => 
+    createStory: (body: FormData) =>
       apiFetch("/api/v1/stories/", {
         method: "POST",
         body,

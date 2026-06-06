@@ -395,7 +395,7 @@ export function DiscoverScreen() {
       <section className="layout-filter" style={{ marginTop: 24 }}>
         <aside className="panel panel-pad stack">
           <h2 className="section-title">Bộ lọc</h2>
-          
+
           <div className="field">
             <label>Thể loại</label>
             <select className="select" value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)}>
@@ -490,8 +490,8 @@ export function DiscoverScreen() {
               `}</style>
               <div className="home-story-grid">
                 {Array.from({ length: 6 }).map((_, index) => (
-                  <div 
-                    className="home-story-card skeleton-pulse" 
+                  <div
+                    className="home-story-card skeleton-pulse"
                     key={index}
                     style={{
                       pointerEvents: "none",
@@ -816,7 +816,7 @@ export function ReaderScreen() {
       try {
         const storyRes = await yagApi.reader.getStoryDetail(storyId);
         setStory(storyRes.data);
-        
+
         // Load all public chapters
         const chapsRes = await yagApi.reader.getChapters(storyId);
         const publicChapters = chapsRes.data || [];
@@ -1439,10 +1439,10 @@ export function ForumScreen() {
                     </button>
                   </div>
                 )}
-            </article>
-          ))
-        )}
-      </main>
+              </article>
+            ))
+          )}
+        </main>
 
         <aside className="forum-right-sidebar stack" style={{ gap: 16 }}>
           <div className="panel panel-pad stack" style={{ gap: 12 }}>
@@ -1818,7 +1818,7 @@ export function PaymentScreen() {
             if (parsed.is_active && parsed.premium_until) {
               cachedExpiry = new Date(parsed.premium_until);
             }
-          } catch {}
+          } catch { }
         }
 
         const rawAmt = data.amount || (planId === "YEARLY" ? 199000 : 39000);
@@ -1846,11 +1846,11 @@ export function PaymentScreen() {
           premium_until: expiry
         }));
 
-        const uniqueId = data.transaction_id && 
-                         data.transaction_id !== "00000000-0000-0000-0000-000000000000" && 
-                         data.transaction_id !== "MOCK_TRANSACTION_ID" 
-                         ? data.transaction_id 
-                         : "MOCK_TXN_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+        const uniqueId = data.transaction_id &&
+          data.transaction_id !== "00000000-0000-0000-0000-000000000000" &&
+          data.transaction_id !== "MOCK_TRANSACTION_ID"
+          ? data.transaction_id
+          : "MOCK_TXN_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
 
         const mockTx = {
           id: uniqueId,
@@ -1900,7 +1900,7 @@ export function PaymentScreen() {
                 baseDate = currentExpiry;
               }
             }
-          } catch {}
+          } catch { }
         }
 
         const expiryDate = new Date(baseDate);
@@ -2019,14 +2019,14 @@ export function PaymentScreen() {
           <div className="list">
             <div className="list-item"><span>Phương thức</span><strong>PayOS Cổng thanh toán</strong></div>
             <div className="list-item"><span>Gói đăng ký</span><strong>{details?.plan_name || (planId === "YEARLY" ? "Gói Năm Premium" : "Gói Tháng Premium")}</strong></div>
-            
+
             {txnRef ? (
               <div className="list-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
                 <span style={{ fontSize: "13px", color: "var(--muted)" }}>Mã tham chiếu</span>
                 <code style={{ fontSize: "12px", background: "rgba(0, 0, 0, 0.04)", padding: "4px 8px", borderRadius: "4px", overflowWrap: "anywhere" }}>{txnRef}</code>
               </div>
             ) : null}
-            
+
             {details?.vnp_transaction_no ? (
               <div className="list-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 4 }}>
                 <span style={{ fontSize: "13px", color: "var(--muted)" }}>Mã GD PayOS</span>
@@ -2035,7 +2035,7 @@ export function PaymentScreen() {
             ) : null}
 
             {details?.amount ? <div className="list-item"><span>Số tiền</span><strong>{details.amount.toLocaleString()}đ</strong></div> : null}
-            
+
             <div className="list-item"><span>Trạng thái</span>
               <span className={`badge ${isPending ? "badge-blue" : isSuccess ? "badge-green" : "badge-red"}`}>
                 {isPending ? "Đang xác nhận" : isSuccess ? "Đã thanh toán" : "Thất bại"}
@@ -2209,18 +2209,18 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
   const handlePostAnnouncement = (e: React.FormEvent) => {
     e.preventDefault();
     if (!announcementText.trim()) return;
-    
+
     const lines = announcementText.split("\n");
     const title = lines[0].substring(0, 80) || "Thông báo từ tác giả";
     const content = lines.slice(1).join("\n") || "Chi tiết thông báo...";
-    
+
     const newAnn = {
       id: `ann-${Date.now()}`,
       title,
       content,
       date: new Date().toLocaleDateString("vi-VN")
     };
-    
+
     const updated = [newAnn, ...announcements];
     setAnnouncements(updated);
     localStorage.setItem("yag.author.announcements", JSON.stringify(updated));
@@ -2794,7 +2794,7 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
                     aria-label="Cỡ chữ"
                   />
                 </div>
-                
+
                 <div className="grid grid-2">
                   <div className="settings-toggle-row">
                     <label htmlFor="toggle-dark-mode">Chế độ giao diện tối</label>

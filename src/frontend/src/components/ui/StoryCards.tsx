@@ -30,7 +30,7 @@ export function HomeStoryCard({ story, index }: { story: any; index: number }) {
   const reads = story.view_count !== undefined ? String(story.view_count >= 1000 ? `${(story.view_count / 1000).toFixed(0)}K` : story.view_count) : "0";
   const rating = formatRating(story.rating_avg, "0.0");
   const href = story.id ? `/stories/${story.id}` : "/story-detail";
-  
+
   const authorName = getStoryAuthorName(story);
   const genre = story.category || story.genre || "Truyện";
   const chapterCount = story.chapter_count ?? story.chapters ?? 0;
@@ -101,7 +101,7 @@ export function ReadingCard({ story, index }: { story: any; index: number }) {
   const hasProgress = current > 0;
   const percent = hasProgress ? Math.round((current / chapterCount) * 100) : 0;
   const href = story.id ? (hasProgress ? `/stories/${story.id}/chapters/${current}` : `/stories/${story.id}`) : "/discover";
-  
+
   const authorName = getStoryAuthorName(story);
   const genre = story.category || story.genre || "Truyện";
 

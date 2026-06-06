@@ -257,14 +257,14 @@ export function AuthorWorksScreen() {
     });
   // Perform calculations for metrics
   const totalViews = works.reduce((acc, story) => acc + (story.view_count || 0), 0);
-  const formattedViews = totalViews >= 1000000 
-    ? `${(totalViews / 1000000).toFixed(1)}M` 
-    : totalViews >= 1000 
-    ? `${(totalViews / 1000).toFixed(1)}K` 
-    : String(totalViews);
+  const formattedViews = totalViews >= 1000000
+    ? `${(totalViews / 1000000).toFixed(1)}M`
+    : totalViews >= 1000
+      ? `${(totalViews / 1000).toFixed(1)}K`
+      : String(totalViews);
 
   const ratedStories = works.filter((s) => (s.rating_count || 0) > 0);
-  const avgRating = ratedStories.length > 0 
+  const avgRating = ratedStories.length > 0
     ? (ratedStories.reduce((acc, s) => acc + (s.rating_avg || 0), 0) / ratedStories.length).toFixed(1)
     : "0.0";
 
@@ -859,7 +859,7 @@ export function AuthorStudioScreen() {
     const val = e.target.value;
     setEditorContent(val);
     triggerAutosave(editorTitle, val);
-    
+
     // Simple history save on space or return keys
     if (val.endsWith(" ") || val.endsWith("\n")) {
       setHistoryStack((prev) => {
@@ -1907,11 +1907,11 @@ export function ScheduleScreen() {
   const [calendarDays, setCalendarDays] = useState<any[]>([]);
   const [currentMonthStr, setCurrentMonthStr] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Timer States
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
-  
+
   // Manual Session Log states
   const [manualDuration, setManualDuration] = useState("");
   const [manualWords, setManualWords] = useState("");
@@ -1942,10 +1942,10 @@ export function ScheduleScreen() {
           const now = new Date();
           const month = now.getMonth(); // 0-11
           const year = now.getFullYear();
-          
+
           // Number of days in current month
           const numDays = new Date(year, month + 1, 0).getDate();
-          
+
           // Load chapters for all stories to find scheduled ones
           const allChapters: any[] = [];
           for (const s of storiesList) {
@@ -2147,21 +2147,20 @@ export function ScheduleScreen() {
                             day.event.status === "approved"
                               ? "var(--green-light)"
                               : day.event.status === "pending"
-                              ? "var(--blue-light)"
-                              : "var(--amber-light)",
+                                ? "var(--blue-light)"
+                                : "var(--amber-light)",
                           color:
                             day.event.status === "approved"
                               ? "var(--green)"
                               : day.event.status === "pending"
-                              ? "var(--blue)"
-                              : "var(--amber)",
-                          borderLeft: `2.5px solid ${
-                            day.event.status === "approved"
+                                ? "var(--blue)"
+                                : "var(--amber)",
+                          borderLeft: `2.5px solid ${day.event.status === "approved"
                               ? "var(--green)"
                               : day.event.status === "pending"
-                              ? "var(--blue)"
-                              : "var(--amber)"
-                          }`,
+                                ? "var(--blue)"
+                                : "var(--amber)"
+                            }`,
                           lineHeight: 1.2
                         }}
                       >

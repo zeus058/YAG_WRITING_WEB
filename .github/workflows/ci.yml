@@ -344,6 +344,15 @@ jobs:
           echo "pubsub_subscription=$PUBSUB_SUBSCRIPTION" >> "$GITHUB_OUTPUT"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
+      - name: Debug — verify project identity
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          echo "Secret GCP_PROJECT_ID length: ${#GCP_PROJECT_ID}"
+          gcloud config get-value project
+          gcloud auth list
+          gcloud projects describe "$GCP_PROJECT_ID" --format="value(projectId,projectNumber)"
+
       - name: Preflight GCP deployment dependencies
         id: preflight
         env:

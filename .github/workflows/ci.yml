@@ -35,7 +35,7 @@ jobs:
         env:
           GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_PROJECT_ID: sewritingweb
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           if [ -n "$GCP_WORKLOAD_IDENTITY_PROVIDER" ] && [ -n "$GCP_SERVICE_ACCOUNT" ] && [ -n "$GCP_PROJECT_ID" ]; then
@@ -319,7 +319,7 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          project_id: sewritingweb
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -328,7 +328,7 @@ jobs:
         id: deploy_vars
         env:
           GCP_REGION: ${{ secrets.GCP_REGION }}
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_PROJECT_ID: sewritingweb
           GCP_GAR_REPO: ${{ secrets.GCP_GAR_REPO }}
           GCP_PUBSUB_TOPIC: ${{ secrets.GCP_PUBSUB_TOPIC }}
           GCP_PUBSUB_SUBSCRIPTION: ${{ secrets.GCP_PUBSUB_SUBSCRIPTION }}
@@ -346,18 +346,15 @@ jobs:
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
       - name: Debug — verify project identity
-        env:
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          echo "Secret GCP_PROJECT_ID length: ${#GCP_PROJECT_ID}"
+          echo "Hardcoded project: sewritingweb"
           gcloud config get-value project
           gcloud auth list
-          gcloud projects describe "$GCP_PROJECT_ID" --format="value(projectId,projectNumber)"
 
       - name: Preflight GCP deployment dependencies
         id: preflight
         env:
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_PROJECT_ID: sewritingweb
           GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           REGION: ${{ steps.deploy_vars.outputs.region }}
           GAR_REPO: ${{ steps.deploy_vars.outputs.gar_repo }}
@@ -489,8 +486,8 @@ jobs:
             SERVICE_ROLE=api
             QUEUE_PROVIDER=pubsub
             PAYMENT_PROVIDER=payos
-            GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
-            PUBSUB_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+            GCP_PROJECT_ID=sewritingweb
+            PUBSUB_PROJECT_ID=sewritingweb
             PUBSUB_MODERATION_TOPIC=${{ steps.deploy_vars.outputs.pubsub_topic }}
             INTERNAL_SERVICE_ACCOUNT_EMAIL=${{ secrets.GCP_SERVICE_ACCOUNT }}
             ALLOW_WEBSOCKET_QUERY_TOKEN=false
@@ -526,7 +523,7 @@ jobs:
 
       - name: Pin internal OIDC audience
         env:
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_PROJECT_ID: sewritingweb
           REGION: ${{ steps.deploy_vars.outputs.region }}
           BACKEND_URL: ${{ steps.deploy.outputs.url }}
         run: |
@@ -540,7 +537,7 @@ jobs:
       - name: Configure Pub/Sub push moderation
         if: steps.preflight.outputs.subscription_configured != 'true'
         env:
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_PROJECT_ID: sewritingweb
           GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           BACKEND_URL: ${{ steps.deploy.outputs.url }}
           PUBSUB_MODERATION_TOPIC: ${{ steps.deploy_vars.outputs.pubsub_topic }}
@@ -571,7 +568,7 @@ jobs:
       - name: Configure Cloud Scheduler scan
         if: steps.preflight.outputs.scheduler_configured != 'true'
         env:
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_PROJECT_ID: sewritingweb
           GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           REGION: ${{ steps.deploy_vars.outputs.region }}
           BACKEND_URL: ${{ steps.deploy.outputs.url }}

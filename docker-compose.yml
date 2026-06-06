@@ -51,7 +51,7 @@ x-backend-env: &backend-env
   # Google Pub/Sub queue option for Cloud Run production deployments
   GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
   PUBSUB_PROJECT_ID: ${PUBSUB_PROJECT_ID:-}
-  PUBSUB_MODERATION_TOPIC: ${PUBSUB_MODERATION_TOPIC:-yag-moderation}
+  PUBSUB_MODERATION_TOPIC: ${PUBSUB_MODERATION_TOPIC:-yag-async-tasks}
 
   # CORS Settings
   CORS_ORIGINS: ${CORS_ORIGINS:-*}

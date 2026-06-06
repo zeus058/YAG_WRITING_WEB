@@ -458,10 +458,26 @@ gcloud iam service-accounts add-iam-policy-binding "${SA_NAME}@${PROJECT_ID}.iam
 In the GCP Console (or using CLI), assign the following roles to the Service Account (`github-actions-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com`):
 1. **Artifact Registry Writer**: To push built Docker images.
 2. **Cloud Run Admin**: To deploy services.
-3. **Service Account User**: To permit Cloud Run to run using the runtime service account.
-4. **Secret Manager Secret Accessor**: To allow the service account to access secrets.
-5. **Pub/Sub Admin**: To create/update the moderation topic and push subscription.
+3. **Service Account User**: To permit Cloud Run and OIDC push jobs to use the runtime service account.
+4. **Secret Manager Secret Accessor**: To allow the service account to access deployment secrets.
+5. **Pub/Sub Editor** or **Pub/Sub Admin**: To create/update the push subscription on the existing moderation topic.
 6. **Cloud Scheduler Admin**: To create/update the scheduled publishing scan trigger.
+
+For the current production CD flow, the Pub/Sub topic must already exist. The default topic is `yag-async-tasks`, and the default push subscription is `yag-async-tasks-cloud-run`.
+
+```bash
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/pubsub.editor"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/cloudscheduler.admin"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountUser"
+```
 
 ---
 
@@ -476,6 +492,8 @@ To activate the CD jobs in the pipeline, navigate to your GitHub Repository -> *
 | `DATABASE_URL` | `postgresql://postgres.xxxx:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require` | Connection string to your production Supabase database (for migrations) |
 | `GCP_REGION` *(Optional)* | `asia-southeast1` | Google Cloud region for deploying backend (Defaults to `asia-southeast1`) |
 | `GCP_GAR_REPO` *(Optional)* | `yag-repo` | Artifact Registry repository name (Defaults to `yag-repo`) |
+| `GCP_PUBSUB_TOPIC` *(Optional)* | `yag-async-tasks` | Existing Pub/Sub topic for async moderation tasks |
+| `GCP_PUBSUB_SUBSCRIPTION` *(Optional)* | `yag-async-tasks-cloud-run` | Push subscription managed by the CD workflow |
 
 ---
 
@@ -501,7 +519,9 @@ Google Cloud Run retrieves production configurations from **Secret Manager** on 
 | `YAG_SMTP_PASSWORD` | SMTP password |
 | `YAG_SMTP_FROM` | Verified sender email |
 
-The Cloud Run workflow sets `QUEUE_PROVIDER=pubsub`, creates the `yag-moderation` Pub/Sub topic and push subscription, and creates the `yag-schedule-scan` Cloud Scheduler HTTP job. Push calls are authenticated with the deployment service account via Google OIDC; no demo queue worker or sample data is deployed.
+The Cloud Run workflow sets `QUEUE_PROVIDER=pubsub`, uses the existing `yag-async-tasks` Pub/Sub topic by default, creates/updates the push subscription, and creates/updates the `yag-schedule-scan` Cloud Scheduler HTTP job. Push calls are authenticated with the deployment service account via Google OIDC; no demo queue worker or sample data is deployed.
+
+After each backend deploy, the workflow pins `INTERNAL_AUTH_AUDIENCE` to the Cloud Run service URL and configures Pub/Sub plus Cloud Scheduler to issue OIDC tokens with that same audience. This keeps internal push authentication stable behind Cloud Run's proxy layer.
 
 *Note: If these Secret Manager secrets are not configured or access is not granted, the Cloud Run deployment command will fail at the container setup phase.*
 

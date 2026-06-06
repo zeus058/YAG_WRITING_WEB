@@ -92,7 +92,7 @@ def test_production_config_accepts_pubsub_queue_settings():
             QUEUE_PROVIDER="pubsub",
             RABBITMQ_URL=None,
             GCP_PROJECT_ID="yag-prod-project",
-            PUBSUB_MODERATION_TOPIC="yag-moderation",
+            PUBSUB_MODERATION_TOPIC="yag-async-tasks",
             INTERNAL_TASK_TOKEN="prod_internal_task_token_at_least_32_chars",
         )
     )
@@ -107,7 +107,7 @@ def test_production_config_accepts_pubsub_oidc_settings():
             QUEUE_PROVIDER="pubsub",
             RABBITMQ_URL=None,
             GCP_PROJECT_ID="yag-prod-project",
-            PUBSUB_MODERATION_TOPIC="yag-moderation",
+            PUBSUB_MODERATION_TOPIC="yag-async-tasks",
             INTERNAL_SERVICE_ACCOUNT_EMAIL="yag-backend@yag-prod-project.iam.gserviceaccount.com",
         )
     )
@@ -187,7 +187,7 @@ def test_production_config_accepts_pubsub_oidc_settings():
                 "QUEUE_PROVIDER": "pubsub",
                 "RABBITMQ_URL": None,
                 "GCP_PROJECT_ID": "",
-                "PUBSUB_MODERATION_TOPIC": "yag-moderation",
+                "PUBSUB_MODERATION_TOPIC": "yag-async-tasks",
                 "INTERNAL_TASK_TOKEN": "prod_internal_task_token_at_least_32_chars",
             },
             "PUBSUB_PROJECT_ID or GCP_PROJECT_ID",
@@ -207,7 +207,7 @@ def test_production_config_accepts_pubsub_oidc_settings():
                 "QUEUE_PROVIDER": "pubsub",
                 "RABBITMQ_URL": None,
                 "GCP_PROJECT_ID": "yag-prod-project",
-                "PUBSUB_MODERATION_TOPIC": "yag-moderation",
+                "PUBSUB_MODERATION_TOPIC": "yag-async-tasks",
                 "INTERNAL_TASK_TOKEN": "short",
             },
             "INTERNAL_TASK_TOKEN or INTERNAL_SERVICE_ACCOUNT_EMAIL",
@@ -217,7 +217,7 @@ def test_production_config_accepts_pubsub_oidc_settings():
                 "QUEUE_PROVIDER": "pubsub",
                 "RABBITMQ_URL": None,
                 "GCP_PROJECT_ID": "yag-prod-project",
-                "PUBSUB_MODERATION_TOPIC": "yag-moderation",
+                "PUBSUB_MODERATION_TOPIC": "yag-async-tasks",
                 "INTERNAL_SERVICE_ACCOUNT_EMAIL": "yag-backend@yag-prod-project.iam.gserviceaccount.com",
                 "INTERNAL_AUTH_AUDIENCE": "http://localhost:8000/internal",
             },

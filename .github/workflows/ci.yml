@@ -24,7 +24,7 @@ jobs:
   # JOB 0: Check Secrets Presence
   # ────────────────────────────────────────────────────────────
   check-secrets:
-    name: "🔍 Check Secrets Presence"
+    name: "Check Secrets Presence"
     runs-on: ubuntu-latest
     outputs:
       has_gcp: ${{ steps.check.outputs.has_gcp }}
@@ -56,7 +56,7 @@ jobs:
   # JOB 1: Backend CI — Lint, Migrate, Test
   # ────────────────────────────────────────────────────────────
   backend:
-    name: "🐍 Backend CI (Python 3.11)"
+    name: "Backend CI (Python 3.11)"
     runs-on: ubuntu-latest
 
     services:
@@ -149,7 +149,7 @@ jobs:
   # JOB 2: Frontend CI — Lint, Type-check, Build
   # ────────────────────────────────────────────────────────────
   frontend:
-    name: "⚛ Frontend CI (Node.js 20)"
+    name: "Frontend CI (Node.js 20)"
     runs-on: ubuntu-latest
 
     defaults:
@@ -180,7 +180,7 @@ jobs:
   # JOB 3: Security Scanning — Dependency vulnerabilities
   # ────────────────────────────────────────────────────────────
   security:
-    name: "🔒 Security Scan"
+    name: "Security Scan"
     runs-on: ubuntu-latest
 
     steps:
@@ -196,8 +196,7 @@ jobs:
         working-directory: ./src/backend
         run: |
           pip install pip-audit
-          pip-audit -r requirements.txt --desc --output json || true
-        continue-on-error: true
+          pip-audit -r requirements.txt --desc --output json
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
@@ -206,8 +205,7 @@ jobs:
 
       - name: Audit npm dependencies
         working-directory: ./src/frontend
-        run: npm audit --omit=dev || true
-        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Run Bandit Security Scan
         working-directory: ./src/backend
@@ -219,7 +217,7 @@ jobs:
   # JOB 4: Docker Build Validation (PRs + push to dev)
   # ────────────────────────────────────────────────────────────
   docker:
-    name: "🐳 Docker Build Check"
+    name: "Docker Build Check"
     runs-on: ubuntu-latest
 
     steps:
@@ -229,7 +227,7 @@ jobs:
       - name: Build backend Docker image
         run: |
           docker build -t yag-backend:ci-${{ github.sha }} ./src/backend
-          echo "✅ Backend Docker image built successfully"
+          echo " Backend Docker image built successfully"
 
       - name: Build frontend Docker image
         run: |
@@ -240,13 +238,13 @@ jobs:
             --build-arg NEXT_PUBLIC_DEPLOY_ENV=production \
             --build-arg NEXT_PUBLIC_API_TIMEOUT_MS=12000 \
             -t yag-frontend:ci-${{ github.sha }} ./src/frontend
-          echo "✅ Frontend Docker image built successfully"
+          echo " Frontend Docker image built successfully"
 
   # ────────────────────────────────────────────────────────────
   # JOB 6: CD — Database Migrations (Production/Staging)
   # ────────────────────────────────────────────────────────────
   deploy-migrations:
-    name: "🗄️ Apply Production Migrations"
+    name: "Apply Production Migrations"
     needs: [backend, frontend, check-secrets]
     runs-on: ubuntu-latest
     # Production migrations run only from main.
@@ -279,30 +277,31 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "⚠️ DATABASE_URL secret is not configured. Skipping."
+            echo " DATABASE_URL secret is not configured. Skipping."
             exit 0
           fi
-          python -m app.manage_migrations --check && echo "✅ No pending migrations" || echo "📦 Pending migrations detected"
+          python -m app.manage_migrations --check && echo "No pending migrations" || echo " Pending migrations detected"
 
       - name: Apply database migrations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           if [ -z "$DATABASE_URL" ]; then
-            echo "⚠️ DATABASE_URL secret is not configured. Skipping migrations."
+            echo " DATABASE_URL secret is not configured. Skipping migrations."
             exit 0
           fi
           python -m app.manage_migrations
-          echo "✅ Database migrations applied successfully."
+          echo "Database migrations applied successfully."
 
   # ────────────────────────────────────────────────────────────
   # JOB 7: CD — Deploy Backend to Google Cloud Run (via WIF)
   # ────────────────────────────────────────────────────────────
   deploy-backend:
-    name: "☁️ Deploy Backend → Cloud Run"
-    needs: [deploy-migrations, check-secrets, security]
+    name: "Deploy Backend to Cloud Run"
+    needs: [deploy-migrations, check-secrets, backend, frontend, security, docker]
     runs-on: ubuntu-latest
     # Production backend deploy runs only from main and requires DB plus GCP WIF secrets.
+    # Explicitly depends on backend, frontend, security, and docker so any CI failure hard-blocks CD.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has_gcp == 'true' && needs.check-secrets.outputs.has_db == 'true'
 
     environment:
@@ -329,14 +328,126 @@ jobs:
           GCP_REGION: ${{ secrets.GCP_REGION }}
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           GCP_GAR_REPO: ${{ secrets.GCP_GAR_REPO }}
+          GCP_PUBSUB_TOPIC: ${{ secrets.GCP_PUBSUB_TOPIC }}
+          GCP_PUBSUB_SUBSCRIPTION: ${{ secrets.GCP_PUBSUB_SUBSCRIPTION }}
         run: |
           REGION="${GCP_REGION:-asia-southeast1}"
           GAR_REPO="${GCP_GAR_REPO:-yag-repo}"
+          PUBSUB_TOPIC="${GCP_PUBSUB_TOPIC:-yag-async-tasks}"
+          PUBSUB_SUBSCRIPTION="${GCP_PUBSUB_SUBSCRIPTION:-yag-async-tasks-cloud-run}"
           IMAGE="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPO/yag-backend:${{ github.sha }}"
 
           echo "region=$REGION" >> "$GITHUB_OUTPUT"
           echo "gar_repo=$GAR_REPO" >> "$GITHUB_OUTPUT"
+          echo "pubsub_topic=$PUBSUB_TOPIC" >> "$GITHUB_OUTPUT"
+          echo "pubsub_subscription=$PUBSUB_SUBSCRIPTION" >> "$GITHUB_OUTPUT"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Preflight GCP deployment dependencies
+        id: preflight
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          REGION: ${{ steps.deploy_vars.outputs.region }}
+          GAR_REPO: ${{ steps.deploy_vars.outputs.gar_repo }}
+          PUBSUB_MODERATION_TOPIC: ${{ steps.deploy_vars.outputs.pubsub_topic }}
+          PUBSUB_SUBSCRIPTION: ${{ steps.deploy_vars.outputs.pubsub_subscription }}
+          SCHEDULER_JOB: yag-schedule-scan
+        run: |
+          set -euo pipefail
+
+          echo "Checking Artifact Registry repository..."
+          gcloud artifacts repositories describe "$GAR_REPO" \
+            --project "$GCP_PROJECT_ID" \
+            --location "$REGION" >/dev/null
+
+          echo "Checking required Secret Manager secrets..."
+          REQUIRED_SECRETS=(
+            YAG_DATABASE_URL
+            YAG_SECRET_KEY
+            YAG_CORS_ORIGINS
+            YAG_REDIS_URL
+            YAG_GEMINI_API_KEY
+            YAG_CLOUDINARY_CLOUD_NAME
+            YAG_CLOUDINARY_API_KEY
+            YAG_CLOUDINARY_API_SECRET
+            YAG_PAYOS_CLIENT_ID
+            YAG_PAYOS_API_KEY
+            YAG_PAYOS_CHECKSUM_KEY
+            YAG_PAYOS_RETURN_URL
+            YAG_SMTP_HOST
+            YAG_SMTP_USER
+            YAG_SMTP_PASSWORD
+            YAG_SMTP_FROM
+          )
+          for secret_name in "${REQUIRED_SECRETS[@]}"; do
+            gcloud secrets versions access latest \
+              --project "$GCP_PROJECT_ID" \
+              --secret "$secret_name" >/dev/null
+          done
+
+          echo "Checking existing Pub/Sub topic..."
+          gcloud pubsub topics describe "$PUBSUB_MODERATION_TOPIC" \
+            --project "$GCP_PROJECT_ID" >/dev/null
+
+          CURRENT_BACKEND_URL="$(gcloud run services describe yag-backend \
+            --project "$GCP_PROJECT_ID" \
+            --region "$REGION" \
+            --format='value(status.url)' 2>/dev/null || true)"
+
+          echo "backend_url=$CURRENT_BACKEND_URL" >> "$GITHUB_OUTPUT"
+          echo "subscription_configured=false" >> "$GITHUB_OUTPUT"
+          echo "scheduler_configured=false" >> "$GITHUB_OUTPUT"
+          if [ -n "$CURRENT_BACKEND_URL" ]; then
+            echo "Existing Cloud Run service found. Pre-configuring push targets before deploy."
+            PUSH_ENDPOINT="$CURRENT_BACKEND_URL/api/v1/internal/pubsub/moderation"
+            if gcloud pubsub subscriptions describe "$PUBSUB_SUBSCRIPTION" \
+              --project "$GCP_PROJECT_ID" >/dev/null 2>&1; then
+              gcloud pubsub subscriptions update "$PUBSUB_SUBSCRIPTION" \
+                --project "$GCP_PROJECT_ID" \
+                --push-endpoint "$PUSH_ENDPOINT" \
+                --push-auth-service-account "$GCP_SERVICE_ACCOUNT" \
+                --push-auth-token-audience "$CURRENT_BACKEND_URL"
+            else
+              gcloud pubsub subscriptions create "$PUBSUB_SUBSCRIPTION" \
+                --project "$GCP_PROJECT_ID" \
+                --topic "$PUBSUB_MODERATION_TOPIC" \
+                --push-endpoint "$PUSH_ENDPOINT" \
+                --push-auth-service-account "$GCP_SERVICE_ACCOUNT" \
+                --push-auth-token-audience "$CURRENT_BACKEND_URL" \
+                --ack-deadline 60
+            fi
+            echo "subscription_configured=true" >> "$GITHUB_OUTPUT"
+
+            SCAN_ENDPOINT="$CURRENT_BACKEND_URL/api/v1/internal/schedule/scan"
+            SCHEDULER_CRON="${{ vars.SCHEDULER_CRON || '5 17 * * *' }}"
+            if gcloud scheduler jobs describe "$SCHEDULER_JOB" \
+              --project "$GCP_PROJECT_ID" \
+              --location "$REGION" >/dev/null 2>&1; then
+              gcloud scheduler jobs update http "$SCHEDULER_JOB" \
+                --project "$GCP_PROJECT_ID" \
+                --location "$REGION" \
+                --schedule "$SCHEDULER_CRON" \
+                --time-zone "UTC" \
+                --uri "$SCAN_ENDPOINT" \
+                --http-method POST \
+                --oidc-service-account-email "$GCP_SERVICE_ACCOUNT" \
+                --oidc-token-audience "$CURRENT_BACKEND_URL"
+            else
+              gcloud scheduler jobs create http "$SCHEDULER_JOB" \
+                --project "$GCP_PROJECT_ID" \
+                --location "$REGION" \
+                --schedule "$SCHEDULER_CRON" \
+                --time-zone "UTC" \
+                --uri "$SCAN_ENDPOINT" \
+                --http-method POST \
+                --oidc-service-account-email "$GCP_SERVICE_ACCOUNT" \
+                --oidc-token-audience "$CURRENT_BACKEND_URL"
+            fi
+            echo "scheduler_configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No existing Cloud Run URL found. Push targets will be configured after first deploy."
+          fi
 
       - name: Configure Docker to use Google Artifact Registry
         run: gcloud auth configure-docker ${{ steps.deploy_vars.outputs.region }}-docker.pkg.dev --quiet
@@ -346,16 +457,15 @@ jobs:
           IMAGE="${{ steps.deploy_vars.outputs.image }}"
           docker build -t $IMAGE ./src/backend
           docker push $IMAGE
-          echo "✅ Image pushed: $IMAGE"
+          echo "Image pushed: $IMAGE"
 
-      - name: Clear conflicting env vars before deploy
+      - name: Remove legacy conflicting env vars before deploy
         run: |
           gcloud run services update yag-backend \
             --region ${{ steps.deploy_vars.outputs.region }} \
-            --clear-secrets \
             --remove-env-vars CORS_ORIGINS,PAYOS_RETURN_URL,RABBITMQ_URL,VNP_TMN_CODE,VNP_HASH_SECRET,VNP_URL,VNP_RETURN_URL,VNP_API_URL \
             --quiet 2>/dev/null || true
-          echo "✅ Cleared old secrets and conflicting env vars"
+          echo "Removed old conflicting env vars without clearing configured secrets"
 
       - name: Deploy to Cloud Run
         id: deploy
@@ -371,7 +481,7 @@ jobs:
             PAYMENT_PROVIDER=payos
             GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
             PUBSUB_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
-            PUBSUB_MODERATION_TOPIC=yag-moderation
+            PUBSUB_MODERATION_TOPIC=${{ steps.deploy_vars.outputs.pubsub_topic }}
             INTERNAL_SERVICE_ACCOUNT_EMAIL=${{ secrets.GCP_SERVICE_ACCOUNT }}
             ALLOW_WEBSOCKET_QUERY_TOKEN=false
             PAYOS_MOCK_ENABLED=false
@@ -404,17 +514,31 @@ jobs:
             --max-instances=3
             --timeout=300
 
+      - name: Pin internal OIDC audience
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          REGION: ${{ steps.deploy_vars.outputs.region }}
+          BACKEND_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          gcloud run services update yag-backend \
+            --project "$GCP_PROJECT_ID" \
+            --region "$REGION" \
+            --set-env-vars "INTERNAL_AUTH_AUDIENCE=$BACKEND_URL" \
+            --quiet
+
       - name: Configure Pub/Sub push moderation
+        if: steps.preflight.outputs.subscription_configured != 'true'
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           BACKEND_URL: ${{ steps.deploy.outputs.url }}
-          PUBSUB_MODERATION_TOPIC: yag-moderation
-          PUBSUB_SUBSCRIPTION: yag-moderation-cloud-run
+          PUBSUB_MODERATION_TOPIC: ${{ steps.deploy_vars.outputs.pubsub_topic }}
+          PUBSUB_SUBSCRIPTION: ${{ steps.deploy_vars.outputs.pubsub_subscription }}
         run: |
           set -euo pipefail
-          gcloud pubsub topics create "$PUBSUB_MODERATION_TOPIC" \
-            --project "$GCP_PROJECT_ID" 2>/dev/null || true
+          gcloud pubsub topics describe "$PUBSUB_MODERATION_TOPIC" \
+            --project "$GCP_PROJECT_ID" >/dev/null
 
           PUSH_ENDPOINT="$BACKEND_URL/api/v1/internal/pubsub/moderation"
           if gcloud pubsub subscriptions describe "$PUBSUB_SUBSCRIPTION" \
@@ -422,17 +546,20 @@ jobs:
             gcloud pubsub subscriptions update "$PUBSUB_SUBSCRIPTION" \
               --project "$GCP_PROJECT_ID" \
               --push-endpoint "$PUSH_ENDPOINT" \
-              --push-auth-service-account "$GCP_SERVICE_ACCOUNT"
+              --push-auth-service-account "$GCP_SERVICE_ACCOUNT" \
+              --push-auth-token-audience "$BACKEND_URL"
           else
             gcloud pubsub subscriptions create "$PUBSUB_SUBSCRIPTION" \
               --project "$GCP_PROJECT_ID" \
               --topic "$PUBSUB_MODERATION_TOPIC" \
               --push-endpoint "$PUSH_ENDPOINT" \
               --push-auth-service-account "$GCP_SERVICE_ACCOUNT" \
+              --push-auth-token-audience "$BACKEND_URL" \
               --ack-deadline 60
           fi
 
       - name: Configure Cloud Scheduler scan
+        if: steps.preflight.outputs.scheduler_configured != 'true'
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
@@ -441,6 +568,7 @@ jobs:
           SCHEDULER_JOB: yag-schedule-scan
         run: |
           set -euo pipefail
+          SCHEDULER_CRON="${{ vars.SCHEDULER_CRON || '5 17 * * *' }}"
           SCAN_ENDPOINT="$BACKEND_URL/api/v1/internal/schedule/scan"
           if gcloud scheduler jobs describe "$SCHEDULER_JOB" \
             --project "$GCP_PROJECT_ID" \
@@ -448,53 +576,94 @@ jobs:
             gcloud scheduler jobs update http "$SCHEDULER_JOB" \
               --project "$GCP_PROJECT_ID" \
               --location "$REGION" \
-              --schedule "5 17 * * *" \
+              --schedule "$SCHEDULER_CRON" \
               --time-zone "UTC" \
               --uri "$SCAN_ENDPOINT" \
               --http-method POST \
-              --oidc-service-account-email "$GCP_SERVICE_ACCOUNT"
+              --oidc-service-account-email "$GCP_SERVICE_ACCOUNT" \
+              --oidc-token-audience "$BACKEND_URL"
           else
             gcloud scheduler jobs create http "$SCHEDULER_JOB" \
               --project "$GCP_PROJECT_ID" \
               --location "$REGION" \
-              --schedule "5 17 * * *" \
+              --schedule "$SCHEDULER_CRON" \
               --time-zone "UTC" \
               --uri "$SCAN_ENDPOINT" \
               --http-method POST \
-              --oidc-service-account-email "$GCP_SERVICE_ACCOUNT"
+              --oidc-service-account-email "$GCP_SERVICE_ACCOUNT" \
+              --oidc-token-audience "$BACKEND_URL"
           fi
 
       - name: Verify deployment health
         run: |
           URL="${{ steps.deploy.outputs.url }}"
-          echo "🔍 Checking health at $URL/health/ready ..."
+          echo "Checking health at $URL/health/ready ..."
           sleep 10
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/health/ready" || echo "000")
           if [ "$STATUS" = "200" ]; then
-            echo "✅ Backend deployment healthy (HTTP $STATUS)"
+            echo "Backend deployment healthy (HTTP $STATUS)"
           else
-            echo "⚠️ Health check returned HTTP $STATUS (service may still be starting)"
+            echo "Health check returned HTTP $STATUS (service may still be starting)"
           fi
 
   # ────────────────────────────────────────────────────────────
   # JOB 8: CD — Deployment Summary
   # ────────────────────────────────────────────────────────────
   deploy-summary:
-    name: "📋 Deployment Summary"
+    name: "Deployment Summary"
     needs: [deploy-migrations, deploy-backend]
     runs-on: ubuntu-latest
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
+      - name: Check Vercel deployment status
+        id: vercel_status
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "status=Token not configured — auto-deployed via GitHub integration" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Poll for up to 3 minutes for a Vercel deployment matching this commit
+          TEAM_PARAM=""
+          [ -n "$VERCEL_TEAM_ID" ] && TEAM_PARAM="&teamId=$VERCEL_TEAM_ID"
+          for i in $(seq 1 18); do
+            RESPONSE=$(curl -sf \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?meta-githubCommitSha=$COMMIT_SHA&limit=5$TEAM_PARAM" || echo "{}")
+            VERCEL_STATE=$(echo "$RESPONSE" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          deploys = data.get('deployments', [])
+          if not deploys:
+              print('PENDING')
+          else:
+              print(deploys[0].get('state', 'UNKNOWN').upper())
+          " 2>/dev/null || echo "UNKNOWN")
+            echo "Attempt $i — Vercel state: $VERCEL_STATE"
+            case "$VERCEL_STATE" in
+              READY)   echo "status=Deployed" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              ERROR)   echo "status=Failed"   >> "$GITHUB_OUTPUT"; exit 0 ;;
+              CANCELED) echo "status=Canceled" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              PENDING|BUILDING|INITIALIZING|QUEUED) sleep 10 ;;
+              *) echo "status=Unknown ($VERCEL_STATE)" >> "$GITHUB_OUTPUT"; exit 0 ;;
+            esac
+          done
+          echo "status=Timed out waiting for Vercel" >> "$GITHUB_OUTPUT"
+
       - name: Generate deployment report
         run: |
-          echo "## 🚀 Deployment Report" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| DB Migrations | ${{ needs.deploy-migrations.result == 'success' && '✅ Applied' || needs.deploy-migrations.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend (Cloud Run) | ${{ needs.deploy-backend.result == 'success' && '✅ Deployed' || needs.deploy-backend.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend (Vercel) | ✅ Auto-deployed via GitHub integration |" >> $GITHUB_STEP_SUMMARY
+          echo "| DB Migrations | ${{ needs.deploy-migrations.result == 'success' && 'Applied' || needs.deploy-migrations.result == 'skipped' && 'Skipped' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend (Cloud Run) | ${{ needs.deploy-backend.result == 'success' && 'Deployed' || needs.deploy-backend.result == 'skipped' && 'Skipped' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend (Vercel) | ${{ steps.vercel_status.outputs.status }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY

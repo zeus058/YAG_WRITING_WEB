@@ -219,6 +219,26 @@ export function AuthorWorksScreen() {
     }
   };
 
+  const handleDeleteStory = async (story: any) => {
+    if (!story?.id) return;
+    const confirmDelete = window.confirm(`Bạn có chắc chắn muốn xóa tác phẩm "${story.title}" không? Hành động này sẽ xóa vĩnh viễn toàn bộ chương truyện, bình luận, đánh giá và không thể hoàn tác!`);
+    if (!confirmDelete) return;
+
+    try {
+      if (appEnv.useMocks) {
+        setWorks(works.filter((w) => w.id !== story.id));
+        triggerLiveToast("Đã xóa tác phẩm nháp (Mock).");
+      } else {
+        await yagApi.author.deleteStory(story.id);
+        triggerLiveToast("Đã xóa tác phẩm thành công!");
+        void loadWorks();
+      }
+    } catch (err) {
+      console.error("Failed to delete story:", err);
+      triggerLiveToast("Không thể xóa tác phẩm. Vui lòng thử lại sau.", "warning");
+    }
+  };
+
   // Perform filtering & sorting on works list
   const filteredWorks = works
     .filter((story) => {
@@ -392,6 +412,13 @@ export function AuthorWorksScreen() {
                     <Link className="button author-card-action" href="/author/schedule">
                       Xem lịch
                     </Link>
+                    <button
+                      className="button button-danger author-card-action"
+                      style={{ gridColumn: "span 2", marginTop: 8 }}
+                      onClick={() => handleDeleteStory(story)}
+                    >
+                      Xóa truyện
+                    </button>
                   </div>
                 </div>
               </article>
@@ -1396,7 +1423,7 @@ export function AuthorStudioScreen() {
                   minHeight: 400,
                   width: "100%",
                   background: "transparent",
-                  color: "var(--foreground)"
+                  color: "var(--jungle-dark)"
                 }}
               />
               <div className="editor-footer-row" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 8 }}>

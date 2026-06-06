@@ -252,17 +252,6 @@ def _dedupe_unseen(
     return filtered
 
 
-def _visible_story_clause() -> str:
-    return """
-        EXISTS (
-            SELECT 1
-            FROM chapters AS visible_chapter
-            WHERE visible_chapter.story_id = s.id
-              AND visible_chapter.moderation_status = 'approved'
-        )
-    """
-
-
 async def _load_preference_rows(db: Any, user_id: str) -> list[dict[str, Any]]:
     result = db.execute(
         text("""
@@ -303,7 +292,7 @@ async def _load_vector_candidates(
 ) -> list[dict[str, Any]]:
     query_vector_literal = _format_vector_literal(preference_vector)
     result = db.execute(
-        text(f"""
+        text("""
             SELECT
                 se.story_id,
                 s.title,
@@ -314,7 +303,12 @@ async def _load_vector_candidates(
                 (se.embedding <=> CAST(:query_vector AS vector)) AS distance
             FROM story_embeddings AS se
             LEFT JOIN stories AS s ON s.id = se.story_id
-            WHERE {_visible_story_clause()}
+            WHERE EXISTS (
+                SELECT 1
+                FROM chapters AS visible_chapter
+                WHERE visible_chapter.story_id = s.id
+                  AND visible_chapter.moderation_status = 'approved'
+            )
             ORDER BY distance ASC
             LIMIT :limit
             """),
@@ -325,7 +319,7 @@ async def _load_vector_candidates(
 
 async def _load_popular_candidates(db: Any, candidate_limit: int) -> list[dict[str, Any]]:
     result = db.execute(
-        text(f"""
+        text("""
             SELECT
                 se.story_id,
                 s.title,
@@ -336,7 +330,12 @@ async def _load_popular_candidates(db: Any, candidate_limit: int) -> list[dict[s
                 0.0 AS distance
             FROM story_embeddings AS se
             LEFT JOIN stories AS s ON s.id = se.story_id
-            WHERE {_visible_story_clause()}
+            WHERE EXISTS (
+                SELECT 1
+                FROM chapters AS visible_chapter
+                WHERE visible_chapter.story_id = s.id
+                  AND visible_chapter.moderation_status = 'approved'
+            )
             ORDER BY COALESCE(s.rating_avg, 0) DESC,
                      COALESCE(s.view_count, 0) DESC
             LIMIT :limit

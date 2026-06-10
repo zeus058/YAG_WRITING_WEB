@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
-import { yagApi, appEnv } from "@/lib";
+import { yagApi, appEnv, useAuth } from "@/lib";
 
 type AdminStats = {
   users_total: number;
@@ -267,6 +267,30 @@ export function AdminDashboardScreen() {
 
   useEffect(() => {
     void loadDashboard();
+
+    const handleAdminAlert = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const message = customEvent.detail;
+      if (message) {
+        const newAlert: ScheduleAlert = {
+          id: message.alert_id || String(Date.now()),
+          severity: message.severity || "warning",
+          message: message.message || "Missed publish schedule warning",
+          is_resolved: false,
+          created_at: new Date().toISOString()
+        };
+        setAlerts((prev) => [newAlert, ...prev]);
+        setStats((prev) => ({
+          ...prev,
+          unresolved_admin_alerts: (prev.unresolved_admin_alerts || 0) + 1
+        }));
+      }
+    };
+
+    window.addEventListener("yag.admin.alert", handleAdminAlert);
+    return () => {
+      window.removeEventListener("yag.admin.alert", handleAdminAlert);
+    };
   }, []);
 
   const handleScheduleScan = async () => {

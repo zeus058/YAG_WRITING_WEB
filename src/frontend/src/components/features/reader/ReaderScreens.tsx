@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { type IconName } from "@/data/yag";
+import { type IconName, STORY_CATEGORIES } from "@/data/yag";
 import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, AIRecommendationStories, RankingItem, ReadingCard, StoryBadge, UpdateStoryRow, getStoryAuthorName } from "@/components/ui";
 import { AppShell } from "@/components/layout";
 import { yagApi, appEnv, useAuth, getStoredJsonArray } from "@/lib";
@@ -68,7 +68,8 @@ export function HomeFeedScreen() {
           yagApi.reader.listStories(),
         ]);
         const fullStories = storiesRes.data || [];
-        setStoriesList(fullStories);
+        const sortedStories = [...fullStories].sort((a: any, b: any) => (b.view_count || 0) - (a.view_count || 0));
+        setStoriesList(sortedStories);
 
         const rawRecs = recsRes.data.recommendations || [];
         const mappedRecs = rawRecs.map((rec: any) => {
@@ -210,7 +211,7 @@ export function HomeFeedScreen() {
           <section className="panel panel-pad stack">
             <h2 className="section-title">Thể loại nổi bật</h2>
             <div className="genre-strip">
-              {["Ngôn tình", "Trinh thám", "Khoa học viễn tưởng", "Huyền huyễn", "Chữa lành", "Cổ trang", "Phiêu lưu", "Kỳ ảo"].map((item, index) => (
+              {STORY_CATEGORIES.map((item, index) => (
                 <Link className={`pill ${index === 0 ? "active" : ""}`} href={`/discover?genre=${encodeURIComponent(item)}`} key={item}>
                   {item}
                 </Link>
@@ -400,12 +401,11 @@ export function DiscoverScreen() {
             <label>Thể loại</label>
             <select className="select" value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)}>
               <option value="Tất cả">Tất cả thể loại</option>
-              <option value="Ngôn tình">Ngôn tình</option>
-              <option value="Lịch sử">Lịch sử</option>
-              <option value="Trinh thám">Trinh thám</option>
-              <option value="Khoa học viễn tưởng">Khoa học viễn tưởng</option>
-              <option value="Huyền huyễn">Huyền huyễn</option>
-              <option value="Kỳ ảo">Kỳ ảo</option>
+              {STORY_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -1172,53 +1172,74 @@ export function ForumScreen() {
       if (storedPosts.length > 0) {
         setPosts(storedPosts);
       } else {
-        const initialMock = [
-          {
-            id: "p1",
-            authorName: "Hương Trà",
-            authorAvatar: "HT",
-            isVerified: true,
-            time: "10 phút trước",
-            content: "Mọi người nghĩ sao về chi tiết mở nút ở chương mới nhất? Mình đang tò mò hướng phát triển tiếp theo.",
-            likes: 24,
-            liked: false,
-            replies: [
-              { id: "r1_1", author: "Gia Hiển", authorAvatar: "GH", content: "Mình cũng thấy chi tiết đó có thể là gợi ý cho tuyến nhân vật phụ.", isVerified: true },
-              { id: "r1_2", author: "Độc giả 03", authorAvatar: "D3", content: "Có thể tác giả đang chuẩn bị đảo chiều ở chương sau.", isVerified: false }
-            ],
-            showReplyBox: false,
-          },
-          {
-            id: "p2",
-            authorName: "Phú Thọ",
-            authorAvatar: "PT",
-            isVerified: true,
-            time: "1 giờ trước",
-            content: "Vừa đọc xong chương mới nhất. Nhịp kể chắc tay, đoạn kết chương khiến mình muốn đọc tiếp ngay.",
-            likes: 12,
-            liked: true,
-            replies: [],
-            showReplyBox: false,
-          },
-          {
-            id: "p3",
-            authorName: "Duy Trường",
-            authorAvatar: "DT",
-            isVerified: true,
-            time: "2 giờ trước",
-            content: "Có ai đề xuất thêm truyện cùng thể loại không ạ? Mình muốn tìm thêm vài bộ để đọc cuối tuần.",
-            likes: 8,
-            liked: false,
-            replies: [
-              { id: "r3_1", author: "Yến Nhi", authorAvatar: "YN", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa trên trang Khám phá nhé!", isVerified: true }
-            ],
-            showReplyBox: false,
-          }
-        ];
-        setPosts(initialMock);
-        localStorage.setItem("yag.forum.posts", JSON.stringify(initialMock));
+        if (appEnv.useMocks) {
+          const initialMock = [
+            {
+              id: "p1",
+              authorName: "Hương Trà",
+              authorAvatar: "HT",
+              isVerified: true,
+              time: "10 phút trước",
+              content: "Mọi người nghĩ sao về chi tiết mở nút ở chương mới nhất? Mình đang tò mò hướng phát triển tiếp theo.",
+              likes: 24,
+              liked: false,
+              replies: [
+                { id: "r1_1", author: "Gia Hiển", authorAvatar: "GH", content: "Mình cũng thấy chi tiết đó có thể là gợi ý cho tuyến nhân vật phụ.", isVerified: true },
+                { id: "r1_2", author: "Độc giả 03", authorAvatar: "D3", content: "Có thể tác giả đang chuẩn bị đảo chiều ở chương sau.", isVerified: false }
+              ],
+              showReplyBox: false,
+            },
+            {
+              id: "p2",
+              authorName: "Phú Thọ",
+              authorAvatar: "PT",
+              isVerified: true,
+              time: "1 giờ trước",
+              content: "Vừa đọc xong chương mới nhất. Nhịp kể chắc tay, đoạn kết chương khiến mình muốn đọc tiếp ngay.",
+              likes: 12,
+              liked: true,
+              replies: [],
+              showReplyBox: false,
+            },
+            {
+              id: "p3",
+              authorName: "Duy Trường",
+              authorAvatar: "DT",
+              isVerified: true,
+              time: "2 giờ trước",
+              content: "Có ai đề xuất thêm truyện cùng thể loại không ạ? Mình muốn tìm thêm vài bộ để đọc cuối tuần.",
+              likes: 8,
+              liked: false,
+              replies: [
+                { id: "r3_1", author: "Yến Nhi", authorAvatar: "YN", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa trên trang Khám phá nhé!", isVerified: true }
+              ],
+              showReplyBox: false,
+            }
+          ];
+          setPosts(initialMock);
+          localStorage.setItem("yag.forum.posts", JSON.stringify(initialMock));
+        } else {
+          setPosts([]);
+        }
       }
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "yag.forum.posts" && e.newValue) {
+        try {
+          setPosts(JSON.parse(e.newValue));
+        } catch {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   useEffect(() => {
@@ -2751,7 +2772,7 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
                   <div className="field">
                     <label>Thể loại mặc định</label>
                     <select className="select" value={defaultCategory} onChange={(e) => setDefaultCategory(e.target.value)}>
-                      {["Ngôn tình", "Kiếm hiệp", "Kỳ ảo", "Trinh thám", "Khoa học viễn tưởng", "Đời thường", "Lịch sử"].map(c => (
+                      {STORY_CATEGORIES.map(c => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
@@ -3029,6 +3050,27 @@ export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" 
 
   useEffect(() => {
     void loadNotifications();
+
+    const handleNewNotification = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const message = customEvent.detail;
+      if (message) {
+        setNotifications((prev) => [
+          {
+            id: message.id || String(Date.now()),
+            title: message.title || "Thông báo mới",
+            message: message.message || "",
+            read_at: null,
+            created_at: message.created_at || new Date().toISOString(),
+          },
+          ...prev,
+        ]);
+      }
+    };
+    window.addEventListener("yag.notifications.new", handleNewNotification);
+    return () => {
+      window.removeEventListener("yag.notifications.new", handleNewNotification);
+    };
   }, []);
 
   const handleMarkAllRead = async () => {
@@ -3040,6 +3082,7 @@ export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" 
       await yagApi.notifications.markAllAsRead();
       void loadNotifications();
       triggerLiveToast("Đã đánh dấu đọc tất cả thông báo.");
+      window.dispatchEvent(new CustomEvent("yag.notifications.refresh"));
     } catch (err) {
       console.error(err);
     }
@@ -3050,6 +3093,7 @@ export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" 
     try {
       await yagApi.notifications.markAsRead(id);
       void loadNotifications();
+      window.dispatchEvent(new CustomEvent("yag.notifications.refresh"));
     } catch (err) {
       console.error(err);
     }

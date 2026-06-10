@@ -111,6 +111,7 @@ async def search_stories_semantic(
                     FROM chapters AS c
                     WHERE c.story_id = s.id
                       AND c.moderation_status = 'approved'
+                      AND c.publish_at <= NOW()
                 )
                 ORDER BY distance ASC
                 LIMIT :limit
@@ -143,6 +144,7 @@ async def search_stories_semantic(
                     FROM chapters AS c
                     WHERE c.story_id = s.id
                       AND c.moderation_status = 'approved'
+                      AND c.publish_at <= NOW()
                 )
                 ORDER BY se.story_id ASC
                 LIMIT :limit
@@ -167,6 +169,7 @@ async def search_stories_semantic(
                     FROM chapters AS c
                     WHERE c.story_id = s.id
                       AND c.moderation_status = 'approved'
+                      AND c.publish_at <= NOW()
                 )
                 ORDER BY COALESCE(s.rating_avg, 0) DESC,
                          COALESCE(s.view_count, 0) DESC
@@ -187,6 +190,7 @@ async def search_stories_semantic(
                     FROM chapters AS c
                     WHERE c.story_id = s.id
                       AND c.moderation_status = 'approved'
+                      AND c.publish_at <= NOW()
                 )
                 ORDER BY COALESCE(s.rating_avg, 0) DESC,
                          COALESCE(s.view_count, 0) DESC
@@ -318,6 +322,7 @@ async def _load_vector_candidates(
                 FROM chapters AS visible_chapter
                 WHERE visible_chapter.story_id = s.id
                   AND visible_chapter.moderation_status = 'approved'
+                  AND visible_chapter.publish_at <= NOW()
             )
             ORDER BY distance ASC
             LIMIT :limit
@@ -345,6 +350,7 @@ async def _load_popular_candidates(db: Any, candidate_limit: int) -> list[dict[s
                 FROM chapters AS visible_chapter
                 WHERE visible_chapter.story_id = s.id
                   AND visible_chapter.moderation_status = 'approved'
+                  AND visible_chapter.publish_at <= NOW()
             )
             ORDER BY COALESCE(s.rating_avg, 0) DESC,
                      COALESCE(s.view_count, 0) DESC

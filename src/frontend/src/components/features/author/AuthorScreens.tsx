@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Icon, Cover, MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
 import { yagApi, appEnv, createDraftSocket, useAuth, getStoredJsonArray } from "@/lib";
+import { STORY_CATEGORIES } from "@/data/yag";
 
 const triggerLiveToast = (message: string, type = "success") => {
   if (typeof window === "undefined") return;
@@ -43,7 +44,7 @@ function getNextChapterNumber(chapters: any[]) {
   return Math.max(0, ...chapters.map((chapter) => Number(chapter.chapter_number) || 0)) + 1;
 }
 
-const storyCategoryOptions = ["Ngôn tình", "Kiếm hiệp", "Kỳ ảo", "Trinh thám", "Khoa học viễn tưởng", "Đời thường", "Lịch sử", "Huyền huyễn", "Phiêu lưu", "Chữa lành"];
+const storyCategoryOptions = STORY_CATEGORIES;
 const storyLanguageOptions = [
   { value: "vi", label: "Tiếng Việt" },
   { value: "en", label: "English" },
@@ -53,7 +54,6 @@ const storyLanguageOptions = [
 ];
 const storyTypeOptions = [
   { value: "fiction", label: "Hư cấu", description: "Tiểu thuyết, truyện dài, truyện ngắn." },
-  { value: "fanfic", label: "Fanfic", description: "Sáng tác dựa trên fandom hoặc nhân vật có sẵn." },
   { value: "nonfiction", label: "Phi hư cấu", description: "Tự truyện, ký sự, ghi chép sáng tạo." },
   { value: "poetry", label: "Thơ ca", description: "Thơ, tản văn ngắn, văn xuôi giàu nhạc tính." },
 ];

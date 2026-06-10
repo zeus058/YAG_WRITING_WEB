@@ -44,7 +44,7 @@ function topbarContext(role: Role, isPremium: boolean = false) {
   ];
 }
 
-const triggerLiveToast = (message: string) => {
+const triggerLiveToast = (message: string, type = "success") => {
   if (typeof window === "undefined") return;
   let stack = document.querySelector<HTMLElement>("[data-runtime-toast-stack]");
   if (!stack) {
@@ -55,7 +55,7 @@ const triggerLiveToast = (message: string) => {
   }
 
   const toast = document.createElement("div");
-  toast.className = `toast success toast-success`;
+  toast.className = `toast ${type} toast-${type}`;
   const label = document.createElement("strong");
   label.textContent = "YAG";
   const body = document.createElement("span");
@@ -168,19 +168,31 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
 
     void fetchUnread();
 
+    const handleRefresh = () => {
+      void fetchUnread();
+    };
+    window.addEventListener("yag.notifications.refresh", handleRefresh);
+
     // Setup live Websocket for notifications
     const ws = createNotificationSocket({
       userId: authUser.id,
       onMessage: (message: any) => {
         if (message && message.type) {
-          setUnreadCount((prev) => prev + 1);
-          triggerLiveToast(message.message || "Bạn nhận được thông báo mới!");
+          if (message.type === "schedule_missed_admin_alert") {
+            triggerLiveToast(`[ADMIN] ${message.message || "Trễ lịch đăng chương!"}`, "warning");
+            window.dispatchEvent(new CustomEvent("yag.admin.alert", { detail: message }));
+          } else {
+            void fetchUnread();
+            triggerLiveToast(message.message || "Bạn nhận được thông báo mới!");
+            window.dispatchEvent(new CustomEvent("yag.notifications.new", { detail: message }));
+          }
         }
       },
     });
 
     return () => {
       if (ws) ws.close();
+      window.removeEventListener("yag.notifications.refresh", handleRefresh);
     };
   }, [authUser]);
 

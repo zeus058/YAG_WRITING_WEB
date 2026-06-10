@@ -1349,7 +1349,6 @@ nav.scrolled {
 .plan-card.popular {
   border-color: var(--crimson);
   transform: translateY(-8px);
-  animation: popularGlow 4s ease-in-out infinite;
 }
 .plan-card.popular:hover {
   transform: translateY(-16px) scale(1.02);

@@ -141,6 +141,15 @@ def list_stories(
         selectinload(Story.chapters),
         selectinload(Story.reviews),
     )
+    # Filter stories to only those with at least 1 published chapter
+    now = datetime.now(timezone.utc)
+    query = query.filter(
+        Story.chapters.any(
+            (Chapter.moderation_status == "approved") &
+            (Chapter.publish_at <= now)
+        )
+    )
+
     if category:
         query = query.filter(Story.category == category)
     if status_value:
@@ -212,7 +221,11 @@ def get_author_chapters(
     response_model=StoryDetailResponse,
     summary="U007 - Chi tiết tác phẩm",
 )
-def get_story_detail(story_id: UUID, db: Session = Depends(deps.get_db)):
+def get_story_detail(
+    story_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user: Optional[User] = Depends(deps.get_current_user_optional),
+):
     story = get_story_or_404(db, story_id)
     # Eager-load approved chapters for the detail view
     chapters = (
@@ -225,6 +238,14 @@ def get_story_detail(story_id: UUID, db: Session = Depends(deps.get_db)):
         .order_by(Chapter.chapter_number.asc())
         .all()
     )
+    if not chapters:
+        is_author = current_user and current_user.id == story.author_id
+        is_admin = current_user and current_user.role == "admin"
+        if not (is_author or is_admin):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Story not found or not yet published",
+            )
     return {
         "id": story.id,
         "author": story.author,
@@ -579,9 +600,10 @@ async def update_story(
 def get_public_chapters(
     story_id: UUID,
     db: Session = Depends(deps.get_db),
+    current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ):
-    get_story_or_404(db, story_id)
-    return (
+    story = get_story_or_404(db, story_id)
+    chapters = (
         db.query(Chapter)
         .filter(
             Chapter.story_id == story_id,
@@ -591,6 +613,15 @@ def get_public_chapters(
         .order_by(Chapter.chapter_number.asc())
         .all()
     )
+    if not chapters:
+        is_author = current_user and current_user.id == story.author_id
+        is_admin = current_user and current_user.role == "admin"
+        if not (is_author or is_admin):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Story not found or has no published chapters",
+            )
+    return chapters
 
 
 @router.post(

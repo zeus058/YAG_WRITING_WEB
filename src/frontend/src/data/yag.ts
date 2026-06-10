@@ -90,7 +90,7 @@ export const pages: PageInfo[] = [
 ];
 
 export const roleNav: Record<Role, ScreenId[]> = {
-  reader: ["s04", "s05", "s11", "s08", "s09", "s14", "s12", "s13"],
+  reader: ["s04", "s05", "s11", "s08", "s09", "s14", "s13"],
   author: ["s15", "s18", "s14", "s12", "s13"],
   admin: ["s19", "s20", "s21", "s14", "s13"],
 };
@@ -111,3 +111,19 @@ export function getRoleForPage(id: ScreenId): Role {
   if (["s19", "s20", "s21"].includes(id)) return "admin";
   return "reader";
 }
+
+export const STORY_CATEGORIES = [
+  "Tiên hiệp",
+  "Huyền huyễn",
+  "Phiêu lưu",
+  "Esport",
+  "Sci-fi",
+  "Đời thường",
+  "Trọng sinh",
+  "Kinh dị",
+  "Ngôn tình",
+  "Đam mỹ",
+  "Bách hợp",
+  "Trinh thám",
+  "Khác",
+];

@@ -625,3 +625,46 @@ class TestStoriesAPI:
         response = client.delete(f"/api/v1/stories/{mock_story.id}")
         assert response.status_code == 403
         assert "Not authorized to delete" in response.json()["detail"]
+
+    # ---------------------------------------------------------------------------
+    # Test Story Visibility Restrictions (No published chapters)
+    # ---------------------------------------------------------------------------
+
+    def test_get_story_detail_without_chapters_anonymous_404(self):
+        app.dependency_overrides[deps.get_current_user_optional] = lambda: None
+        mock_story = _make_mock_story(self.mock_author)
+        # First query gets story, second gets approved chapters (empty list)
+        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_story
+        self.mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
+
+        try:
+            response = client.get(f"/api/v1/stories/{mock_story.id}")
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            assert "Story not found or not yet published" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.pop(deps.get_current_user_optional, None)
+
+    def test_get_story_detail_without_chapters_author_success(self):
+        app.dependency_overrides[deps.get_current_user_optional] = lambda: self.mock_author
+        mock_story = _make_mock_story(self.mock_author)
+        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_story
+        self.mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
+
+        try:
+            response = client.get(f"/api/v1/stories/{mock_story.id}")
+            assert response.status_code == 200
+            assert response.json()["title"] == mock_story.title
+        finally:
+            app.dependency_overrides.pop(deps.get_current_user_optional, None)
+
+    def test_get_public_chapters_without_chapters_anonymous_404(self):
+        app.dependency_overrides[deps.get_current_user_optional] = lambda: None
+        mock_story = _make_mock_story(self.mock_author)
+        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_story
+        self.mock_db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
+
+        try:
+            response = client.get(f"/api/v1/stories/{mock_story.id}/chapters")
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+        finally:
+            app.dependency_overrides.pop(deps.get_current_user_optional, None)

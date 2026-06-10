@@ -1,12 +1,11 @@
-import pytest
 from datetime import timedelta
-from jose import JWTError
-
+from jose import jwt
+from app.core.config import settings
 from app.core.security import (
     verify_password,
     get_password_hash,
     create_access_token,
-    decode_access_token,
+    ALGORITHM,
 )
 
 
@@ -27,10 +26,10 @@ def test_verify_password_exception():
 def test_access_tokens():
     sub = "user_id_123"
     token = create_access_token(sub)
-    decoded = decode_access_token(token)
+    decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
     assert decoded["sub"] == sub
 
     # Test with expires_delta
     token_with_delta = create_access_token(sub, expires_delta=timedelta(minutes=5))
-    decoded_delta = decode_access_token(token_with_delta)
+    decoded_delta = jwt.decode(token_with_delta, settings.SECRET_KEY, algorithms=[ALGORITHM])
     assert decoded_delta["sub"] == sub

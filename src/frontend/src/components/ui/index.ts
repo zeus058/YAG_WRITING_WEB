@@ -1,4 +1,3 @@
-export { BarChart, LineChart } from "./Charts";
 export { BrandLogo } from "./BrandLogo";
 export { Cover } from "./Cover";
 export { ErrorGuide } from "./Feedback";

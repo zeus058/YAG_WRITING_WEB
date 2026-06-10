@@ -9,19 +9,16 @@ from app.schemas.common import (
     ErrorResponse,
     PaginationParams,
 )
-from app.schemas.user import (
-    UserCreate,
+from app.schemas.auth import (
+    UserRegister,
     UserLogin,
     UserResponse,
-    UserInToken,
     TokenResponse,
-    PasswordReset,
+    PasswordResetRequest,
     PasswordResetConfirm,
     PasswordChange,
-)
-from app.schemas.profile import (
-    ProfileResponse,
     ProfileUpdate,
+    ProfileResponse,
 )
 from app.schemas.story import (
     AuthorBrief,
@@ -56,19 +53,7 @@ from app.schemas.payment import (
     PaymentResultResponse,
     TransactionHistoryItem,
 )
-from app.schemas.search import (
-    SearchResultItem,
-    SearchResponse,
-    SemanticSearchRequest,
-    SemanticSearchResultItem,
-    SemanticSearchResponse,
-)
 from app.schemas.ai import (
-    AISuggestRequest,
-    SuggestionItem,
-    AISuggestResponse,
-    AIRecommendRequest,
-    AIRecommendResponse,
     AISuggestionItem,
     AISuggestionRequest,
     AISuggestionResponse,
@@ -81,10 +66,6 @@ from app.schemas.ai import (
     AISkillDefinition,
     AIMcpManifestResponse,
 )
-from app.schemas.auth import (
-    UserRegister,
-    PasswordResetRequest,
-)
 
 __all__ = [
     # Common
@@ -93,16 +74,13 @@ __all__ = [
     "ErrorResponse",
     "PaginationParams",
     # User / Auth
-    "UserCreate",
+    "UserRegister",
     "UserLogin",
     "UserResponse",
-    "UserInToken",
     "TokenResponse",
-    "PasswordReset",
+    "PasswordResetRequest",
     "PasswordResetConfirm",
     "PasswordChange",
-    "UserRegister",
-    "PasswordResetRequest",
     # Profile
     "ProfileResponse",
     "ProfileUpdate",
@@ -133,18 +111,7 @@ __all__ = [
     # Payment
     "PaymentResultResponse",
     "TransactionHistoryItem",
-    # Search
-    "SearchResultItem",
-    "SearchResponse",
-    "SemanticSearchRequest",
-    "SemanticSearchResultItem",
-    "SemanticSearchResponse",
     # AI
-    "AISuggestRequest",
-    "SuggestionItem",
-    "AISuggestResponse",
-    "AIRecommendRequest",
-    "AIRecommendResponse",
     "AISuggestionItem",
     "AISuggestionRequest",
     "AISuggestionResponse",
@@ -157,3 +124,4 @@ __all__ = [
     "AISkillDefinition",
     "AIMcpManifestResponse",
 ]
+

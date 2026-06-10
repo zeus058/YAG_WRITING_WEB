@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { stories, type IconName } from "@/data/yag";
+import { type IconName } from "@/data/yag";
 import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, AIRecommendationStories, RankingItem, ReadingCard, StoryBadge, UpdateStoryRow, getStoryAuthorName } from "@/components/ui";
 import { AppShell } from "@/components/layout";
 import { yagApi, appEnv, useAuth, getStoredJsonArray } from "@/lib";
@@ -55,8 +55,8 @@ export function HomeFeedScreen() {
 
   useEffect(() => {
     if (appEnv.useMocks) {
-      setStoriesList(stories);
-      setRecommendations(stories.slice(0, 4));
+      setStoriesList([]);
+      setRecommendations([]);
       setIsLoading(false);
       return;
     }
@@ -242,7 +242,7 @@ export function DiscoverScreen() {
     setIsLoading(true);
     setSearched(true);
     if (appEnv.useMocks) {
-      setStoriesList(stories.slice(0, 6));
+      setStoriesList([]);
       setIsLoading(false);
       return;
     }
@@ -276,7 +276,7 @@ export function DiscoverScreen() {
       setIsLoading(true);
       try {
         if (appEnv.useMocks) {
-          setStoriesList(stories);
+          setStoriesList([]);
         } else {
           const res = await yagApi.reader.listStories();
           setStoriesList(res.data || []);
@@ -2060,15 +2060,7 @@ export function LibraryScreen() {
   const loadLibrary = async () => {
     try {
       if (appEnv.useMocks) {
-        // Seed mock data with status and reading progress for realistic rendering
-        const mockLibrary = stories.slice(0, 5).map((s, idx) => ({
-          ...s,
-          id: `mock-story-${idx}`,
-          status: idx === 2 ? "completed" : "ongoing",
-          is_premium: idx % 3 === 0,
-          chapters_read: idx % 2 === 0 ? 5 : 0,
-        }));
-        setStoriesList(mockLibrary);
+        setStoriesList([]);
       } else {
         const res = await yagApi.reader.getLibrary();
         setStoriesList(res.data || []);

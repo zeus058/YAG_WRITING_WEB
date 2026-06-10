@@ -97,68 +97,6 @@ export const roleInfo = {
   admin: { label: "Quản trị", name: "Quản trị", avatar: "QT" },
 } satisfies Record<Role, { label: string; name: string; avatar: string }>;
 
-export const screenRouteMap: Record<string, ScreenId> = {
-  "s02-auth": "s02",
-  "/auth": "s02",
-  "s03-password-recovery": "s03",
-  "/auth/recovery": "s03",
-  "s04-home-feed": "s04",
-  "/home": "s04",
-  "/dashboard": "s04",
-  "s05-discover-search": "s05",
-  "/discover": "s05",
-  "s06-story-detail": "s06",
-  "/story-detail": "s06",
-  "s07-reader-mode": "s07",
-  "/reader-mode": "s07",
-  "s08-forum": "s08",
-  "/forum": "s08",
-  "s09-membership": "s09",
-  "/membership": "s09",
-  "s10-payment-result": "s10",
-  "/payment/result": "s10",
-  "/payment-result": "s10",
-  "s11-library": "s11",
-  "/library": "s11",
-  "s12-profile": "s12",
-  "/profile/me": "s12",
-  "/profile": "s12",
-  "/author/profile": "s12",
-  "s13-account-settings": "s13",
-  "/settings": "s13",
-  "/account-settings": "s13",
-  "/author/settings": "s13",
-  "s14-notifications": "s14",
-  "/notifications": "s14",
-  "/author/notifications": "s14",
-  "s15-author-works": "s15",
-  "/author/stories": "s15",
-  "/author-works": "s15",
-  "s16-author-studio": "s16",
-  "/author-studio": "s16",
-  "s17-publish-chapter": "s17",
-  "/publish-chapter": "s17",
-  "s18-schedule-commitment": "s18",
-  "/author/schedule": "s18",
-  "/schedule-commitment": "s18",
-  "s19-admin-dashboard": "s19",
-  "/admin": "s19",
-  "/admin-dashboard": "s19",
-  "s20-content-moderation": "s20",
-  "/admin/moderation": "s20",
-  "/content-moderation": "s20",
-  "s21-reports": "s21",
-  "/admin/stats": "s21",
-  "/reports": "s21",
-};
-
-export const screenStaticSlugs = Object.keys(screenRouteMap);
-
-export const stories: Story[] = [];
-
-export function getScreenId(slug: string) {
-  return screenRouteMap[slug] ?? null;
-}
 
 export function getPageById(id: ScreenId) {
   return pages.find((page) => page.id === id);

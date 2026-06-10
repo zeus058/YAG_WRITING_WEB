@@ -5,6 +5,27 @@ import React, { useState, useEffect, useRef } from "react";
 import { BrandLogo, Cover, getStoryAuthorName, Icon } from "@/components/ui";
 import { yagApi } from "@/lib";
 
+const callMeStory = {
+  id: "call-me-by-your-name",
+  title: "Call Me by Your Name",
+  author: "André Aciman",
+  cover_url: "/Call_Me_By_Your_Name.jpg",
+};
+
+const journeyStory = {
+  id: "journey-under-the-midnight-sun",
+  title: "Journey Under the Midnight Sun",
+  author: "Keigo Higashino",
+  cover_url: "/Journey_Under_the_Midnight_Sun.png",
+};
+
+const threeBodyStory = {
+  id: "three-body-problem",
+  title: "The Three-Body Problem",
+  author: "Cixin Liu",
+  cover_url: "/The_Three-Body_Problem.jpg",
+};
+
 /**
  * Component bọc hỗ trợ hiệu ứng hiển thị khi cuộn trang (Reveal on Scroll)
  */
@@ -52,7 +73,7 @@ function RevealOnScroll({
 }
 
 /**
- * Component hiển thị bìa sách dạng 3D floating có liên kết thực tế với câu chuyện người dùng
+ * Component hiển thị bìa sách dạng 3D floating.
  */
 function HeroBookCard({
   className,
@@ -283,7 +304,7 @@ export default function LandingPage() {
           <div className="hero-left">
             <div className="hero-eyebrow">
               <div className="eyebrow-dot"></div>
-              Nền tảng đọc & viết với AI đồng hành
+              Nền tảng đọc và viết truyện cùng AI đồng hành
             </div>
             <h1 className="hero-title">
               Nơi mọi
@@ -294,7 +315,7 @@ export default function LandingPage() {
             </h1>
             <p className="hero-sub">
               Khám phá tác phẩm do cộng đồng đăng tải, viết cùng trợ lý AI
-              Gemini, tìm kiếm ngữ nghĩa thông minh — tất cả trong một nền tảng
+              Gemini, tìm kiếm bằng AI thông minh - tất cả trong một nền tảng
               dành cho người Việt.
             </p>
             <div className="hero-btns">
@@ -335,16 +356,16 @@ export default function LandingPage() {
             </div>
             <div className="hero-stats">
               <div>
-                <div className="stat-val">Live</div>
+                <div className="stat-val">100+</div>
                 <div className="stat-key">Tác phẩm chất lượng</div>
               </div>
               <div>
                 <div className="stat-val">AI</div>
-                <div className="stat-key">Tìm kiếm ngữ nghĩa</div>
+                <div className="stat-key">Công cụ hỗ trợ</div>
               </div>
               <div>
                 <div className="stat-val">PayOS</div>
-                <div className="stat-key">Đăng ký Premium</div>
+                <div className="stat-key">Hỗ trợ thanh toán</div>
               </div>
             </div>
           </div>
@@ -355,7 +376,7 @@ export default function LandingPage() {
               {/* Book 3 (back) */}
               <HeroBookCard
                 className="bc3"
-                story={stories[2]}
+                story={threeBodyStory}
                 defaultTitle="Tác phẩm cộng đồng"
                 defaultAuthor="Đăng bởi người dùng"
                 fallbackSvg={
@@ -390,7 +411,7 @@ export default function LandingPage() {
               {/* Book 2 (middle) */}
               <HeroBookCard
                 className="bc2"
-                story={stories[1]}
+                story={journeyStory}
                 defaultTitle="Không gian đọc"
                 defaultAuthor="Hành trình sáng tạo mới"
                 fallbackSvg={
@@ -442,7 +463,7 @@ export default function LandingPage() {
               {/* Book 1 (front) */}
               <HeroBookCard
                 className="bc1"
-                story={stories[0]}
+                story={callMeStory}
                 defaultTitle="YAG Stories"
                 defaultAuthor="User Content"
                 fallbackSvg={
@@ -575,11 +596,10 @@ export default function LandingPage() {
               <h2 className="sec-title">
                 Mọi thứ bạn cần để
                 <br />
-                <em>đọc & viết</em> tốt hơn
+                <em>đọc & viết</em> truyện tốt hơn
               </h2>
               <p className="sec-desc">
-                Từ không gian đọc tĩnh lặng đến studio sáng tác thông minh – YAG
-                đồng hành cùng bạn.
+                Từ không gian đọc đặc sắc đến studio sáng tác thông minh - YAG đồng hành cùng bạn.
               </p>
             </div>
           </RevealOnScroll>
@@ -949,7 +969,7 @@ export default function LandingPage() {
               {stories.map((story, index) => {
                 const badgeClass = story.badge || (story.view_count > 1000 ? "hot" : story.rating_avg >= 4.5 ? "ai" : "");
                 const badgeLabel = story.badge === "hot" ? "Đang hot" : story.badge === "ai" ? "AI đề xuất" : story.badge === "done" ? "Hoàn thành" : (story.view_count > 1000 ? "Đang hot" : "");
-                
+
                 return (
                   <Link
                     href={`/stories/${story.id}`}

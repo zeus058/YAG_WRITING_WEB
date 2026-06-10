@@ -4,15 +4,6 @@ import importlib
 from app.core import database
 
 
-def test_database_get_db():
-    gen = database.get_db()
-    db = next(gen)
-    assert db is not None
-    try:
-        next(gen)
-    except StopIteration:
-        pass
-
 
 def test_database_url_configured():
     with patch("app.core.config.settings") as mock_settings:

@@ -143,6 +143,35 @@ def send_otp_email(email: str, otp: str):
         logger.info("SMTP credentials not configured; OTP email was not sent.")
 
 
+def send_verification_email(email: str, otp: str):
+    """Sends verification OTP email via SMTP; development logs it."""
+    subject = "[YAG] Xác thực tài khoản đăng ký"
+    body = f"Mã OTP xác thực tài khoản của bạn là: {otp}\nHiệu lực trong 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai."
+
+    smtp_host = settings.SMTP_HOST
+    smtp_user = settings.SMTP_USER
+    smtp_password = settings.SMTP_PASSWORD
+    smtp_from = settings.SMTP_FROM or smtp_user
+
+    if smtp_host and smtp_user and smtp_password and smtp_from:
+        try:
+            msg = MIMEText(body, "plain", "utf-8")
+            msg["Subject"] = subject
+            msg["From"] = f"YAG Platform <{smtp_from}>"
+            msg["To"] = email
+
+            with smtplib.SMTP_SSL(
+                smtp_host, settings.SMTP_PORT, timeout=5.0
+            ) as server:
+                server.login(smtp_user, smtp_password)
+                server.sendmail(smtp_user, email, msg.as_string())
+            logger.info(f"Verification OTP successfully sent via SMTP to {email}")
+        except Exception as e:
+            logger.error(f"Failed to send verification email via SMTP: {e}.")
+    else:
+        logger.info(f"SMTP credentials not configured; Verification OTP for {email} is: {otp}")
+
+
 class AuthService:
     @staticmethod
     def register(db: Session, user_in: UserRegister) -> User:
@@ -214,6 +243,11 @@ class AuthService:
             _record_login_failure(identifier)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="INVALID_CREDENTIALS"
+            )
+
+        if not db_user.email_verified_at:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="EMAIL_NOT_VERIFIED"
             )
 
         if db_user.is_locked:
@@ -300,3 +334,76 @@ class AuthService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="RESET_THAT_BAI",
             )
+
+    @staticmethod
+    def request_register_otp(email: str, background_tasks: BackgroundTasks) -> dict:
+        """Generates a 6-digit OTP, caches in Redis under verify_email:otp:{email}, and sends a background email."""
+        # Generate 6-digit numeric OTP
+        otp = f"{random.randint(100000, 999999)}"
+
+        # Save in Redis with 5 minutes (300 seconds) expiration
+        try:
+            r = get_redis_client()
+            r.setex(
+                f"verify_email:otp:{email.strip().lower()}",
+                OTP_TTL_SECONDS,
+                _hash_otp(email, otp)
+            )
+        except Exception as e:
+            logger.error(f"Redis is offline, cannot store verification OTP: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY, detail="REDIS_OFFLINE_ERROR"
+            )
+
+        # Dispatch background mail sending
+        background_tasks.add_task(send_verification_email, email, otp)
+        return {"message": "VERIFICATION_PENDING", "email": email}
+
+    @staticmethod
+    def verify_register_otp(db: Session, email: str, otp: str) -> User:
+        """Validates the registration OTP from Redis, updates email_verified_at in DB, and returns the verified user."""
+        email_key = f"verify_email:otp:{email.strip().lower()}"
+        
+        # 1. Fetch OTP from Redis
+        try:
+            r = get_redis_client()
+            cached_otp = r.get(email_key)
+        except Exception as e:
+            logger.error(f"Redis is offline, cannot confirm verification OTP: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY, detail="REDIS_OFFLINE_ERROR"
+            )
+
+        # 2. Match OTP
+        if not _otp_matches(email, otp, cached_otp):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="INVALID_OTP"
+            )
+
+        # 3. Update PostgreSQL
+        db_user = db.query(User).filter(User.email == email).first()
+        if not db_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="USER_NOT_FOUND"
+            )
+
+        if db_user.email_verified_at is not None:
+            return db_user
+
+        try:
+            db_user.email_verified_at = datetime.now(timezone.utc)
+            db.add(db_user)
+            db.commit()
+            db.refresh(db_user)
+
+            # Delete OTP from Redis immediately to prevent reuse
+            r.delete(email_key)
+            return db_user
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to verify email: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="VERIFY_THAT_BAI",
+            )
+

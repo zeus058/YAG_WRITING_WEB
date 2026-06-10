@@ -26,6 +26,9 @@ from app.schemas.auth import (
     ProfileUpdate,
     ProfileResponse,
     CurrentUserResponse,
+    RegisterResponse,
+    VerifyEmailRequest,
+    ResendVerificationRequest,
 )
 from app.services.auth_service import AuthService
 from app.services.cloudinary_service import CloudinaryService
@@ -36,12 +39,29 @@ router = APIRouter()
 
 @router.post(
     "/register",
-    response_model=TokenResponse,
+    response_model=RegisterResponse,
     status_code=status.HTTP_201_CREATED,
     summary="U001 - Đăng ký tài khoản mới",
 )
-def register(user_in: UserRegister, db: Session = Depends(deps.get_db)):
+def register(
+    user_in: UserRegister,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(deps.get_db),
+):
     db_user = AuthService.register(db, user_in)
+    return AuthService.request_register_otp(db_user.email, background_tasks)
+
+
+@router.post(
+    "/verify-email",
+    response_model=TokenResponse,
+    summary="U001 - Xác thực email đăng ký",
+)
+def verify_email(
+    verify_in: VerifyEmailRequest,
+    db: Session = Depends(deps.get_db),
+):
+    db_user = AuthService.verify_register_otp(db, verify_in.email, verify_in.otp)
     access_token = create_access_token(subject=db_user.id)
     return {
         "access_token": access_token,
@@ -49,6 +69,30 @@ def register(user_in: UserRegister, db: Session = Depends(deps.get_db)):
         "token_type": "bearer",
         "user": db_user,
     }
+
+
+@router.post(
+    "/resend-verification",
+    summary="U001 - Gửi lại mã xác thực email",
+)
+def resend_verification(
+    resend_in: ResendVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(deps.get_db),
+):
+    # Check if the user exists and is not verified yet
+    db_user = db.query(User).filter(User.email == resend_in.email).first()
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="USER_NOT_FOUND",
+        )
+    if db_user.email_verified_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="EMAIL_ALREADY_VERIFIED",
+        )
+    return AuthService.request_register_otp(db_user.email, background_tasks)
 
 
 @router.post(

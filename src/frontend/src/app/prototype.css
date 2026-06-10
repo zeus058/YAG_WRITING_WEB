@@ -2979,6 +2979,8 @@ svg {
 .remember-row input,
 .pill input {
   accent-color: var(--crimson);
+  color-scheme: light;
+  cursor: pointer;
 }
 
 .password-rules {
@@ -5525,6 +5527,12 @@ svg {
   cursor: pointer;
   margin-top: 8px;
   white-space: nowrap;
+}
+
+.auth-terms-row input {
+  accent-color: var(--crimson);
+  color-scheme: light;
+  cursor: pointer;
 }
 
 .auth-action-row {

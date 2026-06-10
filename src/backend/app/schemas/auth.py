@@ -80,6 +80,19 @@ class PasswordChange(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+class RegisterResponse(BaseModel):
+    message: str
+    email: str
+
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
 
 # ==========================================
 # U002 — Profile Management Schemas

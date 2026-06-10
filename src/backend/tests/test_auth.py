@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from fastapi import status
+from datetime import datetime, timezone
 
 from app.main import app
 from app.api import deps
@@ -29,8 +30,13 @@ def override_db_dependency(mock_db):
     app.dependency_overrides.pop(deps.get_db, None)
 
 
-def test_register_user_success(mock_db):
-    """Verifies that user registration succeeds and yields a signed JWT token."""
+@patch("app.services.auth_service.get_redis_client")
+def test_register_user_success(mock_redis, mock_db):
+    """Verifies that user registration succeeds and yields a VERIFICATION_PENDING response."""
+    # Mock redis instance functions
+    redis_instance = MagicMock()
+    mock_redis.return_value = redis_instance
+
     # Setup mock returns: email and username queries both return None (not registered yet)
     mock_db.query.return_value.filter.return_value.first.return_value = None
 
@@ -45,11 +51,10 @@ def test_register_user_success(mock_db):
 
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
-    assert data["user"]["username"] == "hien_test"
-    assert data["user"]["email"] == "hien@yag.vn"
+    assert data["message"] == "VERIFICATION_PENDING"
+    assert data["email"] == "hien@yag.vn"
     assert mock_db.commit.called
+    assert redis_instance.setex.called
 
 
 def test_register_duplicate_email(mock_db):
@@ -107,7 +112,8 @@ def test_login_user_success(mock_redis, mock_db):
         username="hien_test",
         email="hien@yag.vn",
         password_hash=hashed_pwd,
-        role="reader"
+        role="reader",
+        email_verified_at=datetime.now(timezone.utc)
     )
     mock_db.query.return_value.filter.return_value.first.return_value = mock_user
 
@@ -137,7 +143,8 @@ def test_login_user_invalid_credentials(mock_redis, mock_db):
         username="hien_test",
         email="hien@yag.vn",
         password_hash=hashed_pwd,
-        role="reader"
+        role="reader",
+        email_verified_at=datetime.now(timezone.utc)
     )
     mock_db.query.return_value.filter.return_value.first.return_value = mock_user
 
@@ -238,3 +245,131 @@ def test_change_password_success(mock_db):
     assert response.json()["message"] == "Mật khẩu đã được cập nhật"
     assert mock_db.commit.called
     assert verify_password("NewPassword123!", user.password_hash)
+
+
+@patch("app.services.auth_service.get_redis_client")
+def test_login_user_unverified(mock_redis, mock_db):
+    """Verifies that login fails if the email has not been verified yet."""
+    redis_instance = MagicMock()
+    redis_instance.get.return_value = None
+    mock_redis.return_value = redis_instance
+
+    hashed_pwd = get_password_hash("Password123!")
+    mock_user = User(
+        username="hien_test",
+        email="hien@yag.vn",
+        password_hash=hashed_pwd,
+        role="reader",
+        email_verified_at=None
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_user
+
+    payload = {
+        "email": "hien@yag.vn",
+        "password": "Password123!"
+    }
+
+    response = client.post("/api/v1/auth/login", json=payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "EMAIL_NOT_VERIFIED"
+
+
+@patch("app.services.auth_service.get_redis_client")
+def test_verify_email_success(mock_redis, mock_db):
+    """Verifies that verifying with correct OTP marks email as verified and returns TokenResponse."""
+    redis_instance = MagicMock()
+    redis_instance.get.return_value = "123456"
+    mock_redis.return_value = redis_instance
+
+    mock_user = User(
+        id="d6a2f7c0-2f9b-449e-ba23-9502e6c7d5bd",
+        username="hien_test",
+        email="hien@yag.vn",
+        role="reader",
+        email_verified_at=None
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_user
+
+    payload = {
+        "email": "hien@yag.vn",
+        "otp": "123456"
+    }
+
+    response = client.post("/api/v1/auth/verify-email", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "access_token" in data
+    assert data["user"]["email"] == "hien@yag.vn"
+    assert mock_db.commit.called
+    assert redis_instance.delete.called
+
+
+@patch("app.services.auth_service.get_redis_client")
+def test_verify_email_invalid_otp(mock_redis, mock_db):
+    """Verifies that verifying with incorrect OTP returns 400."""
+    redis_instance = MagicMock()
+    redis_instance.get.return_value = "999999"
+    mock_redis.return_value = redis_instance
+
+    mock_user = User(
+        username="hien_test",
+        email="hien@yag.vn",
+        role="reader",
+        email_verified_at=None
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_user
+
+    payload = {
+        "email": "hien@yag.vn",
+        "otp": "123456"
+    }
+
+    response = client.post("/api/v1/auth/verify-email", json=payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "INVALID_OTP"
+
+
+@patch("app.services.auth_service.get_redis_client")
+def test_resend_verification_success(mock_redis, mock_db):
+    """Verifies that requesting verification resend caches a new OTP and returns VERIFICATION_PENDING."""
+    redis_instance = MagicMock()
+    mock_redis.return_value = redis_instance
+
+    mock_user = User(
+        username="hien_test",
+        email="hien@yag.vn",
+        role="reader",
+        email_verified_at=None
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_user
+
+    payload = {"email": "hien@yag.vn"}
+
+    response = client.post("/api/v1/auth/resend-verification", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["message"] == "VERIFICATION_PENDING"
+    assert data["email"] == "hien@yag.vn"
+    assert redis_instance.setex.called
+
+
+@patch("app.services.auth_service.get_redis_client")
+def test_resend_verification_already_verified(mock_redis, mock_db):
+    """Verifies that requesting resend for an already verified email returns 400."""
+    redis_instance = MagicMock()
+    mock_redis.return_value = redis_instance
+
+    mock_user = User(
+        username="hien_test",
+        email="hien@yag.vn",
+        role="reader",
+        email_verified_at=datetime.now(timezone.utc)
+    )
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_user
+
+    payload = {"email": "hien@yag.vn"}
+
+    response = client.post("/api/v1/auth/resend-verification", json=payload)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "EMAIL_ALREADY_VERIFIED"
+

@@ -210,6 +210,12 @@ textarea:focus-visible,
   box-shadow: 0 0 0 4px rgba(254, 189, 178, 0.6) !important;
 }
 
+/* Force standard checkboxes to render as light-mode (white background when unchecked) */
+input[type="checkbox"] {
+  color-scheme: light;
+  accent-color: var(--crimson);
+  cursor: pointer;
+}
 
 /* === LANDING PAGE SCOPED STYLES === */
 /* Force landing page colors — chống dark mode override */

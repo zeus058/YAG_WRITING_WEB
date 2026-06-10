@@ -194,6 +194,12 @@ function AuthPageInner() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<ToastType>("success");
 
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
+  const [verificationOtp, setVerificationOtp] = useState("");
+  const [verificationErrors, setVerificationErrors] = useState<string | null>(null);
+  const [verificationSubmitting, setVerificationSubmitting] = useState(false);
+  const [resendSubmitting, setResendSubmitting] = useState(false);
+
   const passwordRules = useMemo(() => passwordState(registerPassword), [registerPassword]);
   const hasPasswordReady = passwordRules.length && passwordRules.mixed && passwordRules.special;
 
@@ -309,6 +315,23 @@ function AuthPageInner() {
       triggerToast("Đăng nhập thành công. Đang chuyển hướng...", "success");
       window.setTimeout(() => router.push(userDestination(userObj.role, redirect)), 500);
     } catch (error) {
+      let isUnverified = false;
+      if (error instanceof ApiError) {
+        const detail = typeof error.details === "object" && error.details && "detail" in error.details
+          ? String((error.details as { detail?: unknown }).detail)
+          : error.message;
+        if (detail === "EMAIL_NOT_VERIFIED") {
+          isUnverified = true;
+        }
+      }
+
+      if (isUnverified) {
+        triggerToast("Email của bạn chưa được xác thực. Vui lòng xác thực.", "warning");
+        setVerificationEmail(loginEmail.trim());
+        setLoginSubmitting(false);
+        return;
+      }
+
       const failure = recordLoginFailure(loginEmail);
       const message = failure?.lockedUntil
         ? "Tài khoản bị tạm khoá. Thử lại sau 15 phút."
@@ -338,20 +361,57 @@ function AuthPageInner() {
 
     setRegisterSubmitting(true);
     try {
+      if (appEnv.useMocks) {
+        triggerToast("Đăng ký thành công (Giả lập). Vui lòng nhập mã OTP.", "success");
+        setVerificationEmail(registerEmail.trim());
+      } else {
+        await yagApi.auth.register({
+          email: registerEmail.trim(),
+          username: registerUsername.trim(),
+          password: registerPassword,
+        });
+        triggerToast("Đăng ký thành công. Vui lòng nhập mã OTP gửi tới email.", "success");
+        setVerificationEmail(registerEmail.trim());
+      }
+    } catch (error) {
+      const message = authErrorMessage(error, "Không thể tạo tài khoản. Vui lòng thử lại.");
+      if (message.includes("Email")) setRegisterErrors((current) => ({ ...current, registerEmail: message }));
+      if (message.includes("đăng nhập")) setRegisterErrors((current) => ({ ...current, registerEmail: message }));
+      if (message.includes("Tên đăng nhập")) setRegisterErrors((current) => ({ ...current, registerUsername: message }));
+      triggerToast(message, "warning");
+    } finally {
+      setRegisterSubmitting(false);
+    }
+  };
+
+  const handleVerifyEmailSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!verificationEmail) return;
+    if (verificationSubmitting) return;
+
+    if (!verificationOtp.trim() || verificationOtp.trim().length !== 6) {
+      setVerificationErrors("Mã OTP phải gồm 6 chữ số.");
+      return;
+    }
+
+    setVerificationSubmitting(true);
+    try {
       let userObj: { id: string; email: string; username: string; role: "reader" | "author" | "admin" };
       if (appEnv.useMocks) {
+        if (verificationOtp.trim() !== "123456") {
+          throw new Error("Mã OTP không đúng (Sử dụng 123456 trong chế độ giả lập).");
+        }
         userObj = {
           id: "reader-id",
-          email: registerEmail,
-          username: registerUsername,
+          email: verificationEmail,
+          username: verificationEmail.split("@")[0] || "reader",
           role: "reader",
         };
         setAuthSession({ accessToken: "mock-token", user: userObj });
       } else {
-        const result = await yagApi.auth.register({
-          email: registerEmail.trim(),
-          username: registerUsername.trim(),
-          password: registerPassword,
+        const result = await yagApi.auth.verifyEmail({
+          email: verificationEmail,
+          otp: verificationOtp.trim(),
         });
         if (!result.data.accessToken || !result.data.user) {
           throw new Error("INVALID_AUTH_RESPONSE");
@@ -359,16 +419,43 @@ function AuthPageInner() {
         userObj = result.data.user;
         setAuthSession({ accessToken: result.data.accessToken, user: result.data.user });
       }
-      triggerToast("Tài khoản đã được tạo thành công. Đang đăng nhập...", "success");
+      triggerToast("Xác thực thành công. Đang chuyển hướng...", "success");
       window.setTimeout(() => router.push(userDestination(userObj.role, redirect)), 500);
     } catch (error) {
-      const message = authErrorMessage(error, "Không thể tạo tài khoản. Vui lòng thử lại.");
-      if (message.includes("Email")) setRegisterErrors((current) => ({ ...current, registerEmail: message }));
-      if (message.includes("đăng nhập")) setRegisterErrors((current) => ({ ...current, registerEmail: message }));
-      if (message.includes("Tên đăng nhập")) setRegisterErrors((current) => ({ ...current, registerUsername: message }));
+      const message = authErrorMessage(error, "Mã OTP không chính xác hoặc đã hết hạn.");
+      setVerificationErrors(message);
       triggerToast(message, "warning");
-      setRegisterSubmitting(false);
+    } finally {
+      setVerificationSubmitting(false);
     }
+  };
+
+  const handleResendOtp = async () => {
+    if (!verificationEmail) return;
+    if (resendSubmitting) return;
+
+    setResendSubmitting(true);
+    try {
+      if (appEnv.useMocks) {
+        triggerToast("Đã gửi lại mã OTP mới (Giả lập: 123456).", "success");
+      } else {
+        await yagApi.auth.resendVerification({ email: verificationEmail });
+        triggerToast("Đã gửi lại mã OTP mới. Vui lòng kiểm tra hộp thư.", "success");
+      }
+      setVerificationOtp("");
+      setVerificationErrors(null);
+    } catch (error) {
+      const message = authErrorMessage(error, "Không thể gửi lại mã. Vui lòng thử lại.");
+      triggerToast(message, "warning");
+    } finally {
+      setResendSubmitting(false);
+    }
+  };
+
+  const handleBackToAuth = () => {
+    setVerificationEmail(null);
+    setVerificationOtp("");
+    setVerificationErrors(null);
   };
 
   if (isLoading || isAuthenticated) {
@@ -399,219 +486,265 @@ function AuthPageInner() {
               </div>
             </div>
 
-            <div className="tabs auth-tabs" role="tablist" aria-label="Chọn hình thức xác thực">
-              <button
-                className={`tab-button ${activeTab === "login" ? "active" : ""}`}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "login"}
-                onClick={() => setActiveTab("login")}
-              >
-                Đăng nhập
-              </button>
-              <button
-                className={`tab-button ${activeTab === "register" ? "active" : ""}`}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "register"}
-                onClick={() => setActiveTab("register")}
-              >
-                Đăng ký
-              </button>
-            </div>
-
-            {activeTab === "login" && (
-              <form onSubmit={handleLoginSubmit} className="tab-panel active" noValidate>
+            {verificationEmail ? (
+              <form onSubmit={handleVerifyEmailSubmit} className="tab-panel active" noValidate>
                 <div className="stack" style={{ marginTop: 24 }}>
-                  <h1 className="section-title" id="loginTitle">Chào mừng trở lại</h1>
-
-                  <div className="field">
-                    <label htmlFor="loginEmail">Email hoặc username</label>
-                    <input
-                      id="loginEmail"
-                      className={`input ${loginErrors.loginEmail ? "input-invalid" : ""}`}
-                      type="text"
-                      value={loginEmail}
-                      onChange={(event) => {
-                        setLoginEmail(event.target.value);
-                        if (loginErrors.loginEmail) setLoginErrors((current) => ({ ...current, loginEmail: "" }));
-                      }}
-                      onBlur={validateLogin}
-                      placeholder="Email hoặc tên đăng nhập"
-                      autoComplete={rememberMe ? "username" : "off"}
-                      aria-invalid={loginErrors.loginEmail ? "true" : "false"}
-                      aria-describedby="loginEmailHelp loginEmailError"
-                    />
-                    <span className="field-note" id="loginEmailHelp">Dùng email đã đăng ký hoặc username của bạn.</span>
-                    <ErrorLine id="loginEmailError" message={loginErrors.loginEmail} />
-                  </div>
-
-                  <PasswordInput
-                    id="loginPassword"
-                    label="Mật khẩu"
-                    value={loginPassword}
-                    visible={showLoginPassword}
-                    onToggle={() => setShowLoginPassword((current) => !current)}
-                    onChange={(value) => {
-                      setLoginPassword(value);
-                      if (loginErrors.loginPassword) setLoginErrors((current) => ({ ...current, loginPassword: "" }));
-                    }}
-                    onBlur={validateLogin}
-                    placeholder="Mật khẩu của bạn"
-                    autoComplete={rememberMe ? "current-password" : "off"}
-                    invalid={!!loginErrors.loginPassword}
-                    describedBy="loginPasswordError"
-                  />
-                  <ErrorLine id="loginPasswordError" message={loginErrors.loginPassword} />
-
-                  <label className="remember-row">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(event) => setRememberMe(event.target.checked)}
-                    />
-                    Lưu thông tin đăng nhập trên thiết bị này
-                  </label>
-
-                  <div className="inline-actions auth-action-row" style={{ justifyContent: "space-between" }}>
-                    <Link className="button" href="/auth/recovery">
-                      Quên mật khẩu
-                    </Link>
-                    <button className="button button-primary" type="submit" disabled={loginSubmitting} aria-busy={loginSubmitting}>
-                      <Icon name="arrow" /> {loginSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
-                    </button>
-                  </div>
-                </div>
-              </form>
-            )}
-
-            {activeTab === "register" && (
-              <form onSubmit={handleRegisterSubmit} className="tab-panel active" noValidate>
-                <div className="stack" style={{ marginTop: 24 }}>
-                  <h1 className="section-title" id="registerTitle">Tạo tài khoản YAG</h1>
-
-                  <div className="field">
-                    <label htmlFor="registerEmail">Email</label>
-                    <input
-                      id="registerEmail"
-                      className={`input ${registerTouched.registerEmail && registerErrors.registerEmail ? "input-invalid" : ""}`}
-                      type="email"
-                      value={registerEmail}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setRegisterEmail(value);
-                        if (registerTouched.registerEmail) validateRegister({ email: value });
-                      }}
-                      onBlur={() => touchRegister("registerEmail")}
-                      placeholder="vd: ten@email.com"
-                      autoComplete="email"
-                      aria-invalid={registerTouched.registerEmail && registerErrors.registerEmail ? "true" : "false"}
-                      aria-describedby="registerEmailHelp registerEmailError"
-                    />
-                    <span className="field-note" id="registerEmailHelp">Email dùng để đăng nhập và khôi phục mật khẩu.</span>
-                    <ErrorLine id="registerEmailError" message={registerTouched.registerEmail ? registerErrors.registerEmail : undefined} />
-                  </div>
-
-                  <div className="field">
-                    <label htmlFor="registerUsername">Username</label>
-                    <input
-                      id="registerUsername"
-                      className={`input ${registerTouched.registerUsername && registerErrors.registerUsername ? "input-invalid" : ""}`}
-                      type="text"
-                      value={registerUsername}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setRegisterUsername(value);
-                        if (registerTouched.registerUsername) validateRegister({ username: value });
-                      }}
-                      onBlur={() => touchRegister("registerUsername")}
-                      placeholder="4-20 ký tự, không dấu"
-                      autoComplete="username"
-                      aria-invalid={registerTouched.registerUsername && registerErrors.registerUsername ? "true" : "false"}
-                      aria-describedby="registerUsernameHelp registerUsernameError"
-                    />
-                    <span className="field-note" id="registerUsernameHelp">Chỉ dùng chữ cái, số và dấu gạch dưới.</span>
-                    <ErrorLine id="registerUsernameError" message={registerTouched.registerUsername ? registerErrors.registerUsername : undefined} />
-                  </div>
-
-                  <PasswordInput
-                    id="registerPassword"
-                    label="Mật khẩu"
-                    value={registerPassword}
-                    visible={showRegisterPassword}
-                    onToggle={() => setShowRegisterPassword((current) => !current)}
-                    onChange={(value) => {
-                      setRegisterPassword(value);
-                      if (registerTouched.registerPassword || registerTouched.registerConfirmPassword) validateRegister({ password: value });
-                    }}
-                    onBlur={() => touchRegister("registerPassword")}
-                    placeholder="Tối thiểu 8 ký tự"
-                    autoComplete="new-password"
-                    invalid={registerTouched.registerPassword && !!registerErrors.registerPassword}
-                    describedBy="registerPasswordHelp registerPasswordError"
-                  />
-                  <ErrorLine id="registerPasswordError" message={registerTouched.registerPassword ? registerErrors.registerPassword : undefined} />
-
-                  <div className="password-rules" id="registerPasswordHelp" aria-live="polite">
-                    <div className={`password-rule ${passwordRules.length ? "valid" : ""}`}>
-                      <span className="rule-icon">{passwordRules.length ? <Icon name="check" /> : <Icon name="close" />}</span>
-                      <span>Tối thiểu 8 ký tự</span>
-                    </div>
-                    <div className={`password-rule ${passwordRules.mixed ? "valid" : ""}`}>
-                      <span className="rule-icon">{passwordRules.mixed ? <Icon name="check" /> : <Icon name="close" />}</span>
-                      <span>Bao gồm số, chữ thường và chữ hoa</span>
-                    </div>
-                    <div className={`password-rule ${passwordRules.special ? "valid" : ""}`}>
-                      <span className="rule-icon">{passwordRules.special ? <Icon name="check" /> : <Icon name="close" />}</span>
-                      <span>Có ký tự đặc biệt như @, #, !, %</span>
-                    </div>
-                  </div>
-
-                  <PasswordInput
-                    id="registerConfirmPassword"
-                    label="Xác nhận mật khẩu"
-                    value={registerConfirmPassword}
-                    visible={showRegisterConfirmPassword}
-                    onToggle={() => setShowRegisterConfirmPassword((current) => !current)}
-                    onChange={(value) => {
-                      setRegisterConfirmPassword(value);
-                      if (registerTouched.registerConfirmPassword) validateRegister({ confirmPassword: value });
-                    }}
-                    onPaste={() => window.setTimeout(() => touchRegister("registerConfirmPassword"), 0)}
-                    onBlur={() => touchRegister("registerConfirmPassword")}
-                    placeholder="Nhập lại mật khẩu"
-                    autoComplete="new-password"
-                    invalid={registerTouched.registerConfirmPassword && !!registerErrors.registerConfirmPassword}
-                    describedBy="registerConfirmPasswordError"
-                  />
-                  <ErrorLine id="registerConfirmPasswordError" message={registerTouched.registerConfirmPassword ? registerErrors.registerConfirmPassword : undefined} />
-
-                  <label className={`auth-terms-row ${registerTouched.terms && registerErrors.terms ? "input-invalid" : ""}`}>
-                    <input
-                      type="checkbox"
-                      checked={agreeTerms}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setAgreeTerms(checked);
-                        setRegisterTouched((current) => ({ ...current, terms: true }));
-                        validateRegister({ terms: checked });
-                      }}
-                    />
-                    Tôi đồng ý điều khoản nội dung và chính sách bảo mật YAG
-                  </label>
-                  <ErrorLine id="termsError" message={registerTouched.terms ? registerErrors.terms : undefined} />
-
-                  <button className="button button-primary" type="submit" disabled={registerSubmitting} aria-busy={registerSubmitting || !hasPasswordReady}>
-                    <Icon name="check" /> {registerSubmitting ? "Đang tạo tài khoản..." : "Đăng ký miễn phí"}
-                  </button>
-                  <p className="field-note">
-                    Đã có tài khoản?{" "}
-                    <button className="link-button" type="button" onClick={() => setActiveTab("login")}>
-                      Đăng nhập
-                    </button>
+                  <h1 className="section-title">Xác thực email</h1>
+                  <p className="field-note" style={{ marginBottom: 16 }}>
+                    Một mã xác thực gồm 6 chữ số đã được gửi tới email <strong>{verificationEmail}</strong>. 
+                    Vui lòng nhập mã để kích hoạt tài khoản của bạn.
                   </p>
+
+                  <div className="field">
+                    <label htmlFor="verificationOtp">Mã OTP</label>
+                    <input
+                      id="verificationOtp"
+                      className={`input ${verificationErrors ? "input-invalid" : ""}`}
+                      type="text"
+                      maxLength={6}
+                      value={verificationOtp}
+                      onChange={(event) => {
+                        setVerificationOtp(event.target.value.replace(/\D/g, ""));
+                        setVerificationErrors(null);
+                      }}
+                      placeholder="Nhập 6 chữ số"
+                    />
+                    <ErrorLine id="verificationOtpError" message={verificationErrors || undefined} />
+                  </div>
+
+                  <div className="stack" style={{ gap: 12, marginTop: 16 }}>
+                    <button className="button button-primary" type="submit" disabled={verificationSubmitting} aria-busy={verificationSubmitting}>
+                      <Icon name="check" /> {verificationSubmitting ? "Đang xác thực..." : "Xác thực"}
+                    </button>
+                    
+                    <div className="inline-actions" style={{ justifyContent: "space-between", gap: 12 }}>
+                      <button className="button" type="button" onClick={handleResendOtp} disabled={resendSubmitting} aria-busy={resendSubmitting}>
+                        <Icon name="arrow" /> {resendSubmitting ? "Đang gửi..." : "Gửi lại mã"}
+                      </button>
+                      <button className="button" type="button" onClick={handleBackToAuth}>
+                        Quay lại
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </form>
+            ) : (
+              <>
+                <div className="tabs auth-tabs" role="tablist" aria-label="Chọn hình thức xác thực">
+                  <button
+                    className={`tab-button ${activeTab === "login" ? "active" : ""}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === "login"}
+                    onClick={() => setActiveTab("login")}
+                  >
+                    Đăng nhập
+                  </button>
+                  <button
+                    className={`tab-button ${activeTab === "register" ? "active" : ""}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === "register"}
+                    onClick={() => setActiveTab("register")}
+                  >
+                    Đăng ký
+                  </button>
+                </div>
+
+                {activeTab === "login" && (
+                  <form onSubmit={handleLoginSubmit} className="tab-panel active" noValidate>
+                    <div className="stack" style={{ marginTop: 24 }}>
+                      <h1 className="section-title" id="loginTitle">Chào mừng trở lại</h1>
+
+                      <div className="field">
+                        <label htmlFor="loginEmail">Email hoặc username</label>
+                        <input
+                          id="loginEmail"
+                          className={`input ${loginErrors.loginEmail ? "input-invalid" : ""}`}
+                          type="text"
+                          value={loginEmail}
+                          onChange={(event) => {
+                            setLoginEmail(event.target.value);
+                            if (loginErrors.loginEmail) setLoginErrors((current) => ({ ...current, loginEmail: "" }));
+                          }}
+                          onBlur={validateLogin}
+                          placeholder="Email hoặc tên đăng nhập"
+                          autoComplete={rememberMe ? "username" : "off"}
+                          aria-invalid={loginErrors.loginEmail ? "true" : "false"}
+                          aria-describedby="loginEmailHelp loginEmailError"
+                        />
+                        <span className="field-note" id="loginEmailHelp">Dùng email đã đăng ký hoặc username của bạn.</span>
+                        <ErrorLine id="loginEmailError" message={loginErrors.loginEmail} />
+                      </div>
+
+                      <PasswordInput
+                        id="loginPassword"
+                        label="Mật khẩu"
+                        value={loginPassword}
+                        visible={showLoginPassword}
+                        onToggle={() => setShowLoginPassword((current) => !current)}
+                        onChange={(value) => {
+                          setLoginPassword(value);
+                          if (loginErrors.loginPassword) setLoginErrors((current) => ({ ...current, loginPassword: "" }));
+                        }}
+                        onBlur={validateLogin}
+                        placeholder="Mật khẩu của bạn"
+                        autoComplete={rememberMe ? "current-password" : "off"}
+                        invalid={!!loginErrors.loginPassword}
+                        describedBy="loginPasswordError"
+                      />
+                      <ErrorLine id="loginPasswordError" message={loginErrors.loginPassword} />
+
+                      <label className="remember-row">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(event) => setRememberMe(event.target.checked)}
+                        />
+                        Lưu thông tin đăng nhập trên thiết bị này
+                      </label>
+
+                      <div className="inline-actions auth-action-row" style={{ justifyContent: "space-between" }}>
+                        <Link className="button" href="/auth/recovery">
+                          Quên mật khẩu
+                        </Link>
+                        <button className="button button-primary" type="submit" disabled={loginSubmitting} aria-busy={loginSubmitting}>
+                          <Icon name="arrow" /> {loginSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+
+                {activeTab === "register" && (
+                  <form onSubmit={handleRegisterSubmit} className="tab-panel active" noValidate>
+                    <div className="stack" style={{ marginTop: 24 }}>
+                      <h1 className="section-title" id="registerTitle">Tạo tài khoản YAG</h1>
+
+                      <div className="field">
+                        <label htmlFor="registerEmail">Email</label>
+                        <input
+                          id="registerEmail"
+                          className={`input ${registerTouched.registerEmail && registerErrors.registerEmail ? "input-invalid" : ""}`}
+                          type="email"
+                          value={registerEmail}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setRegisterEmail(value);
+                            if (registerTouched.registerEmail) validateRegister({ email: value });
+                          }}
+                          onBlur={() => touchRegister("registerEmail")}
+                          placeholder="vd: ten@email.com"
+                          autoComplete="email"
+                          aria-invalid={registerTouched.registerEmail && registerErrors.registerEmail ? "true" : "false"}
+                          aria-describedby="registerEmailHelp registerEmailError"
+                        />
+                        <span className="field-note" id="registerEmailHelp">Email dùng để đăng nhập và khôi phục mật khẩu.</span>
+                        <ErrorLine id="registerEmailError" message={registerTouched.registerEmail ? registerErrors.registerEmail : undefined} />
+                      </div>
+
+                      <div className="field">
+                        <label htmlFor="registerUsername">Username</label>
+                        <input
+                          id="registerUsername"
+                          className={`input ${registerTouched.registerUsername && registerErrors.registerUsername ? "input-invalid" : ""}`}
+                          type="text"
+                          value={registerUsername}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setRegisterUsername(value);
+                            if (registerTouched.registerUsername) validateRegister({ username: value });
+                          }}
+                          onBlur={() => touchRegister("registerUsername")}
+                          placeholder="4-20 ký tự, không dấu"
+                          autoComplete="username"
+                          aria-invalid={registerTouched.registerUsername && registerErrors.registerUsername ? "true" : "false"}
+                          aria-describedby="registerUsernameHelp registerUsernameError"
+                        />
+                        <span className="field-note" id="registerUsernameHelp">Chỉ dùng chữ cái, số và dấu gạch dưới.</span>
+                        <ErrorLine id="registerUsernameError" message={registerTouched.registerUsername ? registerErrors.registerUsername : undefined} />
+                      </div>
+
+                      <PasswordInput
+                        id="registerPassword"
+                        label="Mật khẩu"
+                        value={registerPassword}
+                        visible={showRegisterPassword}
+                        onToggle={() => setShowRegisterPassword((current) => !current)}
+                        onChange={(value) => {
+                          setRegisterPassword(value);
+                          if (registerTouched.registerPassword || registerTouched.registerConfirmPassword) validateRegister({ password: value });
+                        }}
+                        onBlur={() => touchRegister("registerPassword")}
+                        placeholder="Tối thiểu 8 ký tự"
+                        autoComplete="new-password"
+                        invalid={registerTouched.registerPassword && !!registerErrors.registerPassword}
+                        describedBy="registerPasswordHelp registerPasswordError"
+                      />
+                      <ErrorLine id="registerPasswordError" message={registerTouched.registerPassword ? registerErrors.registerPassword : undefined} />
+
+                      <div className="password-rules" id="registerPasswordHelp" aria-live="polite">
+                        <div className={`password-rule ${passwordRules.length ? "valid" : ""}`}>
+                          <span className="rule-icon">{passwordRules.length ? <Icon name="check" /> : <Icon name="close" />}</span>
+                          <span>Tối thiểu 8 ký tự</span>
+                        </div>
+                        <div className={`password-rule ${passwordRules.mixed ? "valid" : ""}`}>
+                          <span className="rule-icon">{passwordRules.mixed ? <Icon name="check" /> : <Icon name="close" />}</span>
+                          <span>Bao gồm số, chữ thường và chữ hoa</span>
+                        </div>
+                        <div className={`password-rule ${passwordRules.special ? "valid" : ""}`}>
+                          <span className="rule-icon">{passwordRules.special ? <Icon name="check" /> : <Icon name="close" />}</span>
+                          <span>Có ký tự đặc biệt như @, #, !, %</span>
+                        </div>
+                      </div>
+
+                      <PasswordInput
+                        id="registerConfirmPassword"
+                        label="Xác nhận mật khẩu"
+                        value={registerConfirmPassword}
+                        visible={showRegisterConfirmPassword}
+                        onToggle={() => setShowRegisterConfirmPassword((current) => !current)}
+                        onChange={(value) => {
+                          setRegisterConfirmPassword(value);
+                          if (registerTouched.registerConfirmPassword) validateRegister({ confirmPassword: value });
+                        }}
+                        onPaste={() => window.setTimeout(() => touchRegister("registerConfirmPassword"), 0)}
+                        onBlur={() => touchRegister("registerConfirmPassword")}
+                        placeholder="Nhập lại mật khẩu"
+                        autoComplete="new-password"
+                        invalid={registerTouched.registerConfirmPassword && !!registerErrors.registerConfirmPassword}
+                        describedBy="registerConfirmPasswordError"
+                      />
+                      <ErrorLine id="registerConfirmPasswordError" message={registerTouched.registerConfirmPassword ? registerErrors.registerConfirmPassword : undefined} />
+
+                      <label className={`auth-terms-row ${registerTouched.terms && registerErrors.terms ? "input-invalid" : ""}`}>
+                        <input
+                          type="checkbox"
+                          checked={agreeTerms}
+                          onChange={(event) => {
+                            const checked = event.target.checked;
+                            setAgreeTerms(checked);
+                            setRegisterTouched((current) => ({ ...current, terms: true }));
+                            validateRegister({ terms: checked });
+                          }}
+                        />
+                        Tôi đồng ý điều khoản nội dung và chính sách bảo mật YAG
+                      </label>
+                      <ErrorLine id="termsError" message={registerTouched.terms ? registerErrors.terms : undefined} />
+
+                      <button className="button button-primary" type="submit" disabled={registerSubmitting} aria-busy={registerSubmitting || !hasPasswordReady}>
+                        <Icon name="check" /> {registerSubmitting ? "Đang tạo tài khoản..." : "Đăng ký miễn phí"}
+                      </button>
+                      <p className="field-note">
+                        Đã có tài khoản?{" "}
+                        <button className="link-button" type="button" onClick={() => setActiveTab("login")}>
+                          Đăng nhập
+                        </button>
+                      </p>
+                    </div>
+                  </form>
+                )}
+              </>
             )}
           </section>
         </main>

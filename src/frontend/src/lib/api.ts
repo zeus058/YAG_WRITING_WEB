@@ -99,13 +99,27 @@ export const yagApi = {
       return result;
     },
     register: async (payload: { email: string; username: string; password: string }) => {
-      const result = await apiFetch<AuthResponse>("/api/v1/auth/register", {
+      return apiFetch<{ message: string; email: string }>("/api/v1/auth/register", {
+        method: "POST",
+        body: payload,
+        timeoutMs: 10000,
+      });
+    },
+    verifyEmail: async (payload: { email: string; otp: string }) => {
+      const result = await apiFetch<AuthResponse>("/api/v1/auth/verify-email", {
         method: "POST",
         body: payload,
         timeoutMs: 10000,
       });
       setAuthTokens(result.data);
       return result;
+    },
+    resendVerification: (payload: { email: string }) => {
+      return apiFetch<{ message: string; email: string }>("/api/v1/auth/resend-verification", {
+        method: "POST",
+        body: payload,
+        timeoutMs: 10000,
+      });
     },
     requestPasswordReset: (payload: { email: string }) =>
       apiFetch<{ message: string }>("/api/v1/auth/password-reset/request", {

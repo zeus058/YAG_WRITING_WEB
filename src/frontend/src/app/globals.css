@@ -48,28 +48,29 @@
 
 /* === CHẾ ĐỘ TỐI (Dark Mode) === */
 .dark {
-  --background: #0A0F0B;
-  --foreground: #E5EDE4;
-  --petal: #0A0F0B;
-  --jungle: #E5EDE4;
+  --background: #0E1310;
+  --foreground: #E5ECE4;
+  --petal: #18201B;
+  --jungle: #E5ECE4;
   --jungle-dark: #FFFFFF;
-  --near-white: #121A14;
-  --ink: #E5EDE4;
-  --muted: #82907E;
-  --line: rgba(255, 255, 255, 0.12);
-  --surface: #141C16;
-  --surface-panel: rgba(20, 28, 22, 0.82);
-  --surface-panel-hover: rgba(28, 38, 30, 0.92);
-  --topbar-bg: rgba(10, 15, 11, 0.85);
-  --button-hover-bg: rgba(254, 189, 178, 0.08);
-  --main-bg-start: #0A0F0B;
-  --main-bg-end: #0E140F;
-  --sidebar-bg: #060907;
-  --sidebar-color: #FAF5EB;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
-  --shadow-lift: 0 16px 48px rgba(0, 0, 0, 0.7);
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.5);
-  --shadow-hover: 0 10px 32px rgba(0, 0, 0, 0.65);
+  --near-white: #222C25;
+  --ink: #FFFFFF;
+  --muted: #94A691;
+  --line: rgba(229, 236, 228, 0.12);
+  --surface: #1E2721;
+  --surface-panel: rgba(30, 39, 33, 0.88);
+  --surface-panel-hover: rgba(38, 49, 41, 0.94);
+  --topbar-bg: rgba(14, 19, 16, 0.88);
+  --button-hover-bg: rgba(254, 189, 178, 0.10);
+  --main-bg-start: #0E1310;
+  --main-bg-end: #141C17;
+  --sidebar-bg: #0A0D0B;
+  --sidebar-color: #F0F6EF;
+  --accent-text: #FEBDB2;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 16px 48px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.38);
+  --shadow-hover: 0 10px 32px rgba(0, 0, 0, 0.52);
 }
 
 

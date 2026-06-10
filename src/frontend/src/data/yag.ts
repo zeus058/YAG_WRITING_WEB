@@ -44,7 +44,11 @@ export type IconName =
   | "menu"
   | "lock"
   | "sun"
-  | "moon";
+  | "moon"
+  | "heart"
+  | "message"
+  | "repost"
+  | "send";
 
 export type PageInfo = {
   id: ScreenId;

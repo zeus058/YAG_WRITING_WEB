@@ -1,7 +1,6 @@
 const mockOnlyStorageKeys = [
   "yag.mockMembership",
   "yag.mockHistory",
-  "yag.forum.posts",
   "yag.author.sessions",
   "yag.author.announcements",
 ];

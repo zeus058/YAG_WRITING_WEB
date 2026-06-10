@@ -1151,64 +1151,72 @@ export function ReaderScreen() {
   );
 }
 
+function VerifiedBadge() {
+  return (
+    <svg viewBox="0 0 24 24" aria-label="Đã xác minh" className="verified-badge" style={{ width: 14, height: 14, fill: "#1d9bf0", flexShrink: 0, marginLeft: 4 }}>
+      <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.99-3.818-3.99-.48 0-.94.1-1.348.27C14.825 2.515 13.512 1.5 12 1.5s-2.825 1.015-3.422 2.28c-.406-.17-.867-.27-1.348-.27-2.108 0-3.818 1.78-3.818 3.99 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.58.875 2.95 2.148 3.6-.154.435-.238.905-.238 1.4 0 2.21 1.71 3.99 3.818 3.99.48 0 .94-.1 1.348-.27.597 1.265 1.91 2.28 3.422 2.28s2.825-1.015 3.422-2.28c.406.17.867.27 1.348.27 2.108 0 3.818-1.78 3.818-3.99 0-.495-.084-.965-.238-1.4 1.273-.65 2.148-2.02 2.148-3.6zm-12.5 4L6 12.5l1.5-1.5 2.5 2.5 6.5-6.5 1.5 1.5-8 8z" />
+    </svg>
+  );
+}
+
 export function ForumScreen() {
   const [posts, setPosts] = useState<any[]>([]);
   const [newPostContent, setNewPostContent] = useState("");
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [activeMoreMenu, setActiveMoreMenu] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"for-you" | "following">("for-you");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedPosts = getStoredJsonArray("yag.forum.posts", appEnv.useMocks);
+      const storedPosts = getStoredJsonArray("yag.forum.posts", true);
       if (storedPosts.length > 0) {
         setPosts(storedPosts);
       } else {
-        if (appEnv.useMocks) {
-          const initialMock = [
-            {
-              id: "p1",
-              authorName: "Độc giả 01",
-              authorAvatar: "D1",
-              time: "10 phút trước",
-              content: "Mọi người nghĩ sao về chi tiết mở nút ở chương mới nhất? Mình đang tò mò hướng phát triển tiếp theo.",
-              likes: 24,
-              liked: false,
-              replies: [
-                { id: "r1_1", author: "Độc giả 02", content: "Mình cũng thấy chi tiết đó có thể là gợi ý cho tuyến nhân vật phụ." },
-                { id: "r1_2", author: "Độc giả 03", content: "Có thể tác giả đang chuẩn bị đảo chiều ở chương sau." }
-              ],
-              showReplyBox: false,
-            },
-            {
-              id: "p2",
-              authorName: "Độc giả 04",
-              authorAvatar: "D4",
-              time: "1 giờ trước",
-              content: "Vừa đọc xong chương mới nhất. Nhịp kể chắc tay, đoạn kết chương khiến mình muốn đọc tiếp ngay.",
-              likes: 12,
-              liked: true,
-              replies: [],
-              showReplyBox: false,
-            },
-            {
-              id: "p3",
-              authorName: "Độc giả 05",
-              authorAvatar: "D5",
-              time: "2 giờ trước",
-              content: "Có ai đề xuất thêm truyện cùng thể loại không ạ? Mình muốn tìm thêm vài bộ để đọc cuối tuần.",
-              likes: 8,
-              liked: false,
-              replies: [
-                { id: "r3_1", author: "Quản trị YAG", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa trên trang Khám phá nhé!" }
-              ],
-              showReplyBox: false,
-            }
-          ];
-          setPosts(initialMock);
-          localStorage.setItem("yag.forum.posts", JSON.stringify(initialMock));
-        } else {
-          setPosts([]);
-        }
+        const initialMock = [
+          {
+            id: "p1",
+            authorName: "Hương Trà",
+            authorAvatar: "HT",
+            isVerified: true,
+            time: "10 phút trước",
+            content: "Mọi người nghĩ sao về chi tiết mở nút ở chương mới nhất? Mình đang tò mò hướng phát triển tiếp theo.",
+            likes: 24,
+            liked: false,
+            replies: [
+              { id: "r1_1", author: "Gia Hiển", authorAvatar: "GH", content: "Mình cũng thấy chi tiết đó có thể là gợi ý cho tuyến nhân vật phụ.", isVerified: true },
+              { id: "r1_2", author: "Độc giả 03", authorAvatar: "D3", content: "Có thể tác giả đang chuẩn bị đảo chiều ở chương sau.", isVerified: false }
+            ],
+            showReplyBox: false,
+          },
+          {
+            id: "p2",
+            authorName: "Phú Thọ",
+            authorAvatar: "PT",
+            isVerified: true,
+            time: "1 giờ trước",
+            content: "Vừa đọc xong chương mới nhất. Nhịp kể chắc tay, đoạn kết chương khiến mình muốn đọc tiếp ngay.",
+            likes: 12,
+            liked: true,
+            replies: [],
+            showReplyBox: false,
+          },
+          {
+            id: "p3",
+            authorName: "Duy Trường",
+            authorAvatar: "DT",
+            isVerified: true,
+            time: "2 giờ trước",
+            content: "Có ai đề xuất thêm truyện cùng thể loại không ạ? Mình muốn tìm thêm vài bộ để đọc cuối tuần.",
+            likes: 8,
+            liked: false,
+            replies: [
+              { id: "r3_1", author: "Yến Nhi", authorAvatar: "YN", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa trên trang Khám phá nhé!", isVerified: true }
+            ],
+            showReplyBox: false,
+          }
+        ];
+        setPosts(initialMock);
+        localStorage.setItem("yag.forum.posts", JSON.stringify(initialMock));
       }
     }
   }, []);
@@ -1272,7 +1280,8 @@ export function ForumScreen() {
     const newPost = {
       id: `p_${Date.now()}`,
       authorName: "Bạn",
-      authorAvatar: "ME",
+      authorAvatar: "B",
+      isVerified: false,
       time: "Vừa xong",
       content: newPostContent,
       likes: 0,
@@ -1305,7 +1314,7 @@ export function ForumScreen() {
       if (p.id === postId) {
         return {
           ...p,
-          replies: [...p.replies, { id: `r_${Date.now()}`, author: "Bạn", content: text }],
+          replies: [...p.replies, { id: `r_${Date.now()}`, author: "Bạn", authorAvatar: "B", content: text, isVerified: false }],
           showReplyBox: false
         };
       }
@@ -1319,161 +1328,208 @@ export function ForumScreen() {
     triggerLiveToast("Đã gửi phản hồi.");
   };
 
+  const displayedPosts = activeTab === "for-you"
+    ? posts
+    : posts.filter(p => p.isVerified || p.authorName === "Bạn");
+
   return (
     <AppShell activeId="s08">
       <div className="forum-shell">
         <main className="forum-feed">
+          {/* Tabs Bar */}
+          <div className="threads-tabs">
+            <button
+              type="button"
+              className={`threads-tab ${activeTab === "for-you" ? "active" : ""}`}
+              onClick={() => setActiveTab("for-you")}
+            >
+              Dành cho bạn
+            </button>
+            <button
+              type="button"
+              className={`threads-tab ${activeTab === "following" ? "active" : ""}`}
+              onClick={() => setActiveTab("following")}
+            >
+              Đang theo dõi
+            </button>
+          </div>
+
           {/* Post Composer */}
           <form onSubmit={handleCreatePost} className="forum-composer">
-            <div className="avatar">ME</div>
+            <div className="forum-composer-left">
+              <div className="avatar" style={{ background: "var(--crimson)", color: "white" }}>
+                B
+              </div>
+            </div>
             <div className="forum-composer-input-wrap">
               <textarea
                 className="forum-composer-textarea"
-                rows={3}
-                placeholder="Bạn muốn chia sẻ điều gì về các tác phẩm hôm nay?..."
+                rows={2}
+                placeholder="Bạn đang nghĩ gì?..."
                 value={newPostContent}
                 onChange={(e) => setNewPostContent(e.target.value)}
               />
               <div className="forum-composer-actions">
                 <button className="button button-primary" type="submit" disabled={!newPostContent.trim()}>
-                  Đăng chủ đề
+                  Đăng
                 </button>
               </div>
             </div>
           </form>
 
           {/* Social Thread Feed */}
-          {posts.length === 0 ? (
+          {displayedPosts.length === 0 ? (
             <div className="panel panel-pad" style={{ textAlign: "center", color: "var(--muted)", padding: 48, borderRadius: 12 }}>
-              Chưa có bài viết thảo luận nào trên diễn đàn. Hãy bắt đầu cuộc thảo luận đầu tiên của bạn!
+              Chưa có bài viết nào trong mục này.
             </div>
           ) : (
-            posts.map((post) => (
-              <article className="forum-post" key={post.id}>
-                <div className="forum-post-head">
-                  <div className="forum-post-author">
+            displayedPosts.map((post) => (
+              <div className="thread-item-wrapper" key={post.id}>
+                {/* Parent Post */}
+                <div className="thread-post">
+                  <div className="thread-left-col">
                     <div className="avatar" style={{ background: post.authorName === "Bạn" ? "var(--crimson)" : "var(--jungle)" }}>
-                      {post.authorAvatar}
+                      {post.authorAvatar || post.authorName.substring(0, 2).toUpperCase()}
                     </div>
-                    <div className="forum-post-meta">
-                      <strong>{post.authorName}</strong>
-                      <small>{post.time}</small>
-                    </div>
+                    {post.replies.length > 0 && <div className="thread-line"></div>}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
-                    <span className="badge badge-blue">Sôi nổi</span>
-                    <button
-                      className="button icon-button forum-more-btn"
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveMoreMenu(activeMoreMenu === post.id ? null : post.id);
-                      }}
-                      style={{ padding: 4, height: 28, width: 28, minWidth: 28, background: "transparent", border: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                      aria-label="Tùy chọn bài viết"
-                    >
-                      <Icon name="settings" />
-                    </button>
-                    {activeMoreMenu === post.id && (
-                      <div className="menu dropdown-menu" style={{ right: 0, top: 32, position: "absolute", zIndex: 10, minWidth: 120 }}>
-                        <button className="menu-item" type="button" onClick={() => handleShare(post.id)}>Chia sẻ</button>
-                        <button className="menu-item" type="button" onClick={() => handleHide(post.id)}>Ẩn bài viết</button>
-                        <button className="menu-item" type="button" onClick={() => handleReport(post.id)} style={{ color: "var(--crimson)" }}>Báo cáo</button>
+                  
+                  <div className="thread-right-col">
+                    <div className="thread-author-row">
+                      <div className="thread-author-info">
+                        <span className="thread-author-name">{post.authorName}</span>
+                        {post.isVerified && <VerifiedBadge />}
+                        <span className="thread-time">{post.time}</span>
+                      </div>
+                      
+                      <div style={{ position: "relative" }}>
+                        <button
+                          className="button icon-button forum-more-btn"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMoreMenu(activeMoreMenu === post.id ? null : post.id);
+                          }}
+                          style={{ padding: 4, height: 28, width: 28, minWidth: 28, background: "transparent", border: 0, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                          aria-label="Tùy chọn bài viết"
+                        >
+                          <Icon name="settings" />
+                        </button>
+                        {activeMoreMenu === post.id && (
+                          <div className="menu dropdown-menu" style={{ right: 0, top: 32, position: "absolute", zIndex: 10, minWidth: 120 }}>
+                            <button className="menu-item" type="button" onClick={() => handleShare(post.id)}>Chia sẻ</button>
+                            <button className="menu-item" type="button" onClick={() => handleHide(post.id)}>Ẩn bài viết</button>
+                            <button className="menu-item" type="button" onClick={() => handleReport(post.id)} style={{ color: "var(--crimson)" }}>Báo cáo</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="thread-content">{post.content}</div>
+
+                    <div className="thread-actions">
+                      <button
+                        type="button"
+                        className={`thread-action-btn ${post.liked ? "active" : ""}`}
+                        onClick={() => handleLikePost(post.id)}
+                        title="Thích"
+                      >
+                        <Icon name="heart" />
+                      </button>
+                      <button
+                        type="button"
+                        className="thread-action-btn"
+                        onClick={() => toggleReplyBox(post.id)}
+                        title="Bình luận"
+                      >
+                        <Icon name="message" />
+                      </button>
+                      <button
+                        type="button"
+                        className="thread-action-btn"
+                        onClick={() => {
+                          handleLikePost(post.id);
+                          triggerLiveToast("Đã chia sẻ lại chủ đề này!");
+                        }}
+                        title="Repost"
+                      >
+                        <Icon name="repost" />
+                      </button>
+                      <button
+                        type="button"
+                        className="thread-action-btn"
+                        onClick={() => handleShare(post.id)}
+                        title="Gửi"
+                      >
+                        <Icon name="send" />
+                      </button>
+                    </div>
+
+                    {(post.likes > 0 || post.replies.length > 0) && (
+                      <div className="thread-stats">
+                        {post.likes > 0 && `${post.likes} lượt thích`}
+                        {post.likes > 0 && post.replies.length > 0 && " • "}
+                        {post.replies.length > 0 && `${post.replies.length} phản hồi`}
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="forum-post-content">{post.content}</div>
-
-                <div className="forum-post-actions">
-                  <button
-                    type="button"
-                    className={`forum-action-btn ${post.liked ? "active" : ""}`}
-                    onClick={() => handleLikePost(post.id)}
-                  >
-                    <Icon name="check" /> {post.likes} Thích
-                  </button>
-                  <button
-                    type="button"
-                    className="forum-action-btn"
-                    onClick={() => toggleReplyBox(post.id)}
-                  >
-                    <Icon name="settings" /> {post.replies.length} Bình luận
-                  </button>
-                  <button
-                    type="button"
-                    className="forum-action-btn"
-                    onClick={() => handleShare(post.id)}
-                  >
-                    <Icon name="arrow" /> Chia sẻ
-                  </button>
-                </div>
+                {/* Inline Reply box */}
+                {post.showReplyBox && (
+                  <div className="thread-post" style={{ marginTop: 12 }}>
+                    <div className="thread-left-col">
+                      <div className="avatar mini" style={{ background: "var(--crimson)" }}>
+                        B
+                      </div>
+                    </div>
+                    <div className="thread-right-col">
+                      <div className="forum-reply-box">
+                        <input
+                          type="text"
+                          placeholder="Trả lời..."
+                          value={replyInputs[post.id] || ""}
+                          onChange={(e) => setReplyInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleAddReplySubmit(post.id);
+                          }}
+                        />
+                        <button className="button button-primary" type="button" onClick={() => handleAddReplySubmit(post.id)}>
+                          Gửi
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Replies list */}
                 {post.replies.length > 0 && (
-                  <div className="forum-replies-section">
+                  <div className="thread-replies-list">
                     {post.replies.map((reply: any) => (
-                      <div className="forum-reply-card" key={reply.id}>
-                        <strong>{reply.author}</strong>
-                        <div>{reply.content}</div>
+                      <div className="thread-reply" key={reply.id}>
+                        <div className="thread-left-col">
+                          <div className="avatar mini" style={{ background: reply.author === "Bạn" ? "var(--crimson)" : "var(--jungle)" }}>
+                            {reply.authorAvatar || reply.author.substring(0, 2).toUpperCase()}
+                          </div>
+                        </div>
+                        <div className="thread-right-col">
+                          <div className="thread-reply-header">
+                            <div className="thread-author-info">
+                              <span className="thread-author-name">{reply.author}</span>
+                              {reply.isVerified && <VerifiedBadge />}
+                            </div>
+                            <span className="thread-time">Vừa xong</span>
+                          </div>
+                          <div className="thread-content" style={{ fontSize: 14 }}>{reply.content}</div>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
-
-                {/* Inline Reply box */}
-                {post.showReplyBox && (
-                  <div className="forum-reply-box">
-                    <input
-                      type="text"
-                      placeholder="Viết phản hồi của bạn..."
-                      value={replyInputs[post.id] || ""}
-                      onChange={(e) => setReplyInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleAddReplySubmit(post.id);
-                      }}
-                    />
-                    <button className="button button-primary" type="button" onClick={() => handleAddReplySubmit(post.id)}>
-                      Gửi
-                    </button>
-                  </div>
-                )}
-              </article>
+              </div>
             ))
           )}
         </main>
-
-        <aside className="forum-right-sidebar stack" style={{ gap: 16 }}>
-          <div className="panel panel-pad stack" style={{ gap: 12 }}>
-            <h2 className="section-title" style={{ margin: 0 }}>Thảo luận nổi bật</h2>
-            <div className="notice" style={{ padding: "8px 12px", borderRadius: 6, fontSize: 13 }}>
-              <Icon name="bell" /> {appEnv.useMocks ? "Có 24 người đang online thảo luận." : "Kết nối cộng đồng YAG."}
-            </div>
-            <div style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.5 }}>
-              Diễn đàn là nơi độc giả trao đổi ý kiến về các chương truyện mới, chia sẻ cảm xúc và dự đoán các chi tiết sắp tới cùng cộng đồng YAG.
-            </div>
-          </div>
-
-          <div className="panel panel-pad stack" style={{ gap: 8 }}>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: "bold" }}>Chủ đề hot tuần</h3>
-            <ul style={{ paddingLeft: 18, margin: 0, fontSize: 13, lineHeight: 1.8, color: "var(--jungle)" }}>
-              {appEnv.useMocks ? (
-                <>
-                  <li>Dự đoán diễn biến chương cuối</li>
-                  <li>Tại sao AI khuyên không nên hồi sinh nam phụ?</li>
-                  <li>Lịch đăng chương premium của tác giả</li>
-                </>
-              ) : (
-                <>
-                  <li>Thảo luận về các tác phẩm mới cập nhật</li>
-                  <li>Sử dụng AI gợi ý tình tiết câu chuyện</li>
-                  <li>Chia sẻ trải nghiệm đọc truyện trên YAG</li>
-                </>
-              )}
-            </ul>
-          </div>
-        </aside>
       </div>
     </AppShell>
   );

@@ -61,6 +61,10 @@ MODE_ALIASES: dict[str, AiMode] = {
     "bí ẩn": "bí ẩn",
     "bi an": "bí ẩn",
     "mystery": "bí ẩn",
+    "write_chapter": "write_chapter",
+    "viet ca chuong": "write_chapter",
+    "viết cả chương": "write_chapter",
+    "full chapter": "write_chapter",
     # Backward compatibility with older mojibake fixtures.
     "kÃ¡Â»â€¹ch tÃƒÂ­nh": "kịch tính",
     "ká»‹ch tÃ­nh": "kịch tính",
@@ -278,6 +282,41 @@ FALLBACK_LIBRARY: dict[AiMode, list[tuple[str, str, str, str, float]]] = {
             0.75,
         ),
     ],
+    "write_chapter": [
+        (
+            "Chương hành động mở màn",
+            "Một chương mở đầu với nhịp nhanh, hành động dồn dập và kết thúc bằng một bước ngoặt.",
+            "Chương hành động giúp thu hút độc giả ngay từ đầu.",
+            "Tiếng kiếm vang lên giữa đêm. Nhân vật lao vào bóng tối, nơi kẻ thù đã chờ sẵn. "
+            "Mỗi bước chân là một canh bạc, mỗi nhát chém là một lời thề không được phép phá vỡ. "
+            "Khi ánh trăng xuyên qua mái nhà đổ, nhân vật nhận ra đối thủ không phải người lạ — "
+            "đó là người mà mình đã từng tin tưởng nhất. Thanh kiếm trong tay bỗng nặng trĩu. "
+            "\"Ngươi biết từ đầu, phải không?\" Giọng nhân vật run, nhưng lưỡi kiếm thì không.",
+            0.82,
+        ),
+        (
+            "Chương đối thoại và cảm xúc",
+            "Một chương xoay quanh cuộc trò chuyện sâu sắc giữa hai nhân vật, bộc lộ quá khứ và xung đột nội tâm.",
+            "Đối thoại chân thực giúp độc giả hiểu nhân vật và gắn kết cảm xúc.",
+            "Căn phòng chỉ có hai người và một ngọn nến sắp tắt. \"Ta đã chờ ngươi nói điều này rất lâu,\" "
+            "người đối diện cất tiếng, giọng nhẹ như gió nhưng nặng như đá. Nhân vật không đáp ngay. "
+            "Ký ức ùa về — những ngày còn cùng nhau chạy dưới mưa, những lần hứa sẽ không bao giờ bỏ đi. "
+            "\"Ta không bỏ đi. Ta chỉ chọn một con đường khác.\" \"Khác?\" Người kia cười buồn. "
+            "\"Khác nghĩa là bỏ lại tất cả những gì chúng ta từng có.\"",
+            0.80,
+        ),
+        (
+            "Chương khám phá và bí ẩn",
+            "Một chương nơi nhân vật phát hiện một manh mối quan trọng, dẫn đến nhiều câu hỏi hơn câu trả lời.",
+            "Bí ẩn và khám phá giữ nhịp truyện hấp dẫn và tạo lực kéo cho chương sau.",
+            "Căn hầm dưới lòng đất không có trên bất kỳ bản đồ nào. Nhân vật bước xuống từng bậc thang đá, "
+            "ngọn đuốc trong tay run rẩy theo nhịp gió lạ. Trên tường, những ký hiệu cổ xưa xếp thành hàng — "
+            "không phải ngôn ngữ nào nhân vật từng biết, nhưng có một ký hiệu quen thuộc đến rùng mình: "
+            "biểu tượng gia tộc của chính mình. \"Tại sao ở đây?\" Câu hỏi vang vọng trong bóng tối, "
+            "nhưng không ai trả lời. Chỉ có tiếng nước nhỏ giọt đều đều, như đếm ngược thời gian.",
+            0.79,
+        ),
+    ],
 }
 
 
@@ -437,24 +476,51 @@ class WritingAgent:
                 ),
             },
         }
-        system_prompt = (
-            WRITING_COACH_SKILL.strip()
-            + "\nReturn JSON only with this exact shape: "
-            '{"suggestions":[{"title":"...","content":"...",'
-            '"reason":"...","insertable_text":"...","quality_score":0.0}]}. '
-            "Return exactly 3 suggestions in Vietnamese. No markdown."
-        )
-        user_prompt = (
-            f"Mode: {normalized_mode}\n"
-            f"Author draft context:\n{context}\n\n"
-            f"Tool outputs:\n{json.dumps(tool_bundle, ensure_ascii=False)}\n\n"
-            "Task: act as the main writing program. Produce three useful options "
-            "that the author can apply immediately. Prefer approved same-story "
-            "chapters and the author's previous approved works for style. If there "
-            "is no author history, use only the reference metadata as broad "
-            "inspiration and do not imitate or copy protected expression. Respect "
-            "continuity and avoid adding unsupported facts."
-        )
+        is_write_chapter = normalized_mode == "write_chapter"
+
+        if is_write_chapter:
+            system_prompt = (
+                WRITING_COACH_SKILL.strip()
+                + "\nReturn JSON only with this exact shape: "
+                '{"suggestions":[{"title":"...","content":"...",'
+                '"reason":"...","insertable_text":"...","quality_score":0.0}]}. '
+                "Return exactly 3 suggestions in Vietnamese. No markdown. "
+                "IMPORTANT: For write_chapter mode, each insertable_text MUST be a "
+                "complete chapter draft of at least 500-1000 words in Vietnamese prose. "
+                "Write vivid, immersive fiction with dialogue, descriptions, and pacing. "
+                "The content field should be a 1-2 sentence summary of what the chapter covers."
+            )
+            user_prompt = (
+                f"Mode: {normalized_mode}\n"
+                f"Author's idea/context:\n{context}\n\n"
+                f"Tool outputs:\n{json.dumps(tool_bundle, ensure_ascii=False)}\n\n"
+                "Task: You are the AI co-writer. The author wants you to write a COMPLETE "
+                "chapter draft based on the idea provided. Produce three different chapter "
+                "drafts with different approaches (e.g. action-oriented, emotional, mysterious). "
+                "Each insertable_text must be a full chapter of 500-1000 words of Vietnamese "
+                "prose that the author can paste directly into their editor. Use the story "
+                "context, style profile, and reference metadata to match the story's tone. "
+                "Respect continuity and avoid adding unsupported facts."
+            )
+        else:
+            system_prompt = (
+                WRITING_COACH_SKILL.strip()
+                + "\nReturn JSON only with this exact shape: "
+                '{"suggestions":[{"title":"...","content":"...",'
+                '"reason":"...","insertable_text":"...","quality_score":0.0}]}. '
+                "Return exactly 3 suggestions in Vietnamese. No markdown."
+            )
+            user_prompt = (
+                f"Mode: {normalized_mode}\n"
+                f"Author draft context:\n{context}\n\n"
+                f"Tool outputs:\n{json.dumps(tool_bundle, ensure_ascii=False)}\n\n"
+                "Task: act as the main writing program. Produce three useful options "
+                "that the author can apply immediately. Prefer approved same-story "
+                "chapters and the author's previous approved works for style. If there "
+                "is no author history, use only the reference metadata as broad "
+                "inspiration and do not imitate or copy protected expression. Respect "
+                "continuity and avoid adding unsupported facts."
+            )
         return system_prompt, user_prompt
 
     async def generate(

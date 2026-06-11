@@ -721,6 +721,18 @@ def delete_story(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this story",
         )
+
+    # Prevent deletion if any chapter is currently undergoing moderation (pending)
+    has_pending = db.query(Chapter).filter(
+        Chapter.story_id == story_id,
+        Chapter.moderation_status == "pending"
+    ).first() is not None
+    if has_pending:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Không thể xóa truyện khi đang có chương chờ duyệt.",
+        )
+
     db.delete(story)
     db.commit()
     return {"message": "Story deleted successfully"}

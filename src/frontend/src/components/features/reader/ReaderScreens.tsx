@@ -953,7 +953,7 @@ export function ReaderScreen() {
         <header className="reader-topbar">
           <div className="inline-actions">
             <Link className="button" href={storyId ? `/stories/${storyId}` : "/story-detail"}>
-              <Icon name="arrow" />
+              <Icon name="arrow-left" />
               <span className="hide-mobile">Trang truyện</span>
             </Link>
             <div>
@@ -1100,19 +1100,7 @@ export function ReaderScreen() {
           </aside>
         </main>
 
-        <div role="navigation" className="reader-toolbar" aria-label="Thanh chuyển chương">
-          {prevChapter ? (
-            <Link className="button" href={prevChapterHref}>Trước</Link>
-          ) : (
-            <button className="button" disabled>Đầu truyện</button>
-          )}
-          <span className="reader-toolbar-status">Chương {chapterNum}</span>
-          {nextChapter ? (
-            <Link className="button button-primary" href={nextChapterHref}>Sau</Link>
-          ) : (
-            <button className="button" disabled>Hết truyện</button>
-          )}
-        </div>
+
 
         <section id="reader-comments" className="reader-comments-section">
           <div className="reader-comments-head">

@@ -62,7 +62,11 @@ class Chapter(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
-    reading_histories = relationship("ReadingHistory", back_populates="chapter")
+    reading_histories = relationship(
+        "ReadingHistory",
+        back_populates="chapter",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         UniqueConstraint(

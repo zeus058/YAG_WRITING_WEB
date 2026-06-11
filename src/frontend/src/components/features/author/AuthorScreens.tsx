@@ -748,6 +748,20 @@ export function AuthorStudioScreen() {
   const [styleReferenceSaving, setStyleReferenceSaving] = useState(false);
   const [styleReferenceMessage, setStyleReferenceMessage] = useState<string | null>(null);
 
+  // Style Reference Modal + Author stories count
+  const [isStyleReferenceModalOpen, setIsStyleReferenceModalOpen] = useState(false);
+  const [authorStoriesCount, setAuthorStoriesCount] = useState(0);
+
+  // AI Co-Writer states ("write_chapter" mode)
+  const [coWriterPrompt, setCoWriterPrompt] = useState("");
+  const [coWriterDrafts, setCoWriterDrafts] = useState<any[]>([]);
+  const [coWriterLoading, setCoWriterLoading] = useState(false);
+  const [coWriterError, setCoWriterError] = useState<string | null>(null);
+  const [coWriterMeta, setCoWriterMeta] = useState<AiResponseMeta | null>(null);
+
+  // Preview Modal
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
   // History stack for Undo/Redo
   const [historyStack, setHistoryStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
@@ -787,6 +801,14 @@ export function AuthorStudioScreen() {
           seriesTitle: storyRes.data.style_reference_series_title || "",
           author: storyRes.data.style_reference_author || "",
         });
+      }
+
+      // Fetch author stories count for style reference modal visibility
+      try {
+        const storiesRes = await yagApi.author.getStories();
+        setAuthorStoriesCount((storiesRes.data || []).length);
+      } catch {
+        setAuthorStoriesCount(0);
       }
 
       if (chaps.length > 0) {
@@ -1155,6 +1177,7 @@ export function AuthorStudioScreen() {
         setHistoryStack((prev) => prev.slice(0, -1));
         triggerAutosave(editorTitle, previous);
         triggerLiveToast("Đã hoàn tác (Undo).");
+        setTimeout(() => { textareaRef.current?.focus(); }, 50);
       } else {
         triggerLiveToast("Không có thao tác nào để hoàn tác.", "warning");
       }
@@ -1166,6 +1189,7 @@ export function AuthorStudioScreen() {
         setRedoStack((prev) => prev.slice(0, -1));
         triggerAutosave(editorTitle, next);
         triggerLiveToast("Đã khôi phục (Redo).");
+        setTimeout(() => { textareaRef.current?.focus(); }, 50);
       } else {
         triggerLiveToast("Không có thao tác nào để khôi phục.", "warning");
       }
@@ -1197,7 +1221,8 @@ export function AuthorStudioScreen() {
   };
 
   const handleAiSuggest = async () => {
-    if (!editorContent.trim() || aiLoading) return;
+    if (aiLoading) return;
+    if (!editorContent.trim() && !aiInput.trim()) return;
     if (aiMode === "rewrite" && !selectedDraftText.trim()) {
       setAiError("Chọn một đoạn văn trong editor trước khi dùng chế độ Viết lại.");
       triggerLiveToast("Hãy bôi chọn đoạn cần viết lại trước.", "warning");
@@ -1238,8 +1263,9 @@ export function AuthorStudioScreen() {
         return;
       }
 
+      const rawContext = editorContent.trim() ? editorContent.slice(-4000) : "Bản thảo mới chưa có nội dung.";
       const contextText = [
-        editorContent.slice(-4000),
+        rawContext,
         aiInput.trim() ? `Yêu cầu thêm của tác giả: ${aiInput.trim()}` : "",
       ].filter(Boolean).join("\n\n");
       const res = await yagApi.author.requestAiSuggestion({
@@ -1330,8 +1356,82 @@ export function AuthorStudioScreen() {
   const isEditingDisabled = activeChapter && activeChapter.moderation_status && activeChapter.moderation_status !== "draft" && activeChapter.moderation_status !== "nháp";
   const editorWordCount = editorContent.split(/\s+/).filter(Boolean).length;
   const editorReadingMinutes = Math.max(1, Math.ceil(editorWordCount / 250));
-  const editorTargetWords = 2000;
-  const editorTargetProgress = Math.min(100, Math.round((editorWordCount / editorTargetWords) * 100));
+  const canRunAi = !isEditingDisabled && !aiLoading && (editorContent.trim().length > 0 || aiInput.trim().length > 0);
+
+  // AI Co-Writer handler
+  const handleCoWriterGenerate = async () => {
+    if (!coWriterPrompt.trim() || coWriterLoading) return;
+    setCoWriterLoading(true);
+    setCoWriterError(null);
+    setCoWriterMeta(null);
+    try {
+      if (appEnv.useMocks) {
+        setTimeout(() => {
+          setCoWriterDrafts([
+            {
+              title: "Chương hành động mở màn",
+              content: "Một chương hành động với nhịp nhanh và bước ngoặt bất ngờ.",
+              insertable_text: "Tiếng kiếm vang lên giữa đêm. Nhân vật lao vào bóng tối, nơi kẻ thù đã chờ sẵn. Mỗi bước chân là một canh bạc, mỗi nhát chém là một lời thề không được phép phá vỡ. Khi ánh trăng xuyên qua mái nhà đổ, nhân vật nhận ra đối thủ không phải người lạ — đó là người mà mình đã từng tin tưởng nhất. Thanh kiếm trong tay bỗng nặng trĩu. \"Ngươi biết từ đầu, phải không?\" Giọng nhân vật run, nhưng lưỡi kiếm thì không.",
+              quality_score: 0.82,
+            },
+            {
+              title: "Chương đối thoại và cảm xúc",
+              content: "Một chương xoay quanh cuộc trò chuyện sâu sắc giữa hai nhân vật.",
+              insertable_text: "Căn phòng chỉ có hai người và một ngọn nến sắp tắt. \"Ta đã chờ ngươi nói điều này rất lâu,\" người đối diện cất tiếng, giọng nhẹ như gió nhưng nặng như đá. Nhân vật không đáp ngay. Ký ức ùa về — những ngày còn cùng nhau chạy dưới mưa, những lần hứa sẽ không bao giờ bỏ đi.",
+              quality_score: 0.80,
+            },
+            {
+              title: "Chương khám phá và bí ẩn",
+              content: "Nhân vật phát hiện một manh mối quan trọng trong căn hầm cổ.",
+              insertable_text: "Căn hầm dưới lòng đất không có trên bất kỳ bản đồ nào. Nhân vật bước xuống từng bậc thang đá, ngọn đuốc trong tay run rẩy theo nhịp gió lạ. Trên tường, những ký hiệu cổ xưa xếp thành hàng — không phải ngôn ngữ nào nhân vật từng biết, nhưng có một ký hiệu quen thuộc đến rùng mình: biểu tượng gia tộc của chính mình.",
+              quality_score: 0.79,
+            },
+          ]);
+          setCoWriterMeta({ provider: "mock-gemini", fallback: false });
+          setCoWriterLoading(false);
+        }, 1500);
+        return;
+      }
+
+      const contextText = coWriterPrompt.trim();
+      const res = await yagApi.author.requestAiSuggestion({
+        chapterId: activeChapter.id,
+        storyId,
+        context: contextText,
+        mode: "write_chapter" as any,
+        selectedText: undefined,
+        targetWords: 800,
+        styleReferenceStoryTitle: styleReference.storyTitle.trim() || undefined,
+        styleReferenceSeriesTitle: styleReference.seriesTitle.trim() || undefined,
+        styleReferenceAuthor: styleReference.author.trim() || undefined,
+      });
+
+      setCoWriterDrafts(res.data.suggestions || []);
+      setCoWriterMeta({
+        provider: res.data.provider,
+        model: res.data.model,
+        fallback: res.data.fallback,
+        message: res.data.message,
+      });
+    } catch (err) {
+      console.error(err);
+      setCoWriterError("Gemini API bận hoặc đã vượt hạn ngạch. Vui lòng thử lại sau ít phút.");
+      triggerLiveToast("AI Co-Writer tạm thời gián đoạn.", "warning");
+    } finally {
+      setCoWriterLoading(false);
+    }
+  };
+
+  const handleCoWriterInsert = (text: string, mode: "overwrite" | "insert") => {
+    if (mode === "overwrite") {
+      if (!confirm("Nội dung hiện tại trong editor sẽ bị thay thế hoàn toàn bởi bản nháp AI. Bạn có chắc chắn?")) return;
+      commitEditorContent(text, text.length);
+      triggerLiveToast("Đã chép bản nháp AI vào trang viết.");
+    } else {
+      insertSuggestion(text);
+      triggerLiveToast("Đã chèn bản nháp AI sau con trỏ.");
+    }
+  };
   const activeChapterStatus = activeChapter?.moderation_status || "nháp";
   const activeChapterStatusLabel =
     activeChapterStatus === "approved"
@@ -1385,7 +1485,7 @@ export function AuthorStudioScreen() {
       <header className="studio-topbar studio-command-bar">
         <div className="studio-title-group">
           <Link className="button" href="/author/stories">
-            <Icon name="arrow" /> Tác phẩm
+            <Icon name="arrow-left" /> Tác phẩm
           </Link>
           <div>
             <strong>Author Studio</strong>
@@ -1397,7 +1497,6 @@ export function AuthorStudioScreen() {
         <div className="studio-status-strip">
           <span><Icon name="edit" /> {editorWordCount} từ</span>
           <span><Icon name="book" /> {editorReadingMinutes} phút đọc</span>
-          <span><Icon name="chart" /> {editorTargetProgress}% mục tiêu</span>
         </div>
         <div className="inline-actions studio-command-actions">
           <button
@@ -1426,9 +1525,7 @@ export function AuthorStudioScreen() {
           <button
             className="button button-primary"
             type="button"
-            onClick={() => {
-              triggerLiveToast("Đang mở bản xem trước...", "success");
-            }}
+            onClick={() => setIsPreviewOpen(true)}
           >
             Xem trước
           </button>
@@ -1597,15 +1694,7 @@ export function AuthorStudioScreen() {
                 })}
               </div>
 
-              <div className="outline-metric" style={{ marginTop: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
-                  <span>Mục tiêu chương</span>
-                  <strong>{editorTargetProgress}%</strong>
-                </div>
-                <div className="progress" style={{ height: 6, background: "var(--line)", borderRadius: 3, overflow: "hidden" }}>
-                  <span style={{ display: "block", width: `${editorTargetProgress}%`, height: "100%", background: "var(--green)" }} />
-                </div>
-              </div>
+
             </aside>
 
             {/* Center Editor Paper */}
@@ -1623,7 +1712,6 @@ export function AuthorStudioScreen() {
               )}
               <div className="editor-meta-row" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginBottom: 12 }}>
                 <span className="badge badge-blue">Trạng thái: {activeChapterStatusLabel}</span>
-                <span>Markdown bật · Autosave REST/WS</span>
               </div>
               <input
                 className="editor-title"
@@ -1669,7 +1757,7 @@ export function AuthorStudioScreen() {
                 }}
               />
               <div className="editor-footer-row" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
-                <span>{editorWordCount} từ · {editorReadingMinutes} phút đọc · mục tiêu {editorTargetWords.toLocaleString("vi-VN")} từ</span>
+                <span>{editorWordCount} từ · {editorReadingMinutes} phút đọc</span>
                 <span className="badge badge-green">{savingStatus}</span>
               </div>
             </div>
@@ -1715,7 +1803,7 @@ export function AuthorStudioScreen() {
               type="button"
               onClick={() => setActiveAiPanel("tools")}
             >
-              Tools / MCP
+              AI Co-Writer
             </button>
           </div>
 
@@ -1726,48 +1814,21 @@ export function AuthorStudioScreen() {
                 <p>Miu trả về nội dung có thể chèn trực tiếp, kèm lý do và điểm chất lượng để bạn quyết định nhanh.</p>
               </div>
 
-              <div className="style-reference-card">
-                <div className="style-reference-head">
-                  <div>
-                    <strong>Reference metadata</strong>
-                    <p>Dùng khi tác phẩm chưa có chương đã duyệt hoặc lịch sử tác giả đủ rõ.</p>
-                  </div>
-                  {storyProfile?.style_reference_author || storyProfile?.style_reference_story_title || storyProfile?.style_reference_series_title ? (
-                    <span className="badge badge-green">Đã lưu</span>
-                  ) : (
-                    <span className="badge badge-amber">Tuỳ chọn</span>
-                  )}
-                </div>
-                <div className="style-reference-grid">
-                  <input
-                    className="input"
-                    value={styleReference.storyTitle}
-                    onChange={(event) => setStyleReference((current) => ({ ...current, storyTitle: event.target.value }))}
-                    placeholder="Tên tác phẩm muốn gợi cảm hứng"
-                  />
-                  <input
-                    className="input"
-                    value={styleReference.seriesTitle}
-                    onChange={(event) => setStyleReference((current) => ({ ...current, seriesTitle: event.target.value }))}
-                    placeholder="Tên series"
-                  />
-                  <input
-                    className="input"
-                    value={styleReference.author}
-                    onChange={(event) => setStyleReference((current) => ({ ...current, author: event.target.value }))}
-                    placeholder="Tác giả / bút danh tham chiếu"
-                  />
-                </div>
-                {styleReferenceMessage ? <small>{styleReferenceMessage}</small> : null}
+              {authorStoriesCount <= 1 && (
                 <button
                   className="button button-soft"
                   type="button"
-                  onClick={handleSaveStyleReference}
-                  disabled={styleReferenceSaving}
+                  onClick={() => setIsStyleReferenceModalOpen(true)}
+                  style={{ width: "100%", justifyContent: "center" }}
                 >
-                  {styleReferenceSaving ? "Đang lưu..." : "Lưu reference"}
+                  <Icon name="edit" /> Style Reference Metadata
+                  {storyProfile?.style_reference_author || storyProfile?.style_reference_story_title || storyProfile?.style_reference_series_title ? (
+                    <span className="badge badge-green" style={{ marginLeft: 8 }}>Đã lưu</span>
+                  ) : (
+                    <span className="badge badge-amber" style={{ marginLeft: 8 }}>Tuỳ chọn</span>
+                  )}
                 </button>
-              </div>
+              )}
 
               <div className="ai-mode-grid" role="radiogroup" aria-label="Chế độ AI">
                 {aiModeOptions.map((item) => (
@@ -1886,7 +1947,7 @@ export function AuthorStudioScreen() {
                   className="button button-primary"
                   type="button"
                   onClick={handleAiSuggest}
-                  disabled={aiLoading || isEditingDisabled || !editorContent.trim()}
+                  disabled={!canRunAi}
                 >
                   <Icon name="arrow" /> {aiLoading ? "Miu đang viết..." : "Chạy AI agent"}
                 </button>
@@ -1895,45 +1956,203 @@ export function AuthorStudioScreen() {
           ) : (
             <div className="tab-panel active stack ai-tooling-panel">
               <div className="agent-bubble">
-                <strong>MCP-compatible AI surface</strong>
-                <p>Manifest này cho thấy AI đang dùng tools và skills có kiểm soát phía server.</p>
+                <strong>AI Co-Writer — Viết cả chương</strong>
+                <p>Mô tả ý tưởng chương truyện, AI sẽ viết toàn bộ nội dung cho bạn. Bạn có thể chỉnh sửa sau khi chép vào trang viết.</p>
               </div>
 
-              {aiToolsError ? <div className="notice warning">{aiToolsError}</div> : null}
+              <div className="agent-compose" style={{ marginBottom: 12 }}>
+                <textarea
+                  className="textarea"
+                  rows={4}
+                  value={coWriterPrompt}
+                  onChange={(e) => setCoWriterPrompt(e.target.value)}
+                  placeholder="Ý tưởng viết chương: ví dụ 'Viết chương 1 kể về một chiến binh đi thám hiểm đền cổ, phát hiện bí ẩn gia tộc...'" 
+                  disabled={isEditingDisabled}
+                />
+                <button
+                  className="button button-primary"
+                  type="button"
+                  onClick={handleCoWriterGenerate}
+                  disabled={coWriterLoading || !coWriterPrompt.trim() || isEditingDisabled}
+                >
+                  <Icon name="edit" /> {coWriterLoading ? "Miu đang viết chương..." : "Chạy AI Agent viết chương"}
+                </button>
+              </div>
 
-              <section className="ai-tool-section">
-                <h3>Tools</h3>
-                <div className="ai-tool-list">
-                  {aiTools.length > 0 ? aiTools.map((tool) => (
-                    <div className="ai-tool-card" key={tool.name}>
-                      <strong>{tool.name}</strong>
-                      <p>{tool.description}</p>
-                      {tool.allowed_roles ? <span>{tool.allowed_roles.join(", ")}</span> : null}
-                    </div>
-                  )) : (
-                    <div className="ai-empty-result">Chưa tải được danh sách tool.</div>
-                  )}
-                </div>
-              </section>
+              {coWriterError ? <div className="notice warning">{coWriterError}</div> : null}
 
-              <section className="ai-tool-section">
-                <h3>Skills</h3>
-                <div className="ai-tool-list">
-                  {(aiManifest?.skills || []).map((skill: any) => (
-                    <div className="ai-skill-card" key={skill.name}>
-                      <strong>{skill.name}</strong>
-                      <p>{skill.description}</p>
-                    </div>
-                  ))}
-                  {!aiManifest?.skills?.length ? (
-                    <div className="ai-empty-result">Chưa tải được skill manifest.</div>
-                  ) : null}
+              {coWriterMeta ? (
+                <div className="ai-provider-strip">
+                  <span className={`badge ${coWriterMeta.fallback ? "badge-amber" : "badge-green"}`}>
+                    {coWriterMeta.fallback ? "Fallback" : "Gemini"}
+                  </span>
+                  <span>{coWriterMeta.provider || "unknown"}</span>
+                  {coWriterMeta.model ? <span>{coWriterMeta.model}</span> : null}
                 </div>
-              </section>
+              ) : null}
+
+              <div className="agent-action-grid">
+                {coWriterDrafts.length === 0 ? (
+                  <div className="ai-empty-result">
+                    Chưa có bản nháp. Nhập ý tưởng và bấm "Chạy AI Agent viết chương" để bắt đầu.
+                  </div>
+                ) : (
+                  coWriterDrafts.map((draft, idx) => {
+                    const draftText = draft.insertable_text || draft.content || "";
+                    const quality = Number(draft.quality_score);
+                    const scoreLabel = Number.isFinite(quality) ? `${Math.round(quality * 100)}%` : "AI";
+                    return (
+                      <div className="agent-result-card" key={`cowriter-${idx}`}>
+                        <div className="agent-result-head">
+                          <strong>{draft.title || `Bản nháp ${idx + 1}`}</strong>
+                          <span className="badge badge-blue">{scoreLabel}</span>
+                        </div>
+                        <p>{draft.content}</p>
+                        {draftText ? (
+                          <blockquote style={{ maxHeight: 200, overflow: "auto", fontSize: 13 }}>{draftText}</blockquote>
+                        ) : null}
+                        <div className="agent-result-actions">
+                          <button
+                            className="button button-primary"
+                            type="button"
+                            onClick={() => handleCoWriterInsert(draftText, "overwrite")}
+                            disabled={isEditingDisabled || !draftText}
+                          >
+                            Chép vào trang viết
+                          </button>
+                          <button
+                            className="button button-soft"
+                            type="button"
+                            onClick={() => handleCoWriterInsert(draftText, "insert")}
+                            disabled={isEditingDisabled || !draftText}
+                          >
+                            Chèn vào sau con trỏ
+                          </button>
+                          <button
+                            className="button"
+                            type="button"
+                            onClick={() => copySuggestion(draftText)}
+                            disabled={!draftText}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <details style={{ marginTop: 16 }}>
+                <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>Thông tin kỹ thuật: Tools & MCP Manifest</summary>
+                <div style={{ marginTop: 8 }}>
+                  {aiToolsError ? <div className="notice warning">{aiToolsError}</div> : null}
+                  <section className="ai-tool-section">
+                    <h3>Tools</h3>
+                    <div className="ai-tool-list">
+                      {aiTools.length > 0 ? aiTools.map((tool) => (
+                        <div className="ai-tool-card" key={tool.name}>
+                          <strong>{tool.name}</strong>
+                          <p>{tool.description}</p>
+                          {tool.allowed_roles ? <span>{tool.allowed_roles.join(", ")}</span> : null}
+                        </div>
+                      )) : (
+                        <div className="ai-empty-result">Chưa tải được danh sách tool.</div>
+                      )}
+                    </div>
+                  </section>
+                  <section className="ai-tool-section">
+                    <h3>Skills</h3>
+                    <div className="ai-tool-list">
+                      {(aiManifest?.skills || []).map((skill: any) => (
+                        <div className="ai-skill-card" key={skill.name}>
+                          <strong>{skill.name}</strong>
+                          <p>{skill.description}</p>
+                        </div>
+                      ))}
+                      {!aiManifest?.skills?.length ? (
+                        <div className="ai-empty-result">Chưa tải được skill manifest.</div>
+                      ) : null}
+                    </div>
+                  </section>
+                </div>
+              </details>
             </div>
           )}
         </aside>
       </main>
+
+      {/* Preview Modal */}
+      {isPreviewOpen && (
+        <div className="modal-backdrop" onClick={() => setIsPreviewOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, maxHeight: "85vh", overflow: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--jungle)" }}>Xem trước chương</h2>
+              <button className="button" type="button" onClick={() => setIsPreviewOpen(false)} style={{ padding: "4px 10px" }}>✕</button>
+            </div>
+            <div style={{ padding: "24px", background: "var(--surface)", borderRadius: 8, border: "1px solid var(--line)", fontFamily: editorFont, fontSize: editorSize, lineHeight: editorLineHeight }}>
+              <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 16, color: "var(--jungle)", borderBottom: "1px solid var(--line)", paddingBottom: 12 }}>
+                {editorTitle || "Chưa có tiêu đề"}
+              </h1>
+              <div className="preview-body" style={{ whiteSpace: "pre-wrap", wordWrap: "break-word", color: "var(--ink)" }}>
+                {editorContent || "Chưa có nội dung."}
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+              <span style={{ fontSize: 11, color: "var(--muted)", alignSelf: "center" }}>{editorWordCount} từ · {editorReadingMinutes} phút đọc</span>
+              <button className="button button-primary" type="button" onClick={() => setIsPreviewOpen(false)}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Style Reference Modal */}
+      {isStyleReferenceModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsStyleReferenceModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--jungle)" }}>Style Reference Metadata</h2>
+              <button className="button" type="button" onClick={() => setIsStyleReferenceModalOpen(false)} style={{ padding: "4px 10px" }}>✕</button>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>Dùng khi tác phẩm chưa có chương đã duyệt hoặc lịch sử tác giả đủ rõ. Miu sẽ tham chiếu metadata này cho phong cách viết.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <input
+                className="input"
+                value={styleReference.storyTitle}
+                onChange={(event) => setStyleReference((current) => ({ ...current, storyTitle: event.target.value }))}
+                placeholder="Tên tác phẩm muốn gợi cảm hứng"
+              />
+              <input
+                className="input"
+                value={styleReference.seriesTitle}
+                onChange={(event) => setStyleReference((current) => ({ ...current, seriesTitle: event.target.value }))}
+                placeholder="Tên series"
+              />
+              <input
+                className="input"
+                value={styleReference.author}
+                onChange={(event) => setStyleReference((current) => ({ ...current, author: event.target.value }))}
+                placeholder="Tác giả / bút danh tham chiếu"
+              />
+            </div>
+            {styleReferenceMessage ? <small style={{ display: "block", marginTop: 8 }}>{styleReferenceMessage}</small> : null}
+            <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
+              <button className="button" type="button" onClick={() => setIsStyleReferenceModalOpen(false)}>Hủy</button>
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={async () => {
+                  await handleSaveStyleReference();
+                  setIsStyleReferenceModalOpen(false);
+                }}
+                disabled={styleReferenceSaving}
+              >
+                {styleReferenceSaving ? "Đang lưu..." : "Lưu reference"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -598,7 +598,7 @@ class TestStoriesAPI:
 
     def test_delete_story_success(self):
         mock_story = _make_mock_story(self.mock_author)
-        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_story
+        self.mock_db.query.return_value.filter.return_value.first.side_effect = [mock_story, None]
 
         response = client.delete(f"/api/v1/stories/{mock_story.id}")
         assert response.status_code == 200
@@ -609,13 +609,29 @@ class TestStoriesAPI:
     def test_delete_story_admin_success(self):
         app.dependency_overrides[deps.get_current_user] = lambda: self.mock_admin
         mock_story = _make_mock_story(self.mock_author) # Owned by author
-        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_story
+        self.mock_db.query.return_value.filter.return_value.first.side_effect = [mock_story, None]
 
         response = client.delete(f"/api/v1/stories/{mock_story.id}")
         assert response.status_code == 200
         assert response.json()["message"] == "Story deleted successfully"
         assert self.mock_db.delete.called
         assert self.mock_db.commit.called
+
+    def test_delete_story_pending_chapters_fails(self):
+        mock_story = _make_mock_story(self.mock_author)
+        mock_pending_chapter = Chapter(
+            id=uuid.uuid4(),
+            story_id=mock_story.id,
+            chapter_number=1,
+            title="Draft Chapter",
+            content="Testing pending check",
+            moderation_status="pending",
+        )
+        self.mock_db.query.return_value.filter.return_value.first.side_effect = [mock_story, mock_pending_chapter]
+
+        response = client.delete(f"/api/v1/stories/{mock_story.id}")
+        assert response.status_code == 400
+        assert "Không thể xóa truyện khi đang có chương chờ duyệt." in response.json()["detail"]
 
     def test_delete_story_unauthorized(self):
         other_author = _make_mock_user(role="author", username="other_author")

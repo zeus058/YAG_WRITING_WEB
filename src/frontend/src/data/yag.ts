@@ -35,6 +35,7 @@ export type IconName =
   | "settings"
   | "card"
   | "arrow"
+  | "arrow-left"
   | "check"
   | "close"
   | "trash"

@@ -100,6 +100,13 @@ export function Icon({ name, className = "icon" }: IconProps) {
           <path d="m12 5 7 7-7 7" />
         </svg>
       );
+    case "arrow-left":
+      return (
+        <svg {...common}>
+          <path d="M19 12H5" />
+          <path d="m12 5-7 7 7 7" />
+        </svg>
+      );
     case "check":
       return (
         <svg {...common}>

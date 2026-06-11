@@ -447,7 +447,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
           <BrandLogo />
         </Link>
         <Link href="/" className="button button-ghost" style={{ display: "inline-flex", alignItems: "center", gap: "8px", borderRadius: "99px", padding: "8px 16px" }}>
-          <span style={{ display: "inline-flex", transform: "rotate(180deg)" }}><Icon name="arrow" /></span>
+          <Icon name="arrow-left" />
           <span>Về trang chủ</span>
         </Link>
       </header>

@@ -31,6 +31,11 @@ class FakeQuery:
     def all(self):
         return self.all_result
 
+    def count(self):
+        if self.all_result:
+            return len(self.all_result)
+        return 1 if self.first_result is not None else 0
+
 
 class FakeDB:
     def __init__(self, schedule, story, author, profile, publication=None, admins=None):
@@ -119,10 +124,10 @@ def test_scan_marks_schedule_missed_and_penalizes_reputation(mock_notify, mock_e
     assert result["checked"] == 1
     assert result["missed"] == 1
     assert schedule.status == "missed"
-    assert profile.reputation_score == 80
+    assert profile.reputation_score == 95
     assert db.committed is True
     assert any(isinstance(item, AdminAlert) for item in db.added)
-    assert mock_notify.call_count == 2
+    assert mock_notify.call_count == 3
     mock_email.assert_called_once()
 
 
@@ -156,5 +161,38 @@ def test_scan_marks_schedule_published_when_chapter_exists(mock_notify, mock_ema
     assert schedule.status == "published"
     assert profile.reputation_score == 100
     assert db.committed is True
-    mock_notify.assert_not_called()
+    assert mock_notify.call_count == 1
     mock_email.assert_not_called()
+
+
+@patch("app.services.schedule_service.send_schedule_warning_email")
+@patch("app.services.schedule_service.publish_user_notification")
+def test_scan_marks_schedule_published_rewards_reputation(mock_notify, mock_email):
+    schedule, story, author, profile, admin = _base_objects()
+    profile.reputation_score = 95  # Start below 100
+    publication = Chapter(
+        id=uuid.uuid4(),
+        story_id=story.id,
+        chapter_number=2,
+        title="On time",
+        content="Published chapter",
+        moderation_status="approved",
+        publish_at=datetime(2026, 6, 1, 0, 0, tzinfo=timezone.utc),
+    )
+    db = FakeDB(
+        schedule=schedule,
+        story=story,
+        author=author,
+        profile=profile,
+        publication=publication,
+        admins=[admin],
+    )
+
+    result = scan_publish_schedules(db, now=datetime(2026, 6, 2, 0, 0, tzinfo=timezone.utc))
+
+    assert result["checked"] == 1
+    assert result["published"] == 1
+    assert profile.reputation_score == 97  # 95 + 2 = 97
+    assert mock_notify.call_count == 1
+    mock_email.assert_not_called()
+

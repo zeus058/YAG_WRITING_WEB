@@ -335,10 +335,7 @@ def increment_story_view(redis_client, story_id: UUID | str, identifier: str) ->
     try:
         dedup_key = f"story:view_dedup:{story_id}:{identifier}"
         is_new = redis_client.set(dedup_key, "1", ex=86400, nx=True)
-        if is_new:
-            redis_client.incr(story_views_key(story_id))
-            return True
-        return False
+        return bool(is_new)
     except redis.RedisError:
         return False
 
@@ -584,6 +581,11 @@ def get_chapter(
     view_count_buffered = increment_story_view(
         redis_client, chapter_data["story_id"], identifier
     )
+
+    if view_count_buffered or not redis_client:
+        db.query(Story).filter(Story.id == chapter_data["story_id"]).update(
+            {Story.view_count: Story.view_count + 1}
+        )
 
     if current_user:
         update_reading_history(db, current_user.id, chapter_id)

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func, or_
 from app.models import User
 from app.api import deps
-from app.models import Chapter, Library, Review, Story
+from app.models import Chapter, Library, PublishSchedule, Review, Story
 from app.services.media_service import upload_story_cover_to_cloudinary
 from app.schemas.story import (
     BookmarkResponse,
@@ -27,7 +27,7 @@ from app.schemas.story import (
     StoryStatus,
     StoryUpdate,
 )
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from uuid import UUID
 from app.schemas.ai import AISemanticSearchRequest, AISemanticSearchResponse
@@ -78,6 +78,8 @@ async def create_story(
     style_reference_author: Optional[str] = Form(None),
     status_value: StoryStatus = Form("ongoing", alias="status"),
     cover_file: Optional[UploadFile] = File(None),
+    expected_chapters: int = Form(0),
+    update_frequency: str = Form("1_week_1_chap"),
     db: Session = Depends(deps.get_db),
     current_author=Depends(deps.get_current_author),
 ):
@@ -108,10 +110,36 @@ async def create_story(
         style_reference_author=style_reference_author,
         status=status_value,
         cover_url=cover_url,
+        expected_chapters=expected_chapters,
+        update_frequency=update_frequency,
     )
     db.add(new_story)
     db.commit()
     db.refresh(new_story)
+
+    # Generate commitments / PublishSchedule records
+    if expected_chapters > 0:
+        freq = update_frequency
+        if freq == "daily":
+            delta = timedelta(days=1)
+        elif freq == "1_week_2_chap":
+            delta = timedelta(days=3, hours=12)
+        elif freq == "2_weeks_1_chap":
+            delta = timedelta(days=14)
+        else:
+            delta = timedelta(days=7) # default 1_week_1_chap
+
+        now = new_story.created_at or datetime.now(timezone.utc)
+        for i in range(1, expected_chapters + 1):
+            schedule = PublishSchedule(
+                story_id=new_story.id,
+                scheduled_time=now + i * delta,
+                status="scheduled",
+                cadence=freq,
+                created_by=new_story.author_id
+            )
+            db.add(schedule)
+        db.commit()
 
     # Sync embedding
     try:
@@ -499,6 +527,8 @@ async def update_story(
     style_reference_author: Optional[str] = Form(None),
     status_value: Optional[StoryStatus] = Form(None, alias="status"),
     cover_file: Optional[UploadFile] = File(None),
+    expected_chapters: Optional[int] = Form(None),
+    update_frequency: Optional[str] = Form(None),
     db: Session = Depends(deps.get_db),
     current_author=Depends(deps.get_current_author),
 ):
@@ -536,6 +566,8 @@ async def update_story(
                 payload.get("styleReferenceAuthor", style_reference_author),
             )
             status_value = payload.get("status", status_value)
+            expected_chapters = payload.get("expected_chapters", expected_chapters)
+            update_frequency = payload.get("update_frequency", update_frequency)
 
     story_in = StoryUpdate(
         title=title,
@@ -552,6 +584,8 @@ async def update_story(
         style_reference_series_title=style_reference_series_title,
         style_reference_author=style_reference_author,
         status=status_value,
+        expected_chapters=expected_chapters,
+        update_frequency=update_frequency,
     )
 
     if story_in.title:
@@ -576,6 +610,41 @@ async def update_story(
         setattr(story, key, value)
     if cover_file:
         story.cover_url = upload_story_cover_to_cloudinary(cover_file)
+
+    # Regenerate schedules if commitments were updated
+    if "expected_chapters" in update_data or "update_frequency" in update_data:
+        db.query(PublishSchedule).filter(
+            PublishSchedule.story_id == story.id,
+            PublishSchedule.status == "scheduled"
+        ).delete()
+
+        pub_count = db.query(Chapter).filter(
+            Chapter.story_id == story.id,
+            Chapter.moderation_status == "approved"
+        ).count()
+
+        remaining = max(0, story.expected_chapters - pub_count)
+        if remaining > 0:
+            freq = story.update_frequency
+            if freq == "daily":
+                delta = timedelta(days=1)
+            elif freq == "1_week_2_chap":
+                delta = timedelta(days=3, hours=12)
+            elif freq == "2_weeks_1_chap":
+                delta = timedelta(days=14)
+            else:
+                delta = timedelta(days=7)
+
+            now = datetime.now(timezone.utc)
+            for i in range(1, remaining + 1):
+                sch = PublishSchedule(
+                    story_id=story.id,
+                    scheduled_time=now + i * delta,
+                    status="scheduled",
+                    cadence=freq,
+                    created_by=story.author_id
+                )
+                db.add(sch)
 
     db.commit()
     db.refresh(story)

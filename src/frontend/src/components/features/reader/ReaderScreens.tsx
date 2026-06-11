@@ -11,7 +11,6 @@ import { yagApi, appEnv, useAuth, getStoredJsonArray } from "@/lib";
 const settingSections: { id: string; label: string; icon: IconName }[] = [
   { id: "profile", label: "Hồ sơ cá nhân", icon: "user" },
   { id: "security", label: "Mật khẩu & bảo mật", icon: "lock" },
-  { id: "reader", label: "Tùy chọn đọc", icon: "book" },
   { id: "notifications", label: "Thông báo", icon: "bell" },
   { id: "membership", label: "Membership & thanh toán", icon: "card" },
 ];
@@ -118,7 +117,9 @@ export function HomeFeedScreen() {
   const heroHref = heroStory?.id ? `/stories/${heroStory.id}` : "/discover";
   const heroTitle = heroStory ? heroStory.title : "Chào mừng bạn đến với YAG!";
   const heroDescription = heroStory
-    ? heroStory.description
+    ? (heroStory.description.length > 180
+      ? heroStory.description.slice(0, 180).trim() + "..."
+      : heroStory.description)
     : "Không gian đọc và sáng tác tiểu thuyết mạng tích hợp AI đầu tiên dành cho người Việt. Hãy bắt đầu hành trình sáng tác và đọc truyện của bạn ngay hôm nay.";
 
   const heroChapters = heroStory ? (heroStory.chapter_count ?? heroStory.chapters ?? 0) : 0;
@@ -584,7 +585,16 @@ export function StoryDetailScreen() {
     setSubmittingReview(true);
     try {
       if (appEnv.useMocks) {
-        setReviews([{ rating: newReviewRating, content: newReviewContent, user: { username: "Bạn" } }, ...reviews]);
+        const updatedReviews = [{ rating: newReviewRating, content: newReviewContent, user: { username: "Bạn" } }, ...reviews];
+        setReviews(updatedReviews);
+        if (story) {
+          const newAvg = updatedReviews.reduce((sum, r) => sum + r.rating, 0) / updatedReviews.length;
+          setStory({
+            ...story,
+            rating_avg: newAvg,
+            rating_count: updatedReviews.length
+          });
+        }
         setNewReviewContent("");
         setSubmittingReview(false);
         return;
@@ -593,12 +603,17 @@ export function StoryDetailScreen() {
         method: "POST",
         body: { rating: newReviewRating, content: newReviewContent }
       });
-      const reviewsRes = await yagApi.reader.getReviews(storyId);
+      const [storyRes, reviewsRes] = await Promise.all([
+        yagApi.reader.getStoryDetail(storyId),
+        yagApi.reader.getReviews(storyId).catch(() => ({ data: { reviews: [] } })),
+      ]);
+      setStory(storyRes.data);
       setReviews(reviewsRes.data.reviews || []);
       setNewReviewContent("");
       triggerLiveToast("Đánh giá thành công!");
     } catch (err) {
       console.error("Review submit failed", err);
+      triggerLiveToast("Đánh giá thất bại", "error");
     } finally {
       setSubmittingReview(false);
     }
@@ -1169,8 +1184,12 @@ export function ForumScreen() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedPosts = getStoredJsonArray("yag.forum.posts", true);
-      if (storedPosts.length > 0) {
-        setPosts(storedPosts);
+      const filteredPosts = appEnv.useMocks
+        ? storedPosts
+        : storedPosts.filter((p: any) => p.id !== "p1" && p.id !== "p2" && p.id !== "p3");
+
+      if (filteredPosts.length > 0) {
+        setPosts(filteredPosts);
       } else {
         if (appEnv.useMocks) {
           const initialMock = [
@@ -1414,7 +1433,7 @@ export function ForumScreen() {
                     </div>
                     {post.replies.length > 0 && <div className="thread-line"></div>}
                   </div>
-                  
+
                   <div className="thread-right-col">
                     <div className="thread-author-row">
                       <div className="thread-author-info">
@@ -1422,7 +1441,7 @@ export function ForumScreen() {
                         {post.isVerified && <VerifiedBadge />}
                         <span className="thread-time">{post.time}</span>
                       </div>
-                      
+
                       <div style={{ position: "relative" }}>
                         <button
                           className="button icon-button forum-more-btn"
@@ -2309,7 +2328,7 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
       {modeOverride === "author" ? (
         <div className="stack" style={{ gap: 24 }}>
           {/* Author Hero banner */}
-          <div className="author-hero-banner" style={{ background: "linear-gradient(135deg, var(--jungle-dark) 0%, #1c3d27 100%)", padding: "40px 32px", borderRadius: 12, color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
+          <div className="author-hero-banner" style={{ padding: "40px 32px", borderRadius: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
               <span className="user-avatar" style={{ background: "var(--crimson)", color: "#fff", width: 64, height: 64, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: 24 }}>
                 {user?.profile?.avatar_url ? (
@@ -2340,7 +2359,7 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
               <div className="metric-grid">
                 <MetricCard label="Tác phẩm xuất bản" value="Chưa có" />
                 <MetricCard label="Lượt xem tích lũy" value="Chưa có" />
-                <MetricCard label="Điểm uy tín sáng tác" value={score != null ? `${score}/100` : "Chưa có"} />
+                <MetricCard label="Điểm uy tín sáng tác" value={`${score ?? 95}/100`} />
                 <MetricCard label="Người theo dõi" value="Chưa có" />
               </div>
             </div>
@@ -2414,7 +2433,7 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
             <Link className="button button-primary" href="/settings">Chỉnh sửa hồ sơ</Link>
           </div>
           <div className="metric-grid" style={{ marginTop: 24 }}>
-            <MetricCard label="Uy tín tác giả" value={String(score)} />
+            <MetricCard label="Uy tín tác giả" value={score != null ? `${score}%` : "95%"} />
             <MetricCard label="Vai trò" value={user?.role === "admin" ? "Admin" : user?.role === "author" ? "Tác giả" : "Độc giả"} />
           </div>
         </section>
@@ -2438,11 +2457,6 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
   const [confirmPassword, setConfirmPassword] = useState("");
   const [securitySubmitting, setSecuritySubmitting] = useState(false);
 
-  // Reader Preferences States
-  const [fontSize, setFontSize] = useState(18);
-  const [isDark, setIsDark] = useState(false);
-  const [isWide, setIsWide] = useState(false);
-
   // Notification Preferences States
   const [notifyChapter, setNotifyChapter] = useState(true);
   const [notifyComment, setNotifyComment] = useState(true);
@@ -2465,12 +2479,8 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
     }
   }, [user]);
 
-  // Load preferences from local storage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setFontSize(Number(localStorage.getItem("yag.reader.fontSize") || 18));
-      setIsDark(localStorage.getItem("yag.reader.isDark") === "true");
-      setIsWide(localStorage.getItem("yag.reader.isWide") === "true");
       setNotifyChapter(localStorage.getItem("yag.settings.notifyChapter") !== "false");
       setNotifyComment(localStorage.getItem("yag.settings.notifyComment") !== "false");
       setNotifySystem(localStorage.getItem("yag.settings.notifySystem") !== "false");
@@ -2623,25 +2633,6 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
     }
   };
 
-  const saveFontSize = (val: number) => {
-    setFontSize(val);
-    localStorage.setItem("yag.reader.fontSize", String(val));
-    window.dispatchEvent(new Event("yag:reader-settings-changed"));
-  };
-
-  const toggleTheme = () => {
-    const val = !isDark;
-    setIsDark(val);
-    localStorage.setItem("yag.reader.isDark", String(val));
-    window.dispatchEvent(new Event("yag:reader-settings-changed"));
-  };
-
-  const toggleWidth = () => {
-    const val = !isWide;
-    setIsWide(val);
-    localStorage.setItem("yag.reader.isWide", String(val));
-    window.dispatchEvent(new Event("yag:reader-settings-changed"));
-  };
 
   const handleSaveNotifications = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2843,61 +2834,6 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
               </form>
             </section>
           )}
-
-          {activeTab === "reader" && modeOverride !== "author" && (
-            <section className="panel panel-pad stack" id="setting-reader">
-              <div>
-                <h2 className="section-title">Tùy chọn hiển thị trình đọc</h2>
-                <p className="section-subtitle">Cá nhân hóa trải nghiệm đọc truyện phù hợp với thị giác của bạn.</p>
-              </div>
-              <div className="stack" style={{ gap: 16 }}>
-                <div className="field">
-                  <label>Cỡ chữ mặc định ({fontSize}px)</label>
-                  <input
-                    className="range"
-                    type="range"
-                    min="16"
-                    max="24"
-                    value={fontSize}
-                    onChange={(e) => saveFontSize(Number(e.target.value))}
-                    aria-label="Cỡ chữ"
-                  />
-                </div>
-
-                <div className="grid grid-2">
-                  <div className="settings-toggle-row">
-                    <label htmlFor="toggle-dark-mode">Chế độ giao diện tối</label>
-                    <input
-                      id="toggle-dark-mode"
-                      type="checkbox"
-                      checked={isDark}
-                      onChange={toggleTheme}
-                      style={{ width: 20, height: 20, cursor: "pointer" }}
-                    />
-                  </div>
-                  <div className="settings-toggle-row">
-                    <label htmlFor="toggle-wide-layout">Giao diện rộng tràn viền</label>
-                    <input
-                      id="toggle-wide-layout"
-                      type="checkbox"
-                      checked={isWide}
-                      onChange={toggleWidth}
-                      style={{ width: 20, height: 20, cursor: "pointer" }}
-                    />
-                  </div>
-                </div>
-
-                <div className={`reader-preview ${isDark ? "dark" : ""}`} style={{ padding: 24, borderRadius: 8, border: "1px solid var(--line)", marginTop: 8 }}>
-                  <div style={{ fontSize: 12, textTransform: "uppercase", color: "var(--muted)", marginBottom: 8, fontWeight: "bold" }}>Bản xem trước trình đọc</div>
-                  <h3 style={{ fontSize: `${fontSize + 4}px`, margin: "0 0 12px 0", color: isDark ? "#fff" : "var(--jungle-dark)" }}>Chương 1: Lời hẹn mùa cũ</h3>
-                  <p style={{ fontSize: `${fontSize}px`, margin: 0, lineHeight: 1.6 }}>
-                    Mưa trên ga cũ vẫn rơi đều đặn như khúc nhạc buồn hoài niệm. Linh khẽ kéo chiếc khăn quàng cổ, nhìn vào khoảng không vô định của sân ga lạnh ngắt...
-                  </p>
-                </div>
-              </div>
-            </section>
-          )}
-
           {activeTab === "notifications" && modeOverride !== "author" && (
             <section className="panel panel-pad stack" id="setting-notifications">
               <div>
@@ -2947,7 +2883,7 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
           {activeTab === "membership" && modeOverride !== "author" && (
             <section className="panel panel-pad stack" id="setting-membership">
               <div>
-                <h2 className="section-title">Membership & Thanh toán</h2>
+                <h2 className="section-title">Membership</h2>
                 <p className="section-subtitle">Quản lý gói hội viên và xem lịch sử giao dịch của bạn.</p>
               </div>
 

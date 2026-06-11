@@ -13,6 +13,12 @@ const legacyDemoSignatures = [
   "Admin YAG",
   "Chỉnh sửa thô chương 12",
   "Hoàn thiện chương 13 nháp",
+  "Mọi người nghĩ sao về chi tiết mở nút",
+  "Hương Trà",
+  "Gia Hiển",
+  "Phú Thọ",
+  "Duy Trường",
+  "Yến Nhi",
 ];
 
 function storage() {

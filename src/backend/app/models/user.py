@@ -60,4 +60,4 @@ class User(Base):
 
     @property
     def reputation_score(self) -> int:
-        return self.profile.reputation_score if self.profile else 100
+        return self.profile.reputation_score if self.profile else 95

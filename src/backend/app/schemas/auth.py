@@ -120,7 +120,7 @@ class CurrentUserProfile(BaseModel):
     display_name: str
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
-    reputation_score: int = 100
+    reputation_score: int = 95
 
     model_config = ConfigDict(from_attributes=True)
 

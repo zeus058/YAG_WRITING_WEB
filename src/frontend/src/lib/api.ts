@@ -235,6 +235,7 @@ export const yagApi = {
         method: "PUT",
         body,
       }),
+    getScheduleOverview: () => apiFetch<any>("/api/v1/author/schedule/overview"),
   },
 
   billing: {

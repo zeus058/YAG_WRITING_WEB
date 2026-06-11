@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon, Cover, MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
-import { yagApi, appEnv, createDraftSocket, useAuth, getStoredJsonArray } from "@/lib";
+import { yagApi, appEnv, createDraftSocket, useAuth } from "@/lib";
 import { STORY_CATEGORIES } from "@/data/yag";
 
 const triggerLiveToast = (message: string, type = "success") => {
@@ -123,6 +123,8 @@ export function AuthorWorksScreen() {
   const [targetAudience, setTargetAudience] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [expectedChapters, setExpectedChapters] = useState(50);
+  const [updateFrequency, setUpdateFrequency] = useState("1_week_1_chap");
   const [submitting, setSubmitting] = useState(false);
 
   // Live filter states
@@ -172,6 +174,8 @@ export function AuthorWorksScreen() {
     setTargetAudience("");
     setCoverFile(null);
     setCoverUrl(null);
+    setExpectedChapters(50);
+    setUpdateFrequency("1_week_1_chap");
   };
 
   const handleCreateStory = async (e: React.FormEvent) => {
@@ -209,6 +213,8 @@ export function AuthorWorksScreen() {
           rating_avg: 0.0,
           updated_at: new Date().toISOString(),
           draft_count: 1,
+          expected_chapters: Number(expectedChapters),
+          update_frequency: updateFrequency,
         };
         setWorks([fakeNew, ...works]);
         setIsModalOpen(false);
@@ -230,6 +236,8 @@ export function AuthorWorksScreen() {
       formData.append("main_characters", mainCharacters.trim());
       formData.append("target_audience", targetAudience);
       formData.append("status", "ongoing");
+      formData.append("expected_chapters", String(expectedChapters));
+      formData.append("update_frequency", updateFrequency);
       if (coverFile) {
         formData.append("cover_file", coverFile);
       }
@@ -351,7 +359,7 @@ export function AuthorWorksScreen() {
         <MetricCard label="Tác phẩm" value={String(works.length)} />
         <MetricCard label="Số chương nháp" value={String(works.reduce((acc, story) => acc + (story.draft_count || 0), 0))} />
         <MetricCard label="Chờ duyệt AI" value={String(works.reduce((acc, story) => acc + (story.pending_count || 0), 0))} />
-        <MetricCard label="Uy tín tác giả" value={user?.profile?.reputation_score != null ? `${user.profile.reputation_score}%` : "Chưa có"} />
+        <MetricCard label="Uy tín tác giả" value={`${user?.profile?.reputation_score ?? 95}%`} />
         <MetricCard label="Lượt đọc" value={formattedViews} />
         <MetricCard label="Đánh giá TB" value={`${avgRating} ★`} />
       </section>
@@ -654,6 +662,31 @@ export function AuthorWorksScreen() {
                         <small>Đánh dấu nếu truyện có chủ đề nhạy cảm hoặc cảnh chỉ phù hợp với độc giả trưởng thành.</small>
                       </div>
                     </label>
+                  </div>
+                </section>
+                
+                <section className="story-setup-section">
+                  <div className="story-setup-section-head">
+                    <span className="story-setup-step">4</span>
+                    <div>
+                      <h3>Cam kết xuất bản</h3>
+                      <p>Thiết lập số chương dự kiến và tần suất đăng để cam kết tiến độ sáng tác.</p>
+                    </div>
+                  </div>
+                  <div className="story-setup-grid two">
+                    <div className="field">
+                      <label>Số chương dự kiến <span className="required">*</span></label>
+                      <input className="input" type="number" min="1" value={expectedChapters} onChange={(e) => setExpectedChapters(Number(e.target.value))} required placeholder="Ví dụ: 50" />
+                    </div>
+                    <div className="field">
+                      <label>Tần suất cập nhật <span className="required">*</span></label>
+                      <select className="select" value={updateFrequency} onChange={(e) => setUpdateFrequency(e.target.value)}>
+                        <option value="1_week_1_chap">1 tuần 1 chương</option>
+                        <option value="1_week_2_chap">1 tuần 2 chương</option>
+                        <option value="2_weeks_1_chap">2 tuần 1 chương</option>
+                        <option value="daily">Mỗi ngày 1 chương</option>
+                      </select>
+                    </div>
                   </div>
                 </section>
               </div>
@@ -2191,63 +2224,176 @@ export function ScheduleScreen() {
   const [calendarDays, setCalendarDays] = useState<any[]>([]);
   const [currentMonthStr, setCurrentMonthStr] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [allChapters, setAllChapters] = useState<any[]>([]);
+  const [selectedStoryId, setSelectedStoryId] = useState<string>("all");
+  const [frequencyFilter, setFrequencyFilter] = useState<"week" | "month" | "year">("week");
+  const [overview, setOverview] = useState<{
+    reputation_score: number;
+    on_time_rate: number;
+    approved_chapters: number;
+    upcoming_schedule: any[];
+  }>({
+    reputation_score: 95,
+    on_time_rate: 100,
+    approved_chapters: 0,
+    upcoming_schedule: [],
+  });
 
-  // Timer States
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerSeconds, setTimerSeconds] = useState(0);
-
-  // Manual Session Log states
-  const [manualDuration, setManualDuration] = useState("");
-  const [manualWords, setManualWords] = useState("");
-  const [manualNotes, setManualNotes] = useState("");
-  const [sessions, setSessions] = useState<any[]>([]);
-
-  // Load works and chapters to populate commitments and calendar events
+  // Load works and chapters to populate commitments, metrics, and calendar events
   useEffect(() => {
     const loadData = async () => {
       try {
         if (appEnv.useMocks) {
-          setWorks([]);
+          const mockStories = [
+            {
+              id: "mock-story-1",
+              title: "Hào Môn Thâm Uyên",
+              expected_chapters: 50,
+              update_frequency: "1_week_2_chap",
+              chapter_count: 15,
+            },
+            {
+              id: "mock-story-2",
+              title: "Ta Ở Tu Tiên Giới Làm Ruộng",
+              expected_chapters: 100,
+              update_frequency: "daily",
+              chapter_count: 72,
+            },
+            {
+              id: "mock-story-3",
+              title: "Kiếm Đạo Độc Tôn",
+              expected_chapters: 30,
+              update_frequency: "1_week_1_chap",
+              chapter_count: 10,
+            }
+          ];
+          setWorks(mockStories);
 
           const now = new Date();
           const month = now.getMonth();
           const year = now.getFullYear();
           const numDays = new Date(year, month + 1, 0).getDate();
-          const daysList = Array.from({ length: numDays }, (_, index) => ({ dayNum: index + 1, event: null }));
+
+          // Generate mock chapters published at various dates in current year, current month, current week
+          const mockChapters: any[] = [];
+          
+          // Story 1: 15 chapters dispersed across the last month
+          for (let i = 1; i <= 15; i++) {
+            const pubDate = new Date();
+            pubDate.setDate(now.getDate() - (15 - i) * 3);
+            mockChapters.push({
+              id: `mock-chap-1-${i}`,
+              story_id: "mock-story-1",
+              chapter_number: i,
+              title: `Chương ${i}: Khởi đầu mới`,
+              moderation_status: "approved",
+              publish_at: pubDate.toISOString(),
+            });
+          }
+          // Story 2: 72 chapters dispersed daily
+          for (let i = 1; i <= 72; i++) {
+            const pubDate = new Date();
+            pubDate.setDate(now.getDate() - (72 - i));
+            mockChapters.push({
+              id: `mock-chap-2-${i}`,
+              story_id: "mock-story-2",
+              chapter_number: i,
+              title: `Chương ${i}: Tu luyện gian khổ`,
+              moderation_status: "approved",
+              publish_at: pubDate.toISOString(),
+            });
+          }
+          // Story 3: 10 chapters dispersed weekly
+          for (let i = 1; i <= 10; i++) {
+            const pubDate = new Date();
+            pubDate.setDate(now.getDate() - (10 - i) * 7);
+            mockChapters.push({
+              id: `mock-chap-3-${i}`,
+              story_id: "mock-story-3",
+              chapter_number: i,
+              title: `Chương ${i}: Kiếm ý sơ thành`,
+              moderation_status: "approved",
+              publish_at: pubDate.toISOString(),
+            });
+          }
+          setAllChapters(mockChapters);
+
+          // Generate calendar days
+          const daysList = Array.from({ length: numDays }, (_, index) => {
+            const dayNum = index + 1;
+            const scheduledChapter = mockChapters.find((c: any) => {
+              const pubDate = new Date(c.publish_at);
+              return (
+                pubDate.getDate() === dayNum &&
+                pubDate.getMonth() === month &&
+                pubDate.getFullYear() === year
+              );
+            });
+
+            let event = null;
+            if (scheduledChapter) {
+              const pubDate = new Date(scheduledChapter.publish_at);
+              const hrs = String(pubDate.getHours()).padStart(2, "0");
+              const mins = String(pubDate.getMinutes()).padStart(2, "0");
+              event = {
+                title: `C${scheduledChapter.chapter_number}: ${scheduledChapter.title.slice(0, 10)}...`,
+                status: scheduledChapter.moderation_status,
+                time: `${hrs}:${mins}`
+              };
+            }
+            return { dayNum, event };
+          });
           setCalendarDays(daysList);
           setCurrentMonthStr(`Tháng ${String(month + 1).padStart(2, "0")}/${year}`);
+
+          setOverview({
+            reputation_score: 95,
+            on_time_rate: 92,
+            approved_chapters: 97,
+            upcoming_schedule: [
+              {
+                date: "12/06 08:00",
+                story: "Hào Môn Thâm Uyên",
+                chapter: "Chương 16",
+                state: "Scheduled",
+                progress: 0,
+              },
+              {
+                date: "13/06 08:00",
+                story: "Ta Ở Tu Tiên Giới Làm Ruộng",
+                chapter: "Chương 73",
+                state: "Scheduled",
+                progress: 0,
+              }
+            ],
+          });
         } else {
           // Production / API mode
           const res = await yagApi.author.getStories();
           const storiesList = res.data || [];
           setWorks(storiesList);
 
-          // Get current month & year
           const now = new Date();
-          const month = now.getMonth(); // 0-11
+          const month = now.getMonth();
           const year = now.getFullYear();
-
-          // Number of days in current month
           const numDays = new Date(year, month + 1, 0).getDate();
 
-          // Load chapters for all stories to find scheduled ones
-          const allChapters: any[] = [];
+          const fetchedChapters: any[] = [];
           for (const s of storiesList) {
             try {
               const chRes = await yagApi.author.getChapters(s.id);
               if (chRes.data) {
-                allChapters.push(...chRes.data.map((c: any) => ({ ...c, storyTitle: s.title })));
+                fetchedChapters.push(...chRes.data.map((c: any) => ({ ...c, story_id: s.id, storyTitle: s.title })));
               }
             } catch (err) {
               console.error(`Failed to load chapters for story ${s.id}:`, err);
             }
           }
+          setAllChapters(fetchedChapters);
 
-          // Generate calendar days
           const daysList = Array.from({ length: numDays }, (_, index) => {
             const dayNum = index + 1;
-            // Find if there is any chapter scheduled on this day
-            const scheduledChapter = allChapters.find((c: any) => {
+            const scheduledChapter = fetchedChapters.find((c: any) => {
               if (!c.publish_at) return false;
               const pubDate = new Date(c.publish_at);
               return (
@@ -2273,6 +2419,15 @@ export function ScheduleScreen() {
 
           setCalendarDays(daysList);
           setCurrentMonthStr(`Tháng ${String(month + 1).padStart(2, "0")}/${year}`);
+
+          try {
+            const overviewRes = await yagApi.author.getScheduleOverview();
+            if (overviewRes.data) {
+              setOverview(overviewRes.data);
+            }
+          } catch (err) {
+            console.error("Failed to load schedule overview:", err);
+          }
         }
       } catch (err) {
         console.error("Failed to load schedule data:", err);
@@ -2283,303 +2438,441 @@ export function ScheduleScreen() {
     void loadData();
   }, []);
 
+  const getFrequencyLabel = (freq: string) => {
+    switch (freq) {
+      case "1_week_1_chap": return "1 tuần 1 chương";
+      case "1_week_2_chap": return "1 tuần 2 chương";
+      case "2_weeks_1_chap": return "2 tuần 1 chương";
+      case "daily": return "Mỗi ngày 1 chương";
+      default: return freq || "Chưa thiết lập";
+    }
+  };
+
   // Compute commitments dynamically
-  const commitments = works
-    .filter((w) => w.targetChaps || w.target_chapters || w.commitment_target_chapters || w.deadline || w.commitment_deadline)
-    .map((w, idx) => {
-      const target = w.targetChaps || w.target_chapters || w.commitment_target_chapters || w.chapter_count || 0;
-      const current = w.currentChaps || w.chapter_count || 0;
-      const deadline = w.deadline || w.commitment_deadline || "Chưa đặt hạn";
-      return {
-        id: w.id || `com-${idx}`,
-        novel: w.title,
-        targetChaps: target,
-        currentChaps: current,
-        deadline: deadline
-      };
+  const commitments = works.map((w, idx) => {
+    const target = w.expected_chapters || w.targetChaps || w.target_chapters || 0;
+    const current = w.chapter_count || w.currentChaps || 0;
+    const frequency = w.update_frequency || "1_week_1_chap";
+    const percent = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+    return {
+      id: w.id || `com-${idx}`,
+      novel: w.title,
+      targetChaps: target,
+      currentChaps: current,
+      frequency: frequency,
+      percent: percent,
+    };
+  });
+
+  // Selected story or all
+  const selectedStory = works.find(w => w.id === selectedStoryId);
+  let expectedTotal = 0;
+  let writtenTotal = 0;
+
+  if (selectedStoryId === "all") {
+    works.forEach(w => {
+      expectedTotal += w.expected_chapters || 0;
+      writtenTotal += w.chapter_count || 0;
     });
+  } else if (selectedStory) {
+    expectedTotal = selectedStory.expected_chapters || 0;
+    writtenTotal = selectedStory.chapter_count || 0;
+  }
+  const remainingTotal = Math.max(0, expectedTotal - writtenTotal);
+  const progressPercent = expectedTotal > 0 ? Math.min(100, Math.round((writtenTotal / expectedTotal) * 100)) : 0;
 
-  // Load stopwatch sessions
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedSessions = getStoredJsonArray("yag.author.sessions", appEnv.useMocks);
-      if (storedSessions.length > 0) {
-        setSessions(storedSessions);
-      } else {
-        if (appEnv.useMocks) {
-          setSessions([]);
-        } else {
-          setSessions([]);
-        }
-      }
+  // Filter chapters by selected story
+  const filteredChapters = allChapters.filter(c => {
+    if (selectedStoryId !== "all" && c.story_id !== selectedStoryId) return false;
+    return c.moderation_status === "approved" && c.publish_at;
+  });
+
+  // Calculate counts for frequencies
+  const now = new Date();
+  
+  // 1. Week View (current week Mon-Sun)
+  const currentDay = now.getDay();
+  const mondayDiff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
+  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), mondayDiff, 0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const weekCounts = [0, 0, 0, 0, 0, 0, 0];
+  filteredChapters.forEach(c => {
+    const pDate = new Date(c.publish_at);
+    if (pDate >= startOfWeek && pDate <= endOfWeek) {
+      let wdIndex = pDate.getDay();
+      wdIndex = wdIndex === 0 ? 6 : wdIndex - 1;
+      weekCounts[wdIndex]++;
     }
-  }, []);
+  });
 
-  // Timer stopwatch trigger
-  useEffect(() => {
-    let interval: any = null;
-    if (isTimerRunning) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev + 1);
-      }, 1000);
-    } else {
-      if (interval) clearInterval(interval);
+  // 2. Month View (weeks of current month: 1-7, 8-14, 15-21, 22+)
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const monthCounts = [0, 0, 0, 0];
+  filteredChapters.forEach(c => {
+    const pDate = new Date(c.publish_at);
+    if (pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear) {
+      const dayVal = pDate.getDate();
+      if (dayVal <= 7) monthCounts[0]++;
+      else if (dayVal <= 14) monthCounts[1]++;
+      else if (dayVal <= 21) monthCounts[2]++;
+      else monthCounts[3]++;
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isTimerRunning]);
+  });
 
-  const handleStartTimer = () => {
-    setIsTimerRunning(true);
-  };
-
-  const handleStopTimer = () => {
-    setIsTimerRunning(false);
-    const durationMin = Math.round(timerSeconds / 60) || 1;
-    setManualDuration(String(durationMin));
-    setTimerSeconds(0);
-    triggerLiveToast(`Đã dừng bấm giờ sau ${durationMin} phút. Nhập số từ hoàn thành để ghi phiên.`);
-  };
-
-  const handleAddManualSession = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!manualDuration || !manualWords) {
-      triggerLiveToast("Vui lòng điền thời gian và số từ viết.", "warning");
-      return;
+  // 3. Year View (months of current year)
+  const yearCounts = Array(12).fill(0);
+  filteredChapters.forEach(c => {
+    const pDate = new Date(c.publish_at);
+    if (pDate.getFullYear() === currentYear) {
+      const mIdx = pDate.getMonth();
+      yearCounts[mIdx]++;
     }
-    const newSession = {
-      id: `session-${Date.now()}`,
-      date: new Date().toLocaleDateString("vi-VN"),
-      duration: Number(manualDuration),
-      words: Number(manualWords),
-      notes: manualNotes || "Tự nhập tay",
-    };
-    const updated = [newSession, ...sessions];
-    setSessions(updated);
-    localStorage.setItem("yag.author.sessions", JSON.stringify(updated));
-    setManualDuration("");
-    setManualWords("");
-    setManualNotes("");
-    triggerLiveToast("Đã ghi nhận phiên viết tay thành công.");
-  };
+  });
 
-  const formatTimerTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  };
+  let chartLabels: string[] = [];
+  let chartData: number[] = [];
 
-  const recentSessionBars = sessions.slice(0, 4).reverse();
-  const maxSessionWords = Math.max(0, ...recentSessionBars.map((session) => Number(session.words) || 0));
+  if (frequencyFilter === "week") {
+    chartLabels = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+    chartData = weekCounts;
+  } else if (frequencyFilter === "month") {
+    chartLabels = ["Tuần 1", "Tuần 2", "Tuần 3", "Tuần 4"];
+    chartData = monthCounts;
+  } else {
+    chartLabels = ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12"];
+    chartData = yearCounts;
+  }
+
+  const maxChartVal = Math.max(...chartData, 1);
 
   return (
     <AppShell activeId="s18">
-      <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr", gap: 24, alignItems: "start" }} className="schedule-workspace">
-        {/* Left Column: Calendar Planning & Commitments */}
-        <div className="stack" style={{ gap: 24 }}>
-          {/* Calendar Panel */}
-          <section className="panel panel-pad stack">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div>
-                <h2 className="section-title" style={{ margin: 0, fontSize: 18, color: "var(--jungle-dark)" }}>Bảng lịch đăng chương</h2>
-                <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>Hẹn giờ phát hành & Trạng thái duyệt tự động của AI</p>
-              </div>
-              <strong style={{ fontSize: 16, color: "var(--jungle-dark)" }}>{currentMonthStr}</strong>
+      <div className="stack" style={{ gap: 24 }}>
+        {/* Metric Cards Row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+          <div className="panel panel-pad stack" style={{ gap: 8, borderLeft: "4px solid var(--green)", borderRadius: "0 8px 8px 0" }}>
+            <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: "bold" }}>Điểm uy tín</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span style={{ fontSize: 28, fontWeight: "bold", color: "var(--foreground)" }}>{overview.reputation_score}</span>
+              <span style={{ fontSize: 13, color: "var(--muted)" }}>/ 100</span>
             </div>
-
-            {/* Weekdays header */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, textAlign: "center", fontWeight: "bold", fontSize: 12, color: "var(--muted)", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-              <div>T2</div>
-              <div>T3</div>
-              <div>T4</div>
-              <div>T5</div>
-              <div>T6</div>
-              <div>T7</div>
-              <div>CN</div>
+            <p style={{ fontSize: 11, color: "var(--muted)", margin: 0 }}>Bị trừ 5 điểm uy tín cho mỗi chương trễ hạn.</p>
+          </div>
+          <div className="panel panel-pad stack" style={{ gap: 8, borderLeft: "4px solid var(--blue)", borderRadius: "0 8px 8px 0" }}>
+            <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: "bold" }}>Tỉ lệ đúng hẹn</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span style={{ fontSize: 28, fontWeight: "bold", color: "var(--foreground)" }}>{overview.on_time_rate}%</span>
             </div>
-
-            {/* Calendar grid */}
-            {isLoading ? (
-              <div style={{ padding: 32, textAlign: "center", color: "var(--muted)" }}>
-                Đang tải lịch đăng chương...
-              </div>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginTop: 8 }}>
-                {calendarDays.map((day) => (
-                  <div
-                    key={day.dayNum}
-                    style={{
-                      minHeight: 85,
-                      border: "1px solid var(--line)",
-                      borderRadius: 6,
-                      padding: 6,
-                      background: day.event ? "rgba(22, 48, 32, 0.02)" : "#fff",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between"
-                    }}
-                  >
-                    <strong style={{ fontSize: 11, color: "var(--muted)" }}>{day.dayNum}</strong>
-                    {day.event && (
-                      <div
-                        style={{
-                          fontSize: 9,
-                          padding: "4px",
-                          borderRadius: 4,
-                          background:
-                            day.event.status === "approved"
-                              ? "var(--green-light)"
-                              : day.event.status === "pending"
-                                ? "var(--blue-light)"
-                                : "var(--amber-light)",
-                          color:
-                            day.event.status === "approved"
-                              ? "var(--green)"
-                              : day.event.status === "pending"
-                                ? "var(--blue)"
-                                : "var(--amber)",
-                          borderLeft: `2.5px solid ${day.event.status === "approved"
-                              ? "var(--green)"
-                              : day.event.status === "pending"
-                                ? "var(--blue)"
-                                : "var(--amber)"
-                            }`,
-                          lineHeight: 1.2
-                        }}
-                      >
-                        <div style={{ fontWeight: "bold" }}>{day.event.time}</div>
-                        <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={day.event.title}>{day.event.title}</div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Target Commitments */}
-          <section className="panel panel-pad stack">
-            <h2 className="section-title" style={{ fontSize: 16, margin: "0 0 12px 0", color: "var(--jungle-dark)" }}>Bảng cam kết sáng tác & Tiến độ</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {commitments.length === 0 ? (
-                <div style={{ fontSize: 13, color: "var(--muted)", textAlign: "center", padding: "16px 0" }}>
-                  Bạn chưa có tác phẩm nào để cam kết tiến độ. Hãy tạo tác phẩm mới trong mục Tác phẩm của tôi!
-                </div>
-              ) : (
-                commitments.map((com) => {
-                  const percent = com.targetChaps > 0 ? Math.min(100, Math.round((com.currentChaps / com.targetChaps) * 100)) : 0;
-                  return (
-                    <div key={com.id} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 16 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                        <div>
-                          <strong style={{ fontSize: 14, color: "var(--foreground)" }}>{com.novel}</strong>
-                          <div style={{ fontSize: 11, color: "var(--muted)" }}>Hạn hoàn thành: {com.deadline}</div>
-                        </div>
-                        <span style={{ fontSize: 13, fontWeight: "bold", color: "var(--jungle-dark)" }}>
-                          {com.currentChaps} / {com.targetChaps} chương ({percent}%)
-                        </span>
-                      </div>
-                      {/* Progress bar container */}
-                      <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden", position: "relative" }}>
-                        <div style={{ width: `${percent}%`, height: "100%", background: "linear-gradient(90deg, var(--jungle-dark) 0%, var(--green) 100%)", borderRadius: 4 }} />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+            <p style={{ fontSize: 11, color: "var(--muted)", margin: 0 }}>Tỷ lệ hoàn thành cam kết xuất bản đúng hạn.</p>
+          </div>
+          <div className="panel panel-pad stack" style={{ gap: 8, borderLeft: "4px solid var(--jungle-dark)", borderRadius: "0 8px 8px 0" }}>
+            <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: "bold" }}>Chương đã xuất bản</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span style={{ fontSize: 28, fontWeight: "bold", color: "var(--foreground)" }}>{overview.approved_chapters}</span>
             </div>
-          </section>
+            <p style={{ fontSize: 11, color: "var(--muted)", margin: 0 }}>Tổng số chương truyện đã được AI kiểm duyệt.</p>
+          </div>
         </div>
 
-        {/* Right Column: Writing Tracker & Statistics */}
-        <div className="stack" style={{ gap: 24 }}>
-          {/* Stopwatch panel */}
-          <section className="panel panel-pad stack" style={{ background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", color: "#fff" }}>
-            <h3 style={{ fontSize: 15, fontWeight: "bold", margin: "0 0 12px 0", color: "#fff" }}>Bộ bấm giờ viết truyện</h3>
-            <div style={{ textAlign: "center", margin: "12px 0" }}>
-              <div style={{ fontSize: 36, fontWeight: "bold", fontFamily: "monospace", letterSpacing: 2 }}>
-                {formatTimerTime(timerSeconds)}
+        {/* Main Workspace Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr", gap: 24, alignItems: "start" }} className="schedule-workspace">
+          {/* Left Column: Calendar Planning & Commitments */}
+          <div className="stack" style={{ gap: 24 }}>
+            {/* Calendar Panel */}
+            <section className="panel panel-pad stack">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div>
+                  <h2 className="section-title" style={{ margin: 0, fontSize: 18, color: "var(--jungle-dark)" }}>Bảng lịch đăng chương</h2>
+                  <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>Hẹn giờ phát hành & Trạng thái duyệt tự động của AI</p>
+                </div>
+                <strong style={{ fontSize: 16, color: "var(--jungle-dark)" }}>{currentMonthStr}</strong>
               </div>
-              <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>
-                {isTimerRunning ? "Đang ghi nhận thời gian tập trung..." : "Bấm giờ để theo dõi năng suất viết"}
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-              {!isTimerRunning ? (
-                <button className="button button-primary" style={{ padding: "8px 24px", fontSize: 13 }} onClick={handleStartTimer}>
-                  Bắt đầu
-                </button>
+
+              {/* Weekdays header */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, textAlign: "center", fontWeight: "bold", fontSize: 12, color: "var(--muted)", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                <div>T2</div>
+                <div>T3</div>
+                <div>T4</div>
+                <div>T5</div>
+                <div>T6</div>
+                <div>T7</div>
+                <div>CN</div>
+              </div>
+
+              {/* Calendar grid */}
+              {isLoading ? (
+                <div style={{ padding: 32, textAlign: "center", color: "var(--muted)" }}>
+                  Đang tải lịch đăng chương...
+                </div>
               ) : (
-                <button className="button button-crimson" style={{ padding: "8px 24px", fontSize: 13, background: "var(--crimson)", border: 0 }} onClick={handleStopTimer}>
-                  Dừng & Ghi
-                </button>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginTop: 8 }}>
+                  {calendarDays.map((day) => (
+                    <div
+                      key={day.dayNum}
+                      style={{
+                        minHeight: 85,
+                        border: "1px solid var(--line)",
+                        borderRadius: 6,
+                        padding: 6,
+                        background: day.event ? "rgba(22, 48, 32, 0.02)" : "#fff",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between"
+                      }}
+                    >
+                      <strong style={{ fontSize: 11, color: "var(--muted)" }}>{day.dayNum}</strong>
+                      {day.event && (
+                        <div
+                          style={{
+                            fontSize: 9,
+                            padding: "4px",
+                            borderRadius: 4,
+                            background:
+                              day.event.status === "approved"
+                                ? "var(--green-light)"
+                                : day.event.status === "pending"
+                                  ? "var(--blue-light)"
+                                  : "var(--amber-light)",
+                            color:
+                              day.event.status === "approved"
+                                ? "var(--green)"
+                                : day.event.status === "pending"
+                                  ? "var(--blue)"
+                                  : "var(--amber)",
+                            borderLeft: `2.5px solid ${day.event.status === "approved"
+                                ? "var(--green)"
+                                : day.event.status === "pending"
+                                  ? "var(--blue)"
+                                  : "var(--amber)"
+                              }`,
+                            lineHeight: 1.2
+                          }}
+                        >
+                          <div style={{ fontWeight: "bold" }}>{day.event.time}</div>
+                          <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={day.event.title}>{day.event.title}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
-            </div>
-          </section>
+            </section>
 
-          {/* Manual Logging Form */}
-          <section className="panel panel-pad stack">
-            <h3 style={{ fontSize: 14, fontWeight: "bold", margin: "0 0 12px 0", color: "var(--jungle-dark)" }}>Ghi nhận phiên viết tay</h3>
-            <form onSubmit={handleAddManualSession} className="stack" style={{ gap: 12 }}>
-              <div className="grid grid-2" style={{ gap: 10 }}>
-                <div className="field">
-                  <label style={{ fontSize: 11, fontWeight: "bold" }}>Số phút viết</label>
-                  <input className="input" type="number" min="1" value={manualDuration} onChange={(e) => setManualDuration(e.target.value)} required placeholder="Nhập số phút" style={{ padding: "6px" }} />
-                </div>
-                <div className="field">
-                  <label style={{ fontSize: 11, fontWeight: "bold" }}>Số từ hoàn thành</label>
-                  <input className="input" type="number" min="1" value={manualWords} onChange={(e) => setManualWords(e.target.value)} required placeholder="Nhập số từ" style={{ padding: "6px" }} />
-                </div>
-              </div>
-              <div className="field">
-                <label style={{ fontSize: 11, fontWeight: "bold" }}>Ghi chú phiên viết</label>
-                <input className="input" value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} placeholder="Ghi chú phiên viết" style={{ padding: "6px" }} />
-              </div>
-              <button className="button button-primary" style={{ padding: "8px", fontSize: 12 }} type="submit">Ghi phiên viết</button>
-            </form>
-          </section>
-
-          {/* History Panel */}
-          <section className="panel panel-pad stack" style={{ maxHeight: 250, overflowY: "auto" }}>
-            <h3 style={{ fontSize: 14, fontWeight: "bold", margin: "0 0 10px 0", color: "var(--jungle-dark)" }}>Lịch sử phiên viết</h3>
-            {sessions.length === 0 ? (
-              <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, textAlign: "center" }}>Chưa có phiên nào được lưu.</p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {sessions.map((s) => (
-                  <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, borderBottom: "1px solid var(--line)", paddingBottom: 6 }}>
-                    <div>
-                      <strong style={{ color: "var(--foreground)" }}>{s.notes}</strong>
-                      <div style={{ fontSize: 10, color: "var(--muted)" }}>{s.date} · {s.duration} phút</div>
-                    </div>
-                    <span style={{ fontWeight: "bold", color: "var(--green)" }}>+{s.words} từ</span>
+            {/* Target Commitments */}
+            <section className="panel panel-pad stack">
+              <h2 className="section-title" style={{ fontSize: 16, margin: "0 0 12px 0", color: "var(--jungle-dark)" }}>Bảng cam kết sáng tác & Tiến độ</h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {commitments.length === 0 ? (
+                  <div style={{ fontSize: 13, color: "var(--muted)", textAlign: "center", padding: "16px 0" }}>
+                    Bạn chưa có tác phẩm nào để cam kết tiến độ. Hãy tạo tác phẩm mới trong mục Tác phẩm của tôi!
                   </div>
-                ))}
+                ) : (
+                  commitments.map((com) => {
+                    return (
+                      <div key={com.id} style={{ borderBottom: "1px solid var(--line)", paddingBottom: 16 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div>
+                            <strong style={{ fontSize: 14, color: "var(--foreground)" }}>{com.novel}</strong>
+                            <div style={{ fontSize: 11, color: "var(--muted)" }}>Tần suất: {getFrequencyLabel(com.frequency)}</div>
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: "bold", color: "var(--jungle-dark)" }}>
+                            {com.currentChaps} / {com.targetChaps} chương ({com.percent}%)
+                          </span>
+                        </div>
+                        {/* Progress bar container */}
+                        <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden", position: "relative" }}>
+                          <div style={{ width: `${com.percent}%`, height: "100%", background: "linear-gradient(90deg, var(--jungle-dark) 0%, var(--green) 100%)", borderRadius: 4 }} />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
-            )}
-          </section>
+            </section>
+          </div>
 
-          {/* Custom CSS Bar Chart for Words Written by Recent Sessions */}
-          <section className="panel panel-pad stack">
-            <h3 style={{ fontSize: 14, fontWeight: "bold", margin: "0 0 12px 0", color: "var(--jungle-dark)" }}>Số từ hoàn thành gần đây</h3>
-            {recentSessionBars.length === 0 ? (
-              <p style={{ fontSize: 12, color: "var(--muted)", margin: 0, textAlign: "center" }}>Chưa có dữ liệu phiên viết.</p>
-            ) : (
-              <div style={{ display: "flex", justifyContent: "space-around", alignItems: "flex-end", height: 100, borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-                {recentSessionBars.map((session, index) => {
-                  const words = Number(session.words) || 0;
-                  const height = maxSessionWords > 0 ? Math.max(8, Math.round((words / maxSessionWords) * 80)) : 8;
-                  return (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }} key={session.id || `${session.date}-${index}`}>
-                      <div style={{ height, width: 24, background: index === recentSessionBars.length - 1 ? "var(--green)" : "var(--line)", borderRadius: "3px 3px 0 0" }} />
-                      <span style={{ fontSize: 10, color: "var(--muted)" }}>{session.date}</span>
+          {/* Right Column: Interactive Charts */}
+          <div className="stack" style={{ gap: 24 }}>
+            {/* Story Selector */}
+            <section className="panel panel-pad stack" style={{ gap: 12 }}>
+              <h3 style={{ fontSize: 14, fontWeight: "bold", margin: 0, color: "var(--jungle-dark)" }}>Chọn tác phẩm phân tích</h3>
+              <select
+                className="select"
+                value={selectedStoryId}
+                onChange={(e) => setSelectedStoryId(e.target.value)}
+                style={{ width: "100%", padding: "8px" }}
+              >
+                <option value="all">Tất cả tác phẩm</option>
+                {works.map((w) => (
+                  <option key={w.id} value={w.id}>{w.title}</option>
+                ))}
+              </select>
+            </section>
+
+            {/* Progress Donut Chart */}
+            <section className="panel panel-pad stack" style={{ gap: 16, alignItems: "center" }}>
+              <h3 style={{ fontSize: 14, fontWeight: "bold", margin: 0, color: "var(--jungle-dark)", width: "100%", textAlign: "left" }}>
+                Tiến độ hoàn thành tác phẩm
+              </h3>
+              {expectedTotal === 0 ? (
+                <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
+                  Chưa có dữ liệu cam kết số chương cho tác phẩm được chọn.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, width: "100%" }}>
+                  {/* SVG Donut */}
+                  <div style={{ position: "relative", width: 140, height: 140 }}>
+                    <svg width="100%" height="100%" viewBox="0 0 120 120" style={{ transform: "rotate(-90deg)" }}>
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="50"
+                        fill="transparent"
+                        stroke="var(--line)"
+                        strokeWidth="10"
+                      />
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="50"
+                        fill="transparent"
+                        stroke="var(--green)"
+                        strokeWidth="10"
+                        strokeDasharray={2 * Math.PI * 50}
+                        strokeDashoffset={(2 * Math.PI * 50) - (progressPercent / 100) * (2 * Math.PI * 50)}
+                        strokeLinecap="round"
+                        style={{ transition: "stroke-dashoffset 0.5s ease-in-out" }}
+                      />
+                    </svg>
+                    <div style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      pointerEvents: "none"
+                    }}>
+                      <span style={{ fontSize: 24, fontWeight: "bold", color: "var(--foreground)" }}>{progressPercent}%</span>
+                      <span style={{ fontSize: 11, color: "var(--muted)" }}>{writtenTotal} / {expectedTotal} chương</span>
                     </div>
-                  );
-                })}
+                  </div>
+                  {/* Legends */}
+                  <div style={{ display: "flex", gap: 16, justifyContent: "center", width: "100%", borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--green)" }} />
+                      <span>Đã viết ({writtenTotal})</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--line)" }} />
+                      <span>Còn lại ({remainingTotal})</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Update Frequency Bar Chart */}
+            <section className="panel panel-pad stack" style={{ gap: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ fontSize: 14, fontWeight: "bold", margin: 0, color: "var(--jungle-dark)" }}>Tần suất cập nhật chương</h3>
+                {/* Filter Toggles */}
+                <div style={{ display: "flex", background: "var(--line)", borderRadius: 6, padding: 2 }}>
+                  <button
+                    className={`button ${frequencyFilter === "week" ? "button-primary" : ""}`}
+                    style={{ padding: "4px 8px", fontSize: 10, borderRadius: 4, background: frequencyFilter === "week" ? "var(--jungle-dark)" : "transparent", color: frequencyFilter === "week" ? "#fff" : "var(--foreground)", border: 0, cursor: "pointer" }}
+                    onClick={() => setFrequencyFilter("week")}
+                  >
+                    Tuần
+                  </button>
+                  <button
+                    className={`button ${frequencyFilter === "month" ? "button-primary" : ""}`}
+                    style={{ padding: "4px 8px", fontSize: 10, borderRadius: 4, background: frequencyFilter === "month" ? "var(--jungle-dark)" : "transparent", color: frequencyFilter === "month" ? "#fff" : "var(--foreground)", border: 0, cursor: "pointer" }}
+                    onClick={() => setFrequencyFilter("month")}
+                  >
+                    Tháng
+                  </button>
+                  <button
+                    className={`button ${frequencyFilter === "year" ? "button-primary" : ""}`}
+                    style={{ padding: "4px 8px", fontSize: 10, borderRadius: 4, background: frequencyFilter === "year" ? "var(--jungle-dark)" : "transparent", color: frequencyFilter === "year" ? "#fff" : "var(--foreground)", border: 0, cursor: "pointer" }}
+                    onClick={() => setFrequencyFilter("year")}
+                  >
+                    Năm
+                  </button>
+                </div>
               </div>
-            )}
-          </section>
+
+              <div style={{ width: "100%", height: 180, display: "flex", justifyContent: "center" }}>
+                <svg width="100%" height="100%" viewBox="0 0 400 180" style={{ overflow: "visible" }}>
+                  <defs>
+                    <linearGradient id="bar-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="var(--green)" />
+                      <stop offset="100%" stopColor="var(--jungle-dark)" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Gridlines */}
+                  <line x1="30" y1="30" x2="390" y2="30" stroke="var(--line)" strokeWidth="0.5" strokeDasharray="4" />
+                  <line x1="30" y1="85" x2="390" y2="85" stroke="var(--line)" strokeWidth="0.5" strokeDasharray="4" />
+                  <line x1="30" y1="140" x2="390" y2="140" stroke="var(--line)" strokeWidth="1" />
+
+                  {/* Bars */}
+                  {chartData.map((val, i) => {
+                    const N = chartData.length;
+                    const barGap = N === 7 ? 12 : N === 4 ? 24 : 6;
+                    const totalGapWidth = barGap * (N - 1);
+                    const barWidth = (360 - totalGapWidth) / N;
+                    const barHeight = (val / maxChartVal) * 110;
+                    const x = 30 + i * (barWidth + barGap);
+                    const y = 140 - barHeight;
+
+                    return (
+                      <g key={i}>
+                        <rect
+                          x={x}
+                          y={y}
+                          width={barWidth}
+                          height={barHeight}
+                          rx="3"
+                          fill="url(#bar-grad)"
+                          style={{ cursor: "pointer", transition: "all 0.3s ease" }}
+                        >
+                          <title>{`Đã đăng ${val} chương`}</title>
+                        </rect>
+                        {/* Count label */}
+                        {val > 0 && (
+                          <text
+                            x={x + barWidth / 2}
+                            y={y - 6}
+                            textAnchor="middle"
+                            style={{ fontSize: 9, fontWeight: "bold", fill: "var(--foreground)" }}
+                          >
+                            {val}
+                          </text>
+                        )}
+                        {/* X-axis label */}
+                        <text
+                          x={x + barWidth / 2}
+                          y="158"
+                          textAnchor="middle"
+                          style={{ fontSize: 9, fill: "var(--muted)", fontWeight: "500" }}
+                        >
+                          {chartLabels[i]}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            </section>
+          </div>
         </div>
       </div>
     </AppShell>

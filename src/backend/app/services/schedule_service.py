@@ -2,7 +2,7 @@ import logging
 import math
 import os
 import smtplib
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from email.mime.text import MIMEText
 from typing import Optional
 
@@ -118,12 +118,58 @@ def _notify_admins(db: Session, alert: AdminAlert) -> int:
 def _mark_schedule_published_if_fulfilled(
     db: Session, schedule: PublishSchedule
 ) -> bool:
-    publication = _find_publication_for_schedule(db, schedule)
-    if not publication:
+    schedules = (
+        db.query(PublishSchedule)
+        .filter(PublishSchedule.story_id == schedule.story_id)
+        .order_by(PublishSchedule.scheduled_time.asc())
+        .all()
+    )
+    try:
+        index = schedules.index(schedule)
+        required_chapters = index + 1
+    except ValueError:
+        required_chapters = 1
+
+    published_chapters_count = (
+        db.query(Chapter)
+        .filter(
+            Chapter.story_id == schedule.story_id,
+            Chapter.moderation_status == "approved",
+            Chapter.publish_at <= schedule.scheduled_time,
+        )
+        .count()
+    )
+
+    if published_chapters_count < required_chapters:
         return False
 
     schedule.status = "published"
     db.add(schedule)
+
+    story = db.query(Story).filter(Story.id == schedule.story_id).first()
+    if story:
+        profile = db.query(Profile).filter(Profile.user_id == story.author_id).first()
+        if profile:
+            old_score = profile.reputation_score
+            profile.reputation_score = min(100, profile.reputation_score + 2)
+            db.add(profile)
+            logger.info(
+                "Author %s completed schedule on time. Reputation: %s -> %s",
+                story.author_id,
+                old_score,
+                profile.reputation_score,
+            )
+            author_payload = {
+                "type": "reputation_reward",
+                "story_id": str(story.id),
+                "story_title": story.title,
+                "schedule_id": str(schedule.id),
+                "reward": 2,
+                "reputation_score": profile.reputation_score,
+                "message": f"Bạn được cộng +2 điểm uy tín vì hoàn thành chương đúng hạn cho truyện '{story.title}'!",
+            }
+            publish_user_notification(str(story.author_id), author_payload)
+
     return True
 
 
@@ -144,9 +190,7 @@ def _handle_missed_schedule(
     author = db.query(User).filter(User.id == story.author_id).first()
     profile = db.query(Profile).filter(Profile.user_id == story.author_id).first()
     days_late = _days_late(schedule.scheduled_time, now)
-    penalty = min(
-        days_late * REPUTATION_PENALTY_PER_DAY, MAX_REPUTATION_PENALTY_PER_MISS
-    )
+    penalty = 5  # Phạt cứng 5 điểm uy tín theo cam kết từng chương
 
     old_score = profile.reputation_score if profile else None
     new_score = old_score
@@ -160,8 +204,8 @@ def _handle_missed_schedule(
 
     severity = "critical" if days_late >= SEVERE_LATE_DAYS else "warning"
     message = (
-        f"Story '{story.title}' missed publish schedule {schedule.scheduled_time.isoformat()} "
-        f"by {days_late} day(s). Reputation penalty: {penalty}."
+        f"Story '{story.title}' missed publish schedule {schedule.scheduled_time.isoformat()}. "
+        f"Reputation penalty: {penalty}."
     )
     alert = AdminAlert(
         alert_type="schedule_missed",
@@ -210,6 +254,58 @@ def _handle_missed_schedule(
 
 def scan_publish_schedules(db: Session, now: Optional[datetime] = None) -> dict:
     now = now or _now_utc()
+    
+    # 1. Warn authors whose schedules are due in the next 24 hours (1 day)
+    warn_threshold = now + timedelta(days=1)
+    upcoming_schedules = (
+        db.query(PublishSchedule)
+        .filter(
+            PublishSchedule.status == "scheduled",
+            PublishSchedule.scheduled_time > now,
+            PublishSchedule.scheduled_time <= warn_threshold,
+            PublishSchedule.reminded_at.is_(None)
+        )
+        .all()
+    )
+
+    for schedule in upcoming_schedules:
+        schedules_list = (
+            db.query(PublishSchedule)
+            .filter(PublishSchedule.story_id == schedule.story_id)
+            .order_by(PublishSchedule.scheduled_time.asc())
+            .all()
+        )
+        try:
+            index = schedules_list.index(schedule)
+            required_chapters = index + 1
+        except ValueError:
+            required_chapters = 1
+
+        published_chapters_count = (
+            db.query(Chapter)
+            .filter(
+                Chapter.story_id == schedule.story_id,
+                Chapter.moderation_status == "approved",
+                Chapter.publish_at <= schedule.scheduled_time,
+            )
+            .count()
+        )
+
+        if published_chapters_count < required_chapters:
+            story = db.query(Story).filter(Story.id == schedule.story_id).first()
+            if story:
+                author_payload = {
+                    "type": "schedule_warning",
+                    "story_id": str(story.id),
+                    "story_title": story.title,
+                    "schedule_id": str(schedule.id),
+                    "scheduled_time": schedule.scheduled_time.isoformat(),
+                    "message": f"Tác phẩm '{story.title}' sắp đến hạn cam kết đăng chương tiếp theo vào {schedule.scheduled_time.strftime('%d/%m %H:%M')}. Vui lòng đăng chương đúng hạn để tránh bị phạt uy tín!",
+                }
+                publish_user_notification(str(story.author_id), author_payload)
+            schedule.reminded_at = now
+
+    # 2. Check due schedules that are missed or published
     due_schedules = (
         db.query(PublishSchedule)
         .filter(

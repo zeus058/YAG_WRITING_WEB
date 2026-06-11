@@ -73,6 +73,8 @@ class StoryCreate(BaseModel):
     cover_url: Optional[str] = Field(
         default=None, description="URL ảnh bìa (Cloudinary)"
     )
+    expected_chapters: int = Field(..., ge=0, description="Dự kiến truyện bao nhiêu chương")
+    update_frequency: str = Field(..., description="Tần suất cập nhật cam kết")
 
 
 class StoryUpdate(BaseModel):
@@ -111,6 +113,8 @@ class StoryUpdate(BaseModel):
         default=None, description="Trạng thái tác phẩm"
     )
     cover_url: Optional[str] = Field(default=None, description="URL ảnh bìa mới")
+    expected_chapters: Optional[int] = Field(default=None, ge=0, description="Dự kiến truyện bao nhiêu chương mới")
+    update_frequency: Optional[str] = Field(default=None, description="Tần suất cập nhật mới")
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +150,8 @@ class StoryResponse(BaseModel):
     pending_count: Optional[int] = Field(default=0, description="Số chương chờ duyệt AI")
     created_at: datetime = Field(..., description="Ngày tạo")
     updated_at: datetime = Field(..., description="Lần cập nhật cuối")
+    expected_chapters: int = Field(default=0, description="Dự kiến truyện bao nhiêu chương")
+    update_frequency: str = Field(default="1_week_1_chap", description="Tần suất cập nhật cam kết")
 
     @field_validator("language", mode="before")
     @classmethod
@@ -166,6 +172,16 @@ class StoryResponse(BaseModel):
     @classmethod
     def default_is_mature(cls, value):
         return False if value is None else value
+
+    @field_validator("expected_chapters", mode="before")
+    @classmethod
+    def default_expected_chapters(cls, value):
+        return 0 if value is None else value
+
+    @field_validator("update_frequency", mode="before")
+    @classmethod
+    def default_update_frequency(cls, value):
+        return "1_week_1_chap" if value is None else value
 
     model_config = ConfigDict(from_attributes=True)
 

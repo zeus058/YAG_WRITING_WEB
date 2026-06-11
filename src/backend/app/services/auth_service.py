@@ -205,7 +205,7 @@ class AuthService:
             db.flush()  # Populates db_user.id for profile matching
 
             db_profile = Profile(
-                user_id=db_user.id, display_name=db_user.username, reputation_score=100
+                user_id=db_user.id, display_name=db_user.username, reputation_score=95
             )
             db.add(db_profile)
             db.commit()

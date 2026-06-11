@@ -61,6 +61,10 @@ class Story(Base):
     rating_avg = Column(
         Numeric(3, 2), nullable=False, default=0.00, server_default="0.00"
     )
+    expected_chapters = Column(Integer, nullable=False, default=0, server_default="0")
+    update_frequency = Column(
+        String(50), nullable=False, default="1_week_1_chap", server_default="'1_week_1_chap'"
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

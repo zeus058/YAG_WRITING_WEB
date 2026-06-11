@@ -25,7 +25,7 @@ class Profile(Base):
     avatar_url = Column(String(255), nullable=True)
     bio = Column(Text, nullable=True)
     reputation_score = Column(
-        Integer, nullable=False, default=100, server_default="100"
+        Integer, nullable=False, default=95, server_default="95"
     )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(

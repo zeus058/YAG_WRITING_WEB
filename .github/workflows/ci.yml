@@ -246,10 +246,10 @@ jobs:
   # ────────────────────────────────────────────────────────────
   deploy-migrations:
     name: "Apply Production Migrations"
-    needs: [backend, frontend, check-secrets]
+    needs: [backend, frontend]
     runs-on: ubuntu-latest
-    # Production migrations run only from main.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has_db == 'true'
+    # Production environment secrets are only visible inside this job.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     environment: production
 
@@ -273,26 +273,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Check for pending migrations
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo " DATABASE_URL secret is not configured. Skipping."
-            exit 0
-          fi
-          python -m app.manage_migrations --check && echo "No pending migrations" || echo " Pending migrations detected"
-
       - name: Apply database migrations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set -euo pipefail
           if [ -z "$DATABASE_URL" ]; then
-            echo " DATABASE_URL secret is not configured. Skipping migrations."
-            exit 0
+            echo "DATABASE_URL secret is not configured."
+            exit 1
           fi
           python -m app.manage_migrations
+          python -m app.manage_migrations --check
           echo "Database migrations applied successfully."
+
+      - name: Import licensed synthetic story library
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          python -m app.import_demo_library --apply --confirm-remote
+          echo "Synthetic story library imported and verified successfully."
 
   # ────────────────────────────────────────────────────────────
   # JOB 7: CD — Deploy Backend to Google Cloud Run (via WIF)
@@ -301,9 +301,9 @@ jobs:
     name: "Deploy Backend to Cloud Run"
     needs: [deploy-migrations, check-secrets, backend, frontend, security, docker]
     runs-on: ubuntu-latest
-    # Production backend deploy runs only from main and requires DB plus GCP WIF secrets.
+    # A successful deploy-migrations job proves the production DB secret is available.
     # Explicitly depends on backend, frontend, security, and docker so any CI failure hard-blocks CD.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has_gcp == 'true' && needs.check-secrets.outputs.has_db == 'true'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has_gcp == 'true'
 
     environment:
       name: 'production'

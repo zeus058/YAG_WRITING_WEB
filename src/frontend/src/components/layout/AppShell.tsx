@@ -359,11 +359,6 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
                     </div>
                   </div>
                   
-                  <Link className="account-dropdown-item" href={role === "author" ? "/author/profile" : "/profile/me"} onClick={() => setIsAccountMenuOpen(false)}>
-                    <Icon name="user" />
-                    Hồ sơ của tôi
-                  </Link>
-                  
                   <Link className="account-dropdown-item" href={role === "author" ? "/author/settings" : "/settings"} onClick={() => setIsAccountMenuOpen(false)}>
                     <Icon name="settings" />
                     Cài đặt tài khoản

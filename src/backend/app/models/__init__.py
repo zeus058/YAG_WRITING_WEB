@@ -23,6 +23,7 @@ from app.models.library import Library
 from app.models.admin_alert import AdminAlert
 from app.models.admin_audit_log import AdminAuditLog
 from app.models.notification import Notification
+from app.models.story_rights import StoryRights
 
 __all__ = [
     "User",
@@ -42,4 +43,5 @@ __all__ = [
     "AdminAlert",
     "AdminAuditLog",
     "Notification",
+    "StoryRights",
 ]

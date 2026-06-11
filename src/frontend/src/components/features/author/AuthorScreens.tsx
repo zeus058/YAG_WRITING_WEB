@@ -124,6 +124,7 @@ export function AuthorWorksScreen() {
   const [works, setWorks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingStory, setEditingStory] = useState<any | null>(null);
 
   // Form states for creating a new story
   const [title, setTitle] = useState("");
@@ -136,8 +137,10 @@ export function AuthorWorksScreen() {
   const [isMature, setIsMature] = useState(false);
   const [mainCharacters, setMainCharacters] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
+  const [storyStatus, setStoryStatus] = useState("ongoing");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [removeCover, setRemoveCover] = useState(false);
   const [expectedChapters, setExpectedChapters] = useState(50);
   const [updateFrequency, setUpdateFrequency] = useState("1_week_1_chap");
   const [submitting, setSubmitting] = useState(false);
@@ -168,15 +171,19 @@ export function AuthorWorksScreen() {
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
+    if (coverUrl?.startsWith("blob:")) URL.revokeObjectURL(coverUrl);
     setCoverFile(file);
+    setRemoveCover(false);
     if (file) {
       setCoverUrl(URL.createObjectURL(file));
     } else {
-      setCoverUrl(null);
+      setCoverUrl(editingStory?.cover_url || null);
     }
   };
 
   const resetStoryForm = () => {
+    if (coverUrl?.startsWith("blob:")) URL.revokeObjectURL(coverUrl);
+    setEditingStory(null);
     setTitle("");
     setDescription("");
     setCategory("Ngôn tình");
@@ -187,13 +194,52 @@ export function AuthorWorksScreen() {
     setIsMature(false);
     setMainCharacters("");
     setTargetAudience("");
+    setStoryStatus("ongoing");
     setCoverFile(null);
     setCoverUrl(null);
+    setRemoveCover(false);
     setExpectedChapters(50);
     setUpdateFrequency("1_week_1_chap");
   };
 
-  const handleCreateStory = async (e: React.FormEvent) => {
+  const openCreateStoryModal = () => {
+    resetStoryForm();
+    setIsModalOpen(true);
+  };
+
+  const openEditStoryModal = (story: any) => {
+    if (!story?.id) {
+      triggerLiveToast("Không thể mở thông tin truyện. Vui lòng tải lại trang.", "warning");
+      return;
+    }
+    if (coverUrl?.startsWith("blob:")) URL.revokeObjectURL(coverUrl);
+    setEditingStory(story);
+    setTitle(story.title || "");
+    setDescription(story.description || "");
+    setCategory(story.category || "Ngôn tình");
+    setLanguage(story.language || "vi");
+    setStoryType(story.story_type || "fiction");
+    setTags(Array.isArray(story.tags) ? story.tags.join(", ") : story.tags || "");
+    setCopyright(story.copyright || "all_rights_reserved");
+    setIsMature(Boolean(story.is_mature));
+    setMainCharacters(story.main_characters || "");
+    setTargetAudience(story.target_audience || "");
+    setStoryStatus(story.status || "ongoing");
+    setCoverFile(null);
+    setCoverUrl(story.cover_url || null);
+    setRemoveCover(false);
+    setExpectedChapters(Number(story.expected_chapters) || Math.max(1, Number(story.chapter_count) || 50));
+    setUpdateFrequency(story.update_frequency || "1_week_1_chap");
+    setIsModalOpen(true);
+  };
+
+  const closeStoryModal = () => {
+    if (submitting) return;
+    setIsModalOpen(false);
+    resetStoryForm();
+  };
+
+  const handleSubmitStory = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanTitle = title.trim();
     const cleanDescription = description.trim();
@@ -208,8 +254,9 @@ export function AuthorWorksScreen() {
     setSubmitting(true);
     try {
       if (appEnv.useMocks) {
-        const fakeNew = {
-          id: `mock-story-${Date.now()}`,
+        const savedStory = {
+          ...(editingStory || {}),
+          id: editingStory?.id || `mock-story-${Date.now()}`,
           title: cleanTitle,
           description: cleanDescription,
           category,
@@ -221,8 +268,8 @@ export function AuthorWorksScreen() {
           main_characters: mainCharacters,
           target_audience: targetAudience,
           chapter_count: 0,
-          cover_url: coverUrl,
-          status: "ongoing",
+          cover_url: removeCover ? null : coverUrl,
+          status: storyStatus,
           moderation_status: "approved",
           view_count: 0,
           rating_avg: 0.0,
@@ -231,11 +278,13 @@ export function AuthorWorksScreen() {
           expected_chapters: Number(expectedChapters),
           update_frequency: updateFrequency,
         };
-        setWorks([fakeNew, ...works]);
+        setWorks(editingStory
+          ? works.map((story) => story.id === editingStory.id ? savedStory : story)
+          : [savedStory, ...works]);
         setIsModalOpen(false);
         resetStoryForm();
-        triggerLiveToast("Đã khởi tạo bộ truyện nháp (Mock).");
-        router.push(`/author/stories/${fakeNew.id}/edit`);
+        triggerLiveToast(editingStory ? "Đã cập nhật thông tin truyện (Mock)." : "Đã khởi tạo bộ truyện nháp (Mock).");
+        if (!editingStory) router.push(`/author/stories/${savedStory.id}/edit`);
         return;
       }
 
@@ -250,24 +299,29 @@ export function AuthorWorksScreen() {
       formData.append("is_mature", String(isMature));
       formData.append("main_characters", mainCharacters.trim());
       formData.append("target_audience", targetAudience);
-      formData.append("status", "ongoing");
+      formData.append("status", storyStatus);
       formData.append("expected_chapters", String(expectedChapters));
       formData.append("update_frequency", updateFrequency);
+      if (editingStory && removeCover) {
+        formData.append("remove_cover", "true");
+      }
       if (coverFile) {
         formData.append("cover_file", coverFile);
       }
 
-      const response = await yagApi.author.createStory(formData);
+      const response = editingStory
+        ? await yagApi.author.updateStory(String(editingStory.id), formData)
+        : await yagApi.author.createStory(formData);
       void loadWorks();
       setIsModalOpen(false);
       resetStoryForm();
-      triggerLiveToast("Đã tạo bộ truyện mới thành công!");
-      if (response.data?.id) {
+      triggerLiveToast(editingStory ? "Đã cập nhật thông tin truyện thành công!" : "Đã tạo bộ truyện mới thành công!");
+      if (!editingStory && response.data?.id) {
         router.push(`/author/stories/${response.data.id}/edit`);
       }
     } catch (err) {
       console.error(err);
-      triggerLiveToast("Không thể tạo tác phẩm. Trùng tiêu đề?", "warning");
+      triggerLiveToast(editingStory ? "Không thể cập nhật truyện. Kiểm tra lại tiêu đề và dữ liệu." : "Không thể tạo tác phẩm. Trùng tiêu đề?", "warning");
     } finally {
       setSubmitting(false);
     }
@@ -353,7 +407,7 @@ export function AuthorWorksScreen() {
     <AppShell
       activeId="s15"
       actions={
-        <button className="button button-primary" onClick={() => setIsModalOpen(true)}>
+        <button className="button button-primary" onClick={openCreateStoryModal}>
           <Icon name="edit" />Tạo tác phẩm mới
         </button>
       }
@@ -447,7 +501,7 @@ export function AuthorWorksScreen() {
                       <span className="author-category-badge">
                         {story.category}
                       </span>
-                      {story.tags && story.tags.slice(0, 2).map((t: string) => (
+                      {(Array.isArray(story.tags) ? story.tags : String(story.tags || "").split(",")).map((tag: string) => tag.trim()).filter(Boolean).slice(0, 2).map((t: string) => (
                         <span key={t} className="author-tag-badge">
                           #{t}
                         </span>
@@ -477,6 +531,10 @@ export function AuthorWorksScreen() {
                         <Icon name="edit" />
                         <span>Viết tiếp</span>
                       </Link>
+                      <button className="button author-card-action author-card-action-manage" type="button" onClick={() => openEditStoryModal(story)} aria-label={`Chỉnh sửa thông tin ${story.title}`}>
+                        <Icon name="settings" />
+                        <span>Sửa thông tin</span>
+                      </button>
                       <Link className="button button-soft author-card-action author-card-action-publish" href={publishHref} onClick={guardMissingStoryId} aria-label={`Đăng chương mới cho ${story.title}`}>
                         <Icon name="arrow" />
                         <span>Đăng chương</span>
@@ -509,26 +567,26 @@ export function AuthorWorksScreen() {
         </section>
       )}
 
-      {/* Story creation modal */}
+      {/* Story create/edit modal */}
       {isModalOpen && (
-        <div className="modal-backdrop open story-setup-backdrop" onClick={() => !submitting && setIsModalOpen(false)}>
+        <div className="modal-backdrop open story-setup-backdrop" onClick={closeStoryModal}>
           <div className="story-setup-modal" role="dialog" aria-modal="true" aria-labelledby="storySetupTitle" onClick={(e) => e.stopPropagation()}>
             <div className="story-setup-header">
               <div>
-                <span className="badge badge-crimson">Author Studio</span>
-                <h2 id="storySetupTitle">Khởi tạo tác phẩm mới</h2>
-                <p>Thiết lập hồ sơ truyện đầy đủ để YAG có thể phân loại, gợi ý và hỗ trợ bạn viết chương đầu tiên tốt hơn.</p>
+                <span className={`badge ${editingStory ? "badge-blue" : "badge-crimson"}`}>{editingStory ? "Chỉnh sửa tác phẩm" : "Author Studio"}</span>
+                <h2 id="storySetupTitle">{editingStory ? `Cập nhật ${editingStory.title}` : "Khởi tạo tác phẩm mới"}</h2>
+                <p>{editingStory ? "Điều chỉnh thông tin hiển thị, phân loại, ảnh bìa và cam kết xuất bản của tác phẩm." : "Thiết lập hồ sơ truyện đầy đủ để YAG có thể phân loại, gợi ý và hỗ trợ bạn viết chương đầu tiên tốt hơn."}</p>
               </div>
-              <button className="button icon-button" type="button" onClick={() => setIsModalOpen(false)} aria-label="Đóng cửa sổ tạo tác phẩm">
+              <button className="button icon-button" type="button" onClick={closeStoryModal} aria-label="Đóng cửa sổ thông tin tác phẩm">
                 <Icon name="close" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateStory} className="story-setup-content">
+            <form onSubmit={handleSubmitStory} className="story-setup-content">
               <aside className="story-setup-preview">
                 <div className="story-cover-preview">
                   {coverUrl ? (
-                    <img src={coverUrl} alt="Bản xem trước ảnh bìa" />
+                    <img src={coverUrl} alt={`Ảnh bìa ${title.trim() || "tác phẩm"}`} />
                   ) : (
                     <div className="story-cover-placeholder">
                       <Icon name="book" />
@@ -543,8 +601,18 @@ export function AuthorWorksScreen() {
                     <Icon name="edit" /> Chọn ảnh bìa
                   </label>
                   {coverUrl ? (
-                    <button className="button" type="button" onClick={() => { setCoverFile(null); setCoverUrl(null); }}>
+                    <button className="button" type="button" onClick={() => {
+                      if (coverUrl.startsWith("blob:")) URL.revokeObjectURL(coverUrl);
+                      setCoverFile(null);
+                      setCoverUrl(null);
+                      setRemoveCover(Boolean(editingStory?.cover_url));
+                    }}>
                       Gỡ ảnh
+                    </button>
+                  ) : null}
+                  {editingStory?.cover_url && removeCover ? (
+                    <button className="button button-soft" type="button" onClick={() => { setCoverUrl(editingStory.cover_url); setRemoveCover(false); }}>
+                      Khôi phục ảnh cũ
                     </button>
                   ) : null}
                 </div>
@@ -582,7 +650,7 @@ export function AuthorWorksScreen() {
                     <label>Tên tác phẩm <span className="required">*</span></label>
                     <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={3} maxLength={255} placeholder="Tên truyện của bạn" />
                   </div>
-                  <div className="story-setup-grid two">
+                  <div className="story-setup-grid three">
                     <div className="field">
                       <label>Thể loại chính</label>
                       <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -597,6 +665,14 @@ export function AuthorWorksScreen() {
                         {storyLanguageOptions.map(item => (
                           <option key={item.value} value={item.value}>{item.label}</option>
                         ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label>Trạng thái</label>
+                      <select className="select" value={storyStatus} onChange={(e) => setStoryStatus(e.target.value)}>
+                        <option value="ongoing">Đang viết</option>
+                        <option value="completed">Hoàn thành</option>
+                        <option value="paused">Tạm ngưng</option>
                       </select>
                     </div>
                   </div>
@@ -707,9 +783,11 @@ export function AuthorWorksScreen() {
               </div>
 
               <div className="story-setup-footer">
-                <button className="button" type="button" onClick={() => setIsModalOpen(false)} disabled={submitting}>Hủy bỏ</button>
+                <button className="button" type="button" onClick={closeStoryModal} disabled={submitting}>Hủy bỏ</button>
                 <button className="button button-primary" type="submit" disabled={submitting}>
-                  {submitting ? "Đang khởi tạo..." : "Khởi tạo & mở Editor"}
+                  {submitting
+                    ? (editingStory ? "Đang lưu thay đổi..." : "Đang khởi tạo...")
+                    : (editingStory ? "Lưu thay đổi" : "Khởi tạo & mở Editor")}
                 </button>
               </div>
             </form>

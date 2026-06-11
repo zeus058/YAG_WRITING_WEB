@@ -527,6 +527,7 @@ async def update_story(
     style_reference_author: Optional[str] = Form(None),
     status_value: Optional[StoryStatus] = Form(None, alias="status"),
     cover_file: Optional[UploadFile] = File(None),
+    remove_cover: bool = Form(False),
     expected_chapters: Optional[int] = Form(None),
     update_frequency: Optional[str] = Form(None),
     db: Session = Depends(deps.get_db),
@@ -566,6 +567,7 @@ async def update_story(
                 payload.get("styleReferenceAuthor", style_reference_author),
             )
             status_value = payload.get("status", status_value)
+            remove_cover = payload.get("remove_cover", remove_cover)
             expected_chapters = payload.get("expected_chapters", expected_chapters)
             update_frequency = payload.get("update_frequency", update_frequency)
 
@@ -601,13 +603,15 @@ async def update_story(
             )
 
     update_data = story_in.model_dump(exclude_none=True)
-    if not update_data and not cover_file:
+    if not update_data and not cover_file and not remove_cover:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="No story fields provided"
         )
 
     for key, value in update_data.items():
         setattr(story, key, value)
+    if remove_cover:
+        story.cover_url = None
     if cover_file:
         story.cover_url = upload_story_cover_to_cloudinary(cover_file)
 

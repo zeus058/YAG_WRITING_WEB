@@ -190,10 +190,11 @@ export const yagApi = {
         body,
         headers: new Headers(), // Let the browser set multipart/form-data boundary
       }),
-    updateStory: (storyId: string, body: Record<string, unknown>) =>
+    updateStory: (storyId: string, body: FormData | Record<string, unknown>) =>
       apiFetch(`/api/v1/stories/${storyId}`, {
         method: "PUT",
         body,
+        headers: body instanceof FormData ? new Headers() : undefined,
       }),
     deleteStory: (storyId: string) =>
       apiFetch(`/api/v1/stories/${storyId}`, {

@@ -495,6 +495,18 @@ class TestStoriesAPI:
         assert response.status_code == 200
         assert mock_story.category == "Action"
 
+    def test_update_story_remove_cover(self):
+        mock_story = _make_mock_story(self.mock_author)
+        self.mock_db.query.return_value.filter.return_value.first.return_value = mock_story
+
+        response = client.put(
+            f"/api/v1/stories/{mock_story.id}",
+            data={"remove_cover": "true"},
+        )
+
+        assert response.status_code == 200
+        assert mock_story.cover_url is None
+
     def test_update_story_unauthorized(self):
         other_author = _make_mock_user(role="author", username="other_author")
         mock_story = _make_mock_story(other_author)

@@ -86,6 +86,12 @@ class Story(Base):
     reviews = relationship(
         "Review", back_populates="story", cascade="all, delete-orphan"
     )
+    rights_record = relationship(
+        "StoryRights",
+        back_populates="story",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     @property
     def chapter_count(self) -> int:

@@ -1211,7 +1211,7 @@ svg {
 
 .author-card-main-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1278,6 +1278,20 @@ svg {
 
 .dark .author-card-action-publish:hover {
   color: #ffffff !important;
+}
+
+/* Metadata action: Sửa thông tin */
+.author-card-action-manage {
+  background: rgba(37, 99, 235, 0.06) !important;
+  border-color: rgba(37, 99, 235, 0.24) !important;
+  color: #1d4ed8 !important;
+}
+
+.author-card-action-manage:hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
 }
 
 /* Tertiary Buttons: Xem truyện & Lịch đăng */
@@ -1394,6 +1408,18 @@ svg {
 .dark .author-card-action-publish:hover {
   background: var(--crimson) !important;
   border-color: var(--crimson) !important;
+  color: #FFFFFF !important;
+}
+
+.dark .author-card-action-manage {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border-color: rgba(96, 165, 250, 0.32) !important;
+  color: #93c5fd !important;
+}
+
+.dark .author-card-action-manage:hover {
+  background: #2563eb !important;
+  border-color: #60a5fa !important;
   color: #FFFFFF !important;
 }
 
@@ -1731,10 +1757,18 @@ svg {
   font-weight: 900;
 }
 
-.story-setup-grid.two {
+.story-setup-grid.two,
+.story-setup-grid.three {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.story-setup-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.story-setup-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .story-setup-form .field {
@@ -1929,6 +1963,10 @@ svg {
   .story-setup-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .story-setup-grid.three {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1945,6 +1983,7 @@ svg {
   }
 
   .story-setup-grid.two,
+  .story-setup-grid.three,
   .story-type-grid,
   .story-setup-summary {
     grid-template-columns: 1fr;
@@ -6671,6 +6710,94 @@ svg {
   width: 16px;
   height: 16px;
   color: var(--crimson);
+}
+
+.dark .publish-hero {
+  border-color: var(--line);
+  background: linear-gradient(135deg, #1e2721, rgba(200, 28, 48, 0.12));
+}
+
+.dark .publish-hero h2,
+.dark .publish-step-body h3,
+.dark .publish-review-head strong,
+.dark .publish-review-title h3,
+.dark .publish-option strong,
+.dark .publish-stat-grid strong {
+  color: var(--foreground);
+}
+
+.dark .publish-hero p,
+.dark .publish-option span,
+.dark .publish-date-field small,
+.dark .publish-stat-grid span {
+  color: var(--muted);
+}
+
+.dark .publish-flow,
+.dark .publish-review {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.dark .publish-step {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.dark .publish-empty-box,
+.dark .publish-stat-grid div {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .publish-option {
+  border-color: var(--line);
+  background: #18201b;
+}
+
+.dark .publish-option.active,
+.dark .publish-option:hover {
+  border-color: rgba(254, 189, 178, 0.42);
+  background: rgba(200, 28, 48, 0.13);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.dark .publish-date-field > label,
+.dark .publish-agreement {
+  color: var(--foreground);
+}
+
+.dark .publish-date-actions .button {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--foreground);
+}
+
+.dark .publish-date-actions .button:hover {
+  border-color: rgba(254, 189, 178, 0.42);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .publish-agreement {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .publish-excerpt {
+  background: rgba(200, 28, 48, 0.1);
+  color: #c2cec0;
+}
+
+.dark .publish-checklist div {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+}
+
+.dark .publish-checklist .done {
+  border-color: rgba(34, 197, 94, 0.32);
+  background: rgba(34, 197, 94, 0.1);
+  color: #bbf7d0;
 }
 
 @media (max-width: 1180px) {

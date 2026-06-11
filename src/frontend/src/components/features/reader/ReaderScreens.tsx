@@ -2347,7 +2347,7 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
               <div className="metric-grid">
                 <MetricCard label="Tác phẩm xuất bản" value="Chưa có" />
                 <MetricCard label="Lượt xem tích lũy" value="Chưa có" />
-                <MetricCard label="Điểm uy tín sáng tác" value={`${score ?? 95}/100`} />
+                <MetricCard label="Điểm uy tín sáng tác" value={score != null ? `${score}/100` : "Đang tải"} />
                 <MetricCard label="Người theo dõi" value="Chưa có" />
               </div>
             </div>
@@ -2421,7 +2421,7 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
             <Link className="button button-primary" href="/settings">Chỉnh sửa hồ sơ</Link>
           </div>
           <div className="metric-grid" style={{ marginTop: 24 }}>
-            <MetricCard label="Uy tín tác giả" value={score != null ? `${score}%` : "95%"} />
+            <MetricCard label="Uy tín tác giả" value={score != null ? `${score}%` : "Đang tải"} />
             <MetricCard label="Vai trò" value={user?.role === "admin" ? "Admin" : user?.role === "author" ? "Tác giả" : "Độc giả"} />
           </div>
         </section>

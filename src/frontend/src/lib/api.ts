@@ -81,6 +81,12 @@ export type AuthResponse = {
     email: string;
     username: string;
     role: "reader" | "author" | "admin";
+    profile?: {
+      display_name: string;
+      avatar_url?: string | null;
+      bio?: string | null;
+      reputation_score: number;
+    } | null;
   };
 };
 
@@ -134,7 +140,7 @@ export const yagApi = {
         timeoutMs: 10000,
       }),
     me: () =>
-      apiFetch<AuthResponse["user"] & { profile?: { display_name: string; avatar_url?: string | null; bio?: string | null; reputation_score?: number } }>("/api/v1/auth/me", {
+      apiFetch<NonNullable<AuthResponse["user"]>>("/api/v1/auth/me", {
         method: "GET",
       }),
   },

@@ -489,7 +489,8 @@ To activate the CD jobs in the pipeline, navigate to your GitHub Repository -> *
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/1234567890/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider` | The full resource identifier of your OIDC Provider |
 | `GCP_SERVICE_ACCOUNT` | `github-actions-sa@your-gcp-project-id.iam.gserviceaccount.com` | The email of the service account created for deployment |
 | `GCP_PROJECT_ID` | `your-gcp-project-id` | Your Google Cloud Project ID |
-| `DATABASE_URL` | `postgresql://postgres.xxxx:password@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require` | Supabase Session pooler connection for migrations/imports; percent-encode special characters in the password |
+| `DATABASE_URL` | `postgresql://postgres.xxxx:password@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require` | Supabase IPv4-compatible Session pooler for GitHub Actions migrations/imports. Do not use the IPv6-only direct `db.*.supabase.co:5432` URL; percent-encode special characters in the password. |
+| `DEMO_AUTHOR_PASSWORD` | Strong secret with at least 12 characters | Optional shared password used only when the manually dispatched CI workflow enables the 10 synthetic author accounts. |
 | `GCP_REGION` *(Optional)* | `asia-southeast1` | Google Cloud region for deploying backend (Defaults to `asia-southeast1`) |
 | `GCP_GAR_REPO` *(Optional)* | `yag-repo` | Artifact Registry repository name (Defaults to `yag-repo`) |
 | `GCP_PUBSUB_TOPIC` *(Optional)* | `yag-async-tasks` | Existing Pub/Sub topic for async moderation tasks |

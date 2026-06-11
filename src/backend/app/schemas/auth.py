@@ -28,6 +28,15 @@ class UserRegister(UserBase):
         return v
 
 
+class CurrentUserProfile(BaseModel):
+    display_name: str
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    reputation_score: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserResponse(BaseModel):
     id: UUID
     username: str
@@ -36,6 +45,7 @@ class UserResponse(BaseModel):
     premium_until: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    profile: Optional[CurrentUserProfile] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -116,14 +126,5 @@ class ProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CurrentUserProfile(BaseModel):
-    display_name: str
-    avatar_url: Optional[str] = None
-    bio: Optional[str] = None
-    reputation_score: int = 95
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 class CurrentUserResponse(UserResponse):
-    profile: Optional[CurrentUserProfile] = None
+    pass

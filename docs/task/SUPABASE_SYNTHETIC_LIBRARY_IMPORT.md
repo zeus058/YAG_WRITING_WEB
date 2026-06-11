@@ -24,9 +24,12 @@ python -m app.import_demo_library \
 
 ## Import Supabase
 
-Đặt `DATABASE_URL` thành Direct connection hoặc Session pooler của Supabase
-(port `5432`, thêm `sslmode=require` và percent-encode ký tự đặc biệt trong mật
-khẩu), sau đó chạy:
+Đặt `DATABASE_URL` thành **Session pooler** lấy trực tiếp từ nút **Connect** của
+Supabase. GitHub Actions không hỗ trợ IPv6 nên không dùng direct host dạng
+`db.<project-ref>.supabase.co:5432`; hãy dùng host
+`*.pooler.supabase.com:5432`, thêm `sslmode=require` và percent-encode ký tự đặc
+biệt trong mật khẩu. Port `6543` là Transaction pooler, không phải Session
+pooler dùng cho migration/import dài. Sau đó chạy:
 
 ```bash
 cd src/backend
@@ -45,3 +48,18 @@ migration, chạy importer và kiểm chứng đủ 100 truyện, 500 chương c
 80 free / 20 premium. `DATABASE_URL` có thể là repository secret hoặc secret của
 GitHub Production Environment; thiếu secret hay import sai số lượng đều làm job
 thất bại và chặn deploy backend.
+
+## Mở tài khoản tác giả demo để thay ảnh bìa
+
+Tạo Production Environment secret `DEMO_AUTHOR_PASSWORD` với mật khẩu mạnh tối
+thiểu 12 ký tự. Trong GitHub Actions, chạy thủ công workflow **CI/CD Pipeline** và
+chọn `demo_author_access = enable`. Workflow không in mật khẩu ra log.
+
+Sau khi job `Apply Production Migrations` hoàn tất, đăng nhập bằng một trong các
+username `yag_system_author_01` đến `yag_system_author_10` và mật khẩu nằm trong
+secret trên. Mỗi tài khoản quản lý 10 truyện. Vào **Tác phẩm của tôi**, chọn
+**Sửa thông tin**, tải ảnh cover rồi **Lưu thay đổi**.
+
+Để thu hồi quyền truy cập, chạy lại workflow với
+`demo_author_access = disable`. Lựa chọn `preserve` không thay đổi trạng thái
+đăng nhập hiện tại.

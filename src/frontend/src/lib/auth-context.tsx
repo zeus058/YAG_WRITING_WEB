@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { getAccessToken, clearAuthTokens, setAuthTokens } from "./auth";
 import { yagApi } from "./api";
 import { appEnv } from "./env";
@@ -16,8 +17,8 @@ export type AuthUser = {
     display_name: string;
     avatar_url?: string | null;
     bio?: string | null;
-    reputation_score?: number;
-  };
+    reputation_score: number;
+  } | null;
 };
 
 type AuthContextType = {
@@ -33,11 +34,12 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     const token = getAccessToken();
     if (!token) {
       setUser(null);
@@ -86,12 +88,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     clearMockStorageWhenDisabled(appEnv.useMocks);
     void refreshUser();
-  }, []);
+  }, [pathname, refreshUser]);
 
   useEffect(() => {
     const handleExpiredSession = () => {

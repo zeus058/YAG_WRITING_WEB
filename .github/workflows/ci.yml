@@ -6,6 +6,17 @@ on:
     branches: [dev, main]
   pull_request:
     branches: [dev, main]
+  workflow_dispatch:
+    inputs:
+      demo_author_access:
+        description: "Manage login access for the 10 synthetic demo authors"
+        required: true
+        default: preserve
+        type: choice
+        options:
+          - preserve
+          - enable
+          - disable
 
 # Đảm bảo chỉ 1 workflow chạy trên cùng branch/PR tại 1 thời điểm
 concurrency:
@@ -249,7 +260,9 @@ jobs:
     needs: [backend, frontend]
     runs-on: ubuntu-latest
     # Production environment secrets are only visible inside this job.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.demo_author_access != 'preserve')
 
     environment: production
 
@@ -274,8 +287,11 @@ jobs:
           pip install -r requirements.txt
 
       - name: Apply database migrations
+        timeout-minutes: 5
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGCONNECT_TIMEOUT: "15"
+          PYTHONUNBUFFERED: "1"
         run: |
           set -euo pipefail
           if [ -z "$DATABASE_URL" ]; then
@@ -287,11 +303,29 @@ jobs:
           echo "Database migrations applied successfully."
 
       - name: Import licensed synthetic story library
+        timeout-minutes: 15
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEMO_AUTHOR_PASSWORD: ${{ secrets.DEMO_AUTHOR_PASSWORD }}
+          DEMO_AUTHOR_ACCESS: ${{ inputs.demo_author_access || 'preserve' }}
+          PGCONNECT_TIMEOUT: "15"
+          PYTHONUNBUFFERED: "1"
         run: |
           set -euo pipefail
-          python -m app.import_demo_library --apply --confirm-remote
+          IMPORT_ARGS=(--apply --confirm-remote --skip-migrations)
+          case "$DEMO_AUTHOR_ACCESS" in
+            enable)
+              if [ -z "$DEMO_AUTHOR_PASSWORD" ]; then
+                echo "DEMO_AUTHOR_PASSWORD production secret is required to enable login."
+                exit 1
+              fi
+              IMPORT_ARGS+=(--enable-author-login)
+              ;;
+            disable)
+              IMPORT_ARGS+=(--disable-author-login)
+              ;;
+          esac
+          python -u -m app.import_demo_library "${IMPORT_ARGS[@]}"
           echo "Synthetic story library imported and verified successfully."
 
   # ────────────────────────────────────────────────────────────

@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = 10
     DB_POOL_TIMEOUT: int = 30
     DB_POOL_RECYCLE_SECONDS: int = 1800
+    DB_CONNECT_TIMEOUT_SECONDS: int = 10
+    DEMO_AUTHOR_PASSWORD: Optional[str] = None
 
     # Redis Settings
     REDIS_URL: Optional[str] = None

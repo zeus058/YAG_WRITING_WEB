@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from app.main import app
 from app.api import deps
 from app.models.user import User
+from app.models.profile import Profile
 from app.core.security import get_password_hash, verify_password
 
 # Create a clean TestClient
@@ -115,6 +116,11 @@ def test_login_user_success(mock_redis, mock_db):
         role="reader",
         email_verified_at=datetime.now(timezone.utc)
     )
+    mock_user.profile = Profile(
+        user_id=mock_user.id,
+        display_name="Gia Hiển",
+        reputation_score=87,
+    )
     mock_db.query.return_value.filter.return_value.first.return_value = mock_user
 
     payload = {
@@ -128,6 +134,7 @@ def test_login_user_success(mock_redis, mock_db):
     data = response.json()
     assert "access_token" in data
     assert data["user"]["email"] == "hien@yag.vn"
+    assert data["user"]["profile"]["reputation_score"] == 87
 
 
 @patch("app.services.auth_service.get_redis_client")

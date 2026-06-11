@@ -428,7 +428,7 @@ export function AuthorWorksScreen() {
         <MetricCard label="Tác phẩm" value={String(works.length)} />
         <MetricCard label="Số chương nháp" value={String(works.reduce((acc, story) => acc + (story.draft_count || 0), 0))} />
         <MetricCard label="Chờ duyệt AI" value={String(works.reduce((acc, story) => acc + (story.pending_count || 0), 0))} />
-        <MetricCard label="Uy tín tác giả" value={`${user?.profile?.reputation_score ?? 95}%`} />
+        <MetricCard label="Uy tín tác giả" value={user?.profile ? `${user.profile.reputation_score}%` : "Đang tải"} />
         <MetricCard label="Lượt đọc" value={formattedViews} />
         <MetricCard label="Đánh giá TB" value={`${avgRating} ★`} />
       </section>
@@ -2564,6 +2564,7 @@ export function PublishScreen() {
 }
 
 export function ScheduleScreen() {
+  const { refreshUser } = useAuth();
   const [works, setWorks] = useState<any[]>([]);
   const [calendarDays, setCalendarDays] = useState<any[]>([]);
   const [currentMonthStr, setCurrentMonthStr] = useState("");
@@ -2572,12 +2573,12 @@ export function ScheduleScreen() {
   const [selectedStoryId, setSelectedStoryId] = useState<string>("all");
   const [frequencyFilter, setFrequencyFilter] = useState<"week" | "month" | "year">("week");
   const [overview, setOverview] = useState<{
-    reputation_score: number;
+    reputation_score: number | null;
     on_time_rate: number;
     approved_chapters: number;
     upcoming_schedule: any[];
   }>({
-    reputation_score: 95,
+    reputation_score: null,
     on_time_rate: 100,
     approved_chapters: 0,
     upcoming_schedule: [],
@@ -2768,6 +2769,7 @@ export function ScheduleScreen() {
             const overviewRes = await yagApi.author.getScheduleOverview();
             if (overviewRes.data) {
               setOverview(overviewRes.data);
+              await refreshUser();
             }
           } catch (err) {
             console.error("Failed to load schedule overview:", err);
@@ -2780,7 +2782,7 @@ export function ScheduleScreen() {
       }
     };
     void loadData();
-  }, []);
+  }, [refreshUser]);
 
   const getFrequencyLabel = (freq: string) => {
     switch (freq) {
@@ -2901,7 +2903,7 @@ export function ScheduleScreen() {
           <div className="panel panel-pad stack" style={{ gap: 8, borderLeft: "4px solid var(--green)", borderRadius: "0 8px 8px 0" }}>
             <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: "bold" }}>Điểm uy tín</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-              <span style={{ fontSize: 28, fontWeight: "bold", color: "var(--foreground)" }}>{overview.reputation_score}</span>
+              <span style={{ fontSize: 28, fontWeight: "bold", color: "var(--foreground)" }}>{overview.reputation_score ?? "--"}</span>
               <span style={{ fontSize: 13, color: "var(--muted)" }}>/ 100</span>
             </div>
             <p style={{ fontSize: 11, color: "var(--muted)", margin: 0 }}>Bị trừ 5 điểm uy tín cho mỗi chương trễ hạn.</p>

@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     display_name    VARCHAR(100)    NOT NULL,
     avatar_url      VARCHAR(255),
     bio             TEXT,
-    reputation_score INTEGER        NOT NULL DEFAULT 95,
+    reputation_score INTEGER        NOT NULL DEFAULT 100,
     created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 

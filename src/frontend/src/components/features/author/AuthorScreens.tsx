@@ -44,6 +44,21 @@ function getNextChapterNumber(chapters: any[]) {
   return Math.max(0, ...chapters.map((chapter) => Number(chapter.chapter_number) || 0)) + 1;
 }
 
+function toLocalDateTimeValue(value: Date) {
+  const offset = value.getTimezoneOffset() * 60_000;
+  return new Date(value.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function getModerationStatusLabel(status: unknown) {
+  const labels: Record<string, string> = {
+    draft: "Bản nháp",
+    "nháp": "Bản nháp",
+    rejected: "Cần chỉnh sửa",
+    flagged: "Đã gắn cờ",
+  };
+  return labels[String(status || "draft").toLowerCase()] || "Bản nháp";
+}
+
 const storyCategoryOptions = STORY_CATEGORIES;
 const storyLanguageOptions = [
   { value: "vi", label: "Tiếng Việt" },
@@ -1994,7 +2009,7 @@ export function AuthorStudioScreen() {
               <div className="agent-action-grid">
                 {coWriterDrafts.length === 0 ? (
                   <div className="ai-empty-result">
-                    Chưa có bản nháp. Nhập ý tưởng và bấm "Chạy AI Agent viết chương" để bắt đầu.
+                    Chưa có bản nháp. Nhập ý tưởng và bấm &quot;Chạy AI Agent viết chương&quot; để bắt đầu.
                   </div>
                 ) : (
                   coWriterDrafts.map((draft, idx) => {
@@ -2164,6 +2179,7 @@ export function PublishScreen() {
 
   const [chapters, setChapters] = useState<any[]>([]);
   const [allChapters, setAllChapters] = useState<any[]>([]);
+  const [story, setStory] = useState<any>(null);
   const [selectedChapId, setSelectedChapId] = useState("");
   const [isPremium, setIsPremium] = useState(false);
   const [publishDate, setPublishDate] = useState("");
@@ -2179,6 +2195,7 @@ export function PublishScreen() {
     if (appEnv.useMocks) {
       setAllChapters([]);
       setChapters([]);
+      setStory(null);
       setSelectedChapId("");
       setIsLoadingChapters(false);
       return;
@@ -2187,11 +2204,15 @@ export function PublishScreen() {
       if (!storyId) {
         throw new Error("MISSING_STORY_ID");
       }
-      const res = await yagApi.author.getChapters(storyId);
+      const [res, storyRes] = await Promise.all([
+        yagApi.author.getChapters(storyId),
+        yagApi.reader.getStoryDetail(storyId).catch(() => ({ data: null })),
+      ]);
       const authorChapters = res.data || [];
       const drafts = authorChapters.filter(isAuthorDraftChapter);
       setAllChapters(authorChapters);
       setChapters(drafts);
+      setStory(storyRes.data || null);
       setSelectedChapId(drafts[0]?.id || "");
     } catch (err) {
       console.error(err);
@@ -2204,6 +2225,13 @@ export function PublishScreen() {
   useEffect(() => {
     void loadPublishDrafts();
   }, [storyId]);
+
+  useEffect(() => {
+    const chapter = chapters.find((item) => item.id === selectedChapId);
+    setIsPremium(Boolean(chapter?.is_premium));
+    setPublishDate(chapter?.publish_at ? toLocalDateTimeValue(new Date(chapter.publish_at)) : "");
+    setAgreement(false);
+  }, [chapters, selectedChapId]);
 
   const handleCreateStarterDraft = async () => {
     setCreatingDraft(true);
@@ -2296,6 +2324,11 @@ export function PublishScreen() {
   const publishTimingLabel = publishDate
     ? new Date(publishDate).toLocaleString("vi-VN", { dateStyle: "medium", timeStyle: "short" })
     : "Ngay sau khi AI duyệt";
+  const setPublishDelay = (minutes: number) => {
+    const scheduledAt = new Date(Date.now() + minutes * 60_000);
+    scheduledAt.setSeconds(0, 0);
+    setPublishDate(toLocalDateTimeValue(scheduledAt));
+  };
   const canSubmitPublish = !submitting && !isLoadingChapters && !creatingDraft && chapters.length > 0 && hasPublishableContent && agreement;
 
   return (
@@ -2373,7 +2406,19 @@ export function PublishScreen() {
                 </div>
                 <div className="field publish-date-field">
                   <label>Hẹn giờ công bố</label>
-                  <input type="datetime-local" className="input" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} />
+                  <input
+                    type="datetime-local"
+                    className="input"
+                    value={publishDate}
+                    step="60"
+                    onChange={(e) => setPublishDate(e.target.value)}
+                  />
+                  <div className="publish-date-actions">
+                    <button className="button button-soft" type="button" onClick={() => setPublishDelay(15)}>Sau 15 phút</button>
+                    <button className="button button-soft" type="button" onClick={() => setPublishDelay(60)}>Sau 1 giờ</button>
+                    <button className="button button-soft" type="button" onClick={() => setPublishDelay(24 * 60)}>Ngày mai</button>
+                    {publishDate ? <button className="button" type="button" onClick={() => setPublishDate("")}>Phát hành ngay</button> : null}
+                  </div>
                   <small>Để trống để phát hành ngay sau khi AI duyệt xong.</small>
                 </div>
               </div>
@@ -2411,9 +2456,11 @@ export function PublishScreen() {
                   </span>
                 </div>
                 <div className="publish-stat-grid">
+                  <div><span>Tác phẩm</span><strong>{story?.title || "Đang cập nhật"}</strong></div>
+                  <div><span>Trạng thái</span><strong>{getModerationStatusLabel(selectedChapter.moderation_status)}</strong></div>
                   <div><span>Số từ</span><strong>{selectedWordCount}</strong></div>
                   <div><span>Ký tự</span><strong>{selectedCharCount}</strong></div>
-                  <div><span>Quyền đọc</span><strong>{isPremium ? "Premium" : "Free"}</strong></div>
+                  <div><span>Quyền đọc</span><strong>{isPremium ? "Premium" : "Miễn phí"}</strong></div>
                   <div><span>Công bố</span><strong>{publishTimingLabel}</strong></div>
                 </div>
                 <div className="publish-excerpt">
@@ -2422,7 +2469,7 @@ export function PublishScreen() {
                 <div className="publish-checklist">
                   <div className={hasPublishableContent ? "done" : ""}><Icon name={hasPublishableContent ? "check" : "edit"} /> Nội dung không rỗng</div>
                   <div className={agreement ? "done" : ""}><Icon name={agreement ? "check" : "shield"} /> Đã xác nhận cam kết</div>
-                  <div className="done"><Icon name="check" /> Gửi qua pipeline AI moderation</div>
+                  <div className={selectedChapter ? "done" : ""}><Icon name={selectedChapter ? "check" : "shield"} /> Sẵn sàng gửi AI kiểm duyệt</div>
                 </div>
                 <Link className="button" href={`/author/stories/${storyId}/edit`}>
                   <Icon name="edit" /> Chỉnh sửa thêm trong Editor

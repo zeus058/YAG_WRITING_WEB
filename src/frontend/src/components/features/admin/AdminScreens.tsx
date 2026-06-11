@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
-import { yagApi, appEnv, useAuth } from "@/lib";
+import { yagApi, appEnv } from "@/lib";
 
 type AdminStats = {
   users_total: number;

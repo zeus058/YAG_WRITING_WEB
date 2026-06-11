@@ -13,6 +13,7 @@ import hashlib
 import json
 import secrets
 from datetime import datetime, timedelta, timezone
+from ipaddress import ip_address
 from pathlib import Path
 from uuid import uuid5
 
@@ -47,7 +48,13 @@ def _author_id(slot: int):
 
 def _is_remote_database(database_url: str) -> bool:
     host = (make_url(database_url).host or "").lower()
-    return host not in {"", "localhost", "127.0.0.1", "0.0.0.0", "::1", "postgres"}
+    if host in {"", "localhost", "postgres"}:
+        return False
+    try:
+        address = ip_address(host)
+    except ValueError:
+        return True
+    return not (address.is_loopback or address.is_unspecified)
 
 
 def _manifest(stories: tuple[StorySeed, ...]) -> dict:

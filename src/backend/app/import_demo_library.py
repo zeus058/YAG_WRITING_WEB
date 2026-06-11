@@ -114,7 +114,7 @@ def _ensure_system_authors(
             slot,
             _author_id(slot),
             f"yag_system_author_{slot:02d}",
-            f"yag-system-author-{slot:02d}@seed.invalid",
+            f"yag-system-author-{slot:02d}@system.yag.vn",
         )
         for slot in range(1, AUTHOR_COUNT + 1)
     ]
@@ -172,6 +172,7 @@ def _ensure_system_authors(
             users_by_id[user_id] = user
             created_count += 1
         else:
+            user.email = email
             user.role = "author"
             if login_password_hash:
                 user.password_hash = login_password_hash

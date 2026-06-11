@@ -78,6 +78,7 @@ def test_enable_demo_author_login_unlocks_new_accounts_with_hashed_password():
     assert len(authors) == 10
     assert len(users) == 10
     assert len(profiles) == 10
+    assert all(user.email.endswith("@system.yag.vn") for user in users)
     assert all(user.password_hash == "login-password-hash" for user in users)
     assert all(user.is_locked is False for user in users)
     assert all(user.locked_reason is None for user in users)

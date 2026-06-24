@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
-import { yagApi, appEnv } from "@/lib";
+import { yagApi } from "@/lib";
 
 type AdminStats = {
   users_total: number;
@@ -94,10 +94,7 @@ const DEFAULT_STATS: AdminStats = {
   audit_logs_total: 0,
 };
 
-const MOCK_REVENUE_SERIES: RevenuePoint[] = [];
-const MOCK_ALERTS: ScheduleAlert[] = [];
-const MOCK_AUDIT_LOGS: AuditLog[] = [];
-const MOCK_QUEUE: ModerationItem[] = [];
+
 
 const reportTabs: { id: ReportType; label: string; metricLabel: string }[] = [
   { id: "revenue", label: "Doanh thu", metricLabel: "Doanh thu" },
@@ -227,9 +224,9 @@ function RevenueTrend({ rows }: { rows: RevenuePoint[] }) {
 
 export function AdminDashboardScreen() {
   const [stats, setStats] = useState<AdminStats>(DEFAULT_STATS);
-  const [alerts, setAlerts] = useState<ScheduleAlert[]>(appEnv.useMocks ? MOCK_ALERTS : []);
-  const [revenueSeries, setRevenueSeries] = useState<RevenuePoint[]>(appEnv.useMocks ? MOCK_REVENUE_SERIES : []);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(appEnv.useMocks ? MOCK_AUDIT_LOGS : []);
+  const [alerts, setAlerts] = useState<ScheduleAlert[]>([]);
+  const [revenueSeries, setRevenueSeries] = useState<RevenuePoint[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState("");
@@ -238,13 +235,7 @@ export function AdminDashboardScreen() {
     setIsLoading(true);
     setError("");
     try {
-      if (appEnv.useMocks) {
-        setStats(DEFAULT_STATS);
-        setAlerts(MOCK_ALERTS);
-        setRevenueSeries(MOCK_REVENUE_SERIES);
-        setAuditLogs(MOCK_AUDIT_LOGS);
-        return;
-      }
+
 
       const [statsRes, alertsRes, revenueRes, logsRes] = await Promise.all([
         yagApi.admin.stats(),
@@ -297,9 +288,7 @@ export function AdminDashboardScreen() {
     setIsScanning(true);
     setError("");
     try {
-      if (!appEnv.useMocks) {
-        await yagApi.admin.runScheduleScan();
-      }
+      await yagApi.admin.runScheduleScan();
       triggerLiveToast("Đã quét lịch đăng và cập nhật cảnh báo.");
       await loadDashboard();
     } catch (err) {
@@ -433,7 +422,7 @@ export function AdminDashboardScreen() {
 }
 
 export function ModerationScreen() {
-  const [queue, setQueue] = useState<ModerationItem[]>(appEnv.useMocks ? MOCK_QUEUE : []);
+  const [queue, setQueue] = useState<ModerationItem[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [reason, setReason] = useState("");
   const [filter, setFilter] = useState<"all" | ModerationStatus>("all");
@@ -458,11 +447,7 @@ export function ModerationScreen() {
     setIsLoading(true);
     setError("");
     try {
-      if (appEnv.useMocks) {
-        setQueue(MOCK_QUEUE);
-        setSelectedId(MOCK_QUEUE[0]?.chapter_id || "");
-        return;
-      }
+
       const res = await yagApi.admin.moderationQueue();
       const items = (res.data || []) as ModerationItem[];
       setQueue(items);
@@ -490,14 +475,12 @@ export function ModerationScreen() {
     setSubmitting(decision);
     setError("");
     try {
-      if (!appEnv.useMocks) {
-        await yagApi.admin.overrideModeration(chapterId, {
-          decision,
-          reason: reason.trim() || (decision === "approved" ? "Admin duyệt thủ công sau khi kiểm tra nội dung." : "Vi phạm quy chế cộng đồng."),
-          violation_category: decision === "approved" ? null : "admin_review",
-          confidence_score: 1,
-        });
-      }
+      await yagApi.admin.overrideModeration(chapterId, {
+        decision,
+        reason: reason.trim() || (decision === "approved" ? "Admin duyệt thủ công sau khi kiểm tra nội dung." : "Vi phạm quy chế cộng đồng."),
+        violation_category: decision === "approved" ? null : "admin_review",
+        confidence_score: 1,
+      });
 
       triggerLiveToast(
         decision === "approved"
@@ -689,7 +672,7 @@ export function ReportsScreen() {
   const [fromDate, setFromDate] = useState(start.toISOString().slice(0, 10));
   const [toDate, setToDate] = useState(today.toISOString().slice(0, 10));
   const [rows, setRows] = useState<ReportRow[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(appEnv.useMocks ? MOCK_AUDIT_LOGS : []);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -697,18 +680,7 @@ export function ReportsScreen() {
     setIsLoading(true);
     setError("");
     try {
-      if (appEnv.useMocks) {
-        setRows(MOCK_REVENUE_SERIES.map((point) => ({
-          label: point.label,
-          revenue: point.revenue,
-          revenue_vnd: point.revenue_vnd,
-          memberships: point.memberships,
-          users: Math.round(point.memberships * 1.7),
-          content: Math.round(point.memberships * 2.4),
-        })));
-        setAuditLogs(MOCK_AUDIT_LOGS);
-        return;
-      }
+
 
       const [reportRes, logsRes] = await Promise.all([
         yagApi.admin.reports({ from: fromDate, to: toDate, type: activeType }),

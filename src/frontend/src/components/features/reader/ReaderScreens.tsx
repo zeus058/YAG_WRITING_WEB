@@ -6,7 +6,40 @@ import Link from "next/link";
 import { type IconName, STORY_CATEGORIES } from "@/data/yag";
 import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, AIRecommendationStories, RankingItem, ReadingCard, StoryBadge, UpdateStoryRow, getStoryAuthorName } from "@/components/ui";
 import { AppShell } from "@/components/layout";
-import { yagApi, appEnv, useAuth, getStoredJsonArray } from "@/lib";
+import { yagApi, useAuth, getStoredJsonArray } from "@/lib";
+
+const settingSections: { id: string; label: string; icon: IconName }[] = [
+  { id: "profile", label: "Hồ sơ cá nhân", icon: "user" },
+  { id: "security", label: "Mật khẩu & bảo mật", icon: "lock" },
+  { id: "notifications", label: "Thông báo", icon: "bell" },
+  { id: "membership", label: "Membership & thanh toán", icon: "card" },
+];
+
+const triggerLiveToast = (message: string, type = "success") => {
+  if (typeof window === "undefined") return;
+  let stack = document.querySelector<HTMLElement>("[data-runtime-toast-stack]");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.className = "toast-stack";
+    stack.dataset.runtimeToastStack = "true";
+    document.body.appendChild(stack);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type} toast-${type}`;
+  const label = document.createElement("strong");
+  label.textContent = "YAG";
+  const body = document.createElement("span");
+  body.textContent = message;
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { type IconName, STORY_CATEGORIES } from "@/data/yag";
+import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, AIRecommendationStories, RankingItem, ReadingCard, StoryBadge, UpdateStoryRow, getStoryAuthorName } from "@/components/ui";
+import { AppShell } from "@/components/layout";
+import { yagApi, useAuth, getStoredJsonArray } from "@/lib";
 
 const settingSections: { id: string; label: string; icon: IconName }[] = [
   { id: "profile", label: "Hồ sơ cá nhân", icon: "user" },
@@ -47,19 +80,33 @@ const normalizeChapterTitle = (chapterNumber: number, title?: string) => {
   return rawTitle.replace(duplicatedPrefix, "").trim() || rawTitle;
 };
 
+const formatRelativeTime = (dateStr?: string | null) => {
+  if (!dateStr) return "Vừa xong";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Vừa xong";
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return "Vừa xong";
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} ngày trước`;
+  
+  return date.toLocaleDateString("vi-VN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+};
+
 export function HomeFeedScreen() {
   const [storiesList, setStoriesList] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (appEnv.useMocks) {
-      setStoriesList([]);
-      setRecommendations([]);
-      setIsLoading(false);
-      return;
-    }
-
     const loadFeed = async () => {
       try {
         const [recsRes, storiesRes] = await Promise.all([
@@ -243,12 +290,6 @@ export function DiscoverScreen() {
   const handleSearch = async () => {
     setIsLoading(true);
     setSearched(true);
-    if (appEnv.useMocks) {
-      setStoriesList([]);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       if (searchMode === "ai") {
         const response = await yagApi.reader.searchStories({
@@ -277,12 +318,8 @@ export function DiscoverScreen() {
     const initStories = async () => {
       setIsLoading(true);
       try {
-        if (appEnv.useMocks) {
-          setStoriesList([]);
-        } else {
-          const res = await yagApi.reader.listStories();
+        const res = await yagApi.reader.listStories();
           setStoriesList(res.data || []);
-        }
       } catch (err) {
         console.error("Failed to load discover stories", err);
       } finally {
@@ -537,14 +574,6 @@ export function StoryDetailScreen() {
   const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
-    if (appEnv.useMocks) {
-      setStory(null);
-      setChapters([]);
-      setReviews([]);
-      setIsLoading(false);
-      return;
-    }
-
     const loadStoryData = async () => {
       try {
         const [storyRes, reviewsRes] = await Promise.all([
@@ -567,10 +596,6 @@ export function StoryDetailScreen() {
   }, [storyId]);
 
   const handleToggleBookmark = async () => {
-    if (appEnv.useMocks) {
-      setIsBookmarked(!isBookmarked);
-      return;
-    }
     try {
       const res = await yagApi.reader.followStory(storyId);
       setIsBookmarked(res.data.bookmarked);
@@ -584,21 +609,6 @@ export function StoryDetailScreen() {
     e.preventDefault();
     setSubmittingReview(true);
     try {
-      if (appEnv.useMocks) {
-        const updatedReviews = [{ rating: newReviewRating, content: newReviewContent, user: { username: "Bạn" } }, ...reviews];
-        setReviews(updatedReviews);
-        if (story) {
-          const newAvg = updatedReviews.reduce((sum, r) => sum + r.rating, 0) / updatedReviews.length;
-          setStory({
-            ...story,
-            rating_avg: newAvg,
-            rating_count: updatedReviews.length
-          });
-        }
-        setNewReviewContent("");
-        setSubmittingReview(false);
-        return;
-      }
       await yagApi.apiFetch(`/api/v1/stories/${storyId}/reviews`, {
         method: "POST",
         body: { rating: newReviewRating, content: newReviewContent }
@@ -810,319 +820,28 @@ export function ReaderScreen() {
 
   useEffect(() => {
     if (!storyId) return;
-
-    if (appEnv.useMocks) {
-      setStory(null);
-      setChapter(null);
-      setChapters([]);
-      setComments([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const loadChapterData = async () => {
-      setIsLoading(true);
-      setLoadError(null);
-      setCommentError(null);
-      setPaywall(false);
-      setPaywallMsg("");
-      setChapter(null);
-      setComments([]);
-      try {
-        const storyRes = await yagApi.reader.getStoryDetail(storyId);
-        setStory(storyRes.data);
-
-        // Load all public chapters
-        const chapsRes = await yagApi.reader.getChapters(storyId);
-        const publicChapters = chapsRes.data || [];
-        setChapters(publicChapters);
-
-        const targetChap = publicChapters.find((c: any) => c.chapter_number === chapterNum);
-        if (!targetChap) {
-          setLoadError("Chương này chưa được xuất bản hoặc không tồn tại trong danh sách chương hiện có.");
-          return;
-        }
-
-        try {
-          const chapRes = await yagApi.chapters.getChapter(targetChap.id);
-          setChapter(chapRes.data);
-          const commRes = await yagApi.chapters.getComments(targetChap.id);
-          setComments(commRes.data.comments || []);
-        } catch (err: any) {
-          if (err.status === 403 || (err.details && String(err.details).includes("Premium"))) {
-            setPaywall(true);
-            setPaywallMsg(err.message || "Chương này dành cho thành viên Premium.");
-            setChapter(targetChap);
-          } else {
-            console.error("Error reading chapter:", err);
-            setLoadError("Không thể tải nội dung chương. Vui lòng thử lại sau ít phút.");
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load reader screen details:", err);
-        setLoadError("Không thể tải dữ liệu truyện. Vui lòng kiểm tra kết nối hoặc thử lại.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    void loadChapterData();
-  }, [storyId, chapterNum]);
-
-  const handlePostComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const content = newComment.trim();
-    if (!content) {
-      setCommentError("Vui lòng nhập nội dung bình luận.");
-      return;
-    }
-    if (!chapter || paywall || isPostingComment) return;
-    setIsPostingComment(true);
-    setCommentError(null);
-    try {
-      if (appEnv.useMocks) {
-        setComments([...comments, { id: String(Math.random()), user: { username: "Bạn" }, content }]);
-        setNewComment("");
-        return;
-      }
-      await yagApi.reader.postComment(chapter.id, { content });
-      const commRes = await yagApi.chapters.getComments(chapter.id);
-      setComments(commRes.data.comments || []);
-      setNewComment("");
-    } catch (err) {
-      console.error("Post comment error", err);
-      setCommentError("Không thể gửi bình luận lúc này. Vui lòng thử lại.");
-    } finally {
-      setIsPostingComment(false);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="reader-page reader-immersive reader-state-page">
-        <div className="reader-state-card">
-          <span className="badge badge-blue">Reader Mode</span>
-          <h1>Đang tải nội dung chương...</h1>
-          <p>YAG đang chuẩn bị nội dung, mục lục và bình luận cho phiên đọc của bạn.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loadError || !chapter) {
-    return (
-      <div className="reader-page reader-immersive reader-state-page">
-        <div className="reader-state-card">
-          <span className="badge badge-red">Không thể mở chương</span>
-          <h1>Chương truyện chưa sẵn sàng</h1>
-          <p>{loadError || "Chương truyện không tồn tại hoặc chưa được xuất bản."}</p>
-          <div className="inline-actions" style={{ justifyContent: "center" }}>
-            <Link className="button button-primary" href={storyId ? `/stories/${storyId}` : "/home"}>
-              Về trang truyện
-            </Link>
-            <Link className="button" href="/discover">
-              Khám phá truyện khác
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const currentIndex = chapters.findIndex((c) => Number(c.chapter_number) === chapterNum);
-  const safeIndex = currentIndex >= 0 ? currentIndex : 0;
-  const prevChapter = safeIndex > 0 ? chapters[safeIndex - 1] : null;
-  const nextChapter = safeIndex < chapters.length - 1 ? chapters[safeIndex + 1] : null;
-  const totalChapters = Math.max(chapters.length, 1);
-  const readingProgress = Math.min(100, Math.max(0, Math.round(((safeIndex + 1) / totalChapters) * 100)));
-  const wordCount = paywall ? 0 : (chapter.content || "").split(/\s+/).filter(Boolean).length;
-  const readingMinutes = Math.max(1, Math.ceil(wordCount / 250));
-  const displayChapterTitle = normalizeChapterTitle(chapterNum, chapter.title);
-  const publishedAtLabel = chapter.publish_at
-    ? new Date(chapter.publish_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
-    : "Chưa có lịch";
-  const currentChapterHref = `/stories/${storyId}/chapters/${chapterNum}`;
-  const prevChapterHref = prevChapter ? `/stories/${storyId}/chapters/${prevChapter.chapter_number}` : "";
-  const nextChapterHref = nextChapter ? `/stories/${storyId}/chapters/${nextChapter.chapter_number}` : "";
-
-  return (
-    <>
-      <div className={`reader-page reader-immersive ${isDark ? "reader-dark" : ""} ${isWide ? "reader-wide" : ""}`}>
-        <div className="reader-progressbar" aria-hidden="true">
-          <span style={{ width: `${readingProgress}%` }} />
-        </div>
-        <header className="reader-topbar">
-          <div className="inline-actions">
-            <Link className="button" href={storyId ? `/stories/${storyId}` : "/story-detail"}>
-              <Icon name="arrow-left" />
-              <span className="hide-mobile">Trang truyện</span>
-            </Link>
-            <div>
-              <strong>{story?.title}</strong>
-              <div className="story-meta">Chương {safeIndex + 1}/{totalChapters} · Chương {chapterNum}: {displayChapterTitle}</div>
-            </div>
-          </div>
-          <div className="reader-topbar-center" aria-label="Tiến độ đọc">
-            <span>{readingProgress}%</span>
-            <div className="progress">
-              <span style={{ width: `${readingProgress}%` }} />
-            </div>
-          </div>
-          <div className="inline-actions">
-            {chapter.is_premium && (
-              <span className="badge badge-amber" style={{ marginRight: 8 }}><Icon name="lock" /> Premium</span>
-            )}
-            <Link className="button" href="#reader-comments">
-              <Icon name="book" />
-              <span className="hide-mobile">Bình luận</span>
-            </Link>
-            {nextChapter ? (
-              <Link className="button button-primary" href={nextChapterHref}>
-                Sau
-                <Icon name="arrow" />
-              </Link>
-            ) : null}
-          </div>
-        </header>
-
-        <main className="reader-layout">
-          <aside className="reader-side-panel reader-chapter-panel" aria-label="Mục lục chương">
-            <div className="reader-panel-head">
-              <span className="badge badge-crimson">Đang đọc</span>
-              <strong>Mục lục</strong>
-            </div>
-            <div className="reader-chapter-list">
-              {chapters.map((c) => (
-                <Link
-                  className={`reader-chapter-link ${c.chapter_number === chapterNum ? "active" : ""}`}
-                  href={`/stories/${storyId}/chapters/${c.chapter_number}`}
-                  key={c.id || c.chapter_number}
-                >
-                  <span>{String(c.chapter_number).padStart(2, "0")}</span>
-                  <strong>{normalizeChapterTitle(Number(c.chapter_number), c.title)}</strong>
-                  {c.is_premium ? <Icon name="lock" /> : null}
-                </Link>
-              ))}
-            </div>
-          </aside>
-
-          <article className="reader-content reader-paper" style={{ "--reader-font-size": `${fontSize}px` } as any}>
-            <div className="reader-chapter-kicker">{story?.title}</div>
-            <h1>Chương {chapterNum}: {displayChapterTitle}</h1>
-            <div className="reader-meta-strip">
-              <span><Icon name="book" />{wordCount} từ</span>
-              <span><Icon name="calendar" />{readingMinutes} phút đọc</span>
-              <span><Icon name="shield" />Chống sao chép bật</span>
-            </div>
-
-            {paywall ? (
-              <div className="reader-unlock-panel" style={{ marginTop: 24 }}>
-                <div>
-                  <span className="badge badge-amber"><Icon name="lock" /> Premium</span>
-                  <h2>{paywallMsg}</h2>
-                  <p>Hãy đăng ký thành viên gói hội viên Premium của YAG để mở khóa toàn bộ chương truyện đặc sắc, lưu lịch sử đọc tự động và không có quảng cáo.</p>
-                </div>
-                <Link className="button button-primary" href="/membership"><Icon name="lock" /> Mở khóa ngay</Link>
-              </div>
-            ) : (
-              <div className="reader-text-body">
-                {chapter.content?.split("\n").map((para: string, idx: number) => {
-                  if (para.trim().startsWith(">")) {
-                    return <blockquote key={idx}>{para.replace(/^>\s*/, "")}</blockquote>;
-                  }
-                  return <p key={idx} style={{ fontSize: `${fontSize}px` }}>{para}</p>;
-                })}
-              </div>
-            )}
-          </article>
-
-          <aside className="reader-side-panel reader-tools-panel" aria-label="Công cụ đọc">
-            <div className="reader-panel-head">
-              <span className="badge badge-blue">Phiên đọc</span>
-              <strong>{readingProgress}%</strong>
-            </div>
-            <div className="reader-session-card">
-              <div>
-                <span>Thời lượng</span>
-                <strong>{readingMinutes} phút</strong>
-              </div>
-              <div>
-                <span>Từ trong chương</span>
-                <strong>{wordCount}</strong>
-              </div>
-              <div>
-                <span>Bình luận</span>
-                <strong>{comments.length}</strong>
-              </div>
-              <div>
-                <span>Công bố</span>
-                <strong>{publishedAtLabel}</strong>
-              </div>
-            </div>
-            <div className="reader-control-card">
-              <div className="reader-control-head">
-                <strong>Hiển thị</strong>
-                <span>{fontSize}px</span>
-              </div>
-              <input
-                className="range"
-                type="range"
-                min="16"
-                max="24"
-                value={fontSize}
-                onChange={(e) => saveFontSize(Number(e.target.value))}
-                aria-label="Cỡ chữ"
-              />
-              <div className="stack" style={{ gap: 8 }}>
-                <button className={`button ${isDark ? "button-primary" : ""}`} type="button" onClick={toggleTheme} style={{ width: "100%" }}>
-                  {isDark ? "Chuyển sang Nền sáng" : "Chuyển sang Nền tối"}
-                </button>
-              </div>
-            </div>
-            <div className="reader-control-card">
-              <div className="reader-control-head">
-                <strong>Chuyển chương</strong>
-                <span>{safeIndex + 1}/{totalChapters}</span>
-              </div>
-              <div className="reader-mini-nav">
-                {prevChapter ? (
-                  <Link className="button" href={prevChapterHref}>Trước</Link>
-                ) : (
-                  <button className="button" type="button" disabled>Đầu truyện</button>
-                )}
-                <Link className="button button-soft" href={currentChapterHref}>Hiện tại</Link>
-                {nextChapter ? (
-                  <Link className="button button-primary" href={nextChapterHref}>Sau</Link>
-                ) : (
-                  <button className="button" type="button" disabled>Hết truyện</button>
-                )}
-              </div>
-            </div>
-          </aside>
-        </main>
-
-
-
-        <section id="reader-comments" className="reader-comments-section">
-          <div className="reader-comments-head">
-            <div>
-              <span className="badge badge-crimson">Cộng đồng</span>
-              <h2 className="section-title">Bình luận chương ({comments.length})</h2>
-            </div>
-            <Link className="button" href={currentChapterHref}>Lên đầu chương</Link>
-          </div>
-          <div className="list reader-comments-list">
-            {comments.length === 0 ? (
-              <div className="empty-state" style={{ padding: 24 }}>
-                <h3 className="section-title" style={{ fontSize: 18 }}>Chưa có bình luận</h3>
                 <p className="section-subtitle">Hãy là người đầu tiên chia sẻ cảm nhận về chương này.</p>
               </div>
             ) : (
               comments.map((comm, index) => (
-                <div className="list-item" key={comm.id || index}>
-                  <div>
-                    <h3 className="list-title">{comm.user?.username || comm.user?.display_name || "Độc giả ẩn danh"}</h3>
-                    <div className="list-meta">{comm.content}</div>
+                <div className="list-item" key={comm.id || index} style={{ alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 className="list-title">{comm.username || comm.display_name || "Độc giả ẩn danh"}</h3>
+                    <div className="list-meta" style={{ marginTop: 4, color: "var(--text)" }}>{comm.content}</div>
+                    <div className="list-meta" style={{ marginTop: 8, display: "flex", gap: 12, alignItems: "center" }}>
+                      <span style={{ color: "var(--muted)", fontSize: 12 }}>
+                        {comm.created_at ? new Date(comm.created_at).toLocaleDateString("vi-VN") : "Vừa xong"}
+                      </span>
+                    </div>
                   </div>
+                  <button 
+                    type="button" 
+                    className={`button ${comm.is_liked_by_me ? "button-primary" : "button-soft"}`} 
+                    style={{ padding: "4px 8px", fontSize: 12 }}
+                    onClick={() => handleToggleLike(comm.id, index)}
+                  >
+                    {comm.is_liked_by_me ? "Đã Thích" : "Thích"} {comm.likes_count > 0 ? `(${comm.likes_count})` : ""}
+                  </button>
                 </div>
               ))
             )}
@@ -1172,62 +891,14 @@ export function ForumScreen() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedPosts = getStoredJsonArray("yag.forum.posts", true);
-      const filteredPosts = appEnv.useMocks
+      const filteredPosts = false
         ? storedPosts
         : storedPosts.filter((p: any) => p.id !== "p1" && p.id !== "p2" && p.id !== "p3");
 
       if (filteredPosts.length > 0) {
         setPosts(filteredPosts);
       } else {
-        if (appEnv.useMocks) {
-          const initialMock = [
-            {
-              id: "p1",
-              authorName: "Hương Trà",
-              authorAvatar: "HT",
-              isVerified: true,
-              time: "10 phút trước",
-              content: "Mọi người nghĩ sao về chi tiết mở nút ở chương mới nhất? Mình đang tò mò hướng phát triển tiếp theo.",
-              likes: 24,
-              liked: false,
-              replies: [
-                { id: "r1_1", author: "Gia Hiển", authorAvatar: "GH", content: "Mình cũng thấy chi tiết đó có thể là gợi ý cho tuyến nhân vật phụ.", isVerified: true },
-                { id: "r1_2", author: "Độc giả 03", authorAvatar: "D3", content: "Có thể tác giả đang chuẩn bị đảo chiều ở chương sau.", isVerified: false }
-              ],
-              showReplyBox: false,
-            },
-            {
-              id: "p2",
-              authorName: "Phú Thọ",
-              authorAvatar: "PT",
-              isVerified: true,
-              time: "1 giờ trước",
-              content: "Vừa đọc xong chương mới nhất. Nhịp kể chắc tay, đoạn kết chương khiến mình muốn đọc tiếp ngay.",
-              likes: 12,
-              liked: true,
-              replies: [],
-              showReplyBox: false,
-            },
-            {
-              id: "p3",
-              authorName: "Duy Trường",
-              authorAvatar: "DT",
-              isVerified: true,
-              time: "2 giờ trước",
-              content: "Có ai đề xuất thêm truyện cùng thể loại không ạ? Mình muốn tìm thêm vài bộ để đọc cuối tuần.",
-              likes: 8,
-              liked: false,
-              replies: [
-                { id: "r3_1", author: "Yến Nhi", authorAvatar: "YN", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa trên trang Khám phá nhé!", isVerified: true }
-              ],
-              showReplyBox: false,
-            }
-          ];
-          setPosts(initialMock);
-          localStorage.setItem("yag.forum.posts", JSON.stringify(initialMock));
-        } else {
-          setPosts([]);
-        }
+        setPosts([]);
       }
     }
   }, []);
@@ -1573,8 +1244,8 @@ export function MembershipScreen() {
     { name: "Tháng", id: "MONTHLY", price: 39000, duration_days: 30, description: "Linh hoạt cho độc giả mới" },
     { name: "Năm", id: "YEARLY", price: 199000, duration_days: 365, description: "Dành cho người đọc thường xuyên" }
   ];
-  const [plans, setPlans] = useState<any[]>(appEnv.useMocks ? defaultPlans : []);
-  const [isLoadingPlans, setIsLoadingPlans] = useState(!appEnv.useMocks);
+  const [plans, setPlans] = useState<any[]>(false ? defaultPlans : []);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const [isPremium, setIsPremium] = useState(false);
@@ -1586,7 +1257,7 @@ export function MembershipScreen() {
       const active = new Date(user.premium_until) > new Date();
       setIsPremium(active);
       setMembershipExpiry(active ? user.premium_until : null);
-    } else if (appEnv.useMocks && typeof window !== "undefined") {
+    } else if (false && typeof window !== "undefined") {
       const cached = localStorage.getItem("yag.mockMembership");
       if (cached) {
         try {
@@ -1619,42 +1290,19 @@ export function MembershipScreen() {
       return;
     }
 
-    if (appEnv.useMocks) {
-      const cached = localStorage.getItem("yag.mockMembership");
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed.is_active && parsed.plan_name) {
-            const name = parsed.plan_name.toLowerCase();
-            if (name.includes("năm") || name.includes("yearly")) {
-              setActivePlanId("YEARLY");
-            } else {
-              setActivePlanId("MONTHLY");
-            }
-          } else {
-            setActivePlanId("MONTHLY");
-          }
-        } catch {
-          setActivePlanId("MONTHLY");
-        }
-      } else {
-        setActivePlanId("MONTHLY");
-      }
-    } else {
-      yagApi.billing.getTransactionHistory()
-        .then((res) => {
-          const successTxs = (res.data || []).filter((tx: any) => tx.status === "success");
-          if (successTxs.length > 0) {
-            const latest = successTxs[0];
-            setActivePlanId(latest.plan_id || (latest.plan_name?.toLowerCase().includes("năm") ? "YEARLY" : "MONTHLY"));
-          } else {
-            setActivePlanId("MONTHLY");
-          }
-        })
-        .catch(() => {
-          setActivePlanId("MONTHLY");
-        });
-    }
+    yagApi.billing.getTransactionHistory()
+              .then((res) => {
+                const successTxs = (res.data || []).filter((tx: any) => tx.status === "success");
+                if (successTxs.length > 0) {
+                  const latest = successTxs[0];
+                  setActivePlanId(latest.plan_id || (latest.plan_name?.toLowerCase().includes("năm") ? "YEARLY" : "MONTHLY"));
+                } else {
+                  setActivePlanId("MONTHLY");
+                }
+              })
+              .catch(() => {
+                setActivePlanId("MONTHLY");
+              });
   }, [isPremium, user]);
 
   const formatDate = (dateStr: string) => {
@@ -1667,7 +1315,6 @@ export function MembershipScreen() {
   };
 
   useEffect(() => {
-    if (appEnv.useMocks) return;
     const fetchPlans = async () => {
       setIsLoadingPlans(true);
       try {
@@ -1685,14 +1332,6 @@ export function MembershipScreen() {
 
   const handlePlanCheckout = async (planId: string) => {
     setLoadingPlan(planId);
-    if (appEnv.useMocks) {
-      // eslint-disable-next-line react-hooks/purity
-      const mockTxn = `MOCK_${planId}_${Date.now()}`;
-      if (typeof window !== "undefined") {
-        window.location.assign(`/payment/result?status=success&plan=${planId}&orderCode=${mockTxn}`);
-      }
-      return;
-    }
     try {
       const returnUrl = `${window.location.origin}/payment/result`;
       const res = await yagApi.billing.createPayosCheckout({ planCode: planId, returnUrl });
@@ -1881,17 +1520,15 @@ export function PaymentScreen() {
           return;
         }
 
-        if (!appEnv.useMocks) {
-          if (active) {
-            setVerificationResult({
-              loading: false,
-              success: true,
-              message: data.message || "Giao dịch đã được xác thực thành công!",
-              details: data,
-            });
-          }
+        if (active) {
+                      setVerificationResult({
+                        loading: false,
+                        success: true,
+                        message: data.message || "Giao dịch đã được xác thực thành công!",
+                        details: data,
+                      });
+                    }
           return;
-        }
 
         let expiry = data.premium_until;
         const cached = localStorage.getItem("yag.mockMembership");
@@ -1967,42 +1604,6 @@ export function PaymentScreen() {
           });
         }
       };
-
-      if (appEnv.useMocks) {
-        const isMockSuccess = responseCode === "00" || responseCode === "success";
-        const rawAmount = planId === "YEARLY" ? 199000 : 39000;
-        const durationDays = planId === "YEARLY" ? 365 : 30;
-
-        let baseDate = new Date();
-        const cached = localStorage.getItem("yag.mockMembership");
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (parsed.is_active && parsed.premium_until) {
-              const currentExpiry = new Date(parsed.premium_until);
-              if (currentExpiry > baseDate) {
-                baseDate = currentExpiry;
-              }
-            }
-          } catch { }
-        }
-
-        const expiryDate = new Date(baseDate);
-        expiryDate.setDate(expiryDate.getDate() + durationDays);
-
-        const mockData = {
-          success: isMockSuccess,
-          transaction_id: txnRef || `MOCK_TXN_${Date.now()}`,
-          plan_name: planId === "YEARLY" ? "Gói Năm Premium" : "Gói Tháng Premium",
-          amount: rawAmount,
-          premium_until: expiryDate.toISOString(),
-          message: isMockSuccess ? "Mô phỏng thanh toán thành công!" : "Mô phỏng thanh toán thất bại."
-        };
-
-        processPaymentData(mockData);
-        return;
-      }
-
       try {
         const res = await yagApi.billing.verifyPayos(queryParams);
         if (active) {
@@ -2143,12 +1744,8 @@ export function LibraryScreen() {
 
   const loadLibrary = async () => {
     try {
-      if (appEnv.useMocks) {
-        setStoriesList([]);
-      } else {
-        const res = await yagApi.reader.getLibrary();
+      const res = await yagApi.reader.getLibrary();
         setStoriesList(res.data || []);
-      }
     } catch (err) {
       console.error("Failed to load library", err);
     } finally {
@@ -2275,7 +1872,7 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("yag.author.announcements");
       if (stored) {
-        setAnnouncements(getStoredJsonArray("yag.author.announcements", appEnv.useMocks));
+        setAnnouncements(getStoredJsonArray("yag.author.announcements", false));
       } else {
         setAnnouncements([]);
       }
@@ -2493,7 +2090,7 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
     if (user?.premium_until) {
       setIsPremium(new Date(user.premium_until) > new Date());
       setMembershipExpiry(user.premium_until);
-    } else if (appEnv.useMocks && typeof window !== "undefined") {
+    } else if (false && typeof window !== "undefined") {
       const cached = localStorage.getItem("yag.mockMembership");
       if (cached) {
         try {
@@ -2536,33 +2133,16 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
   useEffect(() => {
     if (activeTab === "membership") {
       setLoadingHistory(true);
-      if (appEnv.useMocks) {
-        const cached = localStorage.getItem("yag.mockHistory");
-        if (cached) {
-          try {
-            setTransactions(JSON.parse(cached));
-          } catch {
-            setTransactions([]);
-          }
-        } else {
-          setTransactions([
-            { id: "tx_1", plan_name: "Gói Tháng Premium", amount: 39000, status: "success", created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(), vnp_transaction_no: "VNP12345678" },
-            { id: "tx_2", plan_name: "Gói Tháng Premium", amount: 39000, status: "failed", created_at: new Date(Date.now() - 35 * 24 * 3600 * 1000).toISOString(), vnp_transaction_no: "VNP87654321" },
-          ]);
-        }
-        setLoadingHistory(false);
-      } else {
-        yagApi.billing.getTransactionHistory()
-          .then((res) => {
-            setTransactions(res.data || []);
-          })
-          .catch((err) => {
-            console.error("Failed to load transaction history", err);
-          })
-          .finally(() => {
-            setLoadingHistory(false);
-          });
-      }
+      yagApi.billing.getTransactionHistory()
+                  .then((res) => {
+                    setTransactions(res.data || []);
+                  })
+                  .catch((err) => {
+                    console.error("Failed to load transaction history", err);
+                  })
+                  .finally(() => {
+                    setLoadingHistory(false);
+                  });
     }
   }, [activeTab]);
 
@@ -2570,11 +2150,6 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (appEnv.useMocks) {
-        triggerLiveToast("Đã lưu hồ sơ cá nhân (Mock).");
-        setSubmitting(false);
-        return;
-      }
       await yagApi.apiFetch("/api/v1/auth/profiles/me", {
         method: "PUT",
         body: { display_name: displayName, bio },
@@ -2597,14 +2172,6 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
     }
     setSecuritySubmitting(true);
     try {
-      if (appEnv.useMocks) {
-        triggerLiveToast("Đổi mật khẩu thành công (Mock).");
-        setOldPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        setSecuritySubmitting(false);
-        return;
-      }
       await yagApi.apiFetch("/api/v1/auth/password/change", {
         method: "POST",
         body: { old_password: oldPassword, new_password: newPassword }
@@ -2949,22 +2516,8 @@ export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" 
 
   const loadNotifications = async () => {
     try {
-      if (appEnv.useMocks) {
-        if (modeOverride === "author") {
-          setNotifications([
-            { id: "a1", title: "Kiểm duyệt AI hoàn tất", message: "Một chương minh họa đã được duyệt thành công.", read_at: null },
-            { id: "a2", title: "Cảnh báo lịch đăng chương", message: "Một tác phẩm minh họa sắp đến hạn đăng chương mới trong 24 giờ tới.", read_at: null },
-            { id: "a3", title: "Đánh giá tác phẩm mới", message: "Một độc giả minh họa vừa gửi đánh giá cho tác phẩm của bạn.", read_at: "2026-06-04" },
-          ]);
-        } else {
-          setNotifications([
-            { id: "1", title: "Cập nhật chương mới", message: "Một tác phẩm minh họa vừa cập nhật chương mới.", read_at: null }
-          ]);
-        }
-      } else {
-        const res = await yagApi.notifications.list();
+      const res = await yagApi.notifications.list();
         setNotifications(res.data.notifications || []);
-      }
     } catch (err) {
       console.error("Failed to load notifications", err);
     } finally {
@@ -2998,10 +2551,6 @@ export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" 
   }, []);
 
   const handleMarkAllRead = async () => {
-    if (appEnv.useMocks) {
-      setNotifications(notifications.map(n => ({ ...n, read_at: "now" })));
-      return;
-    }
     try {
       await yagApi.notifications.markAllAsRead();
       void loadNotifications();
@@ -3013,7 +2562,6 @@ export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" 
   };
 
   const handleRead = async (id: string) => {
-    if (appEnv.useMocks) return;
     try {
       await yagApi.notifications.markAsRead(id);
       void loadNotifications();

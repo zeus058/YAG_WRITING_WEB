@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ApiError, appEnv, yagApi } from "@/lib";
+import { ApiError, yagApi } from "@/lib";
 import { AuthBackdrop, AuthProductFooter } from "../AuthChrome";
 import { Icon, BrandLogo as ProductLogo } from "@/components/ui";
 
@@ -174,7 +174,7 @@ export default function PasswordRecoveryPage() {
 
     setIsSubmitting(true);
     try {
-      if (!appEnv.useMocks) await yagApi.auth.requestPasswordReset({ email: email.trim() });
+      await yagApi.auth.requestPasswordReset({ email: email.trim() });
       triggerToast("Nếu email tồn tại, bạn sẽ nhận được hướng dẫn khôi phục.", "success");
       setStep(2);
     } catch (error) {
@@ -207,9 +207,7 @@ export default function PasswordRecoveryPage() {
 
     setIsSubmitting(true);
     try {
-      if (!appEnv.useMocks) {
-        await yagApi.auth.confirmPasswordReset({ email: email.trim(), otp, password: newPassword });
-      }
+      await yagApi.auth.confirmPasswordReset({ email: email.trim(), otp, password: newPassword });
       triggerToast("Đặt lại mật khẩu thành công. Đang chuyển hướng về trang đăng nhập...", "success");
       window.setTimeout(() => router.push("/auth"), 800);
     } catch (error) {

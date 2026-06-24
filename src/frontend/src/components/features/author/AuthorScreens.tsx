@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon, Cover, MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
-import { yagApi, appEnv, createDraftSocket, useAuth } from "@/lib";
+import { yagApi, createDraftSocket, useAuth } from "@/lib";
 import { STORY_CATEGORIES } from "@/data/yag";
 
 const triggerLiveToast = (message: string, type = "success") => {
@@ -152,12 +152,8 @@ export function AuthorWorksScreen() {
 
   const loadWorks = async () => {
     try {
-      if (appEnv.useMocks) {
-        setWorks([]);
-      } else {
-        const res = await yagApi.author.getStories();
+      const res = await yagApi.author.getStories();
         setWorks(res.data || []);
-      }
     } catch (err) {
       console.error("Failed to load author works:", err);
     } finally {
@@ -253,41 +249,6 @@ export function AuthorWorksScreen() {
     }
     setSubmitting(true);
     try {
-      if (appEnv.useMocks) {
-        const savedStory = {
-          ...(editingStory || {}),
-          id: editingStory?.id || `mock-story-${Date.now()}`,
-          title: cleanTitle,
-          description: cleanDescription,
-          category,
-          language,
-          story_type: storyType,
-          tags,
-          copyright,
-          is_mature: isMature,
-          main_characters: mainCharacters,
-          target_audience: targetAudience,
-          chapter_count: 0,
-          cover_url: removeCover ? null : coverUrl,
-          status: storyStatus,
-          moderation_status: "approved",
-          view_count: 0,
-          rating_avg: 0.0,
-          updated_at: new Date().toISOString(),
-          draft_count: 1,
-          expected_chapters: Number(expectedChapters),
-          update_frequency: updateFrequency,
-        };
-        setWorks(editingStory
-          ? works.map((story) => story.id === editingStory.id ? savedStory : story)
-          : [savedStory, ...works]);
-        setIsModalOpen(false);
-        resetStoryForm();
-        triggerLiveToast(editingStory ? "Đã cập nhật thông tin truyện (Mock)." : "Đã khởi tạo bộ truyện nháp (Mock).");
-        if (!editingStory) router.push(`/author/stories/${savedStory.id}/edit`);
-        return;
-      }
-
       const formData = new FormData();
       formData.append("title", cleanTitle);
       formData.append("description", cleanDescription);
@@ -333,14 +294,9 @@ export function AuthorWorksScreen() {
     if (!confirmDelete) return;
 
     try {
-      if (appEnv.useMocks) {
-        setWorks(works.filter((w) => w.id !== story.id));
-        triggerLiveToast("Đã xóa tác phẩm nháp (Mock).");
-      } else {
-        await yagApi.author.deleteStory(story.id);
+      await yagApi.author.deleteStory(story.id);
         triggerLiveToast("Đã xóa tác phẩm thành công!");
         void loadWorks();
-      }
     } catch (err) {
       console.error("Failed to delete story:", err);
       triggerLiveToast("Không thể xóa tác phẩm. Vui lòng thử lại sau.", "warning");
@@ -870,17 +826,6 @@ export function AuthorStudioScreen() {
       if (!storyId) {
         throw new Error("MISSING_STORY_ID");
       }
-      if (appEnv.useMocks) {
-        setChapters([]);
-        setActiveChapter(null);
-        setStoryProfile(null);
-        setStyleReference({ storyTitle: "", seriesTitle: "", author: "" });
-        setEditorTitle("");
-        setEditorContent("");
-        setIsLoading(false);
-        return;
-      }
-
       const [chapsRes, storyRes] = await Promise.all([
         yagApi.author.getChapters(storyId),
         yagApi.reader.getStoryDetail(storyId).catch(() => ({ data: null })),
@@ -929,22 +874,6 @@ export function AuthorStudioScreen() {
   useEffect(() => {
     const loadAiTooling = async () => {
       setAiToolsError(null);
-      if (appEnv.useMocks) {
-        setAiTools([
-          { name: "get_story_context", description: "Đọc metadata truyện và mạch chương gần nhất." },
-          { name: "get_author_style_profile", description: "Suy luận giọng văn từ các chương đã duyệt." },
-          { name: "semantic_story_search", description: "Tìm truyện bằng ngữ nghĩa để gợi ý tốt hơn." },
-        ]);
-        setAiManifest({
-          skills: [
-            { name: "writing_coach", description: "Huấn luyện viết sáu chế độ cho tác giả." },
-            { name: "recommendation_curator", description: "Xếp hạng truyện theo gu đọc." },
-            { name: "safety_moderator", description: "Kiểm duyệt nội dung theo chính sách YAG." },
-          ],
-        });
-        return;
-      }
-
       try {
         const [toolsRes, manifestRes] = await Promise.all([
           yagApi.ai.getTools(),
@@ -990,7 +919,7 @@ export function AuthorStudioScreen() {
 
   // Setup WebSocket Autosave
   useEffect(() => {
-    if (!activeChapter?.id || appEnv.useMocks) return;
+    if (!activeChapter?.id || false) return;
 
     if (wsRef.current) wsRef.current.close();
 
@@ -1030,12 +959,6 @@ export function AuthorStudioScreen() {
       setChapters((prev) => prev.map((c) => c.id === chapterId ? { ...c, title: newTitle, content: newBody } : c));
       setActiveChapter((current: any) => current?.id === chapterId ? { ...current, title: newTitle, content: newBody } : current);
     };
-
-    if (appEnv.useMocks) {
-      markSaved("Đã lưu (Mock)");
-      return true;
-    }
-
     const saveLocally = () => {
       if (typeof window !== "undefined") {
         const draftData = {
@@ -1198,13 +1121,11 @@ export function AuthorStudioScreen() {
     setStyleReferenceSaving(true);
     setStyleReferenceMessage(null);
     try {
-      if (!appEnv.useMocks) {
-        await yagApi.author.updateStory(storyId, {
-          style_reference_story_title: cleanReference.storyTitle,
-          style_reference_series_title: cleanReference.seriesTitle,
-          style_reference_author: cleanReference.author,
-        });
-      }
+      await yagApi.author.updateStory(storyId, {
+                  style_reference_story_title: cleanReference.storyTitle,
+                  style_reference_series_title: cleanReference.seriesTitle,
+                  style_reference_author: cleanReference.author,
+                });
       setStoryProfile((current: any) => ({
         ...(current || {}),
         style_reference_story_title: cleanReference.storyTitle,
@@ -1325,37 +1246,6 @@ export function AuthorStudioScreen() {
     setAiError(null);
     setAiResponseMeta(null);
     try {
-      if (appEnv.useMocks) {
-        setTimeout(() => {
-          setAiSuggestions([
-            {
-              title: "Tiếp nối bằng hệ quả",
-              content: "Đẩy cảnh kế tiếp bằng phản ứng trực tiếp của nhân vật trước biến cố cuối đoạn.",
-              reason: "Giữ mạch nhân quả rõ và giúp chương không bị ngắt cảm xúc.",
-              insertable_text: "Tiếng động vừa tắt, cả căn phòng lập tức hiểu rằng không ai còn đường quay lại.",
-              quality_score: 0.82,
-            },
-            {
-              title: "Cài một lựa chọn khó",
-              content: "Cho nhân vật phải chọn giữa lời hứa cá nhân và sự an toàn của người khác.",
-              reason: "Lựa chọn có giá phải trả sẽ tạo lực kéo cho chương sau.",
-              insertable_text: "Nhân vật đứng yên rất lâu, bởi dù chọn cánh cửa nào, một điều quan trọng cũng sẽ mất đi.",
-              quality_score: 0.78,
-            },
-            {
-              title: "Đổi nhịp bằng đối thoại",
-              content: "Mở một câu thoại ngắn để chuyển từ miêu tả sang xung đột trực tiếp.",
-              reason: "Đối thoại giúp cảnh sống động và bộc lộ quan hệ nhân vật nhanh hơn.",
-              insertable_text: "\"Ngươi biết từ đầu?\" Giọng người kia khẽ run, nhưng ánh mắt lại không hề tránh né.",
-              quality_score: 0.76,
-            },
-          ]);
-          setAiResponseMeta({ provider: "mock-gemini", fallback: false });
-          setAiLoading(false);
-        }, 1000);
-        return;
-      }
-
       const rawContext = editorContent.trim() ? editorContent.slice(-4000) : "Bản thảo mới chưa có nội dung.";
       const contextText = [
         rawContext,
@@ -1394,23 +1284,6 @@ export function AuthorStudioScreen() {
     setIsCreatingChapter(true);
     setSaveError(null);
     const nextNum = getNextChapterNumber(chapters);
-    if (appEnv.useMocks) {
-      const newChap = {
-        id: `mock-chap-${Date.now()}`,
-        chapter_number: nextNum,
-        title: `Chương ${nextNum}`,
-        content: "",
-        moderation_status: "draft",
-      };
-      const updated = [...chapters, newChap];
-      setChapters(updated);
-      setActiveChapter(newChap);
-      setEditorTitle(newChap.title);
-      setEditorContent(newChap.content);
-      triggerLiveToast("Đã khởi tạo chương nháp mới (Mock).");
-      setIsCreatingChapter(false);
-      return;
-    }
     try {
       const res = await yagApi.author.createChapter({
         story_id: storyId,
@@ -1458,34 +1331,6 @@ export function AuthorStudioScreen() {
     setCoWriterError(null);
     setCoWriterMeta(null);
     try {
-      if (appEnv.useMocks) {
-        setTimeout(() => {
-          setCoWriterDrafts([
-            {
-              title: "Chương hành động mở màn",
-              content: "Một chương hành động với nhịp nhanh và bước ngoặt bất ngờ.",
-              insertable_text: "Tiếng kiếm vang lên giữa đêm. Nhân vật lao vào bóng tối, nơi kẻ thù đã chờ sẵn. Mỗi bước chân là một canh bạc, mỗi nhát chém là một lời thề không được phép phá vỡ. Khi ánh trăng xuyên qua mái nhà đổ, nhân vật nhận ra đối thủ không phải người lạ — đó là người mà mình đã từng tin tưởng nhất. Thanh kiếm trong tay bỗng nặng trĩu. \"Ngươi biết từ đầu, phải không?\" Giọng nhân vật run, nhưng lưỡi kiếm thì không.",
-              quality_score: 0.82,
-            },
-            {
-              title: "Chương đối thoại và cảm xúc",
-              content: "Một chương xoay quanh cuộc trò chuyện sâu sắc giữa hai nhân vật.",
-              insertable_text: "Căn phòng chỉ có hai người và một ngọn nến sắp tắt. \"Ta đã chờ ngươi nói điều này rất lâu,\" người đối diện cất tiếng, giọng nhẹ như gió nhưng nặng như đá. Nhân vật không đáp ngay. Ký ức ùa về — những ngày còn cùng nhau chạy dưới mưa, những lần hứa sẽ không bao giờ bỏ đi.",
-              quality_score: 0.80,
-            },
-            {
-              title: "Chương khám phá và bí ẩn",
-              content: "Nhân vật phát hiện một manh mối quan trọng trong căn hầm cổ.",
-              insertable_text: "Căn hầm dưới lòng đất không có trên bất kỳ bản đồ nào. Nhân vật bước xuống từng bậc thang đá, ngọn đuốc trong tay run rẩy theo nhịp gió lạ. Trên tường, những ký hiệu cổ xưa xếp thành hàng — không phải ngôn ngữ nào nhân vật từng biết, nhưng có một ký hiệu quen thuộc đến rùng mình: biểu tượng gia tộc của chính mình.",
-              quality_score: 0.79,
-            },
-          ]);
-          setCoWriterMeta({ provider: "mock-gemini", fallback: false });
-          setCoWriterLoading(false);
-        }, 1500);
-        return;
-      }
-
       const contextText = coWriterPrompt.trim();
       const res = await yagApi.author.requestAiSuggestion({
         chapterId: activeChapter.id,
@@ -2270,14 +2115,6 @@ export function PublishScreen() {
   const loadPublishDrafts = async () => {
     setIsLoadingChapters(true);
     setLoadError(null);
-    if (appEnv.useMocks) {
-      setAllChapters([]);
-      setChapters([]);
-      setStory(null);
-      setSelectedChapId("");
-      setIsLoadingChapters(false);
-      return;
-    }
     try {
       if (!storyId) {
         throw new Error("MISSING_STORY_ID");
@@ -2315,21 +2152,6 @@ export function PublishScreen() {
     setCreatingDraft(true);
     try {
       const nextNum = getNextChapterNumber(allChapters);
-      if (appEnv.useMocks) {
-        const newDraft = {
-          id: `mock-draft-${Date.now()}`,
-          chapter_number: nextNum,
-          title: `Chương ${nextNum}`,
-          content: "",
-          moderation_status: "draft",
-        };
-        setAllChapters((current) => [...current, newDraft]);
-        setChapters((current) => [...current, newDraft]);
-        setSelectedChapId(newDraft.id);
-        triggerLiveToast("Đã tạo chương nháp mới. Bạn có thể mở không gian viết để hoàn thiện nội dung.");
-        return;
-      }
-
       const res = await yagApi.author.createChapter({
         story_id: storyId,
         chapter_number: nextNum,
@@ -2376,11 +2198,6 @@ export function PublishScreen() {
 
     setSubmitting(true);
     try {
-      if (appEnv.useMocks) {
-        triggerLiveToast("Chương đã được gửi thành công. Hệ thống AI đang tiến hành kiểm duyệt...", "success");
-        router.push("/author/stories");
-        return;
-      }
       await yagApi.author.publishChapter(selectedChapId, {
         is_premium: isPremium,
         publish_at: publishDate ? new Date(publishDate).toISOString() : undefined,
@@ -2588,193 +2405,61 @@ export function ScheduleScreen() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        if (appEnv.useMocks) {
-          const mockStories = [
-            {
-              id: "mock-story-1",
-              title: "Hào Môn Thâm Uyên",
-              expected_chapters: 50,
-              update_frequency: "1_week_2_chap",
-              chapter_count: 15,
-            },
-            {
-              id: "mock-story-2",
-              title: "Ta Ở Tu Tiên Giới Làm Ruộng",
-              expected_chapters: 100,
-              update_frequency: "daily",
-              chapter_count: 72,
-            },
-            {
-              id: "mock-story-3",
-              title: "Kiếm Đạo Độc Tôn",
-              expected_chapters: 30,
-              update_frequency: "1_week_1_chap",
-              chapter_count: 10,
-            }
-          ];
-          setWorks(mockStories);
-
-          const now = new Date();
-          const month = now.getMonth();
-          const year = now.getFullYear();
-          const numDays = new Date(year, month + 1, 0).getDate();
-
-          // Generate mock chapters published at various dates in current year, current month, current week
-          const mockChapters: any[] = [];
-          
-          // Story 1: 15 chapters dispersed across the last month
-          for (let i = 1; i <= 15; i++) {
-            const pubDate = new Date();
-            pubDate.setDate(now.getDate() - (15 - i) * 3);
-            mockChapters.push({
-              id: `mock-chap-1-${i}`,
-              story_id: "mock-story-1",
-              chapter_number: i,
-              title: `Chương ${i}: Khởi đầu mới`,
-              moderation_status: "approved",
-              publish_at: pubDate.toISOString(),
-            });
-          }
-          // Story 2: 72 chapters dispersed daily
-          for (let i = 1; i <= 72; i++) {
-            const pubDate = new Date();
-            pubDate.setDate(now.getDate() - (72 - i));
-            mockChapters.push({
-              id: `mock-chap-2-${i}`,
-              story_id: "mock-story-2",
-              chapter_number: i,
-              title: `Chương ${i}: Tu luyện gian khổ`,
-              moderation_status: "approved",
-              publish_at: pubDate.toISOString(),
-            });
-          }
-          // Story 3: 10 chapters dispersed weekly
-          for (let i = 1; i <= 10; i++) {
-            const pubDate = new Date();
-            pubDate.setDate(now.getDate() - (10 - i) * 7);
-            mockChapters.push({
-              id: `mock-chap-3-${i}`,
-              story_id: "mock-story-3",
-              chapter_number: i,
-              title: `Chương ${i}: Kiếm ý sơ thành`,
-              moderation_status: "approved",
-              publish_at: pubDate.toISOString(),
-            });
-          }
-          setAllChapters(mockChapters);
-
-          // Generate calendar days
-          const daysList = Array.from({ length: numDays }, (_, index) => {
-            const dayNum = index + 1;
-            const scheduledChapter = mockChapters.find((c: any) => {
-              const pubDate = new Date(c.publish_at);
-              return (
-                pubDate.getDate() === dayNum &&
-                pubDate.getMonth() === month &&
-                pubDate.getFullYear() === year
-              );
-            });
-
-            let event = null;
-            if (scheduledChapter) {
-              const pubDate = new Date(scheduledChapter.publish_at);
-              const hrs = String(pubDate.getHours()).padStart(2, "0");
-              const mins = String(pubDate.getMinutes()).padStart(2, "0");
-              event = {
-                title: `C${scheduledChapter.chapter_number}: ${scheduledChapter.title.slice(0, 10)}...`,
-                status: scheduledChapter.moderation_status,
-                time: `${hrs}:${mins}`
-              };
-            }
-            return { dayNum, event };
-          });
-          setCalendarDays(daysList);
-          setCurrentMonthStr(`Tháng ${String(month + 1).padStart(2, "0")}/${year}`);
-
-          setOverview({
-            reputation_score: 95,
-            on_time_rate: 92,
-            approved_chapters: 97,
-            upcoming_schedule: [
-              {
-                date: "12/06 08:00",
-                story: "Hào Môn Thâm Uyên",
-                chapter: "Chương 16",
-                state: "Scheduled",
-                progress: 0,
-              },
-              {
-                date: "13/06 08:00",
-                story: "Ta Ở Tu Tiên Giới Làm Ruộng",
-                chapter: "Chương 73",
-                state: "Scheduled",
-                progress: 0,
-              }
-            ],
-          });
-        } else {
-          // Production / API mode
-          const res = await yagApi.author.getStories();
+        const res = await yagApi.author.getStories();
           const storiesList = res.data || [];
           setWorks(storiesList);
-
           const now = new Date();
           const month = now.getMonth();
           const year = now.getFullYear();
           const numDays = new Date(year, month + 1, 0).getDate();
-
           const fetchedChapters: any[] = [];
           for (const s of storiesList) {
-            try {
-              const chRes = await yagApi.author.getChapters(s.id);
-              if (chRes.data) {
-                fetchedChapters.push(...chRes.data.map((c: any) => ({ ...c, story_id: s.id, storyTitle: s.title })));
-              }
-            } catch (err) {
-              console.error(`Failed to load chapters for story ${s.id}:`, err);
-            }
-          }
+                      try {
+                        const chRes = await yagApi.author.getChapters(s.id);
+                        if (chRes.data) {
+                          fetchedChapters.push(...chRes.data.map((c: any) => ({ ...c, story_id: s.id, storyTitle: s.title })));
+                        }
+                      } catch (err) {
+                        console.error(`Failed to load chapters for story ${s.id}:`, err);
+                      }
+                    }
           setAllChapters(fetchedChapters);
-
           const daysList = Array.from({ length: numDays }, (_, index) => {
-            const dayNum = index + 1;
-            const scheduledChapter = fetchedChapters.find((c: any) => {
-              if (!c.publish_at) return false;
-              const pubDate = new Date(c.publish_at);
-              return (
-                pubDate.getDate() === dayNum &&
-                pubDate.getMonth() === month &&
-                pubDate.getFullYear() === year
-              );
-            });
+                      const dayNum = index + 1;
+                      const scheduledChapter = fetchedChapters.find((c: any) => {
+                        if (!c.publish_at) return false;
+                        const pubDate = new Date(c.publish_at);
+                        return (
+                          pubDate.getDate() === dayNum &&
+                          pubDate.getMonth() === month &&
+                          pubDate.getFullYear() === year
+                        );
+                      });
 
-            let event = null;
-            if (scheduledChapter) {
-              const pubDate = new Date(scheduledChapter.publish_at);
-              const hrs = String(pubDate.getHours()).padStart(2, "0");
-              const mins = String(pubDate.getMinutes()).padStart(2, "0");
-              event = {
-                title: `C${scheduledChapter.chapter_number}: ${scheduledChapter.title.slice(0, 10)}...`,
-                status: scheduledChapter.moderation_status,
-                time: `${hrs}:${mins}`
-              };
-            }
-            return { dayNum, event };
-          });
-
+                      let event = null;
+                      if (scheduledChapter) {
+                        const pubDate = new Date(scheduledChapter.publish_at);
+                        const hrs = String(pubDate.getHours()).padStart(2, "0");
+                        const mins = String(pubDate.getMinutes()).padStart(2, "0");
+                        event = {
+                          title: `C${scheduledChapter.chapter_number}: ${scheduledChapter.title.slice(0, 10)}...`,
+                          status: scheduledChapter.moderation_status,
+                          time: `${hrs}:${mins}`
+                        };
+                      }
+                      return { dayNum, event };
+                    });
           setCalendarDays(daysList);
           setCurrentMonthStr(`Tháng ${String(month + 1).padStart(2, "0")}/${year}`);
-
           try {
-            const overviewRes = await yagApi.author.getScheduleOverview();
-            if (overviewRes.data) {
-              setOverview(overviewRes.data);
-              await refreshUser();
-            }
-          } catch (err) {
-            console.error("Failed to load schedule overview:", err);
-          }
-        }
+                      const overviewRes = await yagApi.author.getScheduleOverview();
+                      if (overviewRes.data) {
+                        setOverview(overviewRes.data);
+                        await refreshUser();
+                      }
+                    } catch (err) {
+                      console.error("Failed to load schedule overview:", err);
+                    }
       } catch (err) {
         console.error("Failed to load schedule data:", err);
       } finally {

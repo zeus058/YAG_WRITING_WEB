@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, Text, ForeignKey, DateTime, text
+from sqlalchemy import Column, Text, ForeignKey, DateTime, text, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -31,6 +31,7 @@ class Comment(Base):
         nullable=True,
     )
     content = Column(Text, nullable=False)
+    likes_count = Column(Integer, default=0, server_default="0", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -42,3 +43,21 @@ class Comment(Base):
     replies = relationship(
         "Comment", back_populates="parent", cascade="all, delete-orphan"
     )
+
+class CommentLike(Base):
+    __tablename__ = "comment_likes"
+
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    comment_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("comments.id", ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+

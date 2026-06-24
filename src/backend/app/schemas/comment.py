@@ -46,6 +46,8 @@ class CommentResponse(BaseModel):
     chapter_id: uuid.UUID = Field(..., description="ID chương được bình luận")
     parent_id: Optional[uuid.UUID] = Field(default=None, description="ID bình luận cha")
     content: str = Field(..., description="Nội dung bình luận")
+    likes_count: int = Field(default=0, description="Số lượt thích")
+    is_liked_by_me: bool = Field(default=False, description="Người dùng hiện tại đã thích chưa")
     created_at: datetime = Field(..., description="Thời gian tạo")
     updated_at: datetime = Field(..., description="Lần cập nhật cuối")
     replies: Optional[List["CommentResponse"]] = Field(

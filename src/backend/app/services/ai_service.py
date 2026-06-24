@@ -103,7 +103,12 @@ async def search_stories_semantic(
                     se.story_id,
                     s.title,
                     se.plot_summary,
-                    (se.embedding <=> CAST(:query_vector AS vector)) AS distance
+                    -- Hybrid Score: Combine vector distance and keyword matching
+                    (se.embedding <=> CAST(:query_vector AS vector)) * 0.8
+                    - CASE WHEN lower(s.title) LIKE lower(:keyword) THEN 0.5 ELSE 0.0 END
+                    - CASE WHEN lower(s.description) LIKE lower(:keyword) THEN 0.2 ELSE 0.0 END
+                    - CASE WHEN lower(s.category) LIKE lower(:keyword) THEN 0.2 ELSE 0.0 END
+                    AS distance
                 FROM story_embeddings AS se
                 LEFT JOIN stories AS s ON s.id = se.story_id
                 WHERE EXISTS (
@@ -116,7 +121,7 @@ async def search_stories_semantic(
                 ORDER BY distance ASC
                 LIMIT :limit
                 """),
-            {"query_vector": query_vector_literal, "limit": limit},
+            {"query_vector": query_vector_literal, "keyword": f"%{query}%", "limit": limit},
         )
         rows = result_rows(result)
         items = [_build_search_item(row, query_vector) for row in rows[:limit]]

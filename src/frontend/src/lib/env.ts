@@ -11,7 +11,6 @@ export const appEnv = {
     (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000")
       .replace(/^http:/, "ws:")
       .replace(/^https:/, "wss:"),
-  useMocks: process.env.NEXT_PUBLIC_USE_MOCKS === "true",
   requestTimeoutMs: Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 12000),
 } as const;
 
@@ -28,9 +27,7 @@ function assertProductionUrl(name: string, value: string, allowedProtocols: stri
   }
 }
 
-if ((appEnv.deployEnvironment === "production" || isProductionBuild) && appEnv.useMocks) {
-  throw new Error("NEXT_PUBLIC_USE_MOCKS must be false in production builds");
-}
+
 
 if (appEnv.deployEnvironment === "production") {
   assertProductionUrl("NEXT_PUBLIC_APP_URL", appEnv.appUrl, ["https:"]);

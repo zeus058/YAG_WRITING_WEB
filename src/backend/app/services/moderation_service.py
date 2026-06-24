@@ -37,26 +37,22 @@ class ModerationReport:
     raw_response: Optional[str] = None
 
 
-MODERATION_SYSTEM_PROMPT = (
-    SAFETY_MODERATOR_SKILL.strip()
-    + """
+MODERATION_SYSTEM_PROMPT = SAFETY_MODERATOR_SKILL.strip()
 
-Return strict JSON only, with no markdown:
-{
-  "result": "approved" | "rejected" | "flagged",
-  "reason": "short specific reason",
-  "flagged_categories": [
-    "violence",
-    "hate_speech",
-    "sexual_content",
-    "cultural_violation",
-    "child_safety",
-    "spam"
-  ],
-  "confidence_score": 0.0
+MODERATION_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "result": {"type": "STRING"},
+        "reason": {"type": "STRING"},
+        "flagged_categories": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"}
+        },
+        "confidence_score": {"type": "NUMBER"}
+    },
+    "required": ["result", "reason", "flagged_categories", "confidence_score"]
 }
-"""
-)
+
 
 
 def _extract_json(text: str) -> dict:
@@ -234,9 +230,10 @@ def moderate_content(content: str, chapter_id: str) -> ModerationReport:
         parsed, raw_text = GeminiGateway().generate_json_sync(
             system_prompt=MODERATION_SYSTEM_PROMPT,
             user_prompt=_build_user_prompt(content),
-            temperature=0.1,
-            max_output_tokens=min(settings.GEMINI_MAX_OUTPUT_TOKENS, 512),
+            temperature=0.0,
+            max_output_tokens=min(settings.GEMINI_MAX_OUTPUT_TOKENS, 256),
             model=settings.GEMINI_MODERATION_MODEL,
+            response_schema=MODERATION_SCHEMA,
         )
     except (json.JSONDecodeError, GeminiResponseError, ValueError) as exc:
         logger.warning(

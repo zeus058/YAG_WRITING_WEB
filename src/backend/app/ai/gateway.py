@@ -102,17 +102,21 @@ class GeminiGateway:
         user_prompt: str,
         temperature: float,
         max_output_tokens: int | None,
+        response_schema: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        generation_config = {
+            "temperature": temperature,
+            "topP": 0.9,
+            "maxOutputTokens": max_output_tokens or settings.GEMINI_MAX_OUTPUT_TOKENS,
+            "responseMimeType": "application/json",
+        }
+        if response_schema:
+            generation_config["responseSchema"] = response_schema
+            
         return {
             "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
-            "generationConfig": {
-                "temperature": temperature,
-                "topP": 0.9,
-                "maxOutputTokens": max_output_tokens
-                or settings.GEMINI_MAX_OUTPUT_TOKENS,
-                "responseMimeType": "application/json",
-            },
+            "generationConfig": generation_config,
         }
 
     async def _post_async(self, url: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -159,12 +163,14 @@ class GeminiGateway:
         temperature: float = 0.4,
         max_output_tokens: int | None = None,
         model: str | None = None,
+        response_schema: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], str]:
         payload = self._generation_payload(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=temperature,
             max_output_tokens=max_output_tokens,
+            response_schema=response_schema,
         )
         data = await self._post_async(
             self._url(model or settings.GEMINI_MODEL, "generateContent"), payload
@@ -180,12 +186,14 @@ class GeminiGateway:
         temperature: float = 0.2,
         max_output_tokens: int | None = None,
         model: str | None = None,
+        response_schema: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], str]:
         payload = self._generation_payload(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             temperature=temperature,
             max_output_tokens=max_output_tokens,
+            response_schema=response_schema,
         )
         data = self._post_sync(
             self._url(model or settings.GEMINI_MODEL, "generateContent"), payload

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { appEnv, yagApi } from "@/lib";
+import { yagApi } from "@/lib";
 
 const legacyRoutes: Record<string, string> = {
   "s02-auth.html": "/auth",
@@ -186,7 +186,7 @@ export function ClientInteractions() {
       }
 
       const billingTarget = target.closest<HTMLElement>("[data-billing-plan]");
-      if (billingTarget?.dataset.billingPlan && !appEnv.useMocks) {
+      if (billingTarget?.dataset.billingPlan) {
         event.preventDefault();
         showToast("Đang tạo phiên thanh toán PayOS...", "success");
         void yagApi.billing

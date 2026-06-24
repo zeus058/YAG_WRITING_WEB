@@ -12,7 +12,7 @@ from app.models.profile import Profile
 from app.models.story import Story
 from app.models.chapter import Chapter
 from app.models.story_embedding import StoryEmbedding
-from app.models.comment import Comment
+from app.models.comment import Comment, CommentLike
 from app.models.review import Review
 from app.models.membership_plan import MembershipPlan
 from app.models.transaction import Transaction
@@ -32,6 +32,7 @@ __all__ = [
     "Chapter",
     "StoryEmbedding",
     "Comment",
+    "CommentLike",
     "Review",
     "MembershipPlan",
     "Transaction",

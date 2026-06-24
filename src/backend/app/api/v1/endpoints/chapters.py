@@ -30,7 +30,7 @@ from starlette.websockets import WebSocketState
 from app.api import deps
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.models import Chapter, Comment, ReadingHistory, Story, User
+from app.models import Chapter, Comment, CommentLike, ReadingHistory, Story, User
 from app.schemas.story import (
     ChapterCreate,
     ChapterReadResponse,
@@ -368,9 +368,11 @@ def cache_chapter(redis_client, chapter_data: dict[str, Any]) -> None:
         return
 
 
-def serialize_comment(comment: Comment) -> dict[str, Any]:
+def serialize_comment(comment: Comment, liked_comment_ids: set[UUID] | None = None) -> dict[str, Any]:
     user = comment.user
     profile = user.profile if user else None
+    if liked_comment_ids is None:
+        liked_comment_ids = set()
     return {
         "id": str(comment.id),
         "user_id": str(comment.user_id),
@@ -384,15 +386,17 @@ def serialize_comment(comment: Comment) -> dict[str, Any]:
         "chapter_id": str(comment.chapter_id),
         "content": comment.content,
         "parent_id": str(comment.parent_id) if comment.parent_id else None,
+        "likes_count": comment.likes_count or 0,
+        "is_liked_by_me": comment.id in liked_comment_ids,
         "created_at": comment.created_at.isoformat(),
         "updated_at": comment.updated_at.isoformat() if comment.updated_at else None,
     }
 
 
-def build_comment_tree(comments: list[Comment]) -> list[dict[str, Any]]:
+def build_comment_tree(comments: list[Comment], liked_comment_ids: set[UUID] | None = None) -> list[dict[str, Any]]:
     nodes = [
         {
-            **serialize_comment(comment),
+            **serialize_comment(comment, liked_comment_ids),
             "replies": [],
         }
         for comment in comments
@@ -617,6 +621,7 @@ def get_comments(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(deps.get_db),
+    current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ):
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
@@ -633,7 +638,17 @@ def get_comments(
         .limit(limit)
         .all()
     )
-    return {"comments": [serialize_comment(comment) for comment in comments]}
+    
+    liked_ids = set()
+    if current_user and comments:
+        comment_ids = [c.id for c in comments]
+        likes = db.query(CommentLike).filter(
+            CommentLike.user_id == current_user.id,
+            CommentLike.comment_id.in_(comment_ids)
+        ).all()
+        liked_ids = {like.comment_id for like in likes}
+
+    return {"comments": [serialize_comment(comment, liked_ids) for comment in comments]}
 
 
 @router.get(
@@ -646,6 +661,7 @@ def get_comment_tree(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(deps.get_db),
+    current_user: Optional[User] = Depends(deps.get_current_user_optional),
 ):
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
@@ -662,7 +678,17 @@ def get_comment_tree(
         .limit(limit)
         .all()
     )
-    return {"comments": build_comment_tree(comments)}
+
+    liked_ids = set()
+    if current_user and comments:
+        comment_ids = [c.id for c in comments]
+        likes = db.query(CommentLike).filter(
+            CommentLike.user_id == current_user.id,
+            CommentLike.comment_id.in_(comment_ids)
+        ).all()
+        liked_ids = {like.comment_id for like in likes}
+
+    return {"comments": build_comment_tree(comments, liked_ids)}
 
 
 @router.post(
@@ -805,6 +831,46 @@ def delete_comment(
     db.delete(comment)
     db.commit()
     return None
+
+@router.post(
+    "/{chapter_id}/comments/{comment_id}/like",
+    response_model=dict[str, Any],
+    summary="Toggle like for a comment",
+)
+def toggle_comment_like(
+    chapter_id: UUID,
+    comment_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user=Depends(deps.get_current_user),
+):
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin cannot like comments.",
+        )
+    comment = db.query(Comment).filter(Comment.id == comment_id, Comment.chapter_id == chapter_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+        
+    like = db.query(CommentLike).filter(
+        CommentLike.user_id == current_user.id,
+        CommentLike.comment_id == comment_id
+    ).first()
+    
+    if like:
+        db.delete(like)
+        comment.likes_count = max(0, comment.likes_count - 1)
+        action = "unliked"
+        is_liked = False
+    else:
+        new_like = CommentLike(user_id=current_user.id, comment_id=comment_id)
+        db.add(new_like)
+        comment.likes_count += 1
+        action = "liked"
+        is_liked = True
+        
+    db.commit()
+    return {"status": "success", "action": action, "likes_count": comment.likes_count, "is_liked_by_me": is_liked}
 
 
 @router.websocket("/{chapter_id}/comments/ws")

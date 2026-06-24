@@ -14,7 +14,7 @@ import {
 } from "@/data/yag";
 import { BrandLogo, Icon } from "@/components/ui";
 import { ProductFooter } from "./ProductFooter";
-import { useAuth, yagApi, appEnv, createNotificationSocket } from "@/lib";
+import { useAuth, yagApi, createNotificationSocket } from "@/lib";
 
 type AppShellProps = {
   activeId: ScreenId;
@@ -108,22 +108,6 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
   useEffect(() => {
     if (authUser?.premium_until) {
       setIsPremium(new Date(authUser.premium_until) > new Date());
-    } else if (appEnv.useMocks && typeof window !== "undefined") {
-      const cached = localStorage.getItem("yag.mockMembership");
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed.is_active && parsed.premium_until) {
-            setIsPremium(new Date(parsed.premium_until) > new Date());
-          } else {
-            setIsPremium(false);
-          }
-        } catch {
-          setIsPremium(false);
-        }
-      } else {
-        setIsPremium(false);
-      }
     } else {
       setIsPremium(false);
     }
@@ -155,7 +139,7 @@ export function AppShell({ activeId, actions, children, modeOverride }: AppShell
 
   // Load unread notifications count
   useEffect(() => {
-    if (!authUser || appEnv.useMocks) return;
+    if (!authUser) return;
 
     const fetchUnread = async () => {
       try {

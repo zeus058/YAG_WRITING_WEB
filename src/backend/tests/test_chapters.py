@@ -91,6 +91,8 @@ class TestChaptersAPI:
                     obj.created_at = datetime.now(timezone.utc)
                 if not getattr(obj, "updated_at", None):
                     obj.updated_at = datetime.now(timezone.utc)
+                if not getattr(obj, "likes_count", None):
+                    obj.likes_count = 0
                 obj.user = self.mock_reader
 
         self.mock_db.add.side_effect = mock_db_populate

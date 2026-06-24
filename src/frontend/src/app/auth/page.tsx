@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ApiError, appEnv, useAuth, yagApi } from "@/lib";
+import { ApiError, useAuth, yagApi } from "@/lib";
 import { AuthBackdrop, AuthProductFooter } from "./AuthChrome";
 import { Icon, BrandLogo as ProductLogo } from "@/components/ui";
 
@@ -295,22 +295,12 @@ function AuthPageInner() {
     setLoginSubmitting(true);
     try {
       let userObj: { id: string; email: string; username: string; role: "reader" | "author" | "admin" };
-      if (appEnv.useMocks) {
-        userObj = {
-          id: loginEmail.includes("admin") ? "admin-id" : "reader-id",
-          email: loginEmail,
-          username: loginEmail.split("@")[0] || "reader",
-          role: loginEmail.includes("admin") ? "admin" : "reader",
-        };
-        setAuthSession({ accessToken: "mock-token", user: userObj });
-      } else {
-        const result = await yagApi.auth.login({ email: loginEmail.trim(), password: loginPassword });
-        if (!result.data.accessToken || !result.data.user) {
-          throw new Error("INVALID_AUTH_RESPONSE");
-        }
-        userObj = result.data.user;
-        setAuthSession({ accessToken: result.data.accessToken, user: result.data.user });
+      const result = await yagApi.auth.login({ email: loginEmail.trim(), password: loginPassword });
+      if (!result.data.accessToken || !result.data.user) {
+        throw new Error("INVALID_AUTH_RESPONSE");
       }
+      userObj = result.data.user;
+      setAuthSession({ accessToken: result.data.accessToken, user: result.data.user });
       clearLoginFailures(loginEmail);
       triggerToast("Đăng nhập thành công. Đang chuyển hướng...", "success");
       window.setTimeout(() => router.push(userDestination(userObj.role, redirect)), 500);
@@ -361,18 +351,13 @@ function AuthPageInner() {
 
     setRegisterSubmitting(true);
     try {
-      if (appEnv.useMocks) {
-        triggerToast("Đăng ký thành công (Giả lập). Vui lòng nhập mã OTP.", "success");
-        setVerificationEmail(registerEmail.trim());
-      } else {
-        await yagApi.auth.register({
-          email: registerEmail.trim(),
-          username: registerUsername.trim(),
-          password: registerPassword,
-        });
-        triggerToast("Đăng ký thành công. Vui lòng nhập mã OTP gửi tới email.", "success");
-        setVerificationEmail(registerEmail.trim());
-      }
+      await yagApi.auth.register({
+        email: registerEmail.trim(),
+        username: registerUsername.trim(),
+        password: registerPassword,
+      });
+      triggerToast("Đăng ký thành công. Vui lòng nhập mã OTP gửi tới email.", "success");
+      setVerificationEmail(registerEmail.trim());
     } catch (error) {
       const message = authErrorMessage(error, "Không thể tạo tài khoản. Vui lòng thử lại.");
       if (message.includes("Email")) setRegisterErrors((current) => ({ ...current, registerEmail: message }));
@@ -397,28 +382,15 @@ function AuthPageInner() {
     setVerificationSubmitting(true);
     try {
       let userObj: { id: string; email: string; username: string; role: "reader" | "author" | "admin" };
-      if (appEnv.useMocks) {
-        if (verificationOtp.trim() !== "123456") {
-          throw new Error("Mã OTP không đúng (Sử dụng 123456 trong chế độ giả lập).");
-        }
-        userObj = {
-          id: "reader-id",
-          email: verificationEmail,
-          username: verificationEmail.split("@")[0] || "reader",
-          role: "reader",
-        };
-        setAuthSession({ accessToken: "mock-token", user: userObj });
-      } else {
-        const result = await yagApi.auth.verifyEmail({
-          email: verificationEmail,
-          otp: verificationOtp.trim(),
-        });
-        if (!result.data.accessToken || !result.data.user) {
-          throw new Error("INVALID_AUTH_RESPONSE");
-        }
-        userObj = result.data.user;
-        setAuthSession({ accessToken: result.data.accessToken, user: result.data.user });
+      const result = await yagApi.auth.verifyEmail({
+        email: verificationEmail,
+        otp: verificationOtp.trim(),
+      });
+      if (!result.data.accessToken || !result.data.user) {
+        throw new Error("INVALID_AUTH_RESPONSE");
       }
+      userObj = result.data.user;
+      setAuthSession({ accessToken: result.data.accessToken, user: result.data.user });
       triggerToast("Xác thực thành công. Đang chuyển hướng...", "success");
       window.setTimeout(() => router.push(userDestination(userObj.role, redirect)), 500);
     } catch (error) {
@@ -436,12 +408,8 @@ function AuthPageInner() {
 
     setResendSubmitting(true);
     try {
-      if (appEnv.useMocks) {
-        triggerToast("Đã gửi lại mã OTP mới (Giả lập: 123456).", "success");
-      } else {
-        await yagApi.auth.resendVerification({ email: verificationEmail });
-        triggerToast("Đã gửi lại mã OTP mới. Vui lòng kiểm tra hộp thư.", "success");
-      }
+      await yagApi.auth.resendVerification({ email: verificationEmail });
+      triggerToast("Đã gửi lại mã OTP mới. Vui lòng kiểm tra hộp thư.", "success");
       setVerificationOtp("");
       setVerificationErrors(null);
     } catch (error) {

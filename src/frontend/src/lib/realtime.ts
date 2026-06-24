@@ -53,24 +53,72 @@ type NotificationSocketOptions = {
 export function createNotificationSocket(options: NotificationSocketOptions) {
   if (typeof window === "undefined") return null;
 
-  const url = new URL(
-    `/ws/notifications/${options.userId}`,
-    appEnv.wsBaseUrl
-  );
+  let socket: WebSocket | null = null;
+  let reconnectTimer: NodeJS.Timeout;
+  let reconnectAttempts = 0;
 
-  const socket = new WebSocket(url);
-  socket.addEventListener("open", () => options.onOpen?.());
-  socket.addEventListener("message", (event) => {
-    try {
-      options.onMessage?.(JSON.parse(event.data));
-    } catch {
-      options.onMessage?.(event.data);
+  function connect() {
+    const url = new URL(
+      `/ws/notifications/${options.userId}`,
+      appEnv.wsBaseUrl
+    );
+
+    const token = storage()?.getItem("yag.accessToken");
+    if (token) {
+      url.searchParams.set("token", token);
     }
-  });
-  socket.addEventListener("close", () => options.onClose?.());
-  socket.addEventListener("error", (event) => options.onError?.(event));
 
-  return socket;
+    socket = new WebSocket(url);
+    
+    socket.addEventListener("open", () => {
+      reconnectAttempts = 0;
+      options.onOpen?.();
+    });
+    
+    socket.addEventListener("message", (event) => {
+      try {
+        options.onMessage?.(JSON.parse(event.data));
+      } catch {
+        options.onMessage?.(event.data);
+      }
+    });
+    
+    socket.addEventListener("close", () => {
+      options.onClose?.();
+      scheduleReconnect();
+    });
+    
+    socket.addEventListener("error", (event) => {
+      options.onError?.(event);
+      socket?.close();
+    });
+  }
+
+  function scheduleReconnect() {
+    clearTimeout(reconnectTimer);
+    if (reconnectAttempts > 5) return;
+    reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+    reconnectTimer = setTimeout(connect, delay);
+  }
+
+  function storage() {
+    if (typeof window === "undefined") return null;
+    return window.localStorage;
+  }
+
+  connect();
+
+  return {
+    close() {
+      clearTimeout(reconnectTimer);
+      reconnectAttempts = 99; // Prevent reconnect
+      socket?.close();
+    },
+    get socket() {
+      return socket;
+    }
+  };
 }
 
 

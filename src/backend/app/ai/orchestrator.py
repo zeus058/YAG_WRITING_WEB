@@ -484,7 +484,7 @@ class WritingAgent:
                 + "\nReturn JSON only with this exact shape: "
                 '{"suggestions":[{"title":"...","content":"...",'
                 '"reason":"...","insertable_text":"...","quality_score":0.0}]}. '
-                "Return exactly 3 suggestions in Vietnamese. No markdown. "
+                "Return exactly 3 suggestions in Vietnamese. "
                 "IMPORTANT: For write_chapter mode, each insertable_text MUST be a "
                 "complete chapter draft of at least 500-1000 words in Vietnamese prose. "
                 "Write vivid, immersive fiction with dialogue, descriptions, and pacing. "
@@ -508,7 +508,7 @@ class WritingAgent:
                 + "\nReturn JSON only with this exact shape: "
                 '{"suggestions":[{"title":"...","content":"...",'
                 '"reason":"...","insertable_text":"...","quality_score":0.0}]}. '
-                "Return exactly 3 suggestions in Vietnamese. No markdown."
+                "Return exactly 3 suggestions in Vietnamese. "
             )
             user_prompt = (
                 f"Mode: {normalized_mode}\n"
@@ -557,12 +557,33 @@ class WritingAgent:
             system_prompt, user_prompt = self._build_prompt(
                 sanitized_request, context, story_context, style_profile
             )
+            is_write_chapter = normalize_mode(request.mode) == "write_chapter"
             parsed, _raw_text = await self.gateway.generate_json(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                temperature=0.75,
+                temperature=0.85 if is_write_chapter else 0.75,
                 max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
                 model=settings.GEMINI_STRONG_MODEL,
+                response_schema={
+                    "type": "OBJECT",
+                    "properties": {
+                        "suggestions": {
+                            "type": "ARRAY",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "title": {"type": "STRING"},
+                                    "content": {"type": "STRING"},
+                                    "reason": {"type": "STRING"},
+                                    "insertable_text": {"type": "STRING"},
+                                    "quality_score": {"type": "NUMBER"}
+                                },
+                                "required": ["title", "content", "reason", "insertable_text", "quality_score"]
+                            }
+                        }
+                    },
+                    "required": ["suggestions"]
+                }
             )
             suggestions = normalize_suggestions(parsed, request.mode)
             return AISuggestionResponse(
@@ -698,9 +719,31 @@ class RecommendationAgent:
             parsed, _raw_text = await self.gateway.generate_json(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                temperature=0.25,
+                temperature=0.4,
                 max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
-                model=settings.GEMINI_FAST_MODEL,
+                model=settings.GEMINI_STRONG_MODEL,
+                response_schema={
+                    "type": "OBJECT",
+                    "properties": {
+                        "ranking": {
+                            "type": "ARRAY",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "story_id": {"type": "STRING"},
+                                    "reason": {"type": "STRING"},
+                                    "match_tags": {
+                                        "type": "ARRAY",
+                                        "items": {"type": "STRING"}
+                                    },
+                                    "source": {"type": "STRING"}
+                                },
+                                "required": ["story_id", "reason", "match_tags", "source"]
+                            }
+                        }
+                    },
+                    "required": ["ranking"]
+                }
             )
         except (GeminiConfigurationError, GeminiGatewayError, ValueError) as exc:
             logger.warning("Recommendation rerank fell back: %s", type(exc).__name__)

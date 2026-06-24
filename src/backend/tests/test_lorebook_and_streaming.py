@@ -188,8 +188,7 @@ class TestLorebookAndStreaming:
         assert "data: " in content
         assert "done" in content
 
-    @pytest.mark.asyncio
-    async def test_gateway_generate_stream(self, monkeypatch):
+    def test_gateway_generate_stream(self, monkeypatch):
         from app.ai.gateway import GeminiGateway
         captured = {}
 
@@ -222,21 +221,26 @@ class TestLorebookAndStreaming:
         monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-key")
 
         gateway = GeminiGateway()
-        chunks = []
-        async for chunk in gateway.generate_stream(
-            system_prompt="System",
-            user_prompt="User",
-            model="gemini-1.5-flash"
-        ):
-            chunks.append(chunk)
+
+        async def run_test():
+            chunks = []
+            async for chunk in gateway.generate_stream(
+                system_prompt="System",
+                user_prompt="User",
+                model="gemini-1.5-flash"
+            ):
+                chunks.append(chunk)
+            return chunks
+
+        import asyncio
+        chunks = asyncio.run(run_test())
 
         assert len(chunks) == 2
         assert chunks[0] == "Chunk 1"
         assert chunks[1] == "Chunk 2"
         assert "streamGenerateContent" in captured["url"]
 
-    @pytest.mark.asyncio
-    async def test_writing_agent_generate_stream(self, monkeypatch):
+    def test_writing_agent_generate_stream(self, monkeypatch):
         from app.ai.orchestrator import WritingAgent
         from app.ai.gateway import GeminiGateway
         
@@ -264,9 +268,15 @@ class TestLorebookAndStreaming:
         )
 
         agent = WritingAgent()
-        chunks = []
-        async for chunk in agent.generate_stream(req, db=self.mock_db):
-            chunks.append(chunk)
+
+        async def run_test():
+            chunks = []
+            async for chunk in agent.generate_stream(req, db=self.mock_db):
+                chunks.append(chunk)
+            return chunks
+
+        import asyncio
+        chunks = asyncio.run(run_test())
 
         assert len(chunks) == 1
         assert chunks[0] == '{"suggestions": []}'
@@ -347,10 +357,11 @@ def test_gateway_post_sync_success_and_retry(monkeypatch):
         gw.generate_json_sync(system_prompt="sys", user_prompt="usr")
 
 
-@pytest.mark.asyncio
-async def test_gateway_post_async_fail(monkeypatch):
+def test_gateway_post_async_fail(monkeypatch):
     from app.ai.gateway import GeminiGateway, GeminiGatewayError
     import httpx
+    import pytest
+    import asyncio
     
     async def fake_post_fail(*args, **kwargs):
         url = args[1]
@@ -362,12 +373,13 @@ async def test_gateway_post_async_fail(monkeypatch):
     
     gw = GeminiGateway(max_retries=1)
     with pytest.raises(GeminiGatewayError):
-        await gw.generate_json(system_prompt="sys", user_prompt="usr")
+        asyncio.run(gw.generate_json(system_prompt="sys", user_prompt="usr"))
 
 
-@pytest.mark.asyncio
-async def test_embed_text_invalid_response(monkeypatch):
+def test_embed_text_invalid_response(monkeypatch):
     from app.ai.gateway import GeminiGateway, GeminiResponseError
+    import pytest
+    import asyncio
     
     async def fake_post(*args, **kwargs):
         return {"embedding": {"values": None}}
@@ -377,12 +389,13 @@ async def test_embed_text_invalid_response(monkeypatch):
     
     gw = GeminiGateway()
     with pytest.raises(GeminiResponseError):
-        await gw.embed_text("hello")
+        asyncio.run(gw.embed_text("hello"))
 
 
-@pytest.mark.asyncio
-async def test_gateway_generate_stream_escape_and_errors(monkeypatch):
+def test_gateway_generate_stream_escape_and_errors(monkeypatch):
     from app.ai.gateway import GeminiGateway
+    import httpx
+    import asyncio
     
     class FakeResponse:
         def raise_for_status(self):
@@ -406,17 +419,21 @@ async def test_gateway_generate_stream_escape_and_errors(monkeypatch):
     def fake_stream(*args, **kwargs):
         return FakeStreamContext()
 
-    import httpx
     monkeypatch.setattr(httpx.AsyncClient, "stream", fake_stream)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-key")
 
     gateway = GeminiGateway()
-    chunks = []
-    async for chunk in gateway.generate_stream(
-        system_prompt="System",
-        user_prompt="User",
-    ):
-        chunks.append(chunk)
+    
+    async def run_test():
+        chunks = []
+        async for chunk in gateway.generate_stream(
+            system_prompt="System",
+            user_prompt="User",
+        ):
+            chunks.append(chunk)
+        return chunks
+
+    chunks = asyncio.run(run_test())
     
     assert len(chunks) == 1
     assert "Chunk" in chunks[0]

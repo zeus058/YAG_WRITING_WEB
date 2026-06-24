@@ -294,12 +294,11 @@ function AuthPageInner() {
 
     setLoginSubmitting(true);
     try {
-      let userObj: { id: string; email: string; username: string; role: "reader" | "author" | "admin" };
       const result = await yagApi.auth.login({ email: loginEmail.trim(), password: loginPassword });
       if (!result.data.accessToken || !result.data.user) {
         throw new Error("INVALID_AUTH_RESPONSE");
       }
-      userObj = result.data.user;
+      const userObj: { id: string; email: string; username: string; role: "reader" | "author" | "admin" } = result.data.user;
       setAuthSession({ accessToken: result.data.accessToken, user: result.data.user });
       clearLoginFailures(loginEmail);
       triggerToast("Đăng nhập thành công. Đang chuyển hướng...", "success");
@@ -381,7 +380,6 @@ function AuthPageInner() {
 
     setVerificationSubmitting(true);
     try {
-      let userObj: { id: string; email: string; username: string; role: "reader" | "author" | "admin" };
       const result = await yagApi.auth.verifyEmail({
         email: verificationEmail,
         otp: verificationOtp.trim(),
@@ -389,7 +387,7 @@ function AuthPageInner() {
       if (!result.data.accessToken || !result.data.user) {
         throw new Error("INVALID_AUTH_RESPONSE");
       }
-      userObj = result.data.user;
+      const userObj: { id: string; email: string; username: string; role: "reader" | "author" | "admin" } = result.data.user;
       setAuthSession({ accessToken: result.data.accessToken, user: result.data.user });
       triggerToast("Xác thực thành công. Đang chuyển hướng...", "success");
       window.setTimeout(() => router.push(userDestination(userObj.role, redirect)), 500);

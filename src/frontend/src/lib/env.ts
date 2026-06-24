@@ -11,6 +11,7 @@ export const appEnv = {
     (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000")
       .replace(/^http:/, "ws:")
       .replace(/^https:/, "wss:"),
+  useMocks: false,
   requestTimeoutMs: Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 12000),
 } as const;
 

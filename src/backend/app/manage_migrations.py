@@ -26,6 +26,16 @@ def _migration_version(sql_file: Path) -> str:
     return sql_file.stem.split("__", 1)[0]
 
 
+def _migration_sort_key(sql_file: Path) -> int:
+    version = _migration_version(sql_file)
+    if version.startswith("V") and version[1:].isdigit():
+        return int(version[1:])
+    try:
+        return int(version)
+    except ValueError:
+        return 999999
+
+
 def _checksum(sql: str) -> str:
     return hashlib.sha256(sql.encode("utf-8")).hexdigest()
 
@@ -47,7 +57,7 @@ def apply_migrations(migrations_dir: str | Path, check_only: bool = False) -> li
         print(f"Migrations directory not found: {migrations_dir}")
         return []
 
-    sql_files = sorted(migrations_dir.glob("*.sql"))
+    sql_files = sorted(migrations_dir.glob("*.sql"), key=_migration_sort_key)
     if not sql_files:
         print("No SQL migration files found.")
         return []

@@ -144,27 +144,3 @@ class AIRecommendationResponse(BaseModel):
     recommendations: list[AIRecommendationItem]
     message: str | None = None
 
-
-class AIToolDefinition(BaseModel):
-    name: str
-    description: str
-    allowed_roles: list[str]
-    input_schema: dict
-    output_schema: dict
-
-
-class AISkillDefinition(BaseModel):
-    name: str
-    description: str
-    prompt: str
-
-
-class AIMcpManifestResponse(BaseModel):
-    name: str
-    version: str
-    description: str
-    provider: str
-    model_routing: dict | None = None
-    tools: list[AIToolDefinition]
-    skills: list[AISkillDefinition]
-    execution: dict

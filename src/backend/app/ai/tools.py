@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy import text
 
 from app.core.config import settings
-from app.ai.skills import list_ai_skills
+
 
 logger = logging.getLogger(__name__)
 
@@ -387,84 +387,4 @@ def get_moderation_policy() -> dict[str, Any]:
     }
 
 
-def list_tool_definitions() -> list[dict[str, Any]]:
-    return [
-        {
-            "name": "get_story_context",
-            "description": "Fetch story metadata, current chapter, and recent continuity.",
-            "allowed_roles": ["author", "admin"],
-            "input_schema": {"story_id": "string?", "chapter_id": "string?"},
-            "output_schema": {"story": "object", "current_chapter": "object"},
-        },
-        {
-            "name": "get_recent_chapters",
-            "description": "Included in get_story_context as recent chapter excerpts.",
-            "allowed_roles": ["author", "admin"],
-            "input_schema": {"story_id": "string"},
-            "output_schema": {"recent_chapters": "array"},
-        },
-        {
-            "name": "get_author_style_profile",
-            "description": "Infer style from approved same-story chapters and previous author works.",
-            "allowed_roles": ["author", "admin"],
-            "input_schema": {"context": "object"},
-            "output_schema": {"voice": "string", "source": "string", "has_author_history": "boolean"},
-        },
-        {
-            "name": "get_author_previous_works",
-            "description": "Fetch approved excerpts from other works by the same author.",
-            "allowed_roles": ["author", "admin"],
-            "input_schema": {"author_id": "string", "current_story_id": "string?"},
-            "output_schema": {"previous_author_chapters": "array"},
-        },
-        {
-            "name": "get_style_reference",
-            "description": "Read author-provided reference metadata when no author history exists.",
-            "allowed_roles": ["author", "admin"],
-            "input_schema": {"story_id": "string"},
-            "output_schema": {"story_title": "string?", "series_title": "string?", "author": "string?"},
-        },
-        {
-            "name": "semantic_story_search",
-            "description": "Retrieve pgvector story candidates for search and recommendations.",
-            "allowed_roles": ["reader", "author", "admin"],
-            "input_schema": {"query": "string", "limit": "integer"},
-            "output_schema": {"candidates": "array"},
-        },
-        {
-            "name": "get_reader_profile",
-            "description": "Collect reading history and library signals for recommendations.",
-            "allowed_roles": ["reader", "admin"],
-            "input_schema": {"user_id": "string"},
-            "output_schema": {"seen_story_ids": "array", "preferred_categories": "array"},
-        },
-        {
-            "name": "get_moderation_policy",
-            "description": "Return YAG safety categories and moderation thresholds.",
-            "allowed_roles": ["admin", "worker"],
-            "input_schema": {},
-            "output_schema": {"categories": "array", "approve_threshold": "number"},
-        },
-    ]
 
-
-def build_mcp_manifest() -> dict[str, Any]:
-    return {
-        "name": "yag-ai-agent",
-        "version": "1.0.0",
-        "description": "MCP-compatible manifest for YAG Gemini agent tools and skills.",
-        "provider": "gemini",
-        "model_routing": {
-            "writing": settings.GEMINI_STRONG_MODEL,
-            "recommendations": settings.GEMINI_FAST_MODEL,
-            "moderation": settings.GEMINI_MODERATION_MODEL,
-            "embeddings": settings.GEMINI_EMBEDDING_MODEL,
-        },
-        "tools": list_tool_definitions(),
-        "skills": list_ai_skills(),
-        "execution": {
-            "public_tool_execution": False,
-            "authentication": "required",
-            "notes": "Tools are executed only inside authenticated backend workflows.",
-        },
-    }

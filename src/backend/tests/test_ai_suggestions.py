@@ -176,28 +176,6 @@ def test_author_style_profile_uses_reference_when_no_history():
     assert profile["reference"]["author"] == "Reference Author"
 
 
-def test_ai_tools_and_mcp_manifest_are_authenticated():
-    response = client.get("/api/v1/ai/tools")
-    assert response.status_code == 401
-
-    app.dependency_overrides[deps.require_authenticated_user] = (
-        lambda: {"sub": "reader-1", "role": "reader"}
-    )
-    try:
-        tools_response = client.get("/api/v1/ai/tools")
-        manifest_response = client.get("/api/v1/ai/mcp/manifest")
-
-        assert tools_response.status_code == 200
-        assert manifest_response.status_code == 200
-        tools = tools_response.json()
-        manifest = manifest_response.json()
-        assert any(tool["name"] == "get_story_context" for tool in tools)
-        assert manifest["name"] == "yag-ai-agent"
-        assert manifest["model_routing"]["writing"] == settings.GEMINI_STRONG_MODEL
-        assert any(skill["name"] == "writing_coach" for skill in manifest["skills"])
-    finally:
-        app.dependency_overrides.clear()
-
 
 def test_ai_suggestion_context_exceeds_limit():
     context = "word " * 1001

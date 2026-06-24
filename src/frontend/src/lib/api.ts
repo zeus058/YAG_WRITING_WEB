@@ -176,11 +176,6 @@ export const yagApi = {
       apiFetch<any[]>("/api/v1/stories/library/me", { method: "GET" }),
   },
 
-  ai: {
-    getTools: () => apiFetch<any[]>("/api/v1/ai/tools", { method: "GET" }),
-    getMcpManifest: () => apiFetch<any>("/api/v1/ai/mcp/manifest", { method: "GET" }),
-  },
-
   chapters: {
     getChapter: (chapterId: string) =>
       apiFetch<any>(`/api/v1/chapters/${chapterId}`, { method: "GET" }),
@@ -243,6 +238,22 @@ export const yagApi = {
         body,
       }),
     getScheduleOverview: () => apiFetch<any>("/api/v1/author/schedule/overview"),
+    listLores: (storyId: string) =>
+      apiFetch<any[]>(`/api/v1/stories/${storyId}/lores`, { method: "GET" }),
+    createLore: (storyId: string, body: { entity_name: string; entity_type: string; description: string }) =>
+      apiFetch<any>(`/api/v1/stories/${storyId}/lores`, {
+        method: "POST",
+        body,
+      }),
+    updateLore: (storyId: string, loreId: string, body: { entity_name?: string; entity_type?: string; description?: string }) =>
+      apiFetch<any>(`/api/v1/stories/${storyId}/lores/${loreId}`, {
+        method: "PUT",
+        body,
+      }),
+    deleteLore: (storyId: string, loreId: string) =>
+      apiFetch<any>(`/api/v1/stories/${storyId}/lores/${loreId}`, {
+        method: "DELETE",
+      }),
   },
 
   billing: {

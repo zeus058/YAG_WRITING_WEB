@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Icon, Cover, MetricCard } from "@/components/ui";
 import { AppShell } from "@/components/layout";
 import { yagApi, createDraftSocket, useAuth } from "@/lib";
+import { getAccessToken } from "@/lib/auth";
+import { resolveApiUrl } from "@/lib/env";
 import { STORY_CATEGORIES } from "@/data/yag";
 
 const triggerLiveToast = (message: string, type = "success") => {
@@ -754,6 +756,26 @@ export function AuthorWorksScreen() {
   );
 }
 
+const parseInlineMarkdown = (text: string): React.ReactNode[] => {
+  const regex = /(\*\*.*?\*\*|\*.*?\*|<u>.*?<\/u>|<mark>.*?<\/mark>)/g;
+  const parts = text.split(regex);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    if (part.startsWith("<u>") && part.endsWith("</u>")) {
+      return <u key={i}>{part.slice(3, -4)}</u>;
+    }
+    if (part.startsWith("<mark>") && part.endsWith("</mark>")) {
+      return <mark key={i}>{part.slice(6, -7)}</mark>;
+    }
+    return part;
+  });
+};
+
 export function AuthorStudioScreen() {
   const params = useParams();
   const storyId = params?.id as string;
@@ -775,19 +797,18 @@ export function AuthorStudioScreen() {
   const [editorLineHeight, setEditorLineHeight] = useState("1.6");
 
   // AI Suggestion & Agent states
-  const [activeAiPanel, setActiveAiPanel] = useState<"coach" | "tools">("coach");
+  const [activeAiPanel, setActiveAiPanel] = useState<"coach" | "tools" | "lores">("coach");
   const [aiMode, setAiMode] = useState<AiModeId>("continue");
   const [aiTargetWords, setAiTargetWords] = useState(240);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  const [aiStreamingText, setAiStreamingText] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiResponseMeta, setAiResponseMeta] = useState<AiResponseMeta | null>(null);
   const [selectedDraftText, setSelectedDraftText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
-  const [aiTools, setAiTools] = useState<any[]>([]);
-  const [aiManifest, setAiManifest] = useState<any>(null);
-  const [aiToolsError, setAiToolsError] = useState<string | null>(null);
+
   const [storyProfile, setStoryProfile] = useState<any>(null);
   const [styleReference, setStyleReference] = useState<StyleReferenceState>({
     storyTitle: "",
@@ -810,6 +831,7 @@ export function AuthorStudioScreen() {
 
   // Preview Modal
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // History stack for Undo/Redo
   const [historyStack, setHistoryStack] = useState<string[]>([]);
@@ -871,24 +893,87 @@ export function AuthorStudioScreen() {
     void loadStudioData();
   }, [storyId]);
 
-  useEffect(() => {
-    const loadAiTooling = async () => {
-      setAiToolsError(null);
-      try {
-        const [toolsRes, manifestRes] = await Promise.all([
-          yagApi.ai.getTools(),
-          yagApi.ai.getMcpManifest(),
-        ]);
-        setAiTools(toolsRes.data || []);
-        setAiManifest(manifestRes.data || null);
-      } catch (err) {
-        console.error("Failed to load AI tooling manifest:", err);
-        setAiToolsError("Không tải được manifest AI tools/MCP.");
-      }
-    };
+  const [lores, setLores] = useState<any[]>([]);
+  const [loresLoading, setLoresLoading] = useState(false);
+  const [loresError, setLoresError] = useState<string | null>(null);
 
-    void loadAiTooling();
-  }, []);
+  // States for adding/editing lore
+  const [editingLoreId, setEditingLoreId] = useState<string | null>(null);
+  const [loreForm, setLoreForm] = useState({
+    entity_name: "",
+    entity_type: "character",
+    description: ""
+  });
+  const [loreSaving, setLoreSaving] = useState(false);
+
+  const loadLores = async () => {
+    if (!storyId) return;
+    setLoresLoading(true);
+    setLoresError(null);
+    try {
+      const res = await yagApi.author.listLores(storyId);
+      setLores(res.data || []);
+    } catch (err: any) {
+      console.error(err);
+      setLoresError("Không tải được danh sách sổ tay.");
+    } finally {
+      setLoresLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeAiPanel === "lores" && storyId) {
+      void loadLores();
+    }
+  }, [activeAiPanel, storyId]);
+
+  const handleSaveLore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!storyId || !loreForm.entity_name.trim() || !loreForm.description.trim()) return;
+    setLoreSaving(true);
+    try {
+      if (editingLoreId) {
+        const res = await yagApi.author.updateLore(storyId, editingLoreId, loreForm);
+        setLores(prev => prev.map(item => item.id === editingLoreId ? res.data : item));
+        setEditingLoreId(null);
+      } else {
+        const res = await yagApi.author.createLore(storyId, loreForm);
+        setLores(prev => [...prev, res.data]);
+      }
+      setLoreForm({ entity_name: "", entity_type: "character", description: "" });
+    } catch (err: any) {
+      console.error(err);
+      alert("Lỗi khi lưu thiết lập sổ tay.");
+    } finally {
+      setLoreSaving(false);
+    }
+  };
+
+  const handleDeleteLore = async (loreId: string) => {
+    if (!storyId || !window.confirm("Bạn có chắc chắn muốn xóa thực thể này khỏi sổ tay?")) return;
+    try {
+      await yagApi.author.deleteLore(storyId, loreId);
+      setLores(prev => prev.filter(item => item.id !== loreId));
+      if (editingLoreId === loreId) {
+        setEditingLoreId(null);
+        setLoreForm({ entity_name: "", entity_type: "character", description: "" });
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Lỗi khi xóa thực thể sổ tay.");
+    }
+  };
+
+  const startEditLore = (lore: any) => {
+    setEditingLoreId(lore.id);
+    setLoreForm({
+      entity_name: lore.entity_name,
+      entity_type: lore.entity_type,
+      description: lore.description
+    });
+  };
+
+
 
   useEffect(() => {
     if (typeof window !== "undefined" && activeChapter?.id) {
@@ -1245,37 +1330,118 @@ export function AuthorStudioScreen() {
     setAiLoading(true);
     setAiError(null);
     setAiResponseMeta(null);
+    setAiStreamingText("");
+    setAiSuggestions([]);
+
     try {
       const rawContext = editorContent.trim() ? editorContent.slice(-4000) : "Bản thảo mới chưa có nội dung.";
       const contextText = [
         rawContext,
         aiInput.trim() ? `Yêu cầu thêm của tác giả: ${aiInput.trim()}` : "",
       ].filter(Boolean).join("\n\n");
-      const res = await yagApi.author.requestAiSuggestion({
-        chapterId: activeChapter.id,
-        storyId,
-        context: contextText,
-        mode: aiMode,
-        selectedText: selectedDraftText || undefined,
-        targetWords: aiTargetWords,
-        styleReferenceStoryTitle: styleReference.storyTitle.trim() || undefined,
-        styleReferenceSeriesTitle: styleReference.seriesTitle.trim() || undefined,
-        styleReferenceAuthor: styleReference.author.trim() || undefined,
+
+      const response = await fetch(resolveApiUrl("/api/v1/ai/suggestions/stream"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${getAccessToken()}`
+        },
+        body: JSON.stringify({
+          chapter_id: activeChapter.id,
+          story_id: storyId,
+          context: contextText,
+          mode: aiMode,
+          selected_text: selectedDraftText || undefined,
+          target_words: aiTargetWords,
+          style_reference_story_title: styleReference.storyTitle.trim() || undefined,
+          style_reference_series_title: styleReference.seriesTitle.trim() || undefined,
+          style_reference_author: styleReference.author.trim() || undefined,
+        })
       });
 
-      setAiSuggestions(res.data.suggestions || []);
-      setAiResponseMeta({
-        provider: res.data.provider,
-        model: res.data.model,
-        fallback: res.data.fallback,
-        message: res.data.message,
-      });
-    } catch (err) {
+      if (!response.ok) {
+        throw new Error("HTTP error " + response.status);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let accumulatedText = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunkStr = decoder.decode(value, { stream: true });
+          const lines = chunkStr.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const dataStr = line.slice(6).trim();
+              if (dataStr === '{"done": true}') {
+                break;
+              }
+              try {
+                const parsedData = JSON.parse(dataStr);
+                if (parsedData.text) {
+                  accumulatedText += parsedData.text;
+                  setAiStreamingText(accumulatedText);
+                } else if (parsedData.error) {
+                  throw new Error(parsedData.error);
+                }
+              } catch (e: any) {
+                if (e.message?.includes("Unexpected end of JSON") || e.message?.includes("is not valid JSON")) {
+                  continue;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      try {
+        let cleanText = accumulatedText.trim();
+        if (cleanText.startsWith("```")) {
+          cleanText = cleanText.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+        }
+        
+        const startIdx = cleanText.indexOf("{");
+        const endIdx = cleanText.lastIndexOf("}");
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          cleanText = cleanText.substring(startIdx, endIdx + 1);
+        }
+
+        const resultObj = JSON.parse(cleanText);
+        setAiSuggestions(resultObj.suggestions || []);
+        setAiResponseMeta({
+          provider: "gemini",
+          model: "gemini-1.5-flash",
+          fallback: false,
+          message: resultObj.message || null,
+        });
+      } catch (parseError) {
+        console.warn("Failed to parse stream as JSON, treating as raw suggestion:", parseError);
+        setAiSuggestions([
+          {
+            title: "Kết quả gợi ý",
+            content: "Nội dung vừa sinh từ AI.",
+            insertable_text: accumulatedText,
+            reason: "Nội dung sinh trực tiếp dưới dạng văn xuôi.",
+            quality_score: 0.9
+          }
+        ]);
+        setAiResponseMeta({
+          provider: "gemini",
+          model: "gemini-1.5-flash",
+          fallback: false,
+          message: "Lưu ý: Kết quả được trả về dưới dạng văn bản thô.",
+        });
+      }
+    } catch (err: any) {
       console.error(err);
-      setAiError("Gemini API bận hoặc đã vượt hạn ngạch cuộc gọi (Rate Limit / Quota Exceeded). Vui lòng thử lại sau ít phút.");
+      setAiError(err.message || "Gemini API bận hoặc đã vượt hạn ngạch cuộc gọi (Rate Limit / Quota Exceeded). Vui lòng thử lại sau ít phút.");
       triggerLiveToast("AI Suggestion tạm thời gián đoạn.", "warning");
     } finally {
       setAiLoading(false);
+      setAiStreamingText("");
     }
   };
 
@@ -1581,6 +1747,23 @@ export function AuthorStudioScreen() {
               >
                 <span className="color-dot" />
               </button>
+              <button
+                className={`tool-button ${isPreviewMode ? "active" : ""}`}
+                type="button"
+                onClick={() => setIsPreviewMode(!isPreviewMode)}
+                title="Xem trước định dạng"
+                style={{
+                  backgroundColor: isPreviewMode ? "var(--primary)" : "transparent",
+                  color: isPreviewMode ? "white" : "var(--foreground)",
+                  border: isPreviewMode ? "none" : "1px solid var(--line)",
+                  borderRadius: 4,
+                  padding: "4px 8px",
+                  fontSize: 12,
+                  marginLeft: 8
+                }}
+              >
+                {isPreviewMode ? "Sửa" : "Xem trước"}
+              </button>
             </div>
           </div>
 
@@ -1670,30 +1853,63 @@ export function AuthorStudioScreen() {
                   color: "var(--jungle)"
                 }}
               />
-              <textarea
-                ref={textareaRef}
-                className="editor-body"
-                value={editorContent}
-                onChange={handleContentChange}
-                onSelect={syncSelectedDraftText}
-                onMouseUp={syncSelectedDraftText}
-                onKeyUp={syncSelectedDraftText}
-                disabled={isEditingDisabled}
-                placeholder="Bắt đầu viết nội dung chương tại đây..."
-                style={{
-                  fontSize: editorSize,
-                  fontFamily: editorFont,
-                  lineHeight: editorLineHeight,
-                  border: 0,
-                  outline: "none",
-                  resize: "none",
-                  flexGrow: 1,
-                  minHeight: 400,
-                  width: "100%",
-                  background: "transparent",
-                  color: "var(--ink)"
-                }}
-              />
+              {isPreviewMode ? (
+                <div
+                  className="editor-body editor-preview"
+                  style={{
+                    fontSize: editorSize,
+                    fontFamily: editorFont,
+                    lineHeight: editorLineHeight,
+                    minHeight: 400,
+                    width: "100%",
+                    padding: "8px 12px",
+                    color: "var(--ink)",
+                    background: "rgba(255, 255, 255, 0.02)",
+                    border: "1px dashed var(--line)",
+                    borderRadius: 4,
+                    overflowY: "auto"
+                  }}
+                >
+                  {editorContent ? (
+                    editorContent.split("\n").map((para, idx) => {
+                      if (para.trim().startsWith(">")) {
+                        return <blockquote key={idx} style={{ borderLeft: "4px solid var(--primary)", paddingLeft: 12, margin: "12px 0", color: "var(--muted)", fontStyle: "italic" }}>{parseInlineMarkdown(para.replace(/^>\s*/, ""))}</blockquote>;
+                      }
+                      if (para.trim().startsWith("#")) {
+                        return <h2 key={idx} style={{ fontSize: "1.5em", margin: "20px 0 10px 0", color: "var(--primary)" }}>{parseInlineMarkdown(para.replace(/^#\s*/, ""))}</h2>;
+                      }
+                      return <p key={idx} style={{ marginBottom: 12, minHeight: "1em" }}>{parseInlineMarkdown(para)}</p>;
+                    })
+                  ) : (
+                    <p style={{ color: "var(--muted)" }}>Chưa có nội dung viết. Hãy nhấn nút "Sửa" và bắt đầu viết.</p>
+                  )}
+                </div>
+              ) : (
+                <textarea
+                  ref={textareaRef}
+                  className="editor-body"
+                  value={editorContent}
+                  onChange={handleContentChange}
+                  onSelect={syncSelectedDraftText}
+                  onMouseUp={syncSelectedDraftText}
+                  onKeyUp={syncSelectedDraftText}
+                  disabled={isEditingDisabled}
+                  placeholder="Bắt đầu viết nội dung chương tại đây..."
+                  style={{
+                    fontSize: editorSize,
+                    fontFamily: editorFont,
+                    lineHeight: editorLineHeight,
+                    border: 0,
+                    outline: "none",
+                    resize: "none",
+                    flexGrow: 1,
+                    minHeight: 400,
+                    width: "100%",
+                    background: "transparent",
+                    color: "var(--ink)"
+                  }}
+                />
+              )}
               <div className="editor-footer-row" style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
                 <span>{editorWordCount} từ · {editorReadingMinutes} phút đọc</span>
                 <span className="badge badge-green">{savingStatus}</span>
@@ -1743,9 +1959,16 @@ export function AuthorStudioScreen() {
             >
               AI Co-Writer
             </button>
+            <button
+              className={`tab-button ${activeAiPanel === "lores" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveAiPanel("lores")}
+            >
+              Sổ tay
+            </button>
           </div>
 
-          {activeAiPanel === "coach" ? (
+          {activeAiPanel === "coach" && (
             <div className="tab-panel active stack ai-coach-panel">
               <div className="agent-bubble">
                 <strong>Gemini Agent đang dùng ngữ cảnh chương, mode và đoạn chọn.</strong>
@@ -1822,7 +2045,17 @@ export function AuthorStudioScreen() {
               ) : null}
 
               <div className="agent-action-grid">
-                {aiSuggestions.length === 0 ? (
+                {aiLoading && aiStreamingText ? (
+                  <div className="agent-result-card streaming" style={{ border: "1px dashed var(--primary)", background: "rgba(255, 255, 255, 0.02)", gridColumn: "1 / -1", padding: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <strong>Miu đang viết gợi ý...</strong>
+                      <span className="badge badge-amber" style={{ animation: "pulse 1.5s infinite" }}>Streaming</span>
+                    </div>
+                    <blockquote style={{ whiteSpace: "pre-wrap", fontSize: 13, maxHeight: 300, overflow: "auto", background: "rgba(0,0,0,0.2)", padding: 8, borderRadius: 4 }}>
+                      {aiStreamingText}
+                    </blockquote>
+                  </div>
+                ) : aiSuggestions.length === 0 ? (
                   <div className="ai-empty-result">
                     Chưa có gợi ý nào. Chọn mode và gửi yêu cầu để Miu sinh nội dung.
                   </div>
@@ -1891,7 +2124,9 @@ export function AuthorStudioScreen() {
                 </button>
               </div>
             </div>
-          ) : (
+          )}
+
+          {activeAiPanel === "tools" && (
             <div className="tab-panel active stack ai-tooling-panel">
               <div className="agent-bubble">
                 <strong>AI Co-Writer — Viết cả chương</strong>
@@ -1981,40 +2216,97 @@ export function AuthorStudioScreen() {
                 )}
               </div>
 
-              <details style={{ marginTop: 16 }}>
-                <summary style={{ cursor: "pointer", fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>Thông tin kỹ thuật: Tools & MCP Manifest</summary>
-                <div style={{ marginTop: 8 }}>
-                  {aiToolsError ? <div className="notice warning">{aiToolsError}</div> : null}
-                  <section className="ai-tool-section">
-                    <h3>Tools</h3>
-                    <div className="ai-tool-list">
-                      {aiTools.length > 0 ? aiTools.map((tool) => (
-                        <div className="ai-tool-card" key={tool.name}>
-                          <strong>{tool.name}</strong>
-                          <p>{tool.description}</p>
-                          {tool.allowed_roles ? <span>{tool.allowed_roles.join(", ")}</span> : null}
-                        </div>
-                      )) : (
-                        <div className="ai-empty-result">Chưa tải được danh sách tool.</div>
-                      )}
-                    </div>
-                  </section>
-                  <section className="ai-tool-section">
-                    <h3>Skills</h3>
-                    <div className="ai-tool-list">
-                      {(aiManifest?.skills || []).map((skill: any) => (
-                        <div className="ai-skill-card" key={skill.name}>
-                          <strong>{skill.name}</strong>
-                          <p>{skill.description}</p>
-                        </div>
-                      ))}
-                      {!aiManifest?.skills?.length ? (
-                        <div className="ai-empty-result">Chưa tải được skill manifest.</div>
-                      ) : null}
-                    </div>
-                  </section>
+
+            </div>
+          )}
+
+          {activeAiPanel === "lores" && (
+            <div className="tab-panel active stack ai-lores-panel">
+              <div className="agent-bubble">
+                <strong>Sổ tay thiết lập (Lorebook)</strong>
+                <p>Thêm nhân vật, địa danh, vật phẩm... Miu sẽ tự động tham chiếu dữ liệu này để viết truyện nhất quán hơn.</p>
+              </div>
+
+              {/* Form thêm/sửa */}
+              <form onSubmit={handleSaveLore} className="stack" style={{ gap: 10, background: "rgba(255, 255, 255, 0.03)", padding: 12, borderRadius: 6, border: "1px solid var(--line)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <strong style={{ fontSize: 13 }}>{editingLoreId ? "Sửa thực thể" : "Thêm thực thể mới"}</strong>
+                  {editingLoreId && (
+                    <button type="button" className="button button-soft" onClick={() => {
+                      setEditingLoreId(null);
+                      setLoreForm({ entity_name: "", entity_type: "character", description: "" });
+                    }} style={{ padding: "2px 6px", fontSize: 11 }}>Hủy</button>
+                  )}
                 </div>
-              </details>
+                
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Tên thực thể (VD: Tiêu Viêm)"
+                    value={loreForm.entity_name}
+                    onChange={e => setLoreForm(prev => ({ ...prev, entity_name: e.target.value }))}
+                    required
+                    style={{ flex: 1, height: 32, fontSize: 12 }}
+                  />
+                  <select
+                    className="input"
+                    value={loreForm.entity_type}
+                    onChange={e => setLoreForm(prev => ({ ...prev, entity_type: e.target.value }))}
+                    style={{ width: 100, height: 32, fontSize: 12, padding: "0 4px" }}
+                  >
+                    <option value="character">Nhân vật</option>
+                    <option value="location">Địa danh</option>
+                    <option value="item">Vật phẩm</option>
+                    <option value="skill">Kỹ năng</option>
+                    <option value="other">Khác</option>
+                  </select>
+                </div>
+
+                <textarea
+                  className="textarea"
+                  rows={2}
+                  placeholder="Mô tả thiết lập (VD: Độc cô cầu bại, sở hữu Dị Hỏa...)"
+                  value={loreForm.description}
+                  onChange={e => setLoreForm(prev => ({ ...prev, description: e.target.value }))}
+                  required
+                  style={{ fontSize: 12, padding: 6 }}
+                />
+
+                <button type="submit" className="button button-primary" disabled={loreSaving} style={{ height: 32, fontSize: 12, justifyContent: "center" }}>
+                  {loreSaving ? "Đang lưu..." : (editingLoreId ? "Cập nhật" : "Thêm vào sổ tay")}
+                </button>
+              </form>
+
+              {/* Danh sách thực thể */}
+              <div className="lore-list stack" style={{ gap: 8, marginTop: 12, maxHeight: 400, overflowY: "auto" }}>
+                {loresLoading ? (
+                  <div style={{ textAlign: "center", padding: 12, color: "var(--muted)" }}>Đang tải sổ tay...</div>
+                ) : loresError ? (
+                  <div className="notice warning">{loresError}</div>
+                ) : lores.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: 12, color: "var(--muted)", fontSize: 12 }}>Sổ tay hiện tại trống. Hãy thêm thực thể đầu tiên!</div>
+                ) : (
+                  lores.map((lore) => (
+                    <div key={lore.id} className="lore-card" style={{ padding: 10, borderRadius: 6, border: "1px solid var(--line)", background: "rgba(255,255,255,0.01)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <span className="badge" style={{ fontSize: 10, background: "var(--primary-soft)", color: "var(--primary)" }}>
+                          {lore.entity_type === "character" ? "Nhân vật" :
+                           lore.entity_type === "location" ? "Địa danh" :
+                           lore.entity_type === "item" ? "Vật phẩm" :
+                           lore.entity_type === "skill" ? "Kỹ năng" : "Khác"}
+                        </span>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button type="button" className="button button-soft" onClick={() => startEditLore(lore)} style={{ padding: "2px 6px", fontSize: 11 }}>Sửa</button>
+                          <button type="button" className="button button-soft" onClick={() => handleDeleteLore(lore.id)} style={{ padding: "2px 6px", fontSize: 11, color: "var(--crimson)" }}>Xóa</button>
+                        </div>
+                      </div>
+                      <strong style={{ fontSize: 13, color: "var(--foreground)" }}>{lore.entity_name}</strong>
+                      <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, whiteSpace: "pre-line" }}>{lore.description}</p>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
         </aside>

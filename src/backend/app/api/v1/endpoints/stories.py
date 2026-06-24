@@ -741,3 +741,130 @@ def delete_story(
     db.commit()
     return {"message": "Story deleted successfully"}
 
+
+# ---------------------------------------------------------------------------
+# Lorebook CRUD (Sổ tay)
+# ---------------------------------------------------------------------------
+
+from app.models.lore_item import StoryLore
+from app.schemas.lore import LoreCreate, LoreOut, LoreUpdate
+
+
+@router.get(
+    "/{story_id}/lores",
+    response_model=List[LoreOut],
+    summary="Lorebook – Danh sách thực thể của truyện",
+)
+def list_lores(
+    story_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_author=Depends(deps.get_current_author),
+):
+    story = get_story_or_404(db, story_id)
+    if story.author_id != current_author.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
+    return (
+        db.query(StoryLore)
+        .filter(StoryLore.story_id == story_id)
+        .order_by(StoryLore.created_at.asc())
+        .all()
+    )
+
+
+@router.post(
+    "/{story_id}/lores",
+    response_model=LoreOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Lorebook – Thêm thực thể mới",
+)
+def create_lore(
+    story_id: UUID,
+    body: LoreCreate,
+    db: Session = Depends(deps.get_db),
+    current_author=Depends(deps.get_current_author),
+):
+    story = get_story_or_404(db, story_id)
+    if story.author_id != current_author.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
+    lore = StoryLore(
+        story_id=story_id,
+        entity_name=body.entity_name.strip(),
+        entity_type=body.entity_type.strip(),
+        description=body.description.strip(),
+    )
+    db.add(lore)
+    db.commit()
+    db.refresh(lore)
+    return lore
+
+
+@router.put(
+    "/{story_id}/lores/{lore_id}",
+    response_model=LoreOut,
+    summary="Lorebook – Cập nhật thực thể",
+)
+def update_lore(
+    story_id: UUID,
+    lore_id: UUID,
+    body: LoreUpdate,
+    db: Session = Depends(deps.get_db),
+    current_author=Depends(deps.get_current_author),
+):
+    story = get_story_or_404(db, story_id)
+    if story.author_id != current_author.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
+    lore = (
+        db.query(StoryLore)
+        .filter(StoryLore.id == lore_id, StoryLore.story_id == story_id)
+        .first()
+    )
+    if not lore:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Lore entry not found"
+        )
+    update_data = body.model_dump(exclude_none=True)
+    for key, value in update_data.items():
+        setattr(lore, key, value.strip() if isinstance(value, str) else value)
+    db.commit()
+    db.refresh(lore)
+    return lore
+
+
+@router.delete(
+    "/{story_id}/lores/{lore_id}",
+    response_model=MessageResponse,
+    summary="Lorebook – Xóa thực thể",
+)
+def delete_lore(
+    story_id: UUID,
+    lore_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_author=Depends(deps.get_current_author),
+):
+    story = get_story_or_404(db, story_id)
+    if story.author_id != current_author.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
+    lore = (
+        db.query(StoryLore)
+        .filter(StoryLore.id == lore_id, StoryLore.story_id == story_id)
+        .first()
+    )
+    if not lore:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Lore entry not found"
+        )
+    db.delete(lore)
+    db.commit()
+    return {"message": "Lore entry deleted successfully"}

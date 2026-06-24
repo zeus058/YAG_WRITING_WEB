@@ -13,7 +13,42 @@ from app.ai.gateway import (
     GeminiGateway,
     GeminiGatewayError,
 )
-from app.ai.skills import RECOMMENDATION_CURATOR_SKILL, WRITING_COACH_SKILL
+# Inline prompts (formerly in skills.py — removed for simplicity)
+
+WRITING_COACH_PROMPT = """
+Bạn là trợ lý viết tiểu thuyết mạng xuất sắc nhất thế giới. Luôn phản hồi bằng Tiếng Việt.
+
+NGUYÊN TẮC BẮT BUỘC:
+1. "Show, Don't Tell": Miêu tả hành động, cảm xúc, cử chỉ và bối cảnh để người đọc tự cảm nhận. KHÔNG kể lể trực tiếp.
+2. Văn phong: Mượt mà, tự nhiên, giàu hình ảnh. Tránh từ ngữ sáo rỗng hoặc lạm dụng Hán Việt.
+3. Nhất quán: Tuyệt đối KHÔNG bịa đặt tình tiết trái ngược với ngữ cảnh truyện hoặc thông tin Lorebook. Bám sát tính cách nhân vật.
+4. Đối thoại: Sử dụng đối thoại sinh động, phản ánh tính cách từng nhân vật qua giọng điệu và cách dùng từ.
+5. Viết đủ dài: Khi được yêu cầu viết N từ, PHẢI viết đủ khoảng N từ. KHÔNG tóm tắt, KHÔNG cắt ngắn, KHÔNG kết thúc vội.
+6. Cấu trúc: Mỗi đoạn có mục tiêu rõ ràng (giới thiệu → xung đột → cao trào → kết mở). Sử dụng beat-by-beat.
+
+QUY TRÌNH VIẾT:
+- Bước 1: Phân tích ngữ cảnh (context) và thông tin Lorebook nếu có.
+- Bước 2: Xây dựng dàn ý 3-5 beats (điểm nhấn) trong đầu.
+- Bước 3: Viết chi tiết từng beat, đảm bảo đủ số từ yêu cầu.
+- Bước 4: Kiểm tra tính nhất quán với nhân vật và cốt truyện.
+"""
+
+RECOMMENDATION_CURATOR_PROMPT = """
+Bạn là chuyên gia gợi ý truyện mạng cá nhân hóa cho độc giả Việt Nam.
+
+NHIỆM VỤ: Xếp hạng lại danh sách truyện ứng viên dựa trên hồ sơ đọc chi tiết của người dùng.
+
+TIÊU CHÍ CHẤM ĐIỂM (Reranking Rubric):
+- Sở thích thể loại (30%): Truyện có cùng thể loại với các truyện người dùng đã đọc/lưu nhiều nhất không?
+- Tương đồng nội dung (40%): Cốt truyện có tương đồng với các truyện gần đây người dùng đã xem (dựa trên plot_summary) không?
+- Chất lượng (20%): Đánh giá rating_avg và view_count.
+- Tính mới lạ (10%): Ưu tiên truyện khám phá thể loại phụ mà người dùng chưa đọc nhiều.
+
+LƯU Ý:
+- Chỉ sử dụng story_id được cung cấp, KHÔNG bịa đặt.
+- Viết lý do gợi ý ngắn gọn, thuyết phục bằng Tiếng Việt.
+- Thêm match_tags liên quan để gợi ý cho người dùng.
+"""
 from app.ai.tools import (
     get_author_style_profile,
     get_reader_profile,
@@ -452,19 +487,51 @@ class WritingAgent:
     def __init__(self, gateway: GeminiGateway | None = None) -> None:
         self.gateway = gateway or GeminiGateway()
 
+    def _build_lorebook_section(self, db: Any, story_id: str | None, context: str) -> str:
+        """Query lorebook entries matching entities mentioned in context."""
+        if db is None or not story_id:
+            return ""
+        try:
+            from app.models.lore_item import StoryLore
+            lores = db.query(StoryLore).filter(
+                StoryLore.story_id == story_id
+            ).all()
+        except Exception:
+            return ""
+        if not lores:
+            return ""
+
+        context_lower = context.lower()
+        matched = [
+            lore for lore in lores
+            if lore.entity_name.lower() in context_lower
+        ]
+        if not matched:
+            # Still inject all lorebook entries for awareness
+            matched = lores[:10]
+
+        lines = ["\n[LOREBOOK MEMORY]"]
+        lines.append("Dưới đây là thông tin thiết lập quan trọng về các thực thể trong truyện.")
+        lines.append("Bạn BẮT BUỘC phải tôn trọng tuyệt đối tính nhất quán của thông tin này:")
+        for lore in matched[:15]:
+            lines.append(f"- {lore.entity_name} ({lore.entity_type}): {lore.description}")
+        return "\n".join(lines)
+
     def _build_prompt(
         self,
         request: AISuggestionRequest,
         context: str,
         story_context: dict[str, Any],
         style_profile: dict[str, Any],
+        lorebook_section: str = "",
     ) -> tuple[str, str]:
         normalized_mode = normalize_mode(request.mode)
+        target_words = request.target_words
         tool_bundle = {
             "story_context": story_context,
             "author_style_profile": style_profile,
             "requested_mode": normalized_mode,
-            "target_words": request.target_words,
+            "target_words": target_words,
             "selected_text": safe_truncate(request.selected_text, 1600),
             "style_reference": {
                 "story_title": request.style_reference_story_title,
@@ -478,48 +545,63 @@ class WritingAgent:
         }
         is_write_chapter = normalized_mode == "write_chapter"
 
+        # Build length instruction
+        if target_words and target_words > 0:
+            length_instruction = (
+                f"\nĐỘ DÀI BẮT BUỘC: Phải viết CHÍNH XÁC khoảng {target_words} từ. "
+                f"Nếu được yêu cầu {target_words} từ, bạn PHẢI viết ít nhất {int(target_words * 0.8)} từ. "
+                "KHÔNG được viết ngắn hơn. KHÔNG tóm tắt. KHÔNG kết thúc vội vàng."
+            )
+        else:
+            length_instruction = ""
+
+        json_shape = (
+            '\nReturn JSON only with this exact shape: '
+            '{"suggestions":[{"title":"...","content":"...",'
+            '"reason":"...","insertable_text":"...","quality_score":0.0}]}. '
+            'Return exactly 3 suggestions in Vietnamese.'
+        )
+
         if is_write_chapter:
+            min_words = target_words or 800
             system_prompt = (
-                WRITING_COACH_SKILL.strip()
-                + "\nReturn JSON only with this exact shape: "
-                '{"suggestions":[{"title":"...","content":"...",'
-                '"reason":"...","insertable_text":"...","quality_score":0.0}]}. '
-                "Return exactly 3 suggestions in Vietnamese. "
-                "IMPORTANT: For write_chapter mode, each insertable_text MUST be a "
-                "complete chapter draft of at least 500-1000 words in Vietnamese prose. "
+                WRITING_COACH_PROMPT.strip()
+                + lorebook_section
+                + json_shape
+                + f"\nIMPORTANT: For write_chapter mode, each insertable_text MUST be a "
+                f"complete chapter draft of at least {min_words} words in Vietnamese prose. "
                 "Write vivid, immersive fiction with dialogue, descriptions, and pacing. "
+                "Use beat-by-beat structure: Opening → Rising Action → Climax → Resolution. "
                 "The content field should be a 1-2 sentence summary of what the chapter covers."
+                + length_instruction
             )
             user_prompt = (
                 f"Mode: {normalized_mode}\n"
                 f"Author's idea/context:\n{context}\n\n"
                 f"Tool outputs:\n{json.dumps(tool_bundle, ensure_ascii=False)}\n\n"
-                "Task: You are the AI co-writer. The author wants you to write a COMPLETE "
-                "chapter draft based on the idea provided. Produce three different chapter "
-                "drafts with different approaches (e.g. action-oriented, emotional, mysterious). "
-                "Each insertable_text must be a full chapter of 500-1000 words of Vietnamese "
-                "prose that the author can paste directly into their editor. Use the story "
-                "context, style profile, and reference metadata to match the story's tone. "
-                "Respect continuity and avoid adding unsupported facts."
+                f"Task: Write COMPLETE chapter drafts. Target: {min_words}+ words each. "
+                "Produce three different chapter drafts with different approaches "
+                "(e.g. action-oriented, emotional, mysterious). "
+                "Each insertable_text must be richly detailed Vietnamese prose. "
+                "Use the story context, style profile, Lorebook memory, and reference "
+                "metadata to match the story's tone. "
+                "Respect continuity. NEVER summarize — always expand with full scenes."
             )
         else:
             system_prompt = (
-                WRITING_COACH_SKILL.strip()
-                + "\nReturn JSON only with this exact shape: "
-                '{"suggestions":[{"title":"...","content":"...",'
-                '"reason":"...","insertable_text":"...","quality_score":0.0}]}. '
-                "Return exactly 3 suggestions in Vietnamese. "
+                WRITING_COACH_PROMPT.strip()
+                + lorebook_section
+                + json_shape
+                + length_instruction
             )
             user_prompt = (
                 f"Mode: {normalized_mode}\n"
                 f"Author draft context:\n{context}\n\n"
                 f"Tool outputs:\n{json.dumps(tool_bundle, ensure_ascii=False)}\n\n"
-                "Task: act as the main writing program. Produce three useful options "
-                "that the author can apply immediately. Prefer approved same-story "
-                "chapters and the author's previous approved works for style. If there "
-                "is no author history, use only the reference metadata as broad "
-                "inspiration and do not imitate or copy protected expression. Respect "
-                "continuity and avoid adding unsupported facts."
+                "Task: Produce three useful options that the author can apply immediately. "
+                "Prefer approved same-story chapters and the author's previous approved "
+                "works for style. Respect continuity and avoid adding unsupported facts."
+                + (f" Each insertable_text should be approximately {target_words} words." if target_words else "")
             )
         return system_prompt, user_prompt
 
@@ -545,6 +627,11 @@ class WritingAgent:
             chapter_id=sanitized_request.chapter_id,
         )
         style_profile = get_author_style_profile(story_context)
+        lorebook_section = self._build_lorebook_section(
+            db,
+            sanitized_request.story_id or (story_context.get("story") or {}).get("story_id"),
+            context,
+        )
 
         if not settings.AI_AGENT_ENABLED:
             return build_fallback_response(
@@ -555,7 +642,8 @@ class WritingAgent:
 
         try:
             system_prompt, user_prompt = self._build_prompt(
-                sanitized_request, context, story_context, style_profile
+                sanitized_request, context, story_context, style_profile,
+                lorebook_section=lorebook_section,
             )
             is_write_chapter = normalize_mode(request.mode) == "write_chapter"
             parsed, _raw_text = await self.gateway.generate_json(
@@ -607,6 +695,89 @@ class WritingAgent:
                 story_context=story_context,
             )
 
+    async def generate_stream(
+        self, request: AISuggestionRequest, db: Any = None
+    ):
+        context = truncate_context(request.context, settings.AI_CONTEXT_WORD_LIMIT)
+        context = safe_truncate(context, settings.AI_MAX_CONTEXT_CHARS)
+        sanitized_request = AISuggestionRequest(
+            chapter_id=request.chapter_id,
+            story_id=request.story_id,
+            context=context,
+            mode=request.mode,
+            target_words=request.target_words,
+            selected_text=request.selected_text,
+            style_reference_story_title=request.style_reference_story_title,
+            style_reference_series_title=request.style_reference_series_title,
+            style_reference_author=request.style_reference_author,
+        )
+        story_context = get_story_context(
+            db,
+            story_id=sanitized_request.story_id,
+            chapter_id=sanitized_request.chapter_id,
+        )
+        style_profile = get_author_style_profile(story_context)
+        lorebook_section = self._build_lorebook_section(
+            db,
+            sanitized_request.story_id or (story_context.get("story") or {}).get("story_id"),
+            context,
+        )
+
+        if not settings.AI_AGENT_ENABLED or not (settings.GEMINI_API_KEY or "").strip() or (settings.GEMINI_API_KEY or "").strip().lower() in PLACEHOLDER_VALUES:
+            fallback_res = build_fallback_response(
+                sanitized_request,
+                "AI agent mode is disabled.",
+                story_context=story_context,
+            )
+            # Yield fallback response serialized as json
+            yield json.dumps(fallback_res.model_dump())
+            return
+
+        try:
+            system_prompt, user_prompt = self._build_prompt(
+                sanitized_request, context, story_context, style_profile,
+                lorebook_section=lorebook_section,
+            )
+            is_write_chapter = normalize_mode(request.mode) == "write_chapter"
+            response_schema = {
+                "type": "OBJECT",
+                "properties": {
+                    "suggestions": {
+                        "type": "ARRAY",
+                        "items": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "title": {"type": "STRING"},
+                                "content": {"type": "STRING"},
+                                "reason": {"type": "STRING"},
+                                "insertable_text": {"type": "STRING"},
+                                "quality_score": {"type": "NUMBER"}
+                            },
+                            "required": ["title", "content", "reason", "insertable_text", "quality_score"]
+                        }
+                    }
+                },
+                "required": ["suggestions"]
+            }
+
+            async for chunk in self.gateway.generate_stream(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=0.85 if is_write_chapter else 0.75,
+                max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
+                model=settings.GEMINI_STRONG_MODEL,
+                response_schema=response_schema,
+            ):
+                yield chunk
+        except Exception as exc:
+            logger.warning("Writing agent stream failed: %s", type(exc).__name__)
+            fallback_res = build_fallback_response(
+                sanitized_request,
+                str(exc),
+                story_context=story_context,
+            )
+            yield json.dumps(fallback_res.model_dump())
+
 
 class RecommendationAgent:
     def __init__(self, gateway: GeminiGateway | None = None) -> None:
@@ -646,7 +817,7 @@ class RecommendationAgent:
         limit: int,
     ) -> tuple[str, str]:
         system_prompt = (
-            RECOMMENDATION_CURATOR_SKILL.strip()
+            RECOMMENDATION_CURATOR_PROMPT.strip()
             + "\nReturn JSON only with this exact shape: "
             '{"ranking":[{"story_id":"...","reason":"...",'
             '"match_tags":["..."],"source":"llm_rerank"}]}. '

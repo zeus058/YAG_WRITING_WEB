@@ -1,20 +1,18 @@
 """
-AI Smart Novel Engine & pgvector Search Routing Handler.
-Assigned Member: Pham Huong Tra (U006, U008, U009 - TC-013 to TC-015).
+AI Smart Novel Engine — Simplified routing handler.
+Removed legacy MCP manifest and tool listing endpoints.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.ai.tools import build_mcp_manifest, list_tool_definitions
 from app.schemas.ai import (
-    AIMcpManifestResponse,
     AISuggestionRequest,
     AISuggestionResponse,
-    AIToolDefinition,
 )
-from app.services.ai_service import generate_ai_suggestions
+from app.services.ai_service import generate_ai_suggestions, stream_ai_suggestions
 
 router = APIRouter()
 
@@ -33,19 +31,15 @@ async def ai_suggestions(
     return await generate_ai_suggestions(payload, db=db)
 
 
-@router.get(
-    "/tools",
-    response_model=list[AIToolDefinition],
-    summary="List authenticated YAG AI agent tools",
+@router.post(
+    "/suggestions/stream",
+    summary="U006 - AI Streaming: sinh chữ thời gian thực (SSE)",
 )
-async def ai_tools(_token_payload=Depends(deps.require_authenticated_user)):
-    return list_tool_definitions()
-
-
-@router.get(
-    "/mcp/manifest",
-    response_model=AIMcpManifestResponse,
-    summary="MCP-compatible YAG AI tools and skills manifest",
-)
-async def ai_mcp_manifest(_token_payload=Depends(deps.require_authenticated_user)):
-    return build_mcp_manifest()
+async def ai_suggestions_stream(
+    payload: AISuggestionRequest,
+    db: Session = Depends(deps.get_db),
+    token_payload=Depends(deps.require_author_role),
+):
+    _ = token_payload
+    generator = stream_ai_suggestions(payload, db=db)
+    return StreamingResponse(generator, media_type="text/event-stream")

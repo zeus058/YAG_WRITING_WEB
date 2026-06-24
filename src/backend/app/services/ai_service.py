@@ -47,6 +47,7 @@ __all__ = [
     "search_stories_semantic",
     "sync_story_embedding",
     "truncate_context",
+    "stream_ai_suggestions",
 ]
 
 
@@ -82,6 +83,20 @@ async def generate_ai_suggestions(
     request: AISuggestionRequest, db: Any = None
 ) -> AISuggestionResponse:
     return await WritingAgent().generate(request, db=db)
+
+
+async def stream_ai_suggestions(
+    request: AISuggestionRequest, db: Any = None
+):
+    import json
+    try:
+        async for chunk in WritingAgent().generate_stream(request, db=db):
+            yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+    except Exception as exc:
+        logger.error("Error in streaming suggestions: %s", exc)
+        yield f"data: {json.dumps({'error': str(exc)}, ensure_ascii=False)}\n\n"
+    finally:
+        yield "data: {\"done\": true}\n\n"
 
 
 async def _generate_text_embedding(value: str) -> list[float]:

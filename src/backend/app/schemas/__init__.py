@@ -62,9 +62,6 @@ from app.schemas.ai import (
     AISemanticSearchResponse,
     AIRecommendationItem,
     AIRecommendationResponse,
-    AIToolDefinition,
-    AISkillDefinition,
-    AIMcpManifestResponse,
 )
 
 __all__ = [
@@ -120,8 +117,5 @@ __all__ = [
     "AISemanticSearchResponse",
     "AIRecommendationItem",
     "AIRecommendationResponse",
-    "AIToolDefinition",
-    "AISkillDefinition",
-    "AIMcpManifestResponse",
 ]
 

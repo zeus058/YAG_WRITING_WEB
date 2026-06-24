@@ -213,3 +213,67 @@ class GeminiGateway:
         if not isinstance(values, list) or not values:
             raise GeminiResponseError("Gemini embedding response is invalid.")
         return [float(value) for value in values]
+
+    async def generate_stream(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.4,
+        max_output_tokens: int | None = None,
+        model: str | None = None,
+        response_schema: dict[str, Any] | None = None,
+    ):
+        payload = self._generation_payload(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            response_schema=response_schema,
+        )
+        url = self._url(model or settings.GEMINI_MODEL, "streamGenerateContent")
+
+        async with httpx.AsyncClient(timeout=settings.GEMINI_TIMEOUT_SECONDS) as client:
+            async with client.stream("POST", url, json=payload) as response:
+                response.raise_for_status()
+
+                buffer = ""
+                brace_count = 0
+                in_string = False
+                escape = False
+
+                async for chunk in response.aiter_text():
+                    for char in chunk:
+                        buffer += char
+                        if escape:
+                            escape = False
+                            continue
+                        if char == "\\":
+                            escape = True
+                            continue
+                        if char == '"':
+                            in_string = not in_string
+                            continue
+                        if not in_string:
+                            if char == "{":
+                                brace_count += 1
+                            elif char == "}":
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    try:
+                                        obj_str = buffer.strip().lstrip(",").lstrip("[").strip()
+                                        if obj_str.startswith("{") and obj_str.endswith("}"):
+                                            obj = json.loads(obj_str)
+                                            text_val = ""
+                                            candidates = obj.get("candidates") or []
+                                            if candidates:
+                                                parts = candidates[0].get("content", {}).get("parts", [])
+                                                for part in parts:
+                                                    if "text" in part:
+                                                        text_val += part["text"]
+                                            if text_val:
+                                                yield text_val
+                                    except Exception as e:
+                                        logger.warning("Error parsing stream chunk: %s", e)
+                                    buffer = ""
+

@@ -1,6 +1,7 @@
 """Pydantic schemas for Lorebook (story_lores) CRUD."""
 
-from pydantic import BaseModel, Field
+import uuid
+from pydantic import BaseModel, Field, ConfigDict
 
 
 VALID_ENTITY_TYPES = {"character", "location", "item", "skill", "other"}
@@ -19,11 +20,10 @@ class LoreUpdate(BaseModel):
 
 
 class LoreOut(BaseModel):
-    id: str
-    story_id: str
+    id: uuid.UUID
+    story_id: uuid.UUID
     entity_name: str
     entity_type: str
     description: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

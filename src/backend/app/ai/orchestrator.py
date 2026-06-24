@@ -55,7 +55,7 @@ from app.ai.tools import (
     get_story_context,
     safe_truncate,
 )
-from app.core.config import settings
+from app.core.config import PLACEHOLDER_VALUES, settings
 from app.schemas.ai import (
     AIRecommendationItem,
     AISuggestionItem,

@@ -1881,7 +1881,7 @@ export function AuthorStudioScreen() {
                       return <p key={idx} style={{ marginBottom: 12, minHeight: "1em" }}>{parseInlineMarkdown(para)}</p>;
                     })
                   ) : (
-                    <p style={{ color: "var(--muted)" }}>Chưa có nội dung viết. Hãy nhấn nút "Sửa" và bắt đầu viết.</p>
+                    <p style={{ color: "var(--muted)" }}>Chưa có nội dung viết. Hãy nhấn nút &quot;Sửa&quot; và bắt đầu viết.</p>
                   )}
                 </div>
               ) : (

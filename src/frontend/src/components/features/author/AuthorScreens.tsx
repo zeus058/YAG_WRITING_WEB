@@ -891,7 +891,6 @@ export function AuthorStudioScreen() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiResponseMeta, setAiResponseMeta] = useState<AiResponseMeta | null>(null);
   const [selectedDraftText, setSelectedDraftText] = useState("");
-  const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
 
   const [storyProfile, setStoryProfile] = useState<any>(null);
   const [styleReference, setStyleReference] = useState<StyleReferenceState>({
@@ -902,9 +901,8 @@ export function AuthorStudioScreen() {
   const [styleReferenceSaving, setStyleReferenceSaving] = useState(false);
   const [styleReferenceMessage, setStyleReferenceMessage] = useState<string | null>(null);
 
-  // Style Reference Modal + Author stories count
+  // Style Reference Modal
   const [isStyleReferenceModalOpen, setIsStyleReferenceModalOpen] = useState(false);
-  const [authorStoriesCount, setAuthorStoriesCount] = useState(0);
 
   // AI Co-Writer states ("write_chapter" mode)
   const [coWriterPrompt, setCoWriterPrompt] = useState("");
@@ -920,13 +918,8 @@ export function AuthorStudioScreen() {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [activeHighlightColor, setActiveHighlightColor] = useState("#fef08a");
 
-  // History stack for Undo/Redo
-  const [historyStack, setHistoryStack] = useState<string[]>([]);
-  const [redoStack, setRedoStack] = useState<string[]>([]);
-
   const wsRef = useRef<any>(null);
   const debounceTimerRef = useRef<any>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const wysiwygRangeRef = useRef<Range | null>(null);
 
@@ -952,13 +945,6 @@ export function AuthorStudioScreen() {
         });
       }
 
-      // Fetch author stories count for style reference modal visibility
-      try {
-        const storiesRes = await yagApi.author.getStories();
-        setAuthorStoriesCount((storiesRes.data || []).length);
-      } catch {
-        setAuthorStoriesCount(0);
-      }
 
       if (chaps.length > 0) {
         const preferredChapter = [...chaps].reverse().find(isAuthorDraftChapter) || chaps[chaps.length - 1];
@@ -1215,12 +1201,6 @@ export function AuthorStudioScreen() {
     triggerAutosave(editorTitle, md);
   };
 
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setEditorContent(val);
-    triggerAutosave(editorTitle, val);
-  };
-
   const syncSelectedDraftText = () => {
     if (typeof window === "undefined") return;
     const selection = window.getSelection();
@@ -1237,8 +1217,6 @@ export function AuthorStudioScreen() {
   };
 
   const commitEditorContent = (updated: string) => {
-    setHistoryStack((prev) => [...prev.slice(-49), editorContent]);
-    setRedoStack([]);
     setEditorContent(updated);
     triggerAutosave(editorTitle, updated);
 
@@ -1572,8 +1550,6 @@ export function AuthorStudioScreen() {
     setEditorTitle(chap.title);
     setEditorContent(chap.content);
     setSaveError(null);
-    setHistoryStack([]);
-    setRedoStack([]);
   };
 
   const isEditingDisabled = activeChapter && activeChapter.moderation_status && activeChapter.moderation_status !== "draft" && activeChapter.moderation_status !== "nháp";
@@ -2457,7 +2433,7 @@ export function AuthorStudioScreen() {
               <div className="agent-action-grid" style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
                 {coWriterDrafts.length === 0 ? (
                   <div className="ai-empty-result" style={{ textAlign: "center", padding: "16px", color: "var(--text-secondary)", fontSize: "0.8rem", border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 8 }}>
-                    Chưa có bản nháp. Nhập ý tưởng và bấm "Chạy AI Agent viết chương" để bắt đầu.
+                    Chưa có bản nháp. Nhập ý tưởng và bấm &quot;Chạy AI Agent viết chương&quot; để bắt đầu.
                   </div>
                 ) : (
                   coWriterDrafts.map((draft, idx) => {

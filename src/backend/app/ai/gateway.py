@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -16,6 +17,35 @@ from app.core.config import PLACEHOLDER_VALUES, settings
 logger = logging.getLogger(__name__)
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+
+
+class _RateLimiter:
+    """Process-wide token-bucket rate limiter for Gemini API calls."""
+
+    def __init__(self, rpm: int = 10) -> None:
+        self._interval = 60.0 / max(rpm, 1)
+        self._async_lock = asyncio.Lock()
+        self._sync_lock = threading.Lock()
+        self._last_call: float = 0.0
+
+    async def acquire_async(self) -> None:
+        async with self._async_lock:
+            now = time.monotonic()
+            wait = self._interval - (now - self._last_call)
+            if wait > 0:
+                await asyncio.sleep(wait)
+            self._last_call = time.monotonic()
+
+    def acquire_sync(self) -> None:
+        with self._sync_lock:
+            now = time.monotonic()
+            wait = self._interval - (now - self._last_call)
+            if wait > 0:
+                time.sleep(wait)
+            self._last_call = time.monotonic()
+
+
+_rate_limiter = _RateLimiter(rpm=settings.GEMINI_RPM_LIMIT)
 
 
 class GeminiGatewayError(RuntimeError):
@@ -72,6 +102,9 @@ def _extract_text(data: dict[str, Any]) -> str:
 def _should_retry(exc: Exception) -> bool:
     if isinstance(exc, httpx.HTTPStatusError):
         status_code = exc.response.status_code
+        # 404 = wrong model or endpoint — never retry
+        if status_code in (401, 403, 404):
+            return False
         return status_code == 429 or status_code >= 500
     return isinstance(
         exc,
@@ -88,7 +121,7 @@ def _should_retry(exc: Exception) -> bool:
 class GeminiGateway:
     """Small REST adapter that centralizes Gemini retries and JSON parsing."""
 
-    max_retries: int = 4
+    max_retries: int = 2
 
     def _url(self, model: str, action: str) -> str:
         if not gemini_api_key_configured():
@@ -123,6 +156,7 @@ class GeminiGateway:
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
             try:
+                await _rate_limiter.acquire_async()
                 async with httpx.AsyncClient(
                     timeout=settings.GEMINI_TIMEOUT_SECONDS
                 ) as client:
@@ -134,7 +168,8 @@ class GeminiGateway:
                 if attempt >= self.max_retries or not _should_retry(exc):
                     break
                 is_429 = isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429
-                delay = 2.0 * (2 ** attempt) if is_429 else min(0.25 * (attempt + 1), 1.0)
+                delay = 5.0 * (2 ** attempt) if is_429 else min(0.5 * (attempt + 1), 2.0)
+                logger.info("Gemini retry %d/%d in %.1fs (%s)", attempt + 1, self.max_retries, delay, type(exc).__name__)
                 await asyncio.sleep(delay)
 
         logger.warning("Gemini async request failed: %s", type(last_error).__name__)
@@ -144,6 +179,7 @@ class GeminiGateway:
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
             try:
+                _rate_limiter.acquire_sync()
                 with httpx.Client(timeout=settings.GEMINI_TIMEOUT_SECONDS) as client:
                     response = client.post(url, json=payload)
                     response.raise_for_status()
@@ -153,7 +189,8 @@ class GeminiGateway:
                 if attempt >= self.max_retries or not _should_retry(exc):
                     break
                 is_429 = isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429
-                delay = 2.0 * (2 ** attempt) if is_429 else min(0.25 * (attempt + 1), 1.0)
+                delay = 5.0 * (2 ** attempt) if is_429 else min(0.5 * (attempt + 1), 2.0)
+                logger.info("Gemini retry %d/%d in %.1fs (%s)", attempt + 1, self.max_retries, delay, type(exc).__name__)
                 time.sleep(delay)
 
         logger.warning("Gemini sync request failed: %s", type(last_error).__name__)
@@ -247,6 +284,7 @@ class GeminiGateway:
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
             try:
+                await _rate_limiter.acquire_async()
                 async with httpx.AsyncClient(timeout=settings.GEMINI_TIMEOUT_SECONDS) as client:
                     async with client.stream("POST", url, json=payload) as response:
                         response.raise_for_status()
@@ -296,8 +334,37 @@ class GeminiGateway:
                 if attempt >= self.max_retries or not _should_retry(exc):
                     break
                 is_429 = isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429
-                delay = 2.0 * (2 ** attempt) if is_429 else min(0.25 * (attempt + 1), 1.0)
+                delay = 5.0 * (2 ** attempt) if is_429 else min(0.5 * (attempt + 1), 2.0)
+                logger.info("Gemini stream retry %d/%d in %.1fs (%s)", attempt + 1, self.max_retries, delay, type(exc).__name__)
                 await asyncio.sleep(delay)
 
         logger.warning("Gemini stream request failed: %s", type(last_error).__name__)
         raise GeminiGatewayError("Gemini stream request failed.") from last_error
+
+    async def verify_connection(self) -> dict[str, Any]:
+        """Call models.list to verify API key works. Called once at startup."""
+        if not gemini_api_key_configured():
+            return {"status": "skipped", "reason": "API key not configured"}
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models?key={settings.GEMINI_API_KEY}"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                models = resp.json().get("models", [])
+                model_names = [m.get("name", "") for m in models[:50]]
+                configured = [
+                    settings.GEMINI_MODEL,
+                    settings.GEMINI_STRONG_MODEL,
+                    settings.GEMINI_FAST_MODEL,
+                    settings.GEMINI_MODERATION_MODEL,
+                    settings.GEMINI_EMBEDDING_MODEL,
+                ]
+                available = {n.split("/")[-1] for n in model_names}
+                missing = [m for m in set(configured) if m not in available]
+                return {
+                    "status": "ok" if not missing else "warning",
+                    "available_count": len(models),
+                    "missing_models": missing,
+                }
+        except Exception as exc:
+            return {"status": "error", "reason": f"{type(exc).__name__}: {exc}"}

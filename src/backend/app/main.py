@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import UUID
@@ -27,6 +28,8 @@ from app.services.schedule_service import (
     start_schedule_scheduler,
 )
 
+logger = logging.getLogger(__name__)
+
 
 async def periodic_view_count_flush() -> None:
     while True:
@@ -45,6 +48,30 @@ async def lifespan(app: FastAPI):
     # Schema lifecycle is owned by versioned SQL migrations. Startup only starts
     # configured background tasks and checks are exposed through /health/ready.
     start_schedule_scheduler()
+
+    # Gemini API health check — validates key and model availability at startup
+    if settings.AI_AGENT_ENABLED:
+        from app.ai.gateway import GeminiGateway
+        health = await GeminiGateway().verify_connection()
+        if health["status"] == "error":
+            logger.error(
+                "\u26a0\ufe0f  Gemini API health check FAILED: %s  "
+                "AI features will NOT work. Check GEMINI_API_KEY in .env",
+                health.get("reason"),
+            )
+        elif health.get("missing_models"):
+            logger.warning(
+                "\u26a0\ufe0f  Gemini models not found in account: %s  "
+                "These AI features may fail at runtime.",
+                health["missing_models"],
+            )
+        elif health["status"] == "ok":
+            logger.info(
+                "\u2705 Gemini API verified: %d models available",
+                health.get("available_count", 0),
+            )
+        else:
+            logger.info("Gemini API check: %s", health.get("reason", "skipped"))
 
     if settings.AI_AGENT_ENABLED and settings.AI_STARTUP_BACKFILL_ENABLED:
         from app.services.ai_service import sync_all_missing_embeddings_async

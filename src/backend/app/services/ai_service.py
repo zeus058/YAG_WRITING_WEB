@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, Iterable
 
@@ -517,6 +518,8 @@ async def sync_all_missing_embeddings_async() -> int:
             try:
                 await sync_story_embedding(db, str(story_id), description or "")
                 count += 1
+                # Sleep to stay within Gemini API Free Tier rate limit (15 requests per minute = 4s/request)
+                await asyncio.sleep(4.5)
             except Exception as e:
                 logger.error("Failed to sync embedding for story %s: %s", story_id, e)
         return count
@@ -525,4 +528,3 @@ async def sync_all_missing_embeddings_async() -> int:
         return 0
     finally:
         db.close()
-

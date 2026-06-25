@@ -826,6 +826,7 @@ export function AuthorStudioScreen() {
   const [coWriterPrompt, setCoWriterPrompt] = useState("");
   const [coWriterDrafts, setCoWriterDrafts] = useState<any[]>([]);
   const [coWriterLoading, setCoWriterLoading] = useState(false);
+  const [coWriterTargetWords, setCoWriterTargetWords] = useState(500);
   const [coWriterError, setCoWriterError] = useState<string | null>(null);
   const [coWriterMeta, setCoWriterMeta] = useState<AiResponseMeta | null>(null);
 
@@ -1504,7 +1505,7 @@ export function AuthorStudioScreen() {
         context: contextText,
         mode: "write_chapter" as any,
         selectedText: undefined,
-        targetWords: 800,
+        targetWords: coWriterTargetWords,
         styleReferenceStoryTitle: styleReference.storyTitle.trim() || undefined,
         styleReferenceSeriesTitle: styleReference.seriesTitle.trim() || undefined,
         styleReferenceAuthor: styleReference.author.trim() || undefined,
@@ -2007,19 +2008,26 @@ export function AuthorStudioScreen() {
                 ))}
               </div>
 
-              <div className="ai-target-control">
-                <label htmlFor="ai-target-words">Độ dài mục tiêu</label>
+              <div className="ai-target-control" style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label htmlFor="ai-target-words" style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--text-primary)" }}>
+                    Độ dài gợi ý: <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>{aiTargetWords} từ</span>
+                  </label>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Tối đa: 1.000 từ</span>
+                </div>
                 <input
                   id="ai-target-words"
-                  className="input"
-                  type="number"
+                  type="range"
                   min={50}
-                  max={1200}
-                  step={10}
+                  max={1000}
+                  step={50}
                   value={aiTargetWords}
-                  onChange={(event) => setAiTargetWords(Math.max(50, Math.min(1200, Number(event.target.value) || 240)))}
+                  onChange={(event) => setAiTargetWords(Number(event.target.value))}
+                  style={{ width: "100%", accentColor: "var(--color-primary)", cursor: "pointer", height: "6px", borderRadius: "3px" }}
                 />
-                <span>{aiTargetWords.toLocaleString("vi-VN")} từ</span>
+                <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", margin: 0, fontStyle: "italic", lineHeight: "1.3" }}>
+                  * Khuyên dùng 200 - 500 từ để nhận phản hồi nhanh nhất và tránh lỗi nghẽn hạn ngạch API.
+                </p>
               </div>
 
               <div className={`selected-draft-card ${selectedDraftText ? "has-selection" : ""}`}>
@@ -2133,7 +2141,7 @@ export function AuthorStudioScreen() {
                 <p>Mô tả ý tưởng chương truyện, AI sẽ viết toàn bộ nội dung cho bạn. Bạn có thể chỉnh sửa sau khi chép vào trang viết.</p>
               </div>
 
-              <div className="agent-compose" style={{ marginBottom: 12 }}>
+              <div className="agent-compose" style={{ marginBottom: 16 }}>
                 <textarea
                   className="textarea"
                   rows={4}
@@ -2141,12 +2149,38 @@ export function AuthorStudioScreen() {
                   onChange={(e) => setCoWriterPrompt(e.target.value)}
                   placeholder="Ý tưởng viết chương: ví dụ 'Viết chương 1 kể về một chiến binh đi thám hiểm đền cổ, phát hiện bí ẩn gia tộc...'" 
                   disabled={isEditingDisabled}
+                  style={{ marginBottom: 12 }}
                 />
+
+                <div className="ai-target-control" style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label htmlFor="co-writer-target-words" style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--text-primary)" }}>
+                      Độ dài chương cần sinh: <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>{coWriterTargetWords} từ</span>
+                    </label>
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Tối đa: 1.000 từ</span>
+                  </div>
+                  <input
+                    id="co-writer-target-words"
+                    type="range"
+                    min={200}
+                    max={1000}
+                    step={50}
+                    value={coWriterTargetWords}
+                    onChange={(event) => setCoWriterTargetWords(Number(event.target.value))}
+                    disabled={isEditingDisabled}
+                    style={{ width: "100%", accentColor: "var(--color-primary)", cursor: "pointer", height: "6px", borderRadius: "3px" }}
+                  />
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", margin: 0, fontStyle: "italic", lineHeight: "1.3" }}>
+                    * Khuyên dùng 400 - 600 từ để quá trình viết diễn ra ổn định và nhanh chóng nhất.
+                  </p>
+                </div>
+
                 <button
                   className="button button-primary"
                   type="button"
                   onClick={handleCoWriterGenerate}
                   disabled={coWriterLoading || !coWriterPrompt.trim() || isEditingDisabled}
+                  style={{ width: "100%", justifyContent: "center" }}
                 >
                   <Icon name="edit" /> {coWriterLoading ? "Miu đang viết chương..." : "Chạy AI Agent viết chương"}
                 </button>

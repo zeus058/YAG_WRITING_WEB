@@ -88,7 +88,7 @@ def _should_retry(exc: Exception) -> bool:
 class GeminiGateway:
     """Small REST adapter that centralizes Gemini retries and JSON parsing."""
 
-    max_retries: int = 2
+    max_retries: int = 4
 
     def _url(self, model: str, action: str) -> str:
         if not gemini_api_key_configured():
@@ -244,46 +244,60 @@ class GeminiGateway:
         )
         url = self._url(model or settings.GEMINI_MODEL, "streamGenerateContent")
 
-        async with httpx.AsyncClient(timeout=settings.GEMINI_TIMEOUT_SECONDS) as client:
-            async with client.stream("POST", url, json=payload) as response:
-                response.raise_for_status()
+        last_error: Exception | None = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=settings.GEMINI_TIMEOUT_SECONDS) as client:
+                    async with client.stream("POST", url, json=payload) as response:
+                        response.raise_for_status()
 
-                buffer = ""
-                brace_count = 0
-                in_string = False
-                escape = False
+                        buffer = ""
+                        brace_count = 0
+                        in_string = False
+                        escape = False
 
-                async for chunk in response.aiter_text():
-                    for char in chunk:
-                        buffer += char
-                        if escape:
-                            escape = False
-                            continue
-                        if char == "\\":
-                            escape = True
-                            continue
-                        if char == '"':
-                            in_string = not in_string
-                            continue
-                        if not in_string:
-                            if char == "{":
-                                brace_count += 1
-                            elif char == "}":
-                                brace_count -= 1
-                                if brace_count == 0:
-                                    try:
-                                        obj_str = buffer.strip().lstrip(",").lstrip("[").strip()
-                                        if obj_str.startswith("{") and obj_str.endswith("}"):
-                                            obj = json.loads(obj_str)
-                                            text_val = ""
-                                            candidates = obj.get("candidates") or []
-                                            if candidates:
-                                                parts = candidates[0].get("content", {}).get("parts", [])
-                                                for part in parts:
-                                                    if "text" in part:
-                                                        text_val += part["text"]
-                                            if text_val:
-                                                yield text_val
-                                    except Exception as e:
-                                        logger.warning("Error parsing stream chunk: %s", e)
-                                    buffer = ""
+                        async for chunk in response.aiter_text():
+                            for char in chunk:
+                                buffer += char
+                                if escape:
+                                    escape = False
+                                    continue
+                                if char == "\\":
+                                    escape = True
+                                    continue
+                                if char == '"':
+                                    in_string = not in_string
+                                    continue
+                                if not in_string:
+                                    if char == "{":
+                                        brace_count += 1
+                                    elif char == "}":
+                                        brace_count -= 1
+                                        if brace_count == 0:
+                                            try:
+                                                obj_str = buffer.strip().lstrip(",").lstrip("[").strip()
+                                                if obj_str.startswith("{") and obj_str.endswith("}"):
+                                                    obj = json.loads(obj_str)
+                                                    text_val = ""
+                                                    candidates = obj.get("candidates") or []
+                                                    if candidates:
+                                                        parts = candidates[0].get("content", {}).get("parts", [])
+                                                        for part in parts:
+                                                            if "text" in part:
+                                                                text_val += part["text"]
+                                                    if text_val:
+                                                        yield text_val
+                                            except Exception as e:
+                                                logger.warning("Error parsing stream chunk: %s", e)
+                                            buffer = ""
+                        return  # Stream completed successfully
+            except Exception as exc:
+                last_error = exc
+                if attempt >= self.max_retries or not _should_retry(exc):
+                    break
+                is_429 = isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429
+                delay = 2.0 * (2 ** attempt) if is_429 else min(0.25 * (attempt + 1), 1.0)
+                await asyncio.sleep(delay)
+
+        logger.warning("Gemini stream request failed: %s", type(last_error).__name__)
+        raise GeminiGatewayError("Gemini stream request failed.") from last_error

@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     GEMINI_FAST_MODEL: str = "gemini-2.5-flash"
     GEMINI_MODERATION_MODEL: str = "gemini-2.5-pro"
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
-    GEMINI_MAX_OUTPUT_TOKENS: int = 8192
+    GEMINI_MAX_OUTPUT_TOKENS: int = 2048
 
     # Database Settings
     DATABASE_URL: Optional[str] = None
@@ -124,11 +124,11 @@ class Settings(BaseSettings):
     CLOUDINARY_COVER_FOLDER: str = "yag/covers"
 
     GEMINI_TIMEOUT_SECONDS: float = 30.0
-    AI_CONTEXT_WORD_LIMIT: int = 1000
+    AI_CONTEXT_WORD_LIMIT: int = 500
     AI_AGENT_ENABLED: bool = True
     AI_TOOL_TRACE_ENABLED: bool = False
     AI_MODERATION_STRICT_MODE: bool = True
-    AI_MAX_CONTEXT_CHARS: int = 12000
+    AI_MAX_CONTEXT_CHARS: int = 4000
     AI_AUTHOR_STYLE_CHAPTER_LIMIT: int = 12
     AI_RECOMMENDATION_CANDIDATE_LIMIT: int = 20
     AI_MODERATION_APPROVE_THRESHOLD: float = 0.72

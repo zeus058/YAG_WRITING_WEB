@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
     # configured background tasks and checks are exposed through /health/ready.
     start_schedule_scheduler()
 
-    if settings.AI_AGENT_ENABLED:
+    if settings.AI_AGENT_ENABLED and settings.AI_STARTUP_BACKFILL_ENABLED:
         from app.services.ai_service import sync_all_missing_embeddings_async
         asyncio.create_task(sync_all_missing_embeddings_async())
 

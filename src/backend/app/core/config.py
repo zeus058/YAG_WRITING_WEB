@@ -126,6 +126,7 @@ class Settings(BaseSettings):
     GEMINI_TIMEOUT_SECONDS: float = 30.0
     AI_CONTEXT_WORD_LIMIT: int = 500
     AI_AGENT_ENABLED: bool = True
+    AI_STARTUP_BACKFILL_ENABLED: bool = False
     AI_TOOL_TRACE_ENABLED: bool = False
     AI_MODERATION_STRICT_MODE: bool = True
     AI_MAX_CONTEXT_CHARS: int = 4000

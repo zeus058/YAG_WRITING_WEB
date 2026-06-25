@@ -75,10 +75,10 @@ class Settings(BaseSettings):
 
     # AI Engine & Gemini API
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
-    GEMINI_STRONG_MODEL: str = "gemini-2.5-pro"
-    GEMINI_FAST_MODEL: str = "gemini-2.5-flash"
-    GEMINI_MODERATION_MODEL: str = "gemini-2.5-pro"
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_STRONG_MODEL: str = "gemini-1.5-pro"
+    GEMINI_FAST_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODERATION_MODEL: str = "gemini-1.5-pro"
     GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
     GEMINI_MAX_OUTPUT_TOKENS: int = 8192
 

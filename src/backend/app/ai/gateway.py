@@ -133,7 +133,9 @@ class GeminiGateway:
                 last_error = exc
                 if attempt >= self.max_retries or not _should_retry(exc):
                     break
-                await asyncio.sleep(min(0.25 * (attempt + 1), 1.0))
+                is_429 = isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429
+                delay = 2.0 * (2 ** attempt) if is_429 else min(0.25 * (attempt + 1), 1.0)
+                await asyncio.sleep(delay)
 
         logger.warning("Gemini async request failed: %s", type(last_error).__name__)
         raise GeminiGatewayError("Gemini request failed.") from last_error
@@ -150,7 +152,9 @@ class GeminiGateway:
                 last_error = exc
                 if attempt >= self.max_retries or not _should_retry(exc):
                     break
-                time.sleep(min(0.25 * (attempt + 1), 1.0))
+                is_429 = isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429
+                delay = 2.0 * (2 ** attempt) if is_429 else min(0.25 * (attempt + 1), 1.0)
+                time.sleep(delay)
 
         logger.warning("Gemini sync request failed: %s", type(last_error).__name__)
         raise GeminiGatewayError("Gemini request failed.") from last_error

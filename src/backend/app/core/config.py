@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     GEMINI_FAST_MODEL: str = "gemini-2.5-flash"
     GEMINI_MODERATION_MODEL: str = "gemini-2.5-flash"
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
-    GEMINI_MAX_OUTPUT_TOKENS: int = 2048
+    GEMINI_MAX_OUTPUT_TOKENS: int = 8192
 
     # Database Settings
     DATABASE_URL: Optional[str] = None

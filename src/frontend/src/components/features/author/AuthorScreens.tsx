@@ -776,6 +776,90 @@ const parseInlineMarkdown = (text: string): React.ReactNode[] => {
   });
 };
 
+const convertInlineHtmlToMarkdown = (html: string): string => {
+  if (!html) return "";
+  return html
+    .replace(/<strong>(.*?)<\/strong>/gi, "**$1**")
+    .replace(/<b>(.*?)<\/b>/gi, "**$1**")
+    .replace(/<em>(.*?)<\/em>/gi, "*$1*")
+    .replace(/<i>(.*?)<\/i>/gi, "*$1*")
+    .replace(/<u>(.*?)<\/u>/gi, "<u>$1</u>")
+    .replace(/<mark>(.*?)<\/mark>/gi, "<mark>$1</mark>")
+    .replace(/<br>/gi, "");
+};
+
+const htmlToMarkdown = (html: string): string => {
+  if (!html) return "";
+  if (typeof document === "undefined") return html;
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = html;
+
+  const lines: string[] = [];
+  const children = Array.from(tempDiv.childNodes);
+  
+  for (const node of children) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      const tag = el.tagName.toLowerCase();
+      
+      if (tag.startsWith("h") && tag.length === 2) {
+        const level = parseInt(tag[1]) - 1;
+        lines.push("#".repeat(Math.max(1, level)) + " " + convertInlineHtmlToMarkdown(el.innerHTML));
+      } else if (tag === "blockquote") {
+        lines.push("> " + convertInlineHtmlToMarkdown(el.innerHTML));
+      } else if (tag === "p") {
+        if (el.innerHTML === "<br>" || el.innerHTML === "" || el.textContent === "") {
+          lines.push("");
+        } else {
+          lines.push(convertInlineHtmlToMarkdown(el.innerHTML));
+        }
+      } else {
+        lines.push(convertInlineHtmlToMarkdown(el.innerHTML));
+      }
+    } else if (node.nodeType === Node.TEXT_NODE) {
+      lines.push(node.textContent || "");
+    }
+  }
+  
+  return lines.join("\n");
+};
+
+const parseInlineMarkdownToHtml = (text: string): string => {
+  let html = text;
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  return html;
+};
+
+const markdownToHtml = (md: string): string => {
+  if (!md) return "";
+  return md
+    .split("\n")
+    .map((line) => {
+      let trimmed = line.trim();
+      if (trimmed.startsWith("#")) {
+        let level = 0;
+        while (trimmed.startsWith("#")) {
+          level++;
+          trimmed = trimmed.substring(1);
+        }
+        let headingText = trimmed.trim();
+        headingText = parseInlineMarkdownToHtml(headingText);
+        return `<h${Math.min(level + 1, 6)}>${headingText}</h${Math.min(level + 1, 6)}>`;
+      }
+      if (trimmed.startsWith(">")) {
+        let quoteText = trimmed.replace(/^>\s*/, "");
+        quoteText = parseInlineMarkdownToHtml(quoteText);
+        return `<blockquote>${quoteText}</blockquote>`;
+      }
+      if (trimmed === "") {
+        return "<p><br></p>";
+      }
+      return `<p>${parseInlineMarkdownToHtml(line)}</p>`;
+    })
+    .join("");
+};
+
 export function AuthorStudioScreen() {
   const params = useParams();
   const storyId = params?.id as string;
@@ -833,6 +917,8 @@ export function AuthorStudioScreen() {
   // Preview Modal
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [activeHighlightColor, setActiveHighlightColor] = useState("#fef08a");
 
   // History stack for Undo/Redo
   const [historyStack, setHistoryStack] = useState<string[]>([]);
@@ -841,6 +927,8 @@ export function AuthorStudioScreen() {
   const wsRef = useRef<any>(null);
   const debounceTimerRef = useRef<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const wysiwygRangeRef = useRef<Range | null>(null);
 
   const loadStudioData = async () => {
     setIsLoading(true);
@@ -1003,6 +1091,17 @@ export function AuthorStudioScreen() {
     }
   }, [activeChapter]);
 
+  // Load active chapter markdown into WYSIWYG editor HTML
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (editor && activeChapter) {
+      const html = markdownToHtml(activeChapter.content || "");
+      if (editor.innerHTML !== html) {
+        editor.innerHTML = html;
+      }
+    }
+  }, [activeChapter?.id]);
+
   // Setup WebSocket Autosave
   useEffect(() => {
     if (!activeChapter?.id || false) return;
@@ -1107,80 +1206,91 @@ export function AuthorStudioScreen() {
     triggerAutosave(e.target.value, editorContent);
   };
 
+  const handleWysiwygInput = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const html = editor.innerHTML;
+    const md = htmlToMarkdown(html);
+    setEditorContent(md);
+    triggerAutosave(editorTitle, md);
+  };
+
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setEditorContent(val);
     triggerAutosave(editorTitle, val);
-
-    // Simple history save on space or return keys
-    if (val.endsWith(" ") || val.endsWith("\n")) {
-      setHistoryStack((prev) => {
-        if (prev.length === 0 || prev[prev.length - 1] !== val) {
-          return [...prev.slice(-49), val];
-        }
-        return prev;
-      });
-    }
   };
 
   const syncSelectedDraftText = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = textarea.value.substring(start, end).trim();
-    setSelectionRange(end > start ? { start, end } : null);
-    setSelectedDraftText(selected.slice(0, 2000));
+    if (typeof window === "undefined") return;
+    const selection = window.getSelection();
+    if (!selection) return;
+    const selected = selection.toString().trim();
+    if (selected && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      setSelectedDraftText(selected.slice(0, 2000));
+      wysiwygRangeRef.current = range;
+    } else {
+      setSelectedDraftText("");
+      wysiwygRangeRef.current = null;
+    }
   };
 
-  const commitEditorContent = (updated: string, cursorPosition?: number) => {
+  const commitEditorContent = (updated: string) => {
     setHistoryStack((prev) => [...prev.slice(-49), editorContent]);
     setRedoStack([]);
     setEditorContent(updated);
     triggerAutosave(editorTitle, updated);
 
-    if (cursorPosition != null) {
-      setTimeout(() => {
-        const textarea = textareaRef.current;
-        if (!textarea) return;
-        textarea.focus();
-        textarea.setSelectionRange(cursorPosition, cursorPosition);
-        syncSelectedDraftText();
-      }, 50);
+    // Sync HTML content to contentEditable
+    const editor = editorRef.current;
+    if (editor) {
+      const html = markdownToHtml(updated);
+      if (editor.innerHTML !== html) {
+        editor.innerHTML = html;
+      }
     }
   };
 
   const insertSuggestion = (text: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      setEditorContent(prev => {
-        const updated = prev ? `${prev}\n\n${text}` : text;
-        triggerAutosave(editorTitle, updated);
-        return updated;
-      });
-      return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+
+    const range = wysiwygRangeRef.current;
+    if (range) {
+      range.deleteContents();
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+    } else {
+      const p = document.createElement("p");
+      p.textContent = text;
+      editor.appendChild(p);
     }
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const value = textarea.value;
-
-    const before = value.substring(0, start);
-    const after = value.substring(end);
-    const updated = `${before}${text}${after}`;
-
-    commitEditorContent(updated, start + text.length);
+    const html = editor.innerHTML;
+    const md = htmlToMarkdown(html);
+    commitEditorContent(md);
   };
 
   const replaceSelectionWithSuggestion = (text: string) => {
-    if (!selectionRange) {
+    const range = wysiwygRangeRef.current;
+    if (range) {
+      range.deleteContents();
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+
+      const editor = editorRef.current;
+      if (editor) {
+        const html = editor.innerHTML;
+        const md = htmlToMarkdown(html);
+        commitEditorContent(md);
+      }
+      setSelectedDraftText("");
+      wysiwygRangeRef.current = null;
+    } else {
       insertSuggestion(text);
-      return;
     }
-    const updated = `${editorContent.substring(0, selectionRange.start)}${text}${editorContent.substring(selectionRange.end)}`;
-    commitEditorContent(updated, selectionRange.start + text.length);
-    setSelectedDraftText("");
-    setSelectionRange(null);
   };
 
   const copySuggestion = async (text: string) => {
@@ -1229,95 +1339,46 @@ export function AuthorStudioScreen() {
     }
   };
 
-  const applyMarkdownFormat = (type: "bold" | "italic" | "underline" | "highlight") => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  const applyMarkdownFormat = (type: "bold" | "italic" | "underline" | "highlight", color: string = "#fef08a") => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selectedText = text.substring(start, end);
-
-    let formattedText = "";
     if (type === "bold") {
-      formattedText = `**${selectedText || "văn bản"}**`;
+      document.execCommand("bold", false);
     } else if (type === "italic") {
-      formattedText = `*${selectedText || "văn bản"}*`;
+      document.execCommand("italic", false);
     } else if (type === "underline") {
-      formattedText = `<u>${selectedText || "văn bản"}</u>`;
+      document.execCommand("underline", false);
     } else if (type === "highlight") {
-      formattedText = `<mark>${selectedText || "văn bản"}</mark>`;
+      document.execCommand("backColor", false, color);
     }
 
-    const newContent = text.substring(0, start) + formattedText + text.substring(end);
-    setHistoryStack((prev) => [...prev.slice(-49), editorContent]);
-    setRedoStack([]);
-    setEditorContent(newContent);
-    triggerAutosave(editorTitle, newContent);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + formattedText.length, start + formattedText.length);
-    }, 50);
+    handleWysiwygInput();
   };
 
   const handleToolbarToolClick = (tool: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
 
     if (tool === "↶") {
-      if (historyStack.length > 0) {
-        const previous = historyStack[historyStack.length - 1];
-        setRedoStack((prev) => [...prev, editorContent]);
-        setEditorContent(previous);
-        setHistoryStack((prev) => prev.slice(0, -1));
-        triggerAutosave(editorTitle, previous);
-        triggerLiveToast("Đã hoàn tác (Undo).");
-        setTimeout(() => { textareaRef.current?.focus(); }, 50);
-      } else {
-        triggerLiveToast("Không có thao tác nào để hoàn tác.", "warning");
-      }
+      document.execCommand("undo", false);
     } else if (tool === "↷") {
-      if (redoStack.length > 0) {
-        const next = redoStack[redoStack.length - 1];
-        setHistoryStack((prev) => [...prev, editorContent]);
-        setEditorContent(next);
-        setRedoStack((prev) => prev.slice(0, -1));
-        triggerAutosave(editorTitle, next);
-        triggerLiveToast("Đã khôi phục (Redo).");
-        setTimeout(() => { textareaRef.current?.focus(); }, 50);
-      } else {
-        triggerLiveToast("Không có thao tác nào để khôi phục.", "warning");
-      }
-    } else {
-      let insertText = "";
-      if (tool === "H1") {
-        insertText = "\n# ";
-      } else if (tool === "❝") {
-        insertText = "\n> ";
-      } else if (tool === "☰") {
-        insertText = "\n- ";
-      } else if (tool === "≡") {
-        insertText = "\n1. ";
-      } else if (tool === "≣") {
-        insertText = "\n---\n";
-      }
-
-      const newContent = text.substring(0, start) + insertText + text.substring(end);
-      setHistoryStack((prev) => [...prev.slice(-49), editorContent]);
-      setRedoStack([]);
-      setEditorContent(newContent);
-      triggerAutosave(editorTitle, newContent);
-
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start + insertText.length, start + insertText.length);
-      }, 50);
+      document.execCommand("redo", false);
+    } else if (tool === "H1") {
+      document.execCommand("formatBlock", false, "H2");
+    } else if (tool === "❝") {
+      document.execCommand("formatBlock", false, "BLOCKQUOTE");
+    } else if (tool === "☰") {
+      document.execCommand("justifyLeft", false);
+    } else if (tool === "≡") {
+      document.execCommand("justifyCenter", false);
+    } else if (tool === "≣") {
+      document.execCommand("justifyRight", false);
     }
+
+    handleWysiwygInput();
   };
 
   const handleAiSuggest = async () => {
@@ -1410,11 +1471,40 @@ export function AuthorStudioScreen() {
           cleanText = cleanText.substring(startIdx, endIdx + 1);
         }
 
-        const resultObj = JSON.parse(cleanText);
+        // Escape raw control characters inside JSON string values
+        let sanitizedText = "";
+        let inString = false;
+        let isEscaped = false;
+        for (let i = 0; i < cleanText.length; i++) {
+          const char = cleanText[i];
+          if (char === '"' && !isEscaped) {
+            inString = !inString;
+            sanitizedText += char;
+          } else if (inString) {
+            if (char === '\n') {
+              sanitizedText += '\\n';
+            } else if (char === '\r') {
+              sanitizedText += '\\r';
+            } else if (char === '\t') {
+              sanitizedText += '\\t';
+            } else {
+              sanitizedText += char;
+            }
+          } else {
+            sanitizedText += char;
+          }
+          if (char === '\\' && !isEscaped) {
+            isEscaped = true;
+          } else {
+            isEscaped = false;
+          }
+        }
+
+        const resultObj = JSON.parse(sanitizedText);
         setAiSuggestions(resultObj.suggestions || []);
         setAiResponseMeta({
           provider: "gemini",
-          model: "gemini-1.5-flash",
+          model: "gemini-2.5-flash",
           fallback: false,
           message: resultObj.message || null,
         });
@@ -1431,7 +1521,7 @@ export function AuthorStudioScreen() {
         ]);
         setAiResponseMeta({
           provider: "gemini",
-          model: "gemini-1.5-flash",
+          model: "gemini-2.5-flash",
           fallback: false,
           message: "Lưu ý: Kết quả được trả về dưới dạng văn bản thô.",
         });
@@ -1530,7 +1620,7 @@ export function AuthorStudioScreen() {
   const handleCoWriterInsert = (text: string, mode: "overwrite" | "insert") => {
     if (mode === "overwrite") {
       if (!confirm("Nội dung hiện tại trong editor sẽ bị thay thế hoàn toàn bởi bản nháp AI. Bạn có chắc chắn?")) return;
-      commitEditorContent(text, text.length);
+      commitEditorContent(text);
       triggerLiveToast("Đã chép bản nháp AI vào trang viết.");
     } else {
       insertSuggestion(text);
@@ -1661,66 +1751,39 @@ export function AuthorStudioScreen() {
         {/* Editor Area (Left Column - 70%) */}
         <section className="editor-area">
           {/* Writing Toolbar */}
-          <div className="writing-toolbar" aria-label="Thanh công cụ soạn thảo">
-            <div className="tool-group">
-              {["↶", "↷", "H1", "❝", "☰", "≡", "≣"].map((tool) => (
-                <button
-                  className="tool-button"
-                  type="button"
-                  title={tool}
-                  onClick={() => handleToolbarToolClick(tool)}
-                  key={tool}
-                >
-                  <span>{tool}</span>
-                </button>
-              ))}
+          <div className="writing-toolbar" aria-label="Thanh công cụ soạn thảo" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, padding: "8px 16px", background: "var(--surface)", borderBottom: "1px solid var(--line)", borderRadius: "8px 8px 0 0", marginBottom: 0 }}>
+            {/* Undo/Redo */}
+            <div className="tool-group" style={{ display: "flex", gap: 4 }}>
+              <button
+                className="tool-button"
+                type="button"
+                title="Hoàn tác (Undo)"
+                onClick={() => handleToolbarToolClick("↶")}
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
+              >
+                <span>↶</span>
+              </button>
+              <button
+                className="tool-button"
+                type="button"
+                title="Khôi phục (Redo)"
+                onClick={() => handleToolbarToolClick("↷")}
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
+              >
+                <span>↷</span>
+              </button>
             </div>
 
-            <div className="tool-group tool-group-selects">
-              <label>
-                Phông chữ
-                <select
-                  className="select compact-select"
-                  value={editorFont}
-                  onChange={(e) => setEditorFont(e.target.value)}
-                >
-                  <option value="Inter, Arial, sans-serif">Inter</option>
-                  <option value="Georgia, serif">Georgia</option>
-                  <option value="system-ui, sans-serif">System</option>
-                </select>
-              </label>
-              <label>
-                Cỡ chữ
-                <select
-                  className="select compact-select"
-                  value={editorSize}
-                  onChange={(e) => setEditorSize(e.target.value)}
-                >
-                  <option value="14px">14</option>
-                  <option value="16px">16</option>
-                  <option value="20px">20</option>
-                </select>
-              </label>
-              <label>
-                Dòng
-                <select
-                  className="select compact-select"
-                  value={editorLineHeight}
-                  onChange={(e) => setEditorLineHeight(e.target.value)}
-                >
-                  <option value="1.3">1.3</option>
-                  <option value="1.6">1.6</option>
-                  <option value="1.8">1.8</option>
-                </select>
-              </label>
-            </div>
+            <div style={{ width: "1px", height: "20px", background: "var(--line)" }} />
 
-            <div className="tool-group">
+            {/* Rich Formatting */}
+            <div className="tool-group" style={{ display: "flex", gap: 4, alignItems: "center" }}>
               <button
                 className="tool-button"
                 type="button"
                 onClick={() => applyMarkdownFormat("bold")}
                 title="Chữ đậm"
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontWeight: "bold", fontSize: 14, color: "var(--foreground)" }}
               >
                 <strong>B</strong>
               </button>
@@ -1729,6 +1792,7 @@ export function AuthorStudioScreen() {
                 type="button"
                 onClick={() => applyMarkdownFormat("italic")}
                 title="Chữ nghiêng"
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontStyle: "italic", fontSize: 14, color: "var(--foreground)" }}
               >
                 <em>I</em>
               </button>
@@ -1737,35 +1801,199 @@ export function AuthorStudioScreen() {
                 type="button"
                 onClick={() => applyMarkdownFormat("underline")}
                 title="Gạch chân"
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", textDecoration: "underline", fontSize: 14, color: "var(--foreground)" }}
               >
-                <span style={{ textDecoration: "underline" }}>U</span>
+                <span>U</span>
+              </button>
+              
+              {/* Highlight with Color Picker */}
+              <div style={{ position: "relative", display: "inline-block" }}>
+                <button
+                  className="tool-button"
+                  type="button"
+                  onClick={() => setShowColorPicker(!showColorPicker)}
+                  title="Tô sáng văn bản"
+                  style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                >
+                  <span style={{ 
+                    display: "inline-block", 
+                    width: 14, 
+                    height: 14, 
+                    borderRadius: "50%", 
+                    background: activeHighlightColor,
+                    border: "1px solid rgba(0,0,0,0.2)"
+                  }} />
+                  <span style={{ fontSize: 10, opacity: 0.7 }}>▼</span>
+                </button>
+                {showColorPicker && (
+                  <div style={{ 
+                    position: "absolute", 
+                    top: "100%", 
+                    left: 0, 
+                    zIndex: 100, 
+                    background: "var(--surface)", 
+                    border: "1px solid var(--line)", 
+                    borderRadius: 6, 
+                    padding: 8, 
+                    display: "flex", 
+                    gap: 6, 
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                    marginTop: 4
+                  }}>
+                    {["#fef08a", "#bbf7d0", "#bfdbfe", "#fbcfe8", "#fed7aa"].map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => {
+                          setActiveHighlightColor(color);
+                          applyMarkdownFormat("highlight", color);
+                          setShowColorPicker(false);
+                        }}
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          background: color,
+                          border: color === activeHighlightColor ? "2px solid var(--primary)" : "1px solid rgba(0,0,0,0.1)",
+                          cursor: "pointer"
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ width: "1px", height: "20px", background: "var(--line)" }} />
+
+            {/* Layout / Headings */}
+            <div className="tool-group" style={{ display: "flex", gap: 4 }}>
+              <button
+                className="tool-button"
+                type="button"
+                onClick={() => handleToolbarToolClick("H1")}
+                title="Tiêu đề chương"
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 13, fontWeight: "bold", color: "var(--foreground)" }}
+              >
+                H
               </button>
               <button
                 className="tool-button"
                 type="button"
-                onClick={() => applyMarkdownFormat("highlight")}
-                title="Tô sáng"
+                onClick={() => handleToolbarToolClick("❝")}
+                title="Trích dẫn (Quote)"
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
               >
-                <span className="color-dot" />
+                ❝
               </button>
               <button
-                className={`tool-button ${isPreviewMode ? "active" : ""}`}
+                className="tool-button"
                 type="button"
-                onClick={() => setIsPreviewMode(!isPreviewMode)}
-                title="Xem trước định dạng"
-                style={{
-                  backgroundColor: isPreviewMode ? "var(--primary)" : "transparent",
-                  color: isPreviewMode ? "white" : "var(--foreground)",
-                  border: isPreviewMode ? "none" : "1px solid var(--line)",
-                  borderRadius: 4,
-                  padding: "4px 8px",
-                  fontSize: 12,
-                  marginLeft: 8
-                }}
+                onClick={() => handleToolbarToolClick("☰")}
+                title="Canh lề trái"
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
               >
-                {isPreviewMode ? "Sửa" : "Xem trước"}
+                Align L
+              </button>
+              <button
+                className="tool-button"
+                type="button"
+                onClick={() => handleToolbarToolClick("≡")}
+                title="Canh lề giữa"
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
+              >
+                Align C
+              </button>
+              <button
+                className="tool-button"
+                type="button"
+                onClick={() => handleToolbarToolClick("≣")}
+                title="Canh lề phải"
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
+              >
+                Align R
               </button>
             </div>
+
+            <div style={{ width: "1px", height: "20px", background: "var(--line)" }} />
+
+            {/* Typography Inputs & Selects */}
+            <div className="tool-group tool-group-selects" style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                Font
+                <select
+                  className="select compact-select"
+                  value={editorFont}
+                  onChange={(e) => setEditorFont(e.target.value)}
+                  style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid var(--line)", background: "transparent", color: "var(--foreground)" }}
+                >
+                  {[
+                    { name: "Inter", value: "Inter, Arial, sans-serif" },
+                    { name: "Roboto", value: "Roboto, sans-serif" },
+                    { name: "Lora", value: "Lora, serif" },
+                    { name: "Playfair Display", value: "'Playfair Display', serif" },
+                    { name: "Open Sans", value: "'Open Sans', sans-serif" },
+                    { name: "Merriweather", value: "Merriweather, serif" },
+                    { name: "Montserrat", value: "Montserrat, sans-serif" },
+                    { name: "Nunito", value: "Nunito, sans-serif" },
+                    { name: "Patrick Hand", value: "'Patrick Hand', cursive" },
+                    { name: "Source Sans Pro", value: "'Source Sans Pro', sans-serif" },
+                    { name: "Oswald", value: "Oswald, sans-serif" },
+                    { name: "Comfortaa", value: "Comfortaa, cursive" },
+                    { name: "Be Vietnam Pro", value: "'Be Vietnam Pro', sans-serif" }
+                  ].map(f => (
+                    <option key={f.name} value={f.value}>{f.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                Cỡ chữ
+                <input
+                  type="number"
+                  min={10}
+                  max={25}
+                  value={parseInt(editorSize) || 16}
+                  onChange={(e) => setEditorSize(e.target.value + "px")}
+                  style={{ width: "55px", padding: "4px 8px", borderRadius: 4, border: "1px solid var(--line)", background: "transparent", color: "var(--foreground)", fontSize: "0.8rem" }}
+                />
+              </label>
+
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                Giãn cách
+                <input
+                  type="number"
+                  min={1.0}
+                  max={2.0}
+                  step={0.1}
+                  value={parseFloat(editorLineHeight) || 1.6}
+                  onChange={(e) => setEditorLineHeight(e.target.value)}
+                  style={{ width: "55px", padding: "4px 8px", borderRadius: 4, border: "1px solid var(--line)", background: "transparent", color: "var(--foreground)", fontSize: "0.8rem" }}
+                />
+              </label>
+            </div>
+
+            <div style={{ width: "1px", height: "20px", background: "var(--line)", marginLeft: "auto" }} />
+
+            {/* Preview Toggle */}
+            <button
+              className={`tool-button ${isPreviewMode ? "active" : ""}`}
+              type="button"
+              onClick={() => setIsPreviewMode(!isPreviewMode)}
+              title="Xem trước định dạng"
+              style={{
+                backgroundColor: isPreviewMode ? "var(--primary)" : "transparent",
+                color: isPreviewMode ? "white" : "var(--foreground)",
+                border: isPreviewMode ? "none" : "1px solid var(--line)",
+                borderRadius: 4,
+                padding: "6px 12px",
+                fontSize: 12,
+                cursor: "pointer",
+                fontWeight: 600
+              }}
+            >
+              {isPreviewMode ? "Sửa" : "Xem trước"}
+            </button>
           </div>
 
           {/* Writing Workspace */}
@@ -1821,6 +2049,16 @@ export function AuthorStudioScreen() {
 
             {/* Center Editor Paper */}
             <div className="editor-paper" style={{ background: "var(--surface)", borderRadius: 8, padding: 24, minHeight: 500, display: "flex", flexDirection: "column", border: "1px solid var(--line)" }}>
+              {/* Inline CSS style for WYSIWYG editor placeholder */}
+              <style dangerouslySetInnerHTML={{__html: `
+                .wysiwyg-editor:empty:before {
+                  content: attr(placeholder);
+                  color: var(--muted);
+                  opacity: 0.7;
+                  cursor: text;
+                }
+              `}} />
+
               {isEditingDisabled && (
                 <div className="notice warning" style={{ marginBottom: 16, padding: "10px 16px", borderRadius: 6, fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
                   <Icon name="lock" />
@@ -1886,28 +2124,28 @@ export function AuthorStudioScreen() {
                   )}
                 </div>
               ) : (
-                <textarea
-                  ref={textareaRef}
-                  className="editor-body"
-                  value={editorContent}
-                  onChange={handleContentChange}
+                <div
+                  ref={editorRef}
+                  className="editor-body wysiwyg-editor"
+                  contentEditable={!isEditingDisabled}
+                  onInput={handleWysiwygInput}
+                  onBlur={handleWysiwygInput}
                   onSelect={syncSelectedDraftText}
                   onMouseUp={syncSelectedDraftText}
                   onKeyUp={syncSelectedDraftText}
-                  disabled={isEditingDisabled}
-                  placeholder="Bắt đầu viết nội dung chương tại đây..."
+                  {...{ placeholder: "Bắt đầu viết nội dung chương tại đây..." }}
                   style={{
                     fontSize: editorSize,
                     fontFamily: editorFont,
                     lineHeight: editorLineHeight,
                     border: 0,
                     outline: "none",
-                    resize: "none",
                     flexGrow: 1,
                     minHeight: 400,
                     width: "100%",
                     background: "transparent",
-                    color: "var(--ink)"
+                    color: "var(--ink)",
+                    overflowY: "auto"
                   }}
                 />
               )}
@@ -1976,21 +2214,19 @@ export function AuthorStudioScreen() {
                 <p>Miu trả về nội dung có thể chèn trực tiếp, kèm lý do và điểm chất lượng để bạn quyết định nhanh.</p>
               </div>
 
-              {authorStoriesCount <= 1 && (
-                <button
-                  className="button button-soft"
-                  type="button"
-                  onClick={() => setIsStyleReferenceModalOpen(true)}
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  <Icon name="edit" /> Style Reference Metadata
-                  {storyProfile?.style_reference_author || storyProfile?.style_reference_story_title || storyProfile?.style_reference_series_title ? (
-                    <span className="badge badge-green" style={{ marginLeft: 8 }}>Đã lưu</span>
-                  ) : (
-                    <span className="badge badge-amber" style={{ marginLeft: 8 }}>Tuỳ chọn</span>
-                  )}
-                </button>
-              )}
+              <button
+                className="button button-soft"
+                type="button"
+                onClick={() => setIsStyleReferenceModalOpen(true)}
+                style={{ width: "100%", justifyContent: "center" }}
+              >
+                <Icon name="edit" /> Style Reference Metadata
+                {storyProfile?.style_reference_author || storyProfile?.style_reference_story_title || storyProfile?.style_reference_series_title ? (
+                  <span className="badge badge-green" style={{ marginLeft: 8 }}>Đã lưu</span>
+                ) : (
+                  <span className="badge badge-amber" style={{ marginLeft: 8 }}>Tuỳ chọn</span>
+                )}
+              </button>
 
               <div className="ai-mode-grid" role="radiogroup" aria-label="Chế độ AI">
                 {aiModeOptions.map((item) => (
@@ -2008,12 +2244,12 @@ export function AuthorStudioScreen() {
                 ))}
               </div>
 
-              <div className="ai-target-control" style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+              <div className="ai-target-control" style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <label htmlFor="ai-target-words" style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--text-primary)" }}>
+                  <label htmlFor="ai-target-words" style={{ fontSize: "0.8rem", fontWeight: 500, color: "var(--text-primary)" }}>
                     Độ dài gợi ý: <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>{aiTargetWords} từ</span>
                   </label>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Tối đa: 1.000 từ</span>
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Tối đa: 1.000 từ</span>
                 </div>
                 <input
                   id="ai-target-words"
@@ -2023,86 +2259,110 @@ export function AuthorStudioScreen() {
                   step={50}
                   value={aiTargetWords}
                   onChange={(event) => setAiTargetWords(Number(event.target.value))}
-                  style={{ width: "100%", accentColor: "var(--color-primary)", cursor: "pointer", height: "6px", borderRadius: "3px" }}
+                  style={{ width: "100%", accentColor: "var(--color-primary)", cursor: "pointer", height: "5px", borderRadius: "3px" }}
                 />
-                <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", margin: 0, fontStyle: "italic", lineHeight: "1.3" }}>
-                  * Khuyên dùng 200 - 500 từ để nhận phản hồi nhanh nhất và tránh lỗi nghẽn hạn ngạch API.
-                </p>
               </div>
 
-              <div className={`selected-draft-card ${selectedDraftText ? "has-selection" : ""}`}>
-                <strong>Đoạn đang chọn</strong>
-                <p>{selectedDraftText || "Bôi chọn đoạn văn trong editor để dùng chế độ Viết lại hoặc thay thế trực tiếp."}</p>
-              </div>
+              {selectedDraftText && (
+                <div className="selected-draft-card has-selection" style={{ padding: "10px 14px", borderRadius: "6px", background: "rgba(59, 130, 246, 0.08)", border: "1px solid rgba(59, 130, 246, 0.2)", marginBottom: 20 }}>
+                  <strong style={{ fontSize: "0.8rem", color: "var(--text-primary)" }}>Đoạn đang chọn</strong>
+                  <p style={{ fontSize: "0.75rem", margin: "6px 0 0", color: "var(--text-secondary)", maxHeight: "70px", overflowY: "auto" }}>{selectedDraftText}</p>
+                </div>
+              )}
 
               {aiError ? (
-                <div className="notice warning">
+                <div className="notice warning" style={{ marginBottom: 20 }}>
                   {aiError}
                 </div>
               ) : null}
 
               {aiResponseMeta ? (
-                <div className="ai-provider-strip">
-                  <span className={`badge ${aiResponseMeta.fallback ? "badge-amber" : "badge-green"}`}>
+                <div className="ai-provider-strip" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: 16 }}>
+                  <span className={`badge ${aiResponseMeta.fallback ? "badge-amber" : "badge-green"}`} style={{ padding: "2px 6px", fontSize: "0.7rem" }}>
                     {aiResponseMeta.fallback ? "Fallback" : "Gemini"}
                   </span>
-                  <span>{aiResponseMeta.provider || "unknown"}</span>
-                  {aiResponseMeta.model ? <span>{aiResponseMeta.model}</span> : null}
-                  {aiResponseMeta.message ? <small>{aiResponseMeta.message}</small> : null}
+                  <span>{aiResponseMeta.model || "gemini-2.5-flash"}</span>
+                  {aiResponseMeta.message && !aiResponseMeta.message.includes("văn bản thô") ? <small style={{ marginLeft: "auto" }}>{aiResponseMeta.message}</small> : null}
                 </div>
               ) : null}
 
-              <div className="agent-action-grid">
+              <div className="agent-action-grid" style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
                 {aiLoading && aiStreamingText ? (
-                  <div className="agent-result-card streaming" style={{ border: "1px dashed var(--primary)", background: "rgba(255, 255, 255, 0.02)", gridColumn: "1 / -1", padding: 12 }}>
+                  <div className="agent-result-card streaming" style={{ border: "1px dashed var(--primary)", background: "rgba(255, 255, 255, 0.02)", padding: 12, borderRadius: 8 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <strong>Miu đang viết gợi ý...</strong>
-                      <span className="badge badge-amber" style={{ animation: "pulse 1.5s infinite" }}>Streaming</span>
+                      <strong style={{ fontSize: "0.85rem" }}>Miu đang viết gợi ý...</strong>
+                      <span className="badge badge-amber" style={{ animation: "pulse 1.5s infinite", fontSize: "0.7rem" }}>Streaming</span>
                     </div>
-                    <blockquote style={{ whiteSpace: "pre-wrap", fontSize: 13, maxHeight: 300, overflow: "auto", background: "rgba(0,0,0,0.2)", padding: 8, borderRadius: 4 }}>
+                    <blockquote style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", maxHeight: "200px", overflowY: "auto", background: "rgba(0,0,0,0.2)", padding: 8, borderRadius: 4, margin: 0 }}>
                       {aiStreamingText}
                     </blockquote>
                   </div>
                 ) : aiSuggestions.length === 0 ? (
-                  <div className="ai-empty-result">
-                    Chưa có gợi ý nào. Chọn mode và gửi yêu cầu để Miu sinh nội dung.
+                  <div className="ai-empty-result" style={{ textAlign: "center", padding: "16px", color: "var(--text-secondary)", fontSize: "0.8rem", border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 8 }}>
+                    Chưa có gợi ý nào. Chọn chế độ và gửi yêu cầu để Miu sinh nội dung.
                   </div>
                 ) : (
                   aiSuggestions.map((item, idx) => {
                     const insertableText = item.insertable_text || item.content || "";
                     const quality = Number(item.quality_score);
                     const scoreLabel = Number.isFinite(quality) ? `${Math.round(quality * 100)}%` : "AI";
+                    const isFallback = item.content === "Nội dung vừa sinh từ AI.";
                     return (
-                      <div className="agent-result-card" key={`${item.title || "suggestion"}-${idx}`}>
-                        <div className="agent-result-head">
-                          <strong>{item.title || `Gợi ý ${idx + 1}`}</strong>
-                          <span className="badge badge-blue">{scoreLabel}</span>
+                      <div className="agent-result-card" key={`${item.title || "suggestion"}-${idx}`} style={{ padding: "12px", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)", background: "rgba(255, 255, 255, 0.025)" }}>
+                        <div className="agent-result-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <strong style={{ fontSize: "0.85rem", color: "var(--color-primary)" }}>{item.title || `Gợi ý ${idx + 1}`}</strong>
+                          <span className="badge badge-blue" style={{ fontSize: "0.7rem" }}>{scoreLabel}</span>
                         </div>
-                        <p>{item.content}</p>
-                        {item.reason ? <small>{item.reason}</small> : null}
-                        {item.insertable_text ? <blockquote>{item.insertable_text}</blockquote> : null}
-                        <div className="agent-result-actions">
+                        {!isFallback && item.content ? (
+                          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "0 0 6px 0", lineHeight: "1.4" }}>{item.content}</p>
+                        ) : null}
+                        {item.reason && item.reason !== "Nội dung sinh trực tiếp dưới dạng văn xuôi." ? (
+                          <small style={{ display: "block", fontSize: "0.75rem", color: "var(--text-secondary)", opacity: 0.8, marginBottom: 8, fontStyle: "italic" }}>📌 {item.reason}</small>
+                        ) : null}
+                        {insertableText ? (
+                          <blockquote style={{ 
+                            margin: "8px 0", 
+                            padding: "8px 10px", 
+                            borderLeft: "3px solid var(--color-primary)", 
+                            borderRadius: "4px", 
+                            background: "rgba(59, 130, 246, 0.05)", 
+                            color: "var(--text-primary)", 
+                            fontSize: "0.8rem", 
+                            lineHeight: "1.45",
+                            maxHeight: "220px",
+                            overflowY: "auto",
+                            whiteSpace: "pre-wrap"
+                          }}>
+                            {insertableText}
+                          </blockquote>
+                        ) : null}
+                        <div className="agent-result-actions" style={{ display: "flex", gap: 6, marginTop: 10 }}>
                           <button
                             className="button button-primary"
                             type="button"
                             onClick={() => insertSuggestion(insertableText)}
                             disabled={isEditingDisabled || !insertableText}
+                            style={{ flex: 1, padding: "5px 10px", fontSize: "0.75rem", minHeight: "30px", justifyContent: "center" }}
                           >
                             Chèn
                           </button>
-                          <button
-                            className="button button-soft"
-                            type="button"
-                            onClick={() => replaceSelectionWithSuggestion(insertableText)}
-                            disabled={isEditingDisabled || !insertableText}
-                          >
-                            Thay đoạn chọn
-                          </button>
+                          {selectedDraftText ? (
+                            <button
+                              className="button button-soft"
+                              type="button"
+                              onClick={() => replaceSelectionWithSuggestion(insertableText)}
+                              disabled={isEditingDisabled || !insertableText}
+                              style={{ flex: 1.2, padding: "5px 10px", fontSize: "0.75rem", minHeight: "30px", justifyContent: "center" }}
+                            >
+                              Thay thế
+                            </button>
+                          ) : null}
                           <button
                             className="button"
                             type="button"
                             onClick={() => copySuggestion(insertableText)}
                             disabled={!insertableText}
+                            style={{ flex: 0.8, padding: "5px 10px", fontSize: "0.75rem", minHeight: "30px", justifyContent: "center" }}
                           >
                             Copy
                           </button>
@@ -2152,12 +2412,12 @@ export function AuthorStudioScreen() {
                   style={{ marginBottom: 12 }}
                 />
 
-                <div className="ai-target-control" style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+                <div className="ai-target-control" style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <label htmlFor="co-writer-target-words" style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--text-primary)" }}>
+                    <label htmlFor="co-writer-target-words" style={{ fontSize: "0.8rem", fontWeight: 500, color: "var(--text-primary)" }}>
                       Độ dài chương cần sinh: <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>{coWriterTargetWords} từ</span>
                     </label>
-                    <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Tối đa: 1.000 từ</span>
+                    <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>Tối đa: 1.000 từ</span>
                   </div>
                   <input
                     id="co-writer-target-words"
@@ -2168,11 +2428,8 @@ export function AuthorStudioScreen() {
                     value={coWriterTargetWords}
                     onChange={(event) => setCoWriterTargetWords(Number(event.target.value))}
                     disabled={isEditingDisabled}
-                    style={{ width: "100%", accentColor: "var(--color-primary)", cursor: "pointer", height: "6px", borderRadius: "3px" }}
+                    style={{ width: "100%", accentColor: "var(--color-primary)", cursor: "pointer", height: "5px", borderRadius: "3px" }}
                   />
-                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", margin: 0, fontStyle: "italic", lineHeight: "1.3" }}>
-                    * Khuyên dùng 400 - 600 từ để quá trình viết diễn ra ổn định và nhanh chóng nhất.
-                  </p>
                 </div>
 
                 <button
@@ -2186,22 +2443,21 @@ export function AuthorStudioScreen() {
                 </button>
               </div>
 
-              {coWriterError ? <div className="notice warning">{coWriterError}</div> : null}
+              {coWriterError ? <div className="notice warning" style={{ marginBottom: 20 }}>{coWriterError}</div> : null}
 
               {coWriterMeta ? (
-                <div className="ai-provider-strip">
-                  <span className={`badge ${coWriterMeta.fallback ? "badge-amber" : "badge-green"}`}>
+                <div className="ai-provider-strip" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: 16 }}>
+                  <span className={`badge ${coWriterMeta.fallback ? "badge-amber" : "badge-green"}`} style={{ padding: "2px 6px", fontSize: "0.7rem" }}>
                     {coWriterMeta.fallback ? "Fallback" : "Gemini"}
                   </span>
-                  <span>{coWriterMeta.provider || "unknown"}</span>
-                  {coWriterMeta.model ? <span>{coWriterMeta.model}</span> : null}
+                  <span>{coWriterMeta.model || "gemini-2.5-flash"}</span>
                 </div>
               ) : null}
 
-              <div className="agent-action-grid">
+              <div className="agent-action-grid" style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
                 {coWriterDrafts.length === 0 ? (
-                  <div className="ai-empty-result">
-                    Chưa có bản nháp. Nhập ý tưởng và bấm &quot;Chạy AI Agent viết chương&quot; để bắt đầu.
+                  <div className="ai-empty-result" style={{ textAlign: "center", padding: "16px", color: "var(--text-secondary)", fontSize: "0.8rem", border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 8 }}>
+                    Chưa có bản nháp. Nhập ý tưởng và bấm "Chạy AI Agent viết chương" để bắt đầu.
                   </div>
                 ) : (
                   coWriterDrafts.map((draft, idx) => {
@@ -2209,37 +2465,56 @@ export function AuthorStudioScreen() {
                     const quality = Number(draft.quality_score);
                     const scoreLabel = Number.isFinite(quality) ? `${Math.round(quality * 100)}%` : "AI";
                     return (
-                      <div className="agent-result-card" key={`cowriter-${idx}`}>
-                        <div className="agent-result-head">
-                          <strong>{draft.title || `Bản nháp ${idx + 1}`}</strong>
-                          <span className="badge badge-blue">{scoreLabel}</span>
+                      <div className="agent-result-card" key={`cowriter-${idx}`} style={{ padding: "12px", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)", background: "rgba(255, 255, 255, 0.025)" }}>
+                        <div className="agent-result-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <strong style={{ fontSize: "0.85rem", color: "var(--color-primary)" }}>{draft.title || `Bản nháp ${idx + 1}`}</strong>
+                          <span className="badge badge-blue" style={{ fontSize: "0.7rem" }}>{scoreLabel}</span>
                         </div>
-                        <p>{draft.content}</p>
-                        {draftText ? (
-                          <blockquote style={{ maxHeight: 200, overflow: "auto", fontSize: 13 }}>{draftText}</blockquote>
+                        {draft.content && draft.content !== "Nội dung vừa sinh từ AI." ? (
+                          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "0 0 6px 0", lineHeight: "1.4" }}>{draft.content}</p>
                         ) : null}
-                        <div className="agent-result-actions">
+                        {draftText ? (
+                          <blockquote style={{ 
+                            margin: "8px 0", 
+                            padding: "8px 10px", 
+                            borderLeft: "3px solid var(--color-primary)", 
+                            borderRadius: "4px", 
+                            background: "rgba(59, 130, 246, 0.05)", 
+                            color: "var(--text-primary)", 
+                            fontSize: "0.8rem", 
+                            lineHeight: "1.45",
+                            maxHeight: "220px",
+                            overflowY: "auto",
+                            whiteSpace: "pre-wrap"
+                          }}>
+                            {draftText}
+                          </blockquote>
+                        ) : null}
+                        <div className="agent-result-actions" style={{ display: "flex", gap: 6, marginTop: 10 }}>
                           <button
                             className="button button-primary"
                             type="button"
                             onClick={() => handleCoWriterInsert(draftText, "overwrite")}
                             disabled={isEditingDisabled || !draftText}
+                            style={{ flex: 1, padding: "5px 10px", fontSize: "0.75rem", minHeight: "30px", justifyContent: "center" }}
                           >
-                            Chép vào trang viết
+                            Ghi đè
                           </button>
                           <button
                             className="button button-soft"
                             type="button"
                             onClick={() => handleCoWriterInsert(draftText, "insert")}
                             disabled={isEditingDisabled || !draftText}
+                            style={{ flex: 1.2, padding: "5px 10px", fontSize: "0.75rem", minHeight: "30px", justifyContent: "center" }}
                           >
-                            Chèn vào sau con trỏ
+                            Chèn sau
                           </button>
                           <button
                             className="button"
                             type="button"
                             onClick={() => copySuggestion(draftText)}
                             disabled={!draftText}
+                            style={{ flex: 0.8, padding: "5px 10px", fontSize: "0.75rem", minHeight: "30px", justifyContent: "center" }}
                           >
                             Copy
                           </button>

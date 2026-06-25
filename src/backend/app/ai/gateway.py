@@ -112,7 +112,7 @@ class GeminiGateway:
         }
         if response_schema:
             generation_config["responseSchema"] = response_schema
-            
+
         return {
             "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
@@ -206,7 +206,14 @@ class GeminiGateway:
         return extract_json_object(raw_text), raw_text[:2000]
 
     async def embed_text(self, text: str) -> list[float]:
-        payload = {"content": {"parts": [{"text": text}]}}
+        model_name = settings.GEMINI_EMBEDDING_MODEL
+        if not model_name.startswith("models/"):
+            model_name = f"models/{model_name}"
+        payload = {
+            "model": model_name,
+            "content": {"parts": [{"text": text}]},
+            "outputDimensionality": 768,
+        }
         data = await self._post_async(
             self._url(settings.GEMINI_EMBEDDING_MODEL, "embedContent"), payload
         )
@@ -280,4 +287,3 @@ class GeminiGateway:
                                     except Exception as e:
                                         logger.warning("Error parsing stream chunk: %s", e)
                                     buffer = ""
-

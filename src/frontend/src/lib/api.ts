@@ -159,11 +159,12 @@ export const yagApi = {
         method: "POST",
         body,
       }),
-    listStories: (params?: { category?: string; status?: string; q?: string }) => {
+    listStories: (params?: { category?: string; status?: string; q?: string; ids?: string }) => {
       const query = new URLSearchParams();
       if (params?.category) query.set("category", params.category);
       if (params?.status) query.set("status", params.status);
       if (params?.q) query.set("q", params.q);
+      if (params?.ids) query.set("ids", params.ids);
       return apiFetch<any[]>(`/api/v1/stories/?${query.toString()}`, { method: "GET" });
     },
     getStoryDetail: (storyId: string) =>

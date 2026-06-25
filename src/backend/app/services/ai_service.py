@@ -48,6 +48,7 @@ __all__ = [
     "sync_story_embedding",
     "truncate_context",
     "stream_ai_suggestions",
+    "sync_all_missing_embeddings_async",
 ]
 
 
@@ -150,27 +151,6 @@ async def search_stories_semantic(
         logger.warning("Semantic search fallback: %s", type(exc).__name__)
         fallback_rows: list[dict[str, Any]] = []
         for sql, params in (
-            (
-                """
-                SELECT
-                    se.story_id,
-                    s.title,
-                    se.plot_summary,
-                    0.0 AS distance
-                FROM story_embeddings AS se
-                LEFT JOIN stories AS s ON s.id = se.story_id
-                WHERE EXISTS (
-                    SELECT 1
-                    FROM chapters AS c
-                    WHERE c.story_id = s.id
-                      AND c.moderation_status = 'approved'
-                      AND c.publish_at <= NOW()
-                )
-                ORDER BY se.story_id ASC
-                LIMIT :limit
-                """,
-                {"limit": limit},
-            ),
             (
                 """
                 SELECT
@@ -509,3 +489,40 @@ async def sync_story_embedding(
     if hasattr(db, "commit"):
         db.commit()
     return {"story_id": story_id, "embedding": embedding}
+
+
+async def sync_all_missing_embeddings_async() -> int:
+    """Startup utility that generates embeddings for all stories missing them."""
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        # Check if table exists (to be safe in early migration states)
+        db.execute(text("SELECT 1 FROM story_embeddings LIMIT 1"))
+    except Exception:
+        db.close()
+        return 0
+    try:
+        result = db.execute(
+            text(
+                "SELECT id, description FROM stories "
+                "WHERE id NOT IN (SELECT story_id FROM story_embeddings)"
+            )
+        )
+        story_records = result.all()
+        if not story_records:
+            return 0
+        logger.info("Found %d stories missing embeddings. Syncing...", len(story_records))
+        count = 0
+        for story_id, description in story_records:
+            try:
+                await sync_story_embedding(db, str(story_id), description or "")
+                count += 1
+            except Exception as e:
+                logger.error("Failed to sync embedding for story %s: %s", story_id, e)
+        return count
+    except Exception as exc:
+        logger.error("Error in sync_all_missing_embeddings_async: %s", exc)
+        return 0
+    finally:
+        db.close()
+

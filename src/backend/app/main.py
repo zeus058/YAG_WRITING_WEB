@@ -46,6 +46,10 @@ async def lifespan(app: FastAPI):
     # configured background tasks and checks are exposed through /health/ready.
     start_schedule_scheduler()
 
+    if settings.AI_AGENT_ENABLED:
+        from app.services.ai_service import sync_all_missing_embeddings_async
+        asyncio.create_task(sync_all_missing_embeddings_async())
+
     flush_task = None
     if settings.VIEW_COUNT_FLUSH_ENABLED:
         flush_task = asyncio.create_task(periodic_view_count_flush())

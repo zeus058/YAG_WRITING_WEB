@@ -104,8 +104,15 @@ export function HomeFeedScreen() {
         setStoriesList(sortedStories);
 
         const rawRecs = recsRes.data.recommendations || [];
+        const recIds = rawRecs.map((rec: any) => rec.story_id).filter(Boolean);
+        let recommendedStories: any[] = [];
+        if (recIds.length > 0) {
+          const recsDetailRes = await yagApi.reader.listStories({ ids: recIds.join(",") });
+          recommendedStories = recsDetailRes.data || [];
+        }
+
         const mappedRecs = rawRecs.map((rec: any) => {
-          const fullStory = fullStories.find((s: any) => s.id === rec.story_id);
+          const fullStory = recommendedStories.find((s: any) => s.id === rec.story_id);
           return {
             ...(fullStory || {}),
             id: fullStory?.id || rec.story_id,
@@ -290,9 +297,12 @@ export function DiscoverScreen() {
         });
         setIsFallback(response.data.fallback || false);
         const results = response.data.results || [];
-        const storiesRes = await yagApi.reader.listStories();
-        const fullStories = storiesRes.data || [];
-        const mapped = results.map((r: any) => fullStories.find((s: any) => s.id === r.story_id)).filter(Boolean);
+        const storyIds = results.map((r: any) => r.story_id).filter(Boolean);
+        let mapped: any[] = [];
+        if (storyIds.length > 0) {
+          const storiesRes = await yagApi.reader.listStories({ ids: storyIds.join(",") });
+          mapped = storiesRes.data || [];
+        }
         setStoriesList(mapped);
       } else {
         const response = await yagApi.reader.listStories({ q: query });

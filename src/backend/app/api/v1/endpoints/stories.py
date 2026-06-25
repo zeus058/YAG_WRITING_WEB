@@ -159,6 +159,7 @@ def list_stories(
     category: Optional[str] = None,
     status_value: Optional[StoryStatus] = Query(None, alias="status"),
     q: Optional[str] = None,
+    ids: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(deps.get_db),
@@ -177,6 +178,17 @@ def list_stories(
             (Chapter.publish_at <= now)
         )
     )
+
+    if ids:
+        try:
+            id_list = [UUID(x.strip()) for x in ids.split(",") if x.strip()]
+            query = query.filter(Story.id.in_(id_list))
+            limit = max(limit, len(id_list))
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid UUID list format in ids parameter",
+            )
 
     if category:
         query = query.filter(Story.category == category)

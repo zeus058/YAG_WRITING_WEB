@@ -75,11 +75,11 @@ class Settings(BaseSettings):
 
     # AI Engine & Gemini API
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-flash"
-    GEMINI_STRONG_MODEL: str = "gemini-1.5-pro"
-    GEMINI_FAST_MODEL: str = "gemini-1.5-flash"
-    GEMINI_MODERATION_MODEL: str = "gemini-1.5-pro"
-    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_STRONG_MODEL: str = "gemini-2.5-pro"
+    GEMINI_FAST_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODERATION_MODEL: str = "gemini-2.5-pro"
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
     GEMINI_MAX_OUTPUT_TOKENS: int = 8192
 
     # Database Settings
@@ -123,7 +123,7 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: Optional[str] = None
     CLOUDINARY_COVER_FOLDER: str = "yag/covers"
 
-    GEMINI_TIMEOUT_SECONDS: float = 10.0
+    GEMINI_TIMEOUT_SECONDS: float = 30.0
     AI_CONTEXT_WORD_LIMIT: int = 1000
     AI_AGENT_ENABLED: bool = True
     AI_TOOL_TRACE_ENABLED: bool = False

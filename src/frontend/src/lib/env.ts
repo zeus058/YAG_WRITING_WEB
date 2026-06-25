@@ -16,7 +16,6 @@ export const appEnv = {
 } as const;
 
 const localUrlMarkers = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"];
-const isProductionBuild = process.env.NODE_ENV === "production";
 
 function assertProductionUrl(name: string, value: string, allowedProtocols: string[]) {
   const url = new URL(value);

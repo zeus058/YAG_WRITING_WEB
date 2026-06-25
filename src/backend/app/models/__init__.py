@@ -25,6 +25,7 @@ from app.models.admin_audit_log import AdminAuditLog
 from app.models.notification import Notification
 from app.models.story_rights import StoryRights
 from app.models.lore_item import StoryLore
+from app.models.forum import ForumPost, ForumReply, ForumPostLike
 
 __all__ = [
     "User",
@@ -47,4 +48,7 @@ __all__ = [
     "Notification",
     "StoryRights",
     "StoryLore",
+    "ForumPost",
+    "ForumReply",
+    "ForumPostLike",
 ]

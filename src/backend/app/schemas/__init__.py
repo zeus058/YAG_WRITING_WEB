@@ -63,6 +63,12 @@ from app.schemas.ai import (
     AIRecommendationItem,
     AIRecommendationResponse,
 )
+from app.schemas.forum import (
+    ForumPostCreate,
+    ForumPostResponse,
+    ForumReplyCreate,
+    ForumReplyResponse,
+)
 
 __all__ = [
     # Common
@@ -117,5 +123,10 @@ __all__ = [
     "AISemanticSearchResponse",
     "AIRecommendationItem",
     "AIRecommendationResponse",
+    # Forum
+    "ForumPostCreate",
+    "ForumPostResponse",
+    "ForumReplyCreate",
+    "ForumReplyResponse",
 ]
 

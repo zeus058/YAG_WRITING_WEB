@@ -394,7 +394,7 @@ export function AuthorWorksScreen() {
       <div className="panel panel-pad inline-actions" style={{ marginBottom: 24, justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <div className="field-inline" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <label style={{ fontSize: 13, color: "var(--muted)", fontWeight: "bold" }}>Trạng thái:</label>
+            <label style={{ fontSize: 13, color: "var(--muted)", fontWeight: "bold", whiteSpace: "nowrap" }}>Trạng thái:</label>
             <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: "4px 8px", fontSize: 13 }}>
               <option value="all">Tất cả</option>
               <option value="ongoing">Đang viết</option>
@@ -403,7 +403,7 @@ export function AuthorWorksScreen() {
             </select>
           </div>
           <div className="field-inline" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <label style={{ fontSize: 13, color: "var(--muted)", fontWeight: "bold" }}>Kiểm duyệt:</label>
+            <label style={{ fontSize: 13, color: "var(--muted)", fontWeight: "bold", whiteSpace: "nowrap" }}>Kiểm duyệt:</label>
             <select className="select" value={moderationFilter} onChange={(e) => setModerationFilter(e.target.value)} style={{ padding: "4px 8px", fontSize: 13 }}>
               <option value="all">Tất cả</option>
               <option value="pending">Chờ duyệt</option>
@@ -413,7 +413,7 @@ export function AuthorWorksScreen() {
           </div>
         </div>
         <div className="field-inline" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <label style={{ fontSize: 13, color: "var(--muted)", fontWeight: "bold" }}>Sắp xếp:</label>
+          <label style={{ fontSize: 13, color: "var(--muted)", fontWeight: "bold", whiteSpace: "nowrap" }}>Sắp xếp:</label>
           <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ padding: "4px 8px", fontSize: 13 }}>
             <option value="recently_updated">Mới chỉnh sửa</option>
             <option value="views">Lượt đọc</option>
@@ -755,6 +755,52 @@ export function AuthorWorksScreen() {
     </AppShell>
   );
 }
+
+const extractSuggestionsFromBrokenJson = (jsonStr: string): any[] => {
+  const suggestions: any[] = [];
+  const titleRegex = /"title"\s*:\s*"((?:[^"\\]|\\.)*)"/gi;
+  const contentRegex = /"content"\s*:\s*"((?:[^"\\]|\\.)*)"/gi;
+  const reasonRegex = /"reason"\s*:\s*"((?:[^"\\]|\\.)*)"/gi;
+  const insertableRegex = /"insertable_?text"\s*:\s*"((?:[^"\\]|\\.)*)"/gi;
+  
+  const titles: string[] = [];
+  const contents: string[] = [];
+  const reasons: string[] = [];
+  const insertables: string[] = [];
+  
+  let match;
+  while ((match = titleRegex.exec(jsonStr)) !== null) {
+    titles.push(match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+  }
+  titleRegex.lastIndex = 0;
+  
+  while ((match = contentRegex.exec(jsonStr)) !== null) {
+    contents.push(match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+  }
+  contentRegex.lastIndex = 0;
+  
+  while ((match = reasonRegex.exec(jsonStr)) !== null) {
+    reasons.push(match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+  }
+  reasonRegex.lastIndex = 0;
+  
+  while ((match = insertableRegex.exec(jsonStr)) !== null) {
+    insertables.push(match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+  }
+  insertableRegex.lastIndex = 0;
+  
+  const count = Math.max(contents.length, insertables.length);
+  for (let i = 0; i < count; i++) {
+    suggestions.push({
+      title: titles[i] || `Gợi ý ${i + 1}`,
+      content: contents[i] || "Nội dung vừa sinh từ AI.",
+      insertable_text: insertables[i] || contents[i] || "",
+      reason: reasons[i] || "Khôi phục từ phản hồi.",
+      quality_score: 0.85
+    });
+  }
+  return suggestions;
+};
 
 const parseInlineMarkdown = (text: string): React.ReactNode[] => {
   const regex = /(\*\*.*?\*\*|\*.*?\*|<u>.*?<\/u>|<mark[^>]*>.*?<\/mark>)/g;
@@ -1505,22 +1551,37 @@ export function AuthorStudioScreen() {
           message: resultObj.message || null,
         });
       } catch (parseError) {
-        console.warn("Failed to parse stream as JSON, treating as raw suggestion:", parseError);
-        setAiSuggestions([
-          {
-            title: "Kết quả gợi ý",
-            content: "Nội dung vừa sinh từ AI.",
-            insertable_text: accumulatedText,
-            reason: "Nội dung sinh trực tiếp dưới dạng văn xuôi.",
-            quality_score: 0.9
+        console.warn("Failed to parse stream as JSON, trying regex extraction:", parseError);
+        const extracted = extractSuggestionsFromBrokenJson(accumulatedText);
+        if (extracted.length > 0) {
+          setAiSuggestions(extracted);
+          setAiResponseMeta({
+            provider: "gemini",
+            model: "gemini-2.5-flash",
+            fallback: false,
+            message: "Một số gợi ý được khôi phục từ phản hồi chưa hoàn chỉnh.",
+          });
+        } else {
+          let cleanText = accumulatedText.trim();
+          if (cleanText.startsWith("```")) {
+            cleanText = cleanText.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
           }
-        ]);
-        setAiResponseMeta({
-          provider: "gemini",
-          model: "gemini-2.5-flash",
-          fallback: false,
-          message: "Lưu ý: Kết quả được trả về dưới dạng văn bản thô.",
-        });
+          setAiSuggestions([
+            {
+              title: "Kết quả gợi ý",
+              content: "Nội dung vừa sinh từ AI.",
+              insertable_text: cleanText,
+              reason: "Nội dung sinh trực tiếp dưới dạng văn xuôi.",
+              quality_score: 0.9
+            }
+          ]);
+          setAiResponseMeta({
+            provider: "gemini",
+            model: "gemini-2.5-flash",
+            fallback: false,
+            message: "Lưu ý: Kết quả được trả về dưới dạng văn bản thô.",
+          });
+        }
       }
     } catch (err: any) {
       console.error(err);
@@ -1699,25 +1760,9 @@ export function AuthorStudioScreen() {
           >
             Lưu nháp
           </button>
-          <button
-            className="button"
-            type="button"
-            onClick={() => {
-              triggerLiveToast("Miu AI đã quét nhanh bản thảo và không tìm thấy lỗi chính tả.", "success");
-            }}
-          >
-            <Icon name="check" /> Kiểm tra
-          </button>
           <Link className={`button ${canSubmitActiveChapter ? "button-soft" : "disabled"}`} href={`/author/stories/${storyId}/publish`}>
             <Icon name="calendar" /> Xuất bản
           </Link>
-          <button
-            className="button button-primary"
-            type="button"
-            onClick={() => setIsPreviewOpen(true)}
-          >
-            Xem trước
-          </button>
         </div>
       </header>
 
@@ -1890,27 +1935,27 @@ export function AuthorStudioScreen() {
                 type="button"
                 onClick={() => handleToolbarToolClick("☰")}
                 title="Canh lề trái"
-                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 13, fontWeight: "bold", color: "var(--foreground)" }}
               >
-                ☰
+                L
               </button>
               <button
                 className="tool-button"
                 type="button"
                 onClick={() => handleToolbarToolClick("≡")}
                 title="Canh lề giữa"
-                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 13, fontWeight: "bold", color: "var(--foreground)" }}
               >
-                ≡
+                M
               </button>
               <button
                 className="tool-button"
                 type="button"
                 onClick={() => handleToolbarToolClick("≣")}
                 title="Canh lề phải"
-                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
+                style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 13, fontWeight: "bold", color: "var(--foreground)" }}
               >
-                ≣
+                R
               </button>
             </div>
 
@@ -3227,7 +3272,7 @@ export function ScheduleScreen() {
                         border: "1px solid var(--line)",
                         borderRadius: 6,
                         padding: 6,
-                        background: day.event ? "rgba(22, 48, 32, 0.02)" : "#fff",
+                        background: day.event ? "var(--button-hover-bg)" : "var(--surface)",
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between"
@@ -3242,21 +3287,21 @@ export function ScheduleScreen() {
                             borderRadius: 4,
                             background:
                               day.event.status === "approved"
-                                ? "var(--green-light)"
+                                ? "rgba(34, 197, 94, 0.08)"
                                 : day.event.status === "pending"
-                                  ? "var(--blue-light)"
-                                  : "var(--amber-light)",
+                                  ? "rgba(59, 130, 246, 0.08)"
+                                  : "rgba(245, 158, 11, 0.08)",
                             color:
                               day.event.status === "approved"
-                                ? "var(--green)"
+                                ? "var(--green-ok, #22C55E)"
                                 : day.event.status === "pending"
-                                  ? "var(--blue)"
-                                  : "var(--amber)",
+                                  ? "var(--blue-info, #3B82F6)"
+                                  : "var(--amber, #F59E0B)",
                             borderLeft: `2.5px solid ${day.event.status === "approved"
-                                ? "var(--green)"
+                                ? "var(--green-ok, #22C55E)"
                                 : day.event.status === "pending"
-                                  ? "var(--blue)"
-                                  : "var(--amber)"
+                                  ? "var(--blue-info, #3B82F6)"
+                                  : "var(--amber, #F59E0B)"
                               }`,
                             lineHeight: 1.2
                           }}
@@ -3396,21 +3441,21 @@ export function ScheduleScreen() {
                 <div style={{ display: "flex", background: "var(--line)", borderRadius: 6, padding: 2 }}>
                   <button
                     className={`button ${frequencyFilter === "week" ? "button-primary" : ""}`}
-                    style={{ padding: "4px 8px", fontSize: 10, borderRadius: 4, background: frequencyFilter === "week" ? "var(--jungle-dark)" : "transparent", color: frequencyFilter === "week" ? "#fff" : "var(--foreground)", border: 0, cursor: "pointer" }}
+                    style={{ padding: "4px 8px", fontSize: 10, borderRadius: 4, background: frequencyFilter === "week" ? "var(--crimson)" : "transparent", color: frequencyFilter === "week" ? "#fff" : "var(--foreground)", border: 0, cursor: "pointer" }}
                     onClick={() => setFrequencyFilter("week")}
                   >
                     Tuần
                   </button>
                   <button
                     className={`button ${frequencyFilter === "month" ? "button-primary" : ""}`}
-                    style={{ padding: "4px 8px", fontSize: 10, borderRadius: 4, background: frequencyFilter === "month" ? "var(--jungle-dark)" : "transparent", color: frequencyFilter === "month" ? "#fff" : "var(--foreground)", border: 0, cursor: "pointer" }}
+                    style={{ padding: "4px 8px", fontSize: 10, borderRadius: 4, background: frequencyFilter === "month" ? "var(--crimson)" : "transparent", color: frequencyFilter === "month" ? "#fff" : "var(--foreground)", border: 0, cursor: "pointer" }}
                     onClick={() => setFrequencyFilter("month")}
                   >
                     Tháng
                   </button>
                   <button
                     className={`button ${frequencyFilter === "year" ? "button-primary" : ""}`}
-                    style={{ padding: "4px 8px", fontSize: 10, borderRadius: 4, background: frequencyFilter === "year" ? "var(--jungle-dark)" : "transparent", color: frequencyFilter === "year" ? "#fff" : "var(--foreground)", border: 0, cursor: "pointer" }}
+                    style={{ padding: "4px 8px", fontSize: 10, borderRadius: 4, background: frequencyFilter === "year" ? "var(--crimson)" : "transparent", color: frequencyFilter === "year" ? "#fff" : "var(--foreground)", border: 0, cursor: "pointer" }}
                     onClick={() => setFrequencyFilter("year")}
                   >
                     Năm

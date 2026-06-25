@@ -1218,73 +1218,80 @@ export function ForumScreen() {
   const [activeTab, setActiveTab] = useState<"for-you" | "following">("for-you");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedPosts = getStoredJsonArray("yag.forum.posts", true);
-      const filteredPosts = appEnv.useMocks
-        ? storedPosts
-        : storedPosts.filter((p: any) => p.id !== "p1" && p.id !== "p2" && p.id !== "p3");
+    const loadPosts = async () => {
+      if (appEnv.useMocks) {
+        if (typeof window !== "undefined") {
+          const storedPosts = getStoredJsonArray("yag.forum.posts", true);
+          const filteredPosts = storedPosts;
 
-      if (filteredPosts.length > 0) {
-        setPosts(filteredPosts);
+          if (filteredPosts.length > 0) {
+            setPosts(filteredPosts);
+          } else {
+            const initialMock = [
+              {
+                id: "p1",
+                authorName: "Hương Trà",
+                authorAvatar: "HT",
+                isVerified: true,
+                time: "10 phút trước",
+                createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+                content: "Mọi người nghĩ sao về chi tiết mở nút ở chương mới nhất? Mình đang tò mò hướng phát triển tiếp theo.",
+                likes: 24,
+                liked: false,
+                replies: [
+                  { id: "r1_1", author: "Gia Hiển", authorAvatar: "GH", content: "Mình cũng thấy chi tiết đó có thể là gợi ý cho tuyến nhân vật phụ.", isVerified: true },
+                  { id: "r1_2", author: "Độc giả 03", authorAvatar: "D3", content: "Có thể tác giả đang chuẩn bị đảo chiều ở chương sau.", isVerified: false }
+                ],
+                showReplyBox: false,
+              },
+              {
+                id: "p2",
+                authorName: "Phú Thọ",
+                authorAvatar: "PT",
+                isVerified: true,
+                time: "1 giờ trước",
+                createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+                content: "Vừa đọc xong chương mới nhất. Nhịp kể chắc tay, đoạn kết chương khiến mình muốn đọc tiếp ngay.",
+                likes: 12,
+                liked: true,
+                replies: [],
+                showReplyBox: false,
+              },
+              {
+                id: "p3",
+                authorName: "Duy Trường",
+                authorAvatar: "DT",
+                isVerified: true,
+                time: "2 giờ trước",
+                createdAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
+                content: "Có ai đề xuất thêm truyện cùng thể loại không ạ? Mình muốn tìm thêm vài bộ để đọc cuối tuần.",
+                likes: 8,
+                liked: false,
+                replies: [
+                  { id: "r3_1", author: "Yến Nhi", authorAvatar: "YN", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa trên trang Khám phá nhé!", isVerified: true }
+                ],
+                showReplyBox: false,
+              }
+            ];
+            setPosts(initialMock);
+            localStorage.setItem("yag.forum.posts", JSON.stringify(initialMock));
+          }
+        }
       } else {
-        if (appEnv.useMocks) {
-          const initialMock = [
-            {
-              id: "p1",
-              authorName: "Hương Trà",
-              authorAvatar: "HT",
-              isVerified: true,
-              time: "10 phút trước",
-              createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-              content: "Mọi người nghĩ sao về chi tiết mở nút ở chương mới nhất? Mình đang tò mò hướng phát triển tiếp theo.",
-              likes: 24,
-              liked: false,
-              replies: [
-                { id: "r1_1", author: "Gia Hiển", authorAvatar: "GH", content: "Mình cũng thấy chi tiết đó có thể là gợi ý cho tuyến nhân vật phụ.", isVerified: true },
-                { id: "r1_2", author: "Độc giả 03", authorAvatar: "D3", content: "Có thể tác giả đang chuẩn bị đảo chiều ở chương sau.", isVerified: false }
-              ],
-              showReplyBox: false,
-            },
-            {
-              id: "p2",
-              authorName: "Phú Thọ",
-              authorAvatar: "PT",
-              isVerified: true,
-              time: "1 giờ trước",
-              createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-              content: "Vừa đọc xong chương mới nhất. Nhịp kể chắc tay, đoạn kết chương khiến mình muốn đọc tiếp ngay.",
-              likes: 12,
-              liked: true,
-              replies: [],
-              showReplyBox: false,
-            },
-            {
-              id: "p3",
-              authorName: "Duy Trường",
-              authorAvatar: "DT",
-              isVerified: true,
-              time: "2 giờ trước",
-              createdAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
-              content: "Có ai đề xuất thêm truyện cùng thể loại không ạ? Mình muốn tìm thêm vài bộ để đọc cuối tuần.",
-              likes: 8,
-              liked: false,
-              replies: [
-                { id: "r3_1", author: "Yến Nhi", authorAvatar: "YN", content: "Bạn có thể thử tìm kiếm bằng AI ngữ nghĩa trên trang Khám phá nhé!", isVerified: true }
-              ],
-              showReplyBox: false,
-            }
-          ];
-          setPosts(initialMock);
-          localStorage.setItem("yag.forum.posts", JSON.stringify(initialMock));
-        } else {
+        try {
+          const res = await yagApi.forum.getPosts();
+          setPosts(res.data || []);
+        } catch (err) {
+          console.error("Failed to load forum posts from API:", err);
           setPosts([]);
         }
       }
-    }
+    };
+    void loadPosts();
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !appEnv.useMocks) return;
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "yag.forum.posts" && e.newValue) {
         try {
@@ -1325,7 +1332,7 @@ export function ForumScreen() {
   const handleHide = (postId: string) => {
     const updated = posts.filter(p => p.id !== postId);
     setPosts(updated);
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && appEnv.useMocks) {
       localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
     }
     triggerLiveToast("Đã ẩn bài viết này khỏi bảng tin.");
@@ -1336,46 +1343,80 @@ export function ForumScreen() {
     triggerLiveToast("Cảm ơn phản hồi. Bài viết đã được gửi cho ban quản trị để hậu kiểm.");
   };
 
-  const handleLikePost = (postId: string) => {
-    const updated = posts.map(p => {
-      if (p.id === postId) {
-        return {
-          ...p,
-          liked: !p.liked,
-          likes: p.liked ? p.likes - 1 : p.likes + 1
-        };
+  const handleLikePost = async (postId: string) => {
+    if (appEnv.useMocks) {
+      const updated = posts.map(p => {
+        if (p.id === postId) {
+          return {
+            ...p,
+            liked: !p.liked,
+            likes: p.liked ? p.likes - 1 : p.likes + 1
+          };
+        }
+        return p;
+      });
+      setPosts(updated);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
       }
-      return p;
-    });
-    setPosts(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
+    } else {
+      try {
+        const res = await yagApi.forum.likePost(postId);
+        setPosts(prev =>
+          prev.map(p => {
+            if (p.id === postId) {
+              return {
+                ...p,
+                liked: res.data.liked,
+                likes: res.data.likes,
+              };
+            }
+            return p;
+          })
+        );
+      } catch (err: any) {
+        console.error("Failed to like post:", err);
+        triggerLiveToast(err.message || "Không thể tương tác bài viết.", "error");
+      }
     }
   };
 
-  const handleCreatePost = (e: React.FormEvent) => {
+  const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPostContent.trim()) return;
-    const newPost = {
-      id: `p_${Date.now()}`,
-      authorName: "Bạn",
-      authorAvatar: "B",
-      isVerified: false,
-      time: "Vừa xong",
-      createdAt: new Date().toISOString(),
-      content: newPostContent,
-      likes: 0,
-      liked: false,
-      replies: [],
-      showReplyBox: false,
-    };
-    const updated = [newPost, ...posts];
-    setPosts(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
+
+    if (appEnv.useMocks) {
+      const newPost = {
+        id: `p_${Date.now()}`,
+        authorName: "Bạn",
+        authorAvatar: "B",
+        isVerified: false,
+        time: "Vừa xong",
+        createdAt: new Date().toISOString(),
+        content: newPostContent,
+        likes: 0,
+        liked: false,
+        replies: [],
+        showReplyBox: false,
+      };
+      const updated = [newPost, ...posts];
+      setPosts(updated);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
+      }
+      setNewPostContent("");
+      triggerLiveToast("Đăng bài viết thành công!");
+    } else {
+      try {
+        const res = await yagApi.forum.createPost(newPostContent);
+        setPosts(prev => [res.data, ...prev]);
+        setNewPostContent("");
+        triggerLiveToast("Đăng bài viết thành công!");
+      } catch (err: any) {
+        console.error("Failed to create post:", err);
+        triggerLiveToast(err.message || "Không thể đăng bài viết.", "error");
+      }
     }
-    setNewPostContent("");
-    triggerLiveToast("Đăng bài viết thành công!");
   };
 
   const toggleReplyBox = (postId: string) => {
@@ -1387,25 +1428,57 @@ export function ForumScreen() {
     }));
   };
 
-  const handleAddReplySubmit = (postId: string) => {
+  const handleAddReplySubmit = async (postId: string) => {
     const text = replyInputs[postId] || "";
     if (!text.trim()) return;
-    const updated = posts.map(p => {
-      if (p.id === postId) {
-        return {
-          ...p,
-          replies: [...p.replies, { id: `r_${Date.now()}`, author: "Bạn", authorAvatar: "B", content: text, isVerified: false }],
-          showReplyBox: false
-        };
+
+    if (appEnv.useMocks) {
+      const updated = posts.map(p => {
+        if (p.id === postId) {
+          return {
+            ...p,
+            replies: [...p.replies, { id: `r_${Date.now()}`, author: "Bạn", authorAvatar: "B", content: text, isVerified: false }],
+            showReplyBox: false
+          };
+        }
+        return p;
+      });
+      setPosts(updated);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
       }
-      return p;
-    });
-    setPosts(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("yag.forum.posts", JSON.stringify(updated));
+      setReplyInputs(prev => ({ ...prev, [postId]: "" }));
+      triggerLiveToast("Đã gửi phản hồi.");
+    } else {
+      try {
+        const res = await yagApi.forum.createReply(postId, text);
+        setPosts(prev =>
+          prev.map(p => {
+            if (p.id === postId) {
+              const newReply = {
+                id: res.data.id,
+                author: res.data.display_name || res.data.username,
+                authorAvatar: res.data.avatar_url,
+                content: res.data.content,
+                isVerified: res.data.is_verified,
+                createdAt: res.data.created_at,
+              };
+              return {
+                ...p,
+                replies: [...p.replies, newReply],
+                showReplyBox: false,
+              };
+            }
+            return p;
+          })
+        );
+        setReplyInputs(prev => ({ ...prev, [postId]: "" }));
+        triggerLiveToast("Đã gửi phản hồi.");
+      } catch (err: any) {
+        console.error("Failed to submit reply:", err);
+        triggerLiveToast(err.message || "Không thể gửi phản hồi.", "error");
+      }
     }
-    setReplyInputs(prev => ({ ...prev, [postId]: "" }));
-    triggerLiveToast("Đã gửi phản hồi.");
   };
 
   const displayedPosts = activeTab === "for-you"

@@ -342,5 +342,22 @@ export const yagApi = {
         method: "GET",
       }),
   },
+  forum: {
+    getPosts: () => apiFetch<any[]>("/api/v1/forum/posts"),
+    createPost: (content: string) =>
+      apiFetch<any>("/api/v1/forum/posts", {
+        method: "POST",
+        body: { content },
+      }),
+    likePost: (postId: string) =>
+      apiFetch<any>(`/api/v1/forum/posts/${postId}/like`, {
+        method: "POST",
+      }),
+    createReply: (postId: string, content: string) =>
+      apiFetch<any>(`/api/v1/forum/posts/${postId}/replies`, {
+        method: "POST",
+        body: { content },
+      }),
+  },
 };
 

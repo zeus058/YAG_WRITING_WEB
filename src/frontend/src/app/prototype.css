@@ -1212,37 +1212,37 @@ svg {
 .author-card-main-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .author-card-sub-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
 }
 
 .author-card-action {
   min-height: 36px;
-  padding: 6px 8px;
+  padding: 6px 4px !important;
   border: 1px solid var(--line) !important;
   border-radius: 6px !important;
-  font-size: 13px !important;
+  font-size: 11.5px !important;
   font-weight: 600 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 6px !important;
+  gap: 4px !important;
   transition: all 0.2s ease !important;
   cursor: pointer !important;
   box-shadow: none !important;
   background: var(--surface) !important;
-  color: var(--jungle) !important;
+  color: var(--foreground) !important;
   text-decoration: none !important;
 }
 
 .author-card-action .icon {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   color: inherit !important;
 }
 
@@ -1259,39 +1259,19 @@ svg {
   transform: translateY(-1px);
 }
 
-/* Secondary Button: Đăng chương */
-.author-card-action-publish {
-  background: var(--button-hover-bg, rgba(200, 28, 48, 0.05)) !important;
-  border-color: var(--coral, #FEBDB2) !important;
-  color: var(--crimson) !important;
-}
-
-.dark .author-card-action-publish {
-  color: var(--accent-text) !important;
-}
-
-.author-card-action-publish:hover {
-  background: var(--crimson) !important;
-  border-color: var(--crimson) !important;
-  color: #ffffff !important;
-}
-
-.dark .author-card-action-publish:hover {
-  color: #ffffff !important;
-}
-
-/* Metadata action: Sửa thông tin */
+/* Secondary Button: Đăng chương & Sửa thông tin */
+.author-card-action-publish,
 .author-card-action-manage {
-  background: rgba(37, 99, 235, 0.06) !important;
-  border-color: rgba(37, 99, 235, 0.24) !important;
-  color: #1d4ed8 !important;
+  background: var(--surface) !important;
+  border-color: var(--line) !important;
+  color: var(--foreground) !important;
 }
 
+.author-card-action-publish:hover,
 .author-card-action-manage:hover {
-  background: #2563eb !important;
-  border-color: #2563eb !important;
-  color: #ffffff !important;
-  transform: translateY(-1px);
+  background: var(--button-hover-bg, rgba(200, 28, 48, 0.05)) !important;
+  border-color: var(--crimson) !important;
+  color: var(--crimson) !important;
 }
 
 /* Tertiary Buttons: Xem truyện & Lịch đăng */
@@ -1308,23 +1288,17 @@ svg {
   color: var(--jungle-dark) !important;
 }
 
-.dark .author-card-action-preview:hover,
-.dark .author-card-action-schedule:hover {
-  border-color: #ffffff !important;
-  color: #ffffff !important;
-}
-
-/* Danger Button: Xóa */
+/* Danger Button: Xóa (only red on hover to keep interface clean) */
 .author-card-action-delete {
-  background: rgba(239, 68, 68, 0.05) !important;
-  border-color: rgba(239, 68, 68, 0.2) !important;
-  color: var(--err-red, #EF4444) !important;
+  background: var(--surface) !important;
+  border-color: var(--line) !important;
+  color: var(--muted) !important;
 }
 
 .author-card-action-delete:hover {
-  background: var(--err-red, #EF4444) !important;
+  background: rgba(239, 68, 68, 0.08) !important;
   border-color: var(--err-red, #EF4444) !important;
-  color: #ffffff !important;
+  color: var(--err-red, #EF4444) !important;
 }
 
 .author-category-badge {
@@ -1358,7 +1332,8 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  background: rgba(65, 80, 61, 0.04);
+  background: rgba(65, 80, 61, 0.03) !important;
+  border: 1px solid rgba(65, 80, 61, 0.07) !important;
   padding: 6px 4px;
   border-radius: 6px;
   white-space: nowrap;
@@ -1374,12 +1349,11 @@ svg {
 }
 
 .author-stat-chip-orange {
-  background: rgba(217, 119, 6, 0.06);
-  color: #B45309;
+  color: var(--jungle) !important;
 }
 
 .author-stat-chip-orange span:first-child {
-  color: #D97706;
+  color: #D97706 !important;
 }
 
 /* Dark Mode Overrides */
@@ -1399,28 +1373,18 @@ svg {
   transform: translateY(-1px);
 }
 
-.dark .author-card-action-publish {
-  background: rgba(200, 28, 48, 0.08) !important;
-  border-color: rgba(254, 189, 178, 0.25) !important;
-  color: var(--accent-text) !important;
-}
-
-.dark .author-card-action-publish:hover {
-  background: var(--crimson) !important;
-  border-color: var(--crimson) !important;
-  color: #FFFFFF !important;
-}
-
+.dark .author-card-action-publish,
 .dark .author-card-action-manage {
-  background: rgba(59, 130, 246, 0.12) !important;
-  border-color: rgba(96, 165, 250, 0.32) !important;
-  color: #93c5fd !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: var(--line) !important;
+  color: var(--muted) !important;
 }
 
+.dark .author-card-action-publish:hover,
 .dark .author-card-action-manage:hover {
-  background: #2563eb !important;
-  border-color: #60a5fa !important;
-  color: #FFFFFF !important;
+  background: var(--button-hover-bg, rgba(254, 189, 178, 0.1)) !important;
+  border-color: var(--coral) !important;
+  color: var(--accent-text) !important;
 }
 
 .dark .author-card-action-preview,
@@ -1443,15 +1407,15 @@ svg {
 }
 
 .dark .author-card-action-delete {
-  background: rgba(239, 68, 68, 0.08) !important;
-  border-color: rgba(239, 68, 68, 0.25) !important;
-  color: #FCA5A5 !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: var(--line) !important;
+  color: var(--muted) !important;
 }
 
 .dark .author-card-action-delete:hover {
-  background: var(--red) !important;
-  border-color: var(--red) !important;
-  color: #FFFFFF !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: var(--err-red, #EF4444) !important;
+  color: #FCA5A5 !important;
 }
 
 .dark .author-category-badge {
@@ -1474,12 +1438,11 @@ svg {
 }
 
 .dark .author-stat-chip-orange {
-  background: rgba(245, 158, 11, 0.12);
-  color: #FBBF24;
+  color: var(--foreground) !important;
 }
 
 .dark .author-stat-chip-orange span:first-child {
-  color: #FBBF24;
+  color: #FBBF24 !important;
 }
 
 .story-setup-backdrop {
@@ -5003,9 +4966,9 @@ svg {
   place-items: center;
   min-height: 220px;
   padding: 24px;
-  border: 1px dashed rgba(65, 80, 61, 0.24);
+  border: 1px dashed var(--line) !important;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.46);
+  background: var(--surface) !important;
   text-align: center;
 }
 

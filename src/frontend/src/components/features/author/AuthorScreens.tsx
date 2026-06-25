@@ -757,7 +757,7 @@ export function AuthorWorksScreen() {
 }
 
 const parseInlineMarkdown = (text: string): React.ReactNode[] => {
-  const regex = /(\*\*.*?\*\*|\*.*?\*|<u>.*?<\/u>|<mark>.*?<\/mark>)/g;
+  const regex = /(\*\*.*?\*\*|\*.*?\*|<u>.*?<\/u>|<mark[^>]*>.*?<\/mark>)/g;
   const parts = text.split(regex);
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {
@@ -769,8 +769,11 @@ const parseInlineMarkdown = (text: string): React.ReactNode[] => {
     if (part.startsWith("<u>") && part.endsWith("</u>")) {
       return <u key={i}>{part.slice(3, -4)}</u>;
     }
-    if (part.startsWith("<mark>") && part.endsWith("</mark>")) {
-      return <mark key={i}>{part.slice(6, -7)}</mark>;
+    if (part.startsWith("<mark") && part.endsWith("</mark>")) {
+      const match = part.match(/<mark\s+style="background-color:\s*(.*?);?">/i);
+      const bgColor = match ? match[1] : undefined;
+      const textInside = part.replace(/<mark[^>]*>/i, "").slice(0, -7);
+      return <mark key={i} style={bgColor ? { backgroundColor: bgColor } : undefined}>{textInside}</mark>;
     }
     return part;
   });
@@ -784,6 +787,7 @@ const convertInlineHtmlToMarkdown = (html: string): string => {
     .replace(/<em>(.*?)<\/em>/gi, "*$1*")
     .replace(/<i>(.*?)<\/i>/gi, "*$1*")
     .replace(/<u>(.*?)<\/u>/gi, "<u>$1</u>")
+    .replace(/<mark\s+style="background-color:\s*(.*?);?">(.*?)<\/mark>/gi, '<mark style="background-color: $1;">$2</mark>')
     .replace(/<mark>(.*?)<\/mark>/gi, "<mark>$1</mark>")
     .replace(/<br>/gi, "");
 };
@@ -793,6 +797,19 @@ const htmlToMarkdown = (html: string): string => {
   if (typeof document === "undefined") return html;
   const tempDiv = document.createElement("div");
   tempDiv.innerHTML = html;
+
+  // Convert styled spans/fonts to mark tags to preserve background colors
+  const styledElements = tempDiv.querySelectorAll('span[style*="background-color"], font[style*="background-color"], span[style*="background"]');
+  styledElements.forEach((el) => {
+    const htmlEl = el as HTMLElement;
+    const bg = htmlEl.style.backgroundColor || htmlEl.style.background;
+    if (bg) {
+      const mark = document.createElement("mark");
+      mark.setAttribute("style", `background-color: ${bg};`);
+      mark.innerHTML = htmlEl.innerHTML;
+      htmlEl.parentNode?.replaceChild(mark, htmlEl);
+    }
+  });
 
   const lines: string[] = [];
   const children = Array.from(tempDiv.childNodes);
@@ -914,7 +931,7 @@ export function AuthorStudioScreen() {
 
   // Preview Modal
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const isPreviewMode = false;
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [activeHighlightColor, setActiveHighlightColor] = useState("#fef08a");
 
@@ -1288,18 +1305,19 @@ export function AuthorStudioScreen() {
       author: styleReference.author.trim(),
     };
     if (!cleanReference.storyTitle && !cleanReference.seriesTitle && !cleanReference.author) {
-      setStyleReferenceMessage("Nhập ít nhất một trường tham chiếu để Miu dùng khi chưa có lịch sử tác giả.");
+      setStyleReferenceMessage("Nhập nhất một trường tham chiếu để Miu dùng khi chưa có lịch sử tác giả.");
       return;
     }
 
     setStyleReferenceSaving(true);
     setStyleReferenceMessage(null);
     try {
-      await yagApi.author.updateStory(storyId, {
-                  style_reference_story_title: cleanReference.storyTitle,
-                  style_reference_series_title: cleanReference.seriesTitle,
-                  style_reference_author: cleanReference.author,
-                });
+      const formData = new FormData();
+      formData.append("style_reference_story_title", cleanReference.storyTitle);
+      formData.append("style_reference_series_title", cleanReference.seriesTitle);
+      formData.append("style_reference_author", cleanReference.author);
+
+      await yagApi.author.updateStory(storyId, formData);
       setStoryProfile((current: any) => ({
         ...(current || {}),
         style_reference_story_title: cleanReference.storyTitle,
@@ -1789,17 +1807,22 @@ export function AuthorStudioScreen() {
                   type="button"
                   onClick={() => setShowColorPicker(!showColorPicker)}
                   title="Tô sáng văn bản"
-                  style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                  style={{ padding: "4px 8px", background: "transparent", border: 0, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}
                 >
-                  <span style={{ 
-                    display: "inline-block", 
-                    width: 14, 
-                    height: 14, 
-                    borderRadius: "50%", 
+                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--foreground)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m9 11-6 6v3h9l3-3"/>
+                      <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
+                    </svg>
+                    <span style={{ fontSize: 9, opacity: 0.7, color: "var(--foreground)" }}>▼</span>
+                  </div>
+                  <div style={{ 
+                    width: 18, 
+                    height: 3, 
                     background: activeHighlightColor,
-                    border: "1px solid rgba(0,0,0,0.2)"
+                    borderRadius: 1,
+                    border: "1px solid rgba(255,255,255,0.15)"
                   }} />
-                  <span style={{ fontSize: 10, opacity: 0.7 }}>▼</span>
                 </button>
                 {showColorPicker && (
                   <div style={{ 
@@ -1869,7 +1892,7 @@ export function AuthorStudioScreen() {
                 title="Canh lề trái"
                 style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
               >
-                Align L
+                ☰
               </button>
               <button
                 className="tool-button"
@@ -1878,7 +1901,7 @@ export function AuthorStudioScreen() {
                 title="Canh lề giữa"
                 style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
               >
-                Align C
+                ≡
               </button>
               <button
                 className="tool-button"
@@ -1887,7 +1910,7 @@ export function AuthorStudioScreen() {
                 title="Canh lề phải"
                 style={{ padding: "6px 8px", background: "transparent", border: 0, cursor: "pointer", fontSize: 14, color: "var(--foreground)" }}
               >
-                Align R
+                ≣
               </button>
             </div>
 
@@ -1901,7 +1924,7 @@ export function AuthorStudioScreen() {
                   className="select compact-select"
                   value={editorFont}
                   onChange={(e) => setEditorFont(e.target.value)}
-                  style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid var(--line)", background: "transparent", color: "var(--foreground)" }}
+                  style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--foreground)" }}
                 >
                   {[
                     { name: "Inter", value: "Inter, Arial, sans-serif" },
@@ -1918,7 +1941,7 @@ export function AuthorStudioScreen() {
                     { name: "Comfortaa", value: "Comfortaa, cursive" },
                     { name: "Be Vietnam Pro", value: "'Be Vietnam Pro', sans-serif" }
                   ].map(f => (
-                    <option key={f.name} value={f.value}>{f.name}</option>
+                    <option key={f.name} value={f.value} style={{ background: "var(--surface)", color: "var(--foreground)" }}>{f.name}</option>
                   ))}
                 </select>
               </label>
@@ -1948,28 +1971,6 @@ export function AuthorStudioScreen() {
                 />
               </label>
             </div>
-
-            <div style={{ width: "1px", height: "20px", background: "var(--line)", marginLeft: "auto" }} />
-
-            {/* Preview Toggle */}
-            <button
-              className={`tool-button ${isPreviewMode ? "active" : ""}`}
-              type="button"
-              onClick={() => setIsPreviewMode(!isPreviewMode)}
-              title="Xem trước định dạng"
-              style={{
-                backgroundColor: isPreviewMode ? "var(--primary)" : "transparent",
-                color: isPreviewMode ? "white" : "var(--foreground)",
-                border: isPreviewMode ? "none" : "1px solid var(--line)",
-                borderRadius: 4,
-                padding: "6px 12px",
-                fontSize: 12,
-                cursor: "pointer",
-                fontWeight: 600
-              }}
-            >
-              {isPreviewMode ? "Sửa" : "Xem trước"}
-            </button>
           </div>
 
           {/* Writing Workspace */}
@@ -2174,18 +2175,19 @@ export function AuthorStudioScreen() {
             >
               AI Co-Writer
             </button>
-            <button
+             <button
               className={`tab-button ${activeAiPanel === "lores" ? "active" : ""}`}
               type="button"
               onClick={() => setActiveAiPanel("lores")}
+              style={{ gridColumn: "span 2" }}
             >
               Sổ tay
             </button>
           </div>
 
           {activeAiPanel === "coach" && (
-            <div className="tab-panel active stack ai-coach-panel">
-              <div className="agent-bubble">
+            <div className="tab-panel active stack ai-coach-panel" style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+              <div className="agent-bubble" style={{ marginBottom: 4 }}>
                 <strong>Gemini Agent đang dùng ngữ cảnh chương, mode và đoạn chọn.</strong>
                 <p>Miu trả về nội dung có thể chèn trực tiếp, kèm lý do và điểm chất lượng để bạn quyết định nhanh.</p>
               </div>
@@ -2194,7 +2196,7 @@ export function AuthorStudioScreen() {
                 className="button button-soft"
                 type="button"
                 onClick={() => setIsStyleReferenceModalOpen(true)}
-                style={{ width: "100%", justifyContent: "center" }}
+                style={{ width: "100%", justifyContent: "center", minHeight: "40px" }}
               >
                 <Icon name="edit" /> Style Reference Metadata
                 {storyProfile?.style_reference_author || storyProfile?.style_reference_story_title || storyProfile?.style_reference_series_title ? (
@@ -2204,7 +2206,7 @@ export function AuthorStudioScreen() {
                 )}
               </button>
 
-              <div className="ai-mode-grid" role="radiogroup" aria-label="Chế độ AI">
+              <div className="ai-mode-grid" role="radiogroup" aria-label="Chế độ AI" style={{ gap: 12 }}>
                 {aiModeOptions.map((item) => (
                   <button
                     className={`ai-mode-button ${aiMode === item.id ? "active" : ""}`}
@@ -2220,8 +2222,8 @@ export function AuthorStudioScreen() {
                 ))}
               </div>
 
-              <div className="ai-target-control" style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div className="ai-target-control" style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8, marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <label htmlFor="ai-target-words" style={{ fontSize: "0.8rem", fontWeight: 500, color: "var(--text-primary)" }}>
                     Độ dài gợi ý: <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>{aiTargetWords} từ</span>
                   </label>
@@ -2371,13 +2373,13 @@ export function AuthorStudioScreen() {
           )}
 
           {activeAiPanel === "tools" && (
-            <div className="tab-panel active stack ai-tooling-panel">
-              <div className="agent-bubble">
+            <div className="tab-panel active stack ai-tooling-panel" style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+              <div className="agent-bubble" style={{ marginBottom: 4 }}>
                 <strong>AI Co-Writer — Viết cả chương</strong>
                 <p>Mô tả ý tưởng chương truyện, AI sẽ viết toàn bộ nội dung cho bạn. Bạn có thể chỉnh sửa sau khi chép vào trang viết.</p>
               </div>
 
-              <div className="agent-compose" style={{ marginBottom: 16 }}>
+              <div className="agent-compose" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <textarea
                   className="textarea"
                   rows={4}
@@ -2385,11 +2387,10 @@ export function AuthorStudioScreen() {
                   onChange={(e) => setCoWriterPrompt(e.target.value)}
                   placeholder="Ý tưởng viết chương: ví dụ 'Viết chương 1 kể về một chiến binh đi thám hiểm đền cổ, phát hiện bí ẩn gia tộc...'" 
                   disabled={isEditingDisabled}
-                  style={{ marginBottom: 12 }}
                 />
 
-                <div className="ai-target-control" style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="ai-target-control" style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                     <label htmlFor="co-writer-target-words" style={{ fontSize: "0.8rem", fontWeight: 500, color: "var(--text-primary)" }}>
                       Độ dài chương cần sinh: <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>{coWriterTargetWords} từ</span>
                     </label>
@@ -2506,8 +2507,8 @@ export function AuthorStudioScreen() {
           )}
 
           {activeAiPanel === "lores" && (
-            <div className="tab-panel active stack ai-lores-panel">
-              <div className="agent-bubble">
+            <div className="tab-panel active stack ai-lores-panel" style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+              <div className="agent-bubble" style={{ marginBottom: 4 }}>
                 <strong>Sổ tay thiết lập (Lorebook)</strong>
                 <p>Thêm nhân vật, địa danh, vật phẩm... Miu sẽ tự động tham chiếu dữ liệu này để viết truyện nhất quán hơn.</p>
               </div>

@@ -50,9 +50,9 @@ def test_production_config_accepts_secure_url_based_settings():
     assert settings.RABBITMQ_URL.startswith("amqps://")
     assert settings.AI_AGENT_ENABLED is True
     assert settings.AI_MODERATION_STRICT_MODE is True
-    assert settings.GEMINI_STRONG_MODEL == "gemini-2.5-pro"
+    assert settings.GEMINI_STRONG_MODEL == "gemini-2.5-flash"
     assert settings.GEMINI_FAST_MODEL == "gemini-2.5-flash"
-    assert settings.GEMINI_MODERATION_MODEL == "gemini-2.5-pro"
+    assert settings.GEMINI_MODERATION_MODEL == "gemini-2.5-flash"
     assert settings.AI_MODERATION_REJECT_THRESHOLD >= (
         settings.AI_MODERATION_APPROVE_THRESHOLD
     )

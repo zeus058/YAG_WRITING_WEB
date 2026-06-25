@@ -1,5 +1,5 @@
 -- =============================================================================
--- Migration: V4__fix_embedding_dimension.sql
+-- Migration: V11__fix_embedding_dimension.sql
 -- Description: Fix story_embeddings vector dimension from 1536 to 768.
 --   The original schema used vector(1536), but the embedding models actually
 --   produce 768-dim vectors (text-embedding-004 → 768, gemini-embedding-001

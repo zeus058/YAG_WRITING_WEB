@@ -1225,6 +1225,7 @@ export function ForumScreen() {
               authorAvatar: "HT",
               isVerified: true,
               time: "10 phút trước",
+              createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
               content: "Mọi người nghĩ sao về chi tiết mở nút ở chương mới nhất? Mình đang tò mò hướng phát triển tiếp theo.",
               likes: 24,
               liked: false,
@@ -1240,6 +1241,7 @@ export function ForumScreen() {
               authorAvatar: "PT",
               isVerified: true,
               time: "1 giờ trước",
+              createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
               content: "Vừa đọc xong chương mới nhất. Nhịp kể chắc tay, đoạn kết chương khiến mình muốn đọc tiếp ngay.",
               likes: 12,
               liked: true,
@@ -1252,6 +1254,7 @@ export function ForumScreen() {
               authorAvatar: "DT",
               isVerified: true,
               time: "2 giờ trước",
+              createdAt: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
               content: "Có ai đề xuất thêm truyện cùng thể loại không ạ? Mình muốn tìm thêm vài bộ để đọc cuối tuần.",
               likes: 8,
               liked: false,
@@ -1349,6 +1352,7 @@ export function ForumScreen() {
       authorAvatar: "B",
       isVerified: false,
       time: "Vừa xong",
+      createdAt: new Date().toISOString(),
       content: newPostContent,
       likes: 0,
       liked: false,
@@ -1465,7 +1469,7 @@ export function ForumScreen() {
                       <div className="thread-author-info">
                         <span className="thread-author-name">{post.authorName}</span>
                         {post.isVerified && <VerifiedBadge />}
-                        <span className="thread-time">{post.time}</span>
+                        <span className="thread-time">{post.createdAt ? formatRelativeTime(post.createdAt) : post.time}</span>
                       </div>
 
                       <div style={{ position: "relative" }}>

@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 
 LOCAL_URL_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "::1")  # nosec B104
 VALID_SERVICE_ROLES = {"api", "worker", "migrate", "scheduler"}
-VALID_QUEUE_PROVIDERS = {"rabbitmq", "pubsub"}
+VALID_QUEUE_PROVIDERS = {"rabbitmq", "pubsub", "none"}
 INSECURE_SECRET_KEYS = {
     "dev_secret_key",
     "yag_development_secret_key_change_in_production",

@@ -8,9 +8,11 @@ import pika
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.database import SessionLocal
 from app.models.chapter import Chapter
 from app.models.story import Story
 from app.models.user import User
+from app.services.moderation_service import moderate_content, apply_moderation_result
 
 logger = logging.getLogger(__name__)
 
@@ -99,52 +101,72 @@ def push_publish_task_to_pubsub(payload: PublishTaskPayload) -> bool:
 
 def push_publish_task_to_queue(payload: PublishTaskPayload) -> bool:
     """Publish the moderation task to the configured durable queue."""
+    success = False
     if settings.QUEUE_PROVIDER == "pubsub":
-        return push_publish_task_to_pubsub(payload)
+        success = push_publish_task_to_pubsub(payload)
+    elif settings.QUEUE_PROVIDER == "rabbitmq":
+        connection = None
+        try:
+            connection = get_rabbitmq_connection()
+            channel = connection.channel()
+            channel.queue_declare(
+                queue=settings.RABBITMQ_MODERATION_DLQ,
+                durable=True,
+            )
+            channel.queue_declare(
+                queue=settings.RABBITMQ_MODERATION_RETRY_QUEUE,
+                durable=True,
+                arguments={
+                    "x-message-ttl": 60000,
+                    "x-dead-letter-exchange": "",
+                    "x-dead-letter-routing-key": PUBLISH_QUEUE_NAME,
+                },
+            )
+            channel.queue_declare(queue=PUBLISH_QUEUE_NAME, durable=True)
+            channel.basic_publish(
+                exchange="",
+                routing_key=PUBLISH_QUEUE_NAME,
+                body=json.dumps(payload.to_dict(), ensure_ascii=False).encode("utf-8"),
+                properties=pika.BasicProperties(
+                    delivery_mode=pika.DeliveryMode.Persistent,
+                    content_type="application/json",
+                ),
+            )
+            logger.info("Queued moderation task for chapter %s", payload.chapter_id)
+            success = True
+        except pika.exceptions.AMQPConnectionError as exc:
+            logger.error(
+                "RabbitMQ connection failed at %s:%s: %s",
+                settings.RABBITMQ_HOST,
+                settings.RABBITMQ_PORT,
+                exc,
+            )
+        except Exception as exc:
+            logger.error("Failed to publish moderation task: %s", exc)
+        finally:
+            if connection and not connection.is_closed:
+                connection.close()
+    elif settings.QUEUE_PROVIDER == "none":
+        logger.info("QUEUE_PROVIDER is set to 'none'. Using synchronous moderation.")
 
-    connection = None
-    try:
-        connection = get_rabbitmq_connection()
-        channel = connection.channel()
-        channel.queue_declare(
-            queue=settings.RABBITMQ_MODERATION_DLQ,
-            durable=True,
+    if not success:
+        logger.warning(
+            "Queue provider '%s' failed or is 'none'. Falling back to synchronous AI moderation for chapter %s.",
+            settings.QUEUE_PROVIDER,
+            payload.chapter_id,
         )
-        channel.queue_declare(
-            queue=settings.RABBITMQ_MODERATION_RETRY_QUEUE,
-            durable=True,
-            arguments={
-                "x-message-ttl": 60000,
-                "x-dead-letter-exchange": "",
-                "x-dead-letter-routing-key": PUBLISH_QUEUE_NAME,
-            },
-        )
-        channel.queue_declare(queue=PUBLISH_QUEUE_NAME, durable=True)
-        channel.basic_publish(
-            exchange="",
-            routing_key=PUBLISH_QUEUE_NAME,
-            body=json.dumps(payload.to_dict(), ensure_ascii=False).encode("utf-8"),
-            properties=pika.BasicProperties(
-                delivery_mode=pika.DeliveryMode.Persistent,
-                content_type="application/json",
-            ),
-        )
-        logger.info("Queued moderation task for chapter %s", payload.chapter_id)
-        return True
-    except pika.exceptions.AMQPConnectionError as exc:
-        logger.error(
-            "RabbitMQ connection failed at %s:%s: %s",
-            settings.RABBITMQ_HOST,
-            settings.RABBITMQ_PORT,
-            exc,
-        )
-        return False
-    except Exception as exc:
-        logger.error("Failed to publish moderation task: %s", exc)
-        return False
-    finally:
-        if connection and not connection.is_closed:
-            connection.close()
+        db = SessionLocal()
+        try:
+            report = moderate_content(payload.content, payload.chapter_id)
+            apply_moderation_result(payload.chapter_id, report, db)
+            success = True
+        except Exception as sync_exc:
+            logger.error("Synchronous moderation fallback failed: %s", sync_exc)
+            success = False
+        finally:
+            db.close()
+
+    return success
 
 
 def _load_chapter_and_story(chapter_id: str, db: Session) -> tuple[Chapter, Story]:

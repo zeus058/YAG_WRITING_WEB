@@ -3638,6 +3638,9 @@ svg {
 }
 
 .reader-page {
+  --ink: #2b3328;
+  --muted: #6B7468;
+  --petal: #FAF5EB;
   --reader-text: var(--ink);
   --reader-muted: var(--muted);
   --reader-panel: rgba(255, 252, 245, 0.94);
@@ -3646,9 +3649,13 @@ svg {
   --reader-border: rgba(65, 80, 61, 0.14);
   --reader-button: rgba(255, 255, 255, 0.88);
   color: var(--reader-text);
+  background: var(--petal);
 }
 
 .reader-page.reader-dark {
+  --ink: #FFFFFF;
+  --muted: #94A691;
+  --petal: #18201B;
   --reader-text: #F7ECD4;
   --reader-muted: #C9BFA5;
   --reader-panel: rgba(24, 36, 22, 0.94);
@@ -3656,7 +3663,52 @@ svg {
   --reader-chip: rgba(255, 236, 206, 0.08);
   --reader-border: rgba(255, 236, 206, 0.18);
   --reader-button: rgba(255, 236, 206, 0.08);
+  background: var(--petal);
 }
+
+/* === DARK MODE ACCENT & NOTIFICATION OVERRIDES === */
+.dark .badge-green {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ADE80;
+}
+.dark .badge-amber {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.2);
+  color: #FBBF24;
+}
+.dark .badge-blue {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.2);
+  color: #60A5FA;
+}
+
+.dark .toast.success,
+.dark .toast-success {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: #064e3b;
+  color: #e6fbf1;
+}
+.dark .toast.warning,
+.dark .toast-warning {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: #78350f;
+  color: #fef3c7;
+}
+.dark .toast.error,
+.dark .toast-error {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: #7f1d1d;
+  color: #fee2e2;
+}
+.dark .toast strong {
+  color: inherit;
+}
+.dark .toast span {
+  color: inherit;
+  opacity: 0.9;
+}
+
 
 .reader-page .reader-topbar,
 .reader-page .reader-toolbar,

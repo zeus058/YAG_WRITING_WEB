@@ -360,7 +360,7 @@ async def verify_payos_checkout(
             db.commit()
             return {"success": False, "message": "Giao dịch thanh toán đã bị hủy hoặc thất bại."}
     else:
-        if settings.ENVIRONMENT == "production":
+        if not settings.PAYOS_MOCK_ENABLED and settings.ENVIRONMENT == "production":
             return {"success": False, "message": "PayOS is not configured."}
         is_success = (
             transaction.status == "success"

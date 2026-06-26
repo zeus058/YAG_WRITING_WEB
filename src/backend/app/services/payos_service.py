@@ -19,7 +19,7 @@ def is_payos_configured() -> bool:
 
 
 def is_payos_mock_enabled() -> bool:
-    return settings.ENVIRONMENT != "production" and settings.PAYOS_MOCK_ENABLED
+    return settings.PAYOS_MOCK_ENABLED
 
 
 def compute_payos_signature(data: Dict[str, Any], checksum_key: str) -> str:

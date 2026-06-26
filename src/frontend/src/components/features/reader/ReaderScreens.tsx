@@ -84,6 +84,7 @@ export function HomeFeedScreen() {
   const [storiesList, setStoriesList] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [aiMessage, setAiMessage] = useState("");
 
   useEffect(() => {
     if (appEnv.useMocks) {
@@ -111,23 +112,40 @@ export function HomeFeedScreen() {
           recommendedStories = recsDetailRes.data || [];
         }
 
+        const isFallbackMode = recsRes.data.fallback === true || recIds.length === 0;
+        setAiMessage(
+          recsRes.data.message ||
+          (isFallbackMode
+            ? "Chưa có đủ lịch sử đọc để cá nhân hóa, dưới đây là các truyện nổi bật đang được yêu thích:"
+            : "Đề xuất được cá nhân hóa dựa trên gu đọc và các truyện bạn đã xem gần đây:")
+        );
+
+        // Build a map for O(1) lookup, then preserve AI ranking order
+        const storyMap = new Map(recommendedStories.map((s: any) => [s.id, s]));
         const mappedRecs = rawRecs.map((rec: any) => {
-          const fullStory = recommendedStories.find((s: any) => s.id === rec.story_id);
+          const fullStory = storyMap.get(rec.story_id) || {};
+          const sim = rec.similarity ?? 0;
+          const pct = Math.round(Math.min(100, Math.max(1, sim * 100)));
+          const reasonText = rec.reason
+            ? rec.reason
+            : rec.source === "popular"
+              ? "Truyện đang được nhiều độc giả yêu thích."
+              : `Phù hợp ${pct}% với gu đọc của bạn.`;
           return {
-            ...(fullStory || {}),
-            id: fullStory?.id || rec.story_id,
-            title: fullStory?.title || rec.title,
-            description: fullStory?.description || rec.plot_summary,
-            category: fullStory?.category || rec.category,
+            ...(fullStory as object),
+            id: (fullStory as any).id || rec.story_id,
+            title: (fullStory as any).title || rec.title,
+            description: (fullStory as any).description || rec.plot_summary,
+            category: (fullStory as any).category || rec.category,
             badge: "ai",
-            ai_reason: rec.reason,
+            ai_reason: reasonText,
             ai_match_tags: rec.match_tags || [],
             ai_source: rec.source,
-            ai_similarity: rec.similarity,
-            reason: rec.reason,
+            ai_similarity: sim,
+            reason: reasonText,
             match_tags: rec.match_tags || [],
             source: rec.source,
-            similarity: rec.similarity,
+            similarity: sim,
           };
         }).filter((story: any) => story.id || story.title);
 
@@ -220,9 +238,14 @@ export function HomeFeedScreen() {
         <main className="stack">
           <section className="panel panel-pad stack">
             <div className="home-section-head">
-              <h2 className="section-title">AI đề xuất cho bạn</h2>
-              <Link href="/discover">Xem thêm</Link>
+              <h2 className="section-title">Gợi ý cho bạn</h2>
+              <span className="badge badge-blue">AI Picks</span>
             </div>
+            {aiMessage && (
+              <div style={{ padding: "10px 14px", background: "var(--surface-2, rgba(99,102,241,0.08))", borderRadius: 8, border: "1px solid rgba(99,102,241,0.18)", fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
+                ✨ <strong>AI Phân Tích</strong>: {aiMessage}
+              </div>
+            )}
             <AIRecommendationStories count={6} storiesList={recommendations} />
           </section>
           <section className="panel panel-pad stack">
@@ -273,6 +296,7 @@ export function DiscoverScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [isFallback, setIsFallback] = useState(false);
+  const [aiMessage, setAiMessage] = useState("");
 
   const [selectedGenre, setSelectedGenre] = useState("Tất cả");
   const [selectedStatus, setSelectedStatus] = useState("Tất cả");
@@ -296,26 +320,45 @@ export function DiscoverScreen() {
           semantic: true,
         });
         setIsFallback(response.data.fallback || false);
-        const results = response.data.results || [];
+        const results: any[] = response.data.results || [];
         const storyIds = results.map((r: any) => r.story_id).filter(Boolean);
-        let mapped: any[] = [];
         if (storyIds.length > 0) {
           const storiesRes = await yagApi.reader.listStories({ ids: storyIds.join(",") });
-          mapped = (storiesRes.data || []).map((s: any) => {
-            const aiData = results.find((r: any) => r.story_id === s.id);
-            if (aiData) {
-              s.ai_reason = aiData.plot_summary ? `Theo tìm kiếm: ${aiData.plot_summary}` : "Phù hợp với mô tả tìm kiếm của bạn.";
-              s.match_score = aiData.distance !== undefined ? Math.max(1, Math.round((1 - aiData.distance) * 100)) : 90;
-              s.source = "semantic";
-            }
-            return s;
-          });
+          const storyMap = new Map((storiesRes.data || []).map((s: any) => [s.id, s]));
+          // Preserve AI ranking order
+          const mapped = results.map((aiData: any) => {
+            const s = storyMap.get(aiData.story_id) || {};
+            const sim = aiData.similarity ?? 0;
+            const pct = Math.round(Math.min(100, Math.max(1, sim * 100)));
+            return {
+              ...s,
+              id: (s as any).id || aiData.story_id,
+              ai_reason: aiData.plot_summary
+                ? `Truyện phù hợp với tìm kiếm: "${aiData.plot_summary}"`
+                : `Truyện phù hợp ${pct}% với từ khóa tìm kiếm của bạn.`,
+              match_score: pct,
+              similarity: sim,
+              source: "semantic",
+              badge: "ai",
+            };
+          }).filter((s: any) => s.id || (s as any).title);
+          setStoriesList(mapped);
+          
+          setAiMessage(
+            response.data.message ||
+            (response.data.fallback 
+              ? "Tính năng tìm kiếm ngữ nghĩa tạm thời không khả dụng, đây là kết quả tìm kiếm thông thường:" 
+              : `Hệ thống đã phân tích ngữ nghĩa của mô tả và tìm thấy ${mapped.length} kết quả có nội dung tương đồng nhất.`)
+          );
+        } else {
+          setStoriesList([]);
+          setAiMessage("Không tìm thấy truyện nào phù hợp với miêu tả của bạn.");
         }
-        setStoriesList(mapped);
       } else {
         const response = await yagApi.reader.listStories({ q: query });
         setStoriesList(response.data || []);
         setIsFallback(false);
+        setAiMessage("");
       }
     } catch (err) {
       console.error("Failed to perform search", err);
@@ -419,7 +462,10 @@ export function DiscoverScreen() {
               className="input"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Từ khóa hoặc ý tưởng cốt truyện (ví dụ: tình yêu thời chiến tranh)..."
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder={searchMode === "ai"
+                ? "Mô tả cảm xúc muốn đọc (VD: truyện buồn về tình yêu thời chiến, hoặc hành trình tìm lại ký ức)..."
+                : "Tìm theo tên truyện, tác giả, thể loại..."}
             />
           </div>
           <div className="search-mode-segmented">
@@ -435,7 +481,7 @@ export function DiscoverScreen() {
               type="button"
               onClick={() => setSearchMode("ai")}
             >
-              AI
+              🤖 AI
             </button>
           </div>
           <button className="button button-primary search-submit-btn" type="button" onClick={handleSearch} disabled={isLoading}>
@@ -443,6 +489,11 @@ export function DiscoverScreen() {
             {isLoading ? "Đang tìm..." : "Tìm truyện"}
           </button>
         </div>
+        {searchMode === "ai" && !searched && (
+          <div style={{ padding: "10px 14px", background: "var(--surface-2, rgba(99,102,241,0.08))", borderRadius: 8, border: "1px solid rgba(99,102,241,0.18)", fontSize: 13, color: "var(--muted)" }}>
+            💡 <strong>AI Ngữ Nghĩa</strong>: Thay vì từ khóa chính xác, hãy mô tả <em>cảm xúc, tình huống hoặc chủ đề</em> bạn muốn đọc — AI sẽ tìm truyện phù hợp nhất với ý nghĩa đó.
+          </div>
+        )}
       </section>
 
       <section className="layout-filter" style={{ marginTop: 24 }}>
@@ -507,7 +558,7 @@ export function DiscoverScreen() {
 
         <main className="stack">
           <div className="panel panel-pad">
-            <div className="home-section-head">
+            <div className="home-section-head" style={{ marginBottom: aiMessage ? 12 : 0 }}>
               <h2 className="section-title">{filteredStories.length} truyện phù hợp</h2>
               {searchMode === "ai" && (
                 <span className="badge badge-blue">
@@ -515,6 +566,11 @@ export function DiscoverScreen() {
                 </span>
               )}
             </div>
+            {searchMode === "ai" && searched && aiMessage && (
+              <div style={{ padding: "10px 14px", background: "var(--surface-2, rgba(99,102,241,0.08))", borderRadius: 8, border: "1px solid rgba(99,102,241,0.18)", fontSize: 13, color: "var(--muted)", marginTop: 8 }}>
+                ✨ <strong>AI Phân Tích</strong>: {aiMessage}
+              </div>
+            )}
           </div>
 
           {filteredStories.length === 0 && searched && (
@@ -2448,6 +2504,18 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
     }
   }, []);
 
+  const [works, setWorks] = useState<any[]>([]);
+  useEffect(() => {
+    if (modeOverride === "author" && user) {
+      yagApi.author.getStories()
+        .then(res => setWorks(res.data))
+        .catch(() => {});
+    }
+  }, [modeOverride, user]);
+
+  const publishedWorks = works.filter(w => w.status !== "paused").length;
+  const totalViews = works.reduce((sum, w) => sum + (w.view_count || 0), 0);
+
   const handlePostAnnouncement = (e: React.FormEvent) => {
     e.preventDefault();
     if (!announcementText.trim()) return;
@@ -2511,8 +2579,8 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
           {activeProfileTab === "stats" && (
             <div className="stack" style={{ gap: 24 }}>
               <div className="metric-grid">
-                <MetricCard label="Tác phẩm xuất bản" value="Chưa có" />
-                <MetricCard label="Lượt xem tích lũy" value="Chưa có" />
+                <MetricCard label="Tác phẩm xuất bản" value={publishedWorks > 0 ? publishedWorks.toString() : "Chưa có"} />
+                <MetricCard label="Lượt xem tích lũy" value={totalViews > 0 ? totalViews.toString() : "Chưa có"} />
                 <MetricCard label="Điểm uy tín sáng tác" value={score != null ? `${score}/100` : "Đang tải"} />
                 <MetricCard label="Người theo dõi" value="Chưa có" />
               </div>

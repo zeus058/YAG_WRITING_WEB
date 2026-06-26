@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func, or_
 from app.models import User
 from app.api import deps
-from app.models import Chapter, Library, PublishSchedule, Review, Story
+from app.models import Chapter, Library, PublishSchedule, Review, Story, Profile
 from app.services.media_service import upload_story_cover_to_cloudinary
 from app.schemas.story import (
     BookmarkResponse,
@@ -196,8 +196,15 @@ def list_stories(
         query = query.filter(Story.status == status_value)
     if q:
         pattern = f"%{q}%"
+        query = query.join(Story.author).outerjoin(Profile, User.id == Profile.user_id)
         query = query.filter(
-            or_(Story.title.ilike(pattern), Story.description.ilike(pattern))
+            or_(
+                Story.title.ilike(pattern), 
+                Story.description.ilike(pattern),
+                Story.category.ilike(pattern),
+                User.username.ilike(pattern),
+                Profile.display_name.ilike(pattern)
+            )
         )
 
     offset = (page - 1) * limit

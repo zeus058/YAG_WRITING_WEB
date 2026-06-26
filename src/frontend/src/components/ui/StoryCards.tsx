@@ -63,14 +63,17 @@ export function AIRecommendationCard({ story, index }: { story: any; index: numb
   const tags = story.match_tags || story.ai_match_tags || [];
   const source = story.source || story.ai_source || "llm_rerank";
   const sourceLabel = source === "llm_rerank"
-    ? "LLM rerank"
+    ? "AI Rerank"
     : source === "semantic"
-      ? "Semantic"
+      ? "Ngữ nghĩa"
       : source === "popular"
-        ? "Popular"
+        ? "Phổ biến"
         : source;
-  const similarity = Number(story.similarity ?? story.ai_similarity);
-  const confidence = Number.isFinite(similarity) ? Math.round(similarity * 100) : null;
+  const similarity = Number(story.similarity ?? story.ai_similarity ?? 0);
+  const matchScore = Number(story.match_score ?? 0);
+  // Prefer match_score (already %) over similarity (0..1)
+  const confidence = matchScore > 0 ? matchScore : (Number.isFinite(similarity) && similarity > 0 ? Math.round(similarity * 100) : null);
+  const authorName = getStoryAuthorName(story);
 
   return (
     <Link className="ai-recommend-card" href={href}>
@@ -80,8 +83,8 @@ export function AIRecommendationCard({ story, index }: { story: any; index: numb
           <h3 className="story-title">{story.title || "Truyện được đề xuất"}</h3>
           <span className="badge badge-blue">{confidence ? `${confidence}%` : "AI"}</span>
         </div>
-        <div className="story-meta">{genre} · {sourceLabel}</div>
-        <p>{reason}</p>
+        <div className="story-meta">{authorName} · {genre} · <span style={{ opacity: 0.7, fontSize: 11 }}>{sourceLabel}</span></div>
+        <p style={{ fontSize: 13, margin: "6px 0 0 0", opacity: 0.85 }}>{reason}</p>
         {tags.length > 0 && (
           <div className="ai-tag-row">
             {tags.slice(0, 4).map((tag: string) => (

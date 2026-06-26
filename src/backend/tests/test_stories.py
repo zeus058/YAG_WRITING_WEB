@@ -166,6 +166,8 @@ class TestStoriesAPI:
         # Mock list queries
         mock_query = self.mock_db.query.return_value.options.return_value
         mock_query.filter.return_value = mock_query
+        mock_query.join.return_value = mock_query
+        mock_query.outerjoin.return_value = mock_query
         mock_query.order_by.return_value.offset.return_value.limit.return_value.all.return_value = [mock_story_1, mock_story_2]
 
         response = client.get("/api/v1/stories/?category=fantasy&status=ongoing&q=Sword")

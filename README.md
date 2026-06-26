@@ -7,17 +7,17 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
 
-YAG is a full-stack web application for reading and writing online novels with AI-assisted authoring, semantic story search, asynchronous AI moderation, real-time notifications, and premium membership payments.
+YAG is a full-stack web application for reading and writing online novels. It supports AI-assisted authoring, semantic story search, asynchronous AI moderation, real-time notifications, and premium membership payments.
 
-This repository is built for the HCMUS 2025-2026 Introduction to Software Engineering project.
+This project was built for the HCMUS 2025-2026 Introduction to Software Engineering course.
 
 ## Contents
 
-- [Features](#features)
+- [Main Features](#main-features)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Repository Structure](#repository-structure)
-- [Local Development](#local-development)
+- [Quick Start](#quick-start)
 - [Environment Variables](#environment-variables)
 - [Database Migrations](#database-migrations)
 - [Testing](#testing)
@@ -26,19 +26,20 @@ This repository is built for the HCMUS 2025-2026 Introduction to Software Engine
 - [CI/CD](#cicd)
 - [API Map](#api-map)
 - [Project Hygiene](#project-hygiene)
+- [Troubleshooting](#troubleshooting)
 - [Team](#team)
 
-## Features
+## Main Features
 
-| Area | Capability |
+| Area | What it includes |
 |---|---|
-| Authentication | Register, login, JWT auth, reset password, change password, role-based access |
-| Reader | Home feed, story discovery, story detail, reader mode, comments, reviews, library, reading history |
-| Author | Story management, chapter drafting, autosave WebSocket, AI writing suggestions, scheduled publishing |
-| AI | Gemini plot suggestions, story embeddings, semantic search, recommendations, moderation assistance |
-| Moderation | RabbitMQ background worker, AI moderation logs, admin review queue, alerts, notifications |
-| Membership | Membership plan catalog, premium chapter access, PayOS checkout, PayOS verification |
-| Admin | Dashboard metrics, moderation queue, user/story controls, audit logs |
+| Authentication | Register, login, JWT auth, reset password, change password, and role-based access |
+| Reader | Home feed, discovery, story detail, reader mode, comments, reviews, library, and reading history |
+| Author | Story management, chapter drafting, WebSocket autosave, AI writing suggestions, and scheduled publishing |
+| AI | Gemini plot suggestions, embeddings, semantic search, recommendations, and moderation support |
+| Moderation | RabbitMQ moderation pipeline, AI moderation logs, admin review queue, alerts, and notifications |
+| Membership | Membership plans, premium chapter access, PayOS checkout, and payment verification |
+| Admin | Dashboard metrics, moderation queue, user/story controls, and audit logs |
 | Realtime | Native WebSocket routes for notifications and chapter draft autosave |
 
 ## Tech Stack
@@ -52,10 +53,10 @@ This repository is built for the HCMUS 2025-2026 Introduction to Software Engine
 | Queue | RabbitMQ 3.13 |
 | AI | Google Gemini API, `gemini-1.5-flash`, `text-embedding-004` |
 | Media | Cloudinary |
-| Payment | PayOS; Secure checkout and callback/API status validation |
+| Payment | PayOS |
 | Scheduler | APScheduler |
-| Deployment | Docker Compose, Nginx, optional Google Cloud Run backend deployment |
-| CI | GitHub Actions, pytest, ESLint, Docker build validation, Bandit, optional SonarQube |
+| Deployment | Docker Compose, Nginx, Google Cloud Run backend, Vercel frontend |
+| CI | GitHub Actions, pytest, ESLint, Docker config validation, Bandit, optional SonarQube |
 
 ## Architecture
 
@@ -92,15 +93,15 @@ flowchart LR
 
 ### Runtime services
 
-| Service | Role |
+| Service | Purpose |
 |---|---|
 | `postgres` | Main relational database and pgvector storage |
-| `redis` | Session/cache/view count/pub-sub support |
-| `rabbitmq` | Async moderation queue |
-| `migrate` | One-shot migration runner |
+| `redis` | Cache, view counters, session support, and pub/sub support |
+| `rabbitmq` | Message broker for asynchronous moderation jobs |
+| `migrate` | One-shot SQL migration runner |
 | `backend` | FastAPI API server |
-| `scheduler` | Dedicated scheduled jobs service |
-| `moderation-worker` | RabbitMQ consumer for AI moderation |
+| `scheduler` | Dedicated service for scheduled jobs and view count flushes |
+| `moderation-worker` | RabbitMQ consumer that runs AI moderation |
 | `frontend` | Next.js standalone frontend |
 | `nginx` | HTTP/HTTPS reverse proxy and WebSocket routing |
 
@@ -108,50 +109,51 @@ flowchart LR
 
 ```text
 SE_Writing_Web/
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-├── docs/
-│   └── task/
-├── nginx/
-│   ├── certs/
-│   │   └── .gitignore
-│   └── nginx.conf
-├── src/
-│   ├── backend/
-│   │   ├── app/
-│   │   │   ├── api/
-│   │   │   ├── core/
-│   │   │   ├── models/
-│   │   │   ├── schemas/
-│   │   │   ├── services/
-│   │   │   ├── worker/
-│   │   │   ├── main.py
-│   │   │   ├── manage_migrations.py
-│   │   │   ├── reset_dev_db.py
-│   │   │   └── seed.py
-│   │   ├── migrations/
-│   │   ├── tests/
-│   │   ├── Dockerfile
-│   │   ├── requirements.txt
-│   │   └── worker.py
-│   └── frontend/
-│       ├── src/
-│       │   ├── app/
-│       │   ├── components/
-│       │   ├── data/
-│       │   └── lib/
-│       ├── Dockerfile
-│       ├── package.json
-│       └── package-lock.json
-├── .env.example
-├── AGENTS.md
-├── docker-compose.yml
-├── README.md
-└── sonar-project.properties
+|-- .github/
+|   `-- workflows/
+|       `-- ci.yml
+|-- docs/
+|   |-- fix/
+|   `-- task/
+|-- nginx/
+|   |-- certs/
+|   |   `-- .gitignore
+|   `-- nginx.conf
+|-- src/
+|   |-- backend/
+|   |   |-- app/
+|   |   |   |-- api/
+|   |   |   |-- core/
+|   |   |   |-- models/
+|   |   |   |-- schemas/
+|   |   |   |-- services/
+|   |   |   |-- worker/
+|   |   |   |-- main.py
+|   |   |   |-- manage_migrations.py
+|   |   |   |-- reset_dev_db.py
+|   |   |   `-- seed.py
+|   |   |-- migrations/
+|   |   |-- tests/
+|   |   |-- Dockerfile
+|   |   |-- requirements.txt
+|   |   `-- worker.py
+|   `-- frontend/
+|       |-- src/
+|       |   |-- app/
+|       |   |-- components/
+|       |   |-- data/
+|       |   `-- lib/
+|       |-- Dockerfile
+|       |-- package.json
+|       `-- package-lock.json
+|-- .env.example
+|-- AGENTS.md
+|-- docker-compose.yml
+|-- README.md
+`-- sonar-project.properties
 ```
 
-## Local Development
+## Quick Start
 
 ### Prerequisites
 
@@ -167,31 +169,36 @@ git clone https://github.com/zeus058/SE_Writing_Web.git
 cd SE_Writing_Web
 ```
 
-### 2. Start infrastructure
+### 2. Start local infrastructure
 
-The default Compose profile starts only PostgreSQL, Redis, and RabbitMQ.
+The default Docker Compose command starts only PostgreSQL, Redis, and RabbitMQ. Run the backend and frontend directly from your terminal during development.
 
 ```bash
 docker compose up -d
 ```
 
-Local infrastructure defaults:
+Local service defaults:
 
 | Service | URL/Port | Credentials |
 |---|---|---|
 | PostgreSQL | `localhost:5432` | `yag_user / yag_secret`, database `yag_db` |
-| Redis | `localhost:6379` | no password by default |
+| Redis | `localhost:6379` | No password by default |
 | RabbitMQ | `localhost:5672` | `yag_mq / yag_mq_secret` |
 | RabbitMQ UI | `http://localhost:15672` | `yag_mq / yag_mq_secret` |
 
-### 3. Configure backend
+### 3. Run the backend
 
 ```bash
 cd src/backend
 cp .env.example .env
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python -m app.manage_migrations
+uvicorn app.main:app --reload --port 8000
 ```
 
-For local Docker infrastructure, keep:
+For the local Docker infrastructure, keep these backend values:
 
 ```env
 POSTGRES_SERVER=localhost
@@ -204,39 +211,26 @@ RABBITMQ_USER=yag_mq
 RABBITMQ_PASSWORD=yag_mq_secret
 ```
 
-Set real values for AI/media/payment features when needed:
+Set real keys only when you need the related features:
 
 ```env
 GEMINI_API_KEY=...
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
-VNP_TMN_CODE=...
-VNP_HASH_SECRET=...
+PAYOS_CLIENT_ID=...
+PAYOS_API_KEY=...
+PAYOS_CHECKSUM_KEY=...
+PAYOS_RETURN_URL=http://localhost:3000/payment/result
 ```
 
-Install dependencies and run migrations:
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python -m app.manage_migrations
-```
-
-Optional development seed:
+Optional development data:
 
 ```bash
 python -m app.seed
 ```
 
-Start the API:
-
-```bash
-uvicorn app.main:app --reload --port 8000
-```
-
-Start the moderation worker in a separate terminal:
+Run the moderation worker in a second backend terminal when testing publishing/moderation flows:
 
 ```bash
 cd src/backend
@@ -244,7 +238,7 @@ cd src/backend
 python worker.py
 ```
 
-### 4. Configure frontend
+### 4. Run the frontend
 
 ```bash
 cd src/frontend
@@ -271,15 +265,15 @@ Open:
 | `SERVICE_ROLE` | `api`, `worker`, `migrate`, or `scheduler` |
 | `SECRET_KEY` | JWT signing key |
 | `CORS_ORIGINS` | Comma-separated frontend origins |
-| `DATABASE_URL` | Optional full PostgreSQL URL; overrides component DB vars |
-| `POSTGRES_*` | PostgreSQL component config |
+| `DATABASE_URL` | Optional full PostgreSQL URL; overrides component DB variables |
+| `POSTGRES_*` | PostgreSQL component configuration |
 | `REDIS_URL` | Optional full Redis URL |
-| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | Redis component config |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | Redis component configuration |
 | `RABBITMQ_URL` | Optional full RabbitMQ URL |
-| `RABBITMQ_*` | RabbitMQ component config |
-| `GEMINI_API_KEY` | Gemini AI features |
-| `CLOUDINARY_*` | Avatar and cover uploads |
-| `PAYOS_*` | PayOS client credentials and return URL configuration |
+| `RABBITMQ_*` | RabbitMQ component configuration |
+| `GEMINI_API_KEY` | Enables Gemini AI features |
+| `CLOUDINARY_*` | Enables avatar and cover uploads |
+| `PAYOS_*` | PayOS checkout, callback, and verification settings |
 | `ALLOW_WEBSOCKET_QUERY_TOKEN` | Must be `false` in production |
 
 ### Frontend essentials
@@ -287,11 +281,13 @@ Open:
 | Variable | Purpose |
 |---|---|
 | `NEXT_PUBLIC_APP_URL` | Public frontend origin |
-| `NEXT_PUBLIC_API_BASE_URL` | API origin, without `/api/v1` |
-| `NEXT_PUBLIC_WS_BASE_URL` | WebSocket origin/path |
+| `NEXT_PUBLIC_API_BASE_URL` | API origin without `/api/v1` |
+| `NEXT_PUBLIC_WS_BASE_URL` | WebSocket origin or path |
 | `NEXT_PUBLIC_DEPLOY_ENV` | `development`, `staging`, or `production` |
-| `NEXT_PUBLIC_USE_MOCKS` | UI mock mode; must be `false` outside demos |
+| `NEXT_PUBLIC_USE_MOCKS` | UI mock mode; keep `false` outside demos |
 | `NEXT_PUBLIC_API_TIMEOUT_MS` | API request timeout |
+
+For Docker Compose, use the root `.env.example`. For native local development, use `src/backend/.env.example` and `src/frontend/.env.example`.
 
 ## Database Migrations
 
@@ -303,13 +299,22 @@ python -m app.manage_migrations
 python -m app.manage_migrations --check
 ```
 
+Migration files live in `src/backend/migrations/`:
+
+```text
+V1__initial_schema.sql
+V2__hotfix_users_lock_columns.sql
+V3__p1_schema_alignment.sql
+V4__init_membership_plans.sql
+V5__add_story_metadata.sql
+```
+
 Rules:
 
-- Do not edit already-applied migration files.
-- Add new schema changes as `src/backend/migrations/V{N}__description.sql`.
-- The `schema_migrations` table stores filename, version, checksum, and apply time.
-- Membership plans are initialized by `V4__init_membership_plans.sql`.
-- `app.seed` is for development data only and must not be used for production initialization.
+- Do not edit migration files that may already have been applied.
+- Add schema changes as a new `V{N}__description.sql` file.
+- The `schema_migrations` table stores version, filename, checksum, and apply time.
+- Use `app.seed` only for development data, not production initialization.
 
 ## Testing
 
@@ -339,33 +344,29 @@ docker compose --profile prod config
 
 ## Docker Compose
 
-### Profiles
-
-| Command | Services | Use |
+| Command | Starts | Use case |
 |---|---|---|
-| `docker compose up -d` | `postgres`, `redis`, `rabbitmq` | Local infrastructure |
+| `docker compose up -d` | `postgres`, `redis`, `rabbitmq` | Local infrastructure only |
 | `docker compose --profile app up -d --build` | Full stack | Local full-stack container test |
-| `docker compose --profile prod up -d --build` | Full stack | VM/VPS production deployment |
+| `docker compose --profile prod up -d --build` | Full stack | Self-hosted production deployment |
 
-For the `app` profile, create a root `.env` from `.env.example` and keep `ENVIRONMENT=development`.
+For the `app` profile, copy the root `.env.example` to `.env` and keep `ENVIRONMENT=development`.
 
 For the `prod` profile:
 
 - Set `ENVIRONMENT=production`.
 - Use strong non-default secrets.
-- Set HTTPS `CORS_ORIGINS`, `FRONTEND_PUBLIC_URL`, `API_PUBLIC_URL`, and `WS_PUBLIC_URL`.
-- Place TLS files at:
-  - `nginx/certs/fullchain.pem`
-  - `nginx/certs/privkey.pem`
+- Set HTTPS values for `CORS_ORIGINS`, `FRONTEND_PUBLIC_URL`, `API_PUBLIC_URL`, and `WS_PUBLIC_URL`.
+- Place TLS files at `nginx/certs/fullchain.pem` and `nginx/certs/privkey.pem`.
 
 ## Production Deployment
 
-### Self-hosted Docker Compose
+### Option 1: Self-hosted Docker Compose
 
 1. Prepare a server with Docker and Docker Compose.
-2. Clone the repository.
+2. Clone this repository.
 3. Copy `.env.example` to `.env` at the repository root.
-4. Fill all production variables.
+4. Fill every production variable.
 5. Add TLS certificates under `nginx/certs/`.
 6. Start the production profile:
 
@@ -376,9 +377,7 @@ docker compose logs -f backend moderation-worker nginx
 curl -fsS https://your-domain.com/health/ready
 ```
 
-### Required production values
-
-Production startup validation rejects unsafe configuration. At minimum:
+Minimum production values:
 
 ```env
 ENVIRONMENT=production
@@ -401,118 +400,67 @@ PAYOS_CHECKSUM_KEY=<production checksum key>
 PAYOS_RETURN_URL=https://your-domain.com/payment/result
 ```
 
-Important: `API_PUBLIC_URL` is the origin only, for example `https://your-domain.com`, because the frontend client appends `/api/v1`.
+`API_PUBLIC_URL` should be the origin only, for example `https://your-domain.com`. The frontend app appends `/api/v1` by itself.
 
-## CI/CD & Production Deployment (GCP + Supabase + Vercel)
+### Option 2: Cloud Run backend and Vercel frontend
 
-The repository runs a unified GitHub Actions pipeline (`.github/workflows/ci.yml`) for linting, testing, security audits, and automated deployments.
+The repository also supports a cloud deployment flow:
 
-### 1. Unified Pipeline Triggers
-* **CI validation** (Backend tests, linting, frontend builds, Dockerfile check, dependency audits) runs on all branches on push or pull requests.
-* **CD deployment** (Database migrations and Cloud Run deploy) runs **only** on a push to the `main` branch, and **gracefully skips** if the required GitHub Secrets are not configured.
+- GitHub Actions builds and deploys the backend to Google Cloud Run.
+- Production secrets are stored in Google Secret Manager.
+- The production database can use Supabase PostgreSQL.
+- The frontend can be connected to Vercel for automatic deployments.
 
----
+Required GitHub Actions secrets for Cloud Run deployment:
 
-### 2. Setting Up Workload Identity Federation (WIF) on Google Cloud
-To deploy securely without service account keys (JSON files), we use GCP Workload Identity Federation. 
+| Secret | Purpose |
+|---|---|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | Full Workload Identity Federation provider resource |
+| `GCP_SERVICE_ACCOUNT` | Google service account email used by GitHub Actions |
+| `GCP_PROJECT_ID` | Google Cloud project ID |
+| `DATABASE_URL` | Production database URL used by migrations |
+| `GCP_REGION` | Optional Cloud Run region; defaults to `asia-southeast1` |
+| `GCP_GAR_REPO` | Optional Artifact Registry repo; defaults to `yag-repo` |
 
-Follow these steps in Google Cloud Shell or your local gcloud CLI:
+Expected Google Secret Manager secrets:
 
-```bash
-# 1. Set environment variables (replace with your values)
-export PROJECT_ID="your-gcp-project-id"
-export GITHUB_REPO="zeus058/SE_Writing_Web"
-export POOL_NAME="github-actions-pool"
-export PROVIDER_NAME="github-provider"
-export SA_NAME="github-actions-sa"
+| Secret name | Value |
+|---|---|
+| `YAG_DATABASE_URL` | Production PostgreSQL/Supabase URL |
+| `YAG_SECRET_KEY` | Strong JWT secret |
+| `YAG_CORS_ORIGINS` | Allowed frontend origins |
+| `YAG_REDIS_URL` | Production Redis URL |
+| `YAG_RABBITMQ_URL` | Production RabbitMQ URL |
+| `YAG_GEMINI_API_KEY` | Gemini API key |
+| `YAG_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `YAG_CLOUDINARY_API_KEY` | Cloudinary API key |
+| `YAG_CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `YAG_PAYOS_CLIENT_ID` | PayOS client ID |
+| `YAG_PAYOS_API_KEY` | PayOS API key |
+| `YAG_PAYOS_CHECKSUM_KEY` | PayOS checksum key |
+| `YAG_PAYOS_RETURN_URL` | PayOS HTTPS return URL |
 
-# 2. Create the Workload Identity Pool
-gcloud iam workload-identity-pools create $POOL_NAME \
-  --project="${PROJECT_ID}" \
-  --location="global" \
-  --display-name="GitHub Actions Pool"
+Vercel frontend environment variables:
 
-# 3. Create the OIDC Provider for GitHub Actions
-gcloud iam workload-identity-pools providers create-oidc $PROVIDER_NAME \
-  --project="${PROJECT_ID}" \
-  --location="global" \
-  --workload-identity-pool=$POOL_NAME \
-  --display-name="GitHub Provider" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
-  --attribute-condition="assertion.repository == '${GITHUB_REPO}'" \
-  --issuer-uri="https://token.actions.githubusercontent.com"
-
-# 4. Create the Service Account for Deployment
-gcloud iam service-accounts create $SA_NAME \
-  --project="${PROJECT_ID}" \
-  --display-name="SA for GitHub Actions CD"
-
-# 5. Bind the GitHub Repository to the Service Account
-gcloud iam service-accounts add-iam-policy-binding "${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --project="${PROJECT_ID}" \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')/locations/global/workloadIdentityPools/$POOL_NAME/attribute.repository/$GITHUB_REPO"
+```env
+NEXT_PUBLIC_APP_URL=https://your-frontend.vercel.app
+NEXT_PUBLIC_API_BASE_URL=https://your-backend.a.run.app
+NEXT_PUBLIC_WS_BASE_URL=wss://your-backend.a.run.app/ws
+NEXT_PUBLIC_DEPLOY_ENV=production
+NEXT_PUBLIC_USE_MOCKS=false
+NEXT_PUBLIC_API_TIMEOUT_MS=12000
 ```
 
-#### Grant Required Roles to the Service Account
-In the GCP Console (or using CLI), assign the following roles to the Service Account (`github-actions-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com`):
-1. **Artifact Registry Writer**: To push built Docker images.
-2. **Cloud Run Admin**: To deploy services.
-3. **Service Account User**: To permit Cloud Run to run using the runtime service account.
-4. **Secret Manager Secret Accessor**: To allow the service account to access secrets.
+## CI/CD
 
----
+The unified GitHub Actions workflow lives at `.github/workflows/ci.yml`.
 
-### 3. Adding Secrets to GitHub Repository
-To activate the CD jobs in the pipeline, navigate to your GitHub Repository -> **Settings** -> **Secrets and variables** -> **Actions** and add the following **Repository Secrets**:
-
-| Secret Key | Value Example | Purpose |
-|---|---|---|
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/1234567890/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider` | The full resource identifier of your OIDC Provider |
-| `GCP_SERVICE_ACCOUNT` | `github-actions-sa@your-gcp-project-id.iam.gserviceaccount.com` | The email of the service account created for deployment |
-| `GCP_PROJECT_ID` | `your-gcp-project-id` | Your Google Cloud Project ID |
-| `DATABASE_URL` | `postgresql://postgres.xxxx:password@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require` | Connection string to your production Supabase database (for migrations) |
-| `GCP_REGION` *(Optional)* | `asia-southeast1` | Google Cloud region for deploying backend (Defaults to `asia-southeast1`) |
-| `GCP_GAR_REPO` *(Optional)* | `yag-repo` | Artifact Registry repository name (Defaults to `yag-repo`) |
-
----
-
-### 4. Setting Up Production Secrets in Google Secret Manager
-Google Cloud Run retrieves production configurations from **Secret Manager** on startup. Ensure the following secrets are created and populated in Google Secret Manager:
-
-| Secret Name | Expected Payload Content |
+| Trigger | Behavior |
 |---|---|
-| `YAG_DATABASE_URL` | Production Supabase/PostgreSQL connection string |
-| `YAG_SECRET_KEY` | Strong random string (minimum 32 characters) for JWT encryption |
-| `YAG_CORS_ORIGINS` | Comma-separated allowed production frontend origins (e.g. `https://yag-frontend.vercel.app`) |
-| `YAG_REDIS_URL` | Production Redis URL (e.g., `redis://:password@host:port`) |
-| `YAG_RABBITMQ_URL` | Production RabbitMQ URL (e.g., `amqps://user:pass@host:port/vhost`) |
-| `YAG_GEMINI_API_KEY` | Google Gemini API Key |
-| `YAG_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
-| `YAG_CLOUDINARY_API_KEY` | Cloudinary API Key |
-| `YAG_CLOUDINARY_API_SECRET` | Cloudinary API Secret |
-| `YAG_PAYOS_CLIENT_ID` | PayOS merchant Client ID |
-| `YAG_PAYOS_API_KEY` | PayOS merchant API key |
-| `YAG_PAYOS_CHECKSUM_KEY` | PayOS merchant checksum key |
-| `YAG_PAYOS_RETURN_URL` | PayOS return redirect URL (must be HTTPS in production) |
+| Push or pull request | Runs CI validation: backend tests, linting, frontend build, Docker checks, and audits |
+| Push to `main` | Runs CD jobs for migrations and Cloud Run deployment when required secrets are configured |
 
-*Note: If these Secret Manager secrets are not configured or access is not granted, the Cloud Run deployment command will fail at the container setup phase.*
-
----
-
-### 5. Frontend Production Deploy (Vercel)
-The Next.js frontend auto-deploys via Vercel integration:
-1. Connect your Vercel account to the GitHub repository.
-2. Link the repository to a Vercel project.
-3. Configure the following **Environment Variables** in Vercel settings (Environment Variables):
-   * `NEXT_PUBLIC_APP_URL` (e.g., `https://yag-frontend.vercel.app`)
-   * `NEXT_PUBLIC_API_BASE_URL` (e.g., `https://yag-backend-xxxx.a.run.app`) - Backend origin without `/api/v1` suffix
-   * `NEXT_PUBLIC_WS_BASE_URL` (e.g., `wss://yag-backend-xxxx.a.run.app/ws`)
-   * `NEXT_PUBLIC_DEPLOY_ENV` = `production`
-   * `NEXT_PUBLIC_USE_MOCKS` = `false`
-   * `NEXT_PUBLIC_API_TIMEOUT_MS` = `12000`
-4. Deploys are automatically triggered on push to `main` (for Production release) and `dev` (for Preview releases).
-
+Deployment jobs are designed to skip gracefully if the required GitHub secrets are missing.
 
 ## API Map
 
@@ -520,9 +468,9 @@ All API routes are mounted under `/api/v1`.
 
 | Prefix | Module |
 |---|---|
-| `/auth` | Authentication, profile auth helpers, password flows |
-| `/stories` | Story CRUD, story detail, reviews, library/history helpers |
-| `/chapters` | Chapter CRUD, comments, reading, view count |
+| `/auth` | Authentication, profile auth helpers, and password flows |
+| `/stories` | Story CRUD, story detail, reviews, library, and history helpers |
+| `/chapters` | Chapter CRUD, comments, reading, and view count |
 | `/author/chapters` | Author autosave and draft editing helpers |
 | `/publish` | Publish and moderation submission flows |
 | `/payment` | PayOS status and payment history |
@@ -530,7 +478,7 @@ All API routes are mounted under `/api/v1`.
 | `/membership` | Membership plans and checkout alias |
 | `/ai` | AI suggestions and semantic search helpers |
 | `/recommendations` | Recommendation endpoints |
-| `/admin` | Admin dashboard, moderation, audit, alerts |
+| `/admin` | Admin dashboard, moderation, audit, and alerts |
 | `/notifications` | Notification listing and read state |
 
 WebSocket routes:
@@ -547,15 +495,15 @@ Health routes:
 |---|---|
 | `/health` | Basic health |
 | `/health/live` | Liveness |
-| `/health/ready` | DB, Redis, RabbitMQ readiness |
+| `/health/ready` | DB, Redis, and RabbitMQ readiness |
 
 ## Project Hygiene
 
 - Do not commit `.env`, `.venv`, `node_modules`, `.next`, generated coverage, cache files, uploads, or TLS private keys.
-- Keep production certificates outside Git; only `nginx/certs/.gitignore` is tracked.
-- Keep root README as the canonical public documentation.
-- Use `AGENTS.md` as the detailed internal engineering map for AI agents and project maintainers.
-- Add new database changes through new migration files only.
+- Keep production certificates outside Git; only `nginx/certs/.gitignore` should be tracked.
+- Keep this README as the public project overview.
+- Use `AGENTS.md` as the detailed internal engineering map for AI agents and maintainers.
+- Add database changes through new migration files only.
 
 ## Troubleshooting
 

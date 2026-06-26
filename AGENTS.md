@@ -2,7 +2,6 @@
 
 > **Đọc file này trước tiên.** Đây là bản đồ kỹ thuật toàn bộ dự án YAG dành cho AI Agent.
 > Khi nhận bất kỳ task nào, agent phải tham chiếu file này thay vì scan raw codebase.
-> Cập nhật lần cuối: 2026-06-04
 
 ---
 

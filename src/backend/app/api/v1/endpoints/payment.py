@@ -346,10 +346,19 @@ async def verify_payos_checkout(
     )
     plan_name = plan.name if plan else "Gói Membership"
 
-    # In production or if PayOS is configured, verify PAID status directly from PayOS API
     is_success = False
-    if payos_svc.is_payos_configured():
-        payos_info = await payos_svc.get_payos_payment_info(int(order_code))
+
+    # Check mock status first if enabled
+    if settings.PAYOS_MOCK_ENABLED and (status_param == "success" or status_param == "PAID"):
+        is_success = True
+    elif payos_svc.is_payos_configured():
+        # Verify PAID status directly from PayOS API
+        try:
+            order_code_int = int(order_code)
+            payos_info = await payos_svc.get_payos_payment_info(order_code_int)
+        except (ValueError, TypeError):
+            payos_info = None
+
         if payos_info and payos_info.get("status") == "PAID":
             is_success = True
             transaction.vnp_transaction_no = str(payos_info.get("reference", ""))
@@ -360,15 +369,11 @@ async def verify_payos_checkout(
             db.commit()
             return {"success": False, "message": "Giao dịch thanh toán đã bị hủy hoặc thất bại."}
     else:
+        # PayOS is not configured, and not a mock success
         if not settings.PAYOS_MOCK_ENABLED and settings.ENVIRONMENT == "production":
             return {"success": False, "message": "PayOS is not configured."}
-        is_success = (
-            transaction.status == "success"
-            or (
-                settings.PAYOS_MOCK_ENABLED
-                and (status_param == "success" or status_param == "PAID")
-            )
-        )
+        
+        is_success = (transaction.status == "success")
         if not is_success and status_param == "cancel":
             transaction.status = "failed"
             db.commit()

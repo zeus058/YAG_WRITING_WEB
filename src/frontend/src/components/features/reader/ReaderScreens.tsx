@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { type IconName, STORY_CATEGORIES } from "@/data/yag";
@@ -2061,7 +2061,12 @@ export function PaymentScreen() {
   const planId = searchParams.get("plan") || "MONTHLY";
   const txnRef = searchParams.get("orderCode") || searchParams.get("vnp_TxnRef") || searchParams.get("transactionId") || searchParams.get("txnRef");
 
+  const verificationStarted = useRef(false);
+
   useEffect(() => {
+    if (!txnRef || verificationStarted.current) return;
+    verificationStarted.current = true;
+
     let active = true;
 
     const verifyPayment = async () => {

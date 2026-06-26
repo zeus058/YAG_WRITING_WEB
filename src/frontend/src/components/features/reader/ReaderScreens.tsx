@@ -2057,7 +2057,7 @@ export function PaymentScreen() {
     message: "Đang tiến hành xác thực giao dịch...",
   });
 
-  const responseCode = searchParams.get("status") || searchParams.get("vnp_ResponseCode");
+  const responseCode = searchParams.get("status") || searchParams.get("code") || searchParams.get("vnp_ResponseCode");
   const planId = searchParams.get("plan") || "MONTHLY";
   const txnRef = searchParams.get("orderCode") || searchParams.get("vnp_TxnRef") || searchParams.get("transactionId") || searchParams.get("txnRef");
 
@@ -2191,7 +2191,7 @@ export function PaymentScreen() {
       };
 
       if (appEnv.useMocks) {
-        const isMockSuccess = responseCode === "00" || responseCode === "success";
+        const isMockSuccess = responseCode === "00" || responseCode === "success" || responseCode === "PAID";
         const rawAmount = planId === "YEARLY" ? 199000 : 39000;
         const durationDays = planId === "YEARLY" ? 365 : 30;
 

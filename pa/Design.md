@@ -136,26 +136,35 @@ Sơ đồ kiến trúc tổng thể dưới đây minh họa mối quan hệ, lu
 
 #### 3.1.3. Special Architectural Aspects
 
-1. **Kiến trúc Client-Server và Modular Monolith:**
-   - Áp dụng triệt để mô hình Client-Server. 
-   - Frontend là Single Page Application (SPA) xây dựng bằng **Next.js**, tách biệt hoàn toàn với Backend.
-   - Backend sử dụng **FastAPI**. 
-   - Các logic nghiệp vụ (Content, Payment, AI) được gom trong một khối để dễ triển khai, nhưng mã nguồn phân tách rõ ràng, sẵn sàng nâng cấp lên Microservices khi hệ thống mở rộng.
+1. **Kiến trúc Client-Server kết hợp Modular Monolith:**
+   - Hệ thống tách rõ hai phần: **Frontend Next.js** chịu trách nhiệm giao diện, điều hướng và tương tác người dùng; **Backend FastAPI** chịu trách nhiệm API, xử lý nghiệp vụ và kết nối dữ liệu.
+   - Frontend giao tiếp với Backend qua REST API cho các thao tác thông thường và WebSocket cho các tính năng cần phản hồi ngay như thông báo hoặc tự động lưu bản nháp.
+   - Backend vẫn được triển khai như một khối ứng dụng duy nhất để giảm độ phức tạp vận hành trong phạm vi đồ án. Tuy nhiên, mã nguồn được chia theo module nghiệp vụ như Authentication, Stories/Chapters, AI, Payment và Admin để dễ bảo trì.
+   - Cách tổ chức này giúp nhóm triển khai nhanh ở giai đoạn đầu, đồng thời vẫn có khả năng tách dần thành Microservices nếu hệ thống mở rộng về số lượng người dùng hoặc lưu lượng xử lý.
 
-2. **Xử lý bất đồng bộ cường độ cao:**
-   - Các tác vụ AI rất tốn thời gian. Để đảm bảo không treo UI, khi tác giả nhấn "Xuất bản", hệ thống chuyển tác vụ thành một Event đẩy vào **RabbitMQ**. Các Background Worker sẽ tiêu thụ hàng đợi này, gọi API Google Gemini và âm thầm cập nhật database.
+2. **Xử lý bất đồng bộ cho các tác vụ AI và kiểm duyệt:**
+   - Các tác vụ như kiểm duyệt nội dung chương, sinh gợi ý hoặc tạo embedding có thể mất nhiều thời gian vì phải gọi Gemini API. Nếu xử lý trực tiếp trong request chính, giao diện có thể bị chờ lâu.
+   - Vì vậy, khi tác giả gửi yêu cầu xuất bản chương, Backend chỉ ghi nhận trạng thái ban đầu và đẩy một message vào **RabbitMQ**.
+   - **Moderation Worker** tiêu thụ message từ hàng đợi, gọi Gemini API, lưu kết quả vào `ai_moderation_logs`, cập nhật `moderation_status` của chương và gửi thông báo cho tác giả hoặc Admin.
+   - Cơ chế hàng đợi giúp request của người dùng phản hồi nhanh hơn, đồng thời giảm rủi ro mất tác vụ khi hệ thống cần retry hoặc xử lý lại.
 
-3. **Giao tiếp thời gian thực, độ trễ thấp:**
-   - Hệ thống yêu cầu độ trễ dưới 200ms cho tính năng soạn thảo (tự động lưu) và diễn đàn. Điều này được giải quyết bằng giao thức **WebSockets** tích hợp trực tiếp trên FastAPI, kết hợp cơ chế Pub/Sub của **Redis** để đồng bộ trạng thái giữa các client ngay lập tức.
+3. **Giao tiếp thời gian thực cho autosave và notification:**
+   - Những tính năng như tự động lưu bản nháp, nhận thông báo kiểm duyệt và cập nhật trạng thái chương cần phản hồi gần như tức thời, nên hệ thống sử dụng **WebSocket** thay vì chỉ polling API định kỳ.
+   - WebSocket được tích hợp trực tiếp trên FastAPI để duy trì kết nối hai chiều giữa client và server.
+   - **Redis Pub/Sub** được dùng để hỗ trợ đồng bộ sự kiện khi có nhiều tiến trình hoặc nhiều instance backend cùng chạy.
+   - Thiết kế này giúp tác giả thấy trạng thái lưu/chờ duyệt nhanh hơn và giúp độc giả/Admin nhận thông báo mới mà không cần tải lại trang.
 
-4. **Tìm kiếm ngữ nghĩa qua Vector Database:**
-   - Điểm khác biệt của hệ thống là khả năng tìm truyện qua mô tả tự nhiên (ví dụ: "nam chính là hacker"). Backend gọi Gemini API để chuyển hóa văn bản thành Vector Embedding, sau đó dùng **pgvector** để thực hiện phép đo Cosine Similarity để trích xuất truyện phù hợp nhất.
+4. **Tìm kiếm ngữ nghĩa bằng pgvector:**
+   - Bên cạnh tìm kiếm theo từ khóa và bộ lọc, YAG hỗ trợ tìm truyện bằng mô tả tự nhiên, ví dụ: "truyện có nam chính là hacker và bối cảnh tương lai".
+   - Mỗi truyện có phần tóm tắt được chuyển thành vector embedding bằng Gemini và lưu trong bảng `story_embeddings`.
+   - Khi người dùng nhập truy vấn tự nhiên, Backend cũng chuyển truy vấn đó thành embedding rồi so sánh với các vector đã lưu bằng **Cosine Similarity** của **pgvector**.
+   - Nhờ vậy, hệ thống có thể trả về truyện có nội dung gần nghĩa với nhu cầu của người đọc, kể cả khi truy vấn không trùng chính xác từ khóa trong tiêu đề hoặc mô tả.
 
-5. **Bảo mật nhiều lớp và Đảm bảo an toàn thanh toán:**
-   - Bảo vệ mật khẩu qua mã hóa **Bcrypt**, xác thực phiên bằng **JWT**.
-   - API Gateway kết hợp **Nginx** và cơ chế **Rate Limiting** để chặn các tool tự động cào dữ liệu (Anti-crawling) và tấn công DDoS.
-   - Luồng thanh toán Membership tích hợp **VNPAY Sandbox** thông qua giao thức IPN (Instant Payment Notification) backend-to-backend, không phụ thuộc vào kết quả trả về từ Frontend, chống gian lận tuyệt đối.
-   - Hệ thống có cơ chế sao lưu tự động định kỳ (Daily Backup) toàn bộ PostgreSQL lên **Google Cloud Storage**.
+5. **Bảo mật nhiều lớp và an toàn thanh toán:**
+   - Mật khẩu người dùng được mã hóa bằng **Bcrypt**; phiên đăng nhập sử dụng **JWT**; các API nhạy cảm được kiểm soát bằng phân quyền Reader, Author và Admin.
+   - **Nginx** đóng vai trò reverse proxy, hỗ trợ định tuyến API/WebSocket và áp dụng rate limiting để giảm nguy cơ spam request, crawling tự động hoặc tấn công DDoS cơ bản.
+   - Luồng thanh toán Membership sử dụng **PayOS**. Backend tạo giao dịch, kiểm tra chữ ký/checksum và xác nhận trạng thái thanh toán từ nguồn đáng tin cậy thay vì chỉ tin vào kết quả redirect từ Frontend.
+   - Dữ liệu quan trọng như transaction, membership, moderation log và audit log được lưu trong PostgreSQL để có thể truy vết khi xảy ra lỗi hoặc tranh chấp.
 
 ### 3.2. Class Diagram
     Written by: 23120177 Phạm Hương Trà

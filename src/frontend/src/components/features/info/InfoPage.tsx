@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { IconName } from "@/data/yag";
 import { ProductFooter } from "@/components/layout";
 import { BrandLogo, Icon } from "@/components/ui";
+import { yagApi } from "@/lib/api";
 
 type InfoSection = {
   title: string;
@@ -177,6 +178,33 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
   const [ticketSubject, setTicketSubject] = useState<string>("Tài khoản");
   const [ticketStep, setTicketStep] = useState<number>(1);
   const [agreePrivacy, setAgreePrivacy] = useState<boolean>(true);
+  
+  const [ticketName, setTicketName] = useState("");
+  const [ticketEmail, setTicketEmail] = useState("");
+  const [ticketContent, setTicketContent] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleTicketSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketName || !ticketEmail || !ticketContent || !agreePrivacy) return;
+    
+    setIsSubmitting(true);
+    try {
+      await yagApi.support.submitTicket({
+        name: ticketName,
+        email: ticketEmail,
+        subject: ticketSubject,
+        content: ticketContent,
+        agreePrivacy
+      });
+      setTicketStep(3);
+    } catch (err) {
+      console.error("Failed to submit ticket", err);
+      alert("Đã xảy ra lỗi khi gửi yêu cầu. Vui lòng thử lại sau.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Custom renders for premium interactive experience
   const renderInteractiveAbout = () => (
@@ -190,7 +218,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Độc giả hoạt động</small>
           </div>
           <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
-            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--green)" }}>5,000+</span>
+            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--green-ok)" }}>5,000+</span>
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Tác phẩm hoàn thiện</small>
           </div>
           <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
@@ -198,7 +226,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Độ hài lòng UX</small>
           </div>
           <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
-            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--blue)" }}>Realtime</span>
+            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--blue-info)" }}>Realtime</span>
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Bình luận & Thông báo</small>
           </div>
         </div>
@@ -219,8 +247,8 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             key={section.title}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span className="info-card-icon" style={{ background: activeTab === idx ? "var(--coral)" : "", color: activeTab === idx ? "#FFF" : "" }}><Icon name={section.icon} /></span>
-              <h2 className="section-title" style={{ margin: 0, fontSize: 18 }}>{section.title}</h2>
+              <span className="info-card-icon" style={{ background: activeTab === idx ? "var(--coral)" : "", color: activeTab === idx ? "var(--jungle)" : "" }}><Icon name={section.icon} /></span>
+              <h2 className="section-title" style={{ margin: 0, fontSize: 18, color: activeTab === idx ? "var(--crimson)" : "var(--jungle)" }}>{section.title}</h2>
             </div>
             <p style={{ marginTop: 12 }}>{section.body}</p>
             <span style={{ marginTop: "auto", fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>Click để xem chi tiết ➜</span>
@@ -239,12 +267,12 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>Ra mắt giao diện đọc tối giản, split-screen soạn thảo dành cho tác giả, kiểm duyệt AI thời gian thực và tích hợp ví điện tử PayOS.</p>
           </div>
           <div style={{ position: "relative" }}>
-            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--green)" }}></div>
+            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--green-ok)" }}></div>
             <strong>Quý 3 - Quý 4 / 2026: Trợ lý Miu AI & Diễn đàn</strong>
             <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>Đồng bộ trợ lý viết Miu AI sâu vào trình soạn thảo, kích hoạt phòng thảo luận nhóm và triển khai cam kết điểm uy tín tác giả.</p>
           </div>
           <div style={{ position: "relative" }}>
-            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--blue)" }}></div>
+            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--blue-info)" }}></div>
             <strong>Kế hoạch 2027: Bản quyền số Blockchain & App di động</strong>
             <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>Ứng dụng NFT hóa bản quyền tác phẩm và phát hành ứng dụng di động native trên cả iOS và Android.</p>
           </div>
@@ -302,17 +330,17 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
           <p style={{ color: "var(--muted)" }}>Dữ liệu của bạn được quản lý và bảo vệ nghiêm ngặt dưới hạ tầng đám mây được mã hóa.</p>
         </div>
         <div className="stack" style={{ gap: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Mã hóa đầu cuối SSL</strong><span style={{ color: "var(--green)", fontWeight: 800 }}>100% Hoạt động</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Mã hóa đầu cuối SSL</strong><span style={{ color: "var(--green-ok)", fontWeight: 800 }}>100% Hoạt động</span></div>
           <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ width: "100%", height: "100%", background: "var(--green)" }}></div>
+            <div style={{ width: "100%", height: "100%", background: "var(--green-ok)" }}></div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Bảo mật mật khẩu (SHA-256)</strong><span style={{ color: "var(--green)", fontWeight: 800 }}>Đã kích hoạt</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Bảo mật mật khẩu (SHA-256)</strong><span style={{ color: "var(--green-ok)", fontWeight: 800 }}>Đã kích hoạt</span></div>
           <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ width: "100%", height: "100%", background: "var(--green)" }}></div>
+            <div style={{ width: "100%", height: "100%", background: "var(--green-ok)" }}></div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Cổng thanh toán trung gian</strong><span style={{ color: "var(--green)", fontWeight: 800 }}>PayOS (Không lưu số thẻ)</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Cổng thanh toán trung gian</strong><span style={{ color: "var(--green-ok)", fontWeight: 800 }}>PayOS (Không lưu số thẻ)</span></div>
           <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ width: "100%", height: "100%", background: "var(--green)" }}></div>
+            <div style={{ width: "100%", height: "100%", background: "var(--green-ok)" }}></div>
           </div>
         </div>
       </section>
@@ -333,8 +361,8 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             onMouseEnter={() => setActiveTab(idx)}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-              <span className="info-card-icon" style={{ background: activeTab === idx ? "var(--coral)" : "", color: activeTab === idx ? "#FFF" : "" }}><Icon name={section.icon} /></span>
-              <strong style={{ fontSize: 16, color: "var(--jungle)" }}>{section.title}</strong>
+              <span className="info-card-icon" style={{ background: activeTab === idx ? "var(--coral)" : "", color: activeTab === idx ? "var(--jungle)" : "" }}><Icon name={section.icon} /></span>
+              <strong style={{ fontSize: 16, color: activeTab === idx ? "var(--crimson)" : "var(--jungle)" }}>{section.title}</strong>
             </div>
             <p style={{ color: "var(--muted)", margin: 0, fontSize: 14 }}>{section.body}</p>
           </div>
@@ -383,15 +411,15 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
         )}
 
         {ticketStep === 2 && (
-          <form className="stack" style={{ gap: 16 }} onSubmit={(e) => { e.preventDefault(); setTicketStep(3); }}>
+          <form className="stack" style={{ gap: 16 }} onSubmit={handleTicketSubmit}>
             <div className="grid grid-2">
               <div className="field">
                 <label>Họ tên</label>
-                <input className="input" required />
+                <input className="input" required value={ticketName} onChange={e => setTicketName(e.target.value)} disabled={isSubmitting} />
               </div>
               <div className="field">
                 <label>Email liên hệ</label>
-                <input className="input" type="email" required />
+                <input className="input" type="email" required value={ticketEmail} onChange={e => setTicketEmail(e.target.value)} disabled={isSubmitting} />
               </div>
             </div>
             <div className="field">
@@ -400,22 +428,22 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             </div>
             <div className="field">
               <label>Nội dung chi tiết</label>
-              <textarea className="textarea" placeholder="Vui lòng mô tả chi tiết vấn đề bạn đang gặp phải..." required />
+              <textarea className="textarea" placeholder="Vui lòng mô tả chi tiết vấn đề bạn đang gặp phải..." required value={ticketContent} onChange={e => setTicketContent(e.target.value)} disabled={isSubmitting} />
             </div>
             <label className="remember-row">
-              <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} />
+              <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} disabled={isSubmitting} />
               Tôi đồng ý cho phép bộ phận hỗ trợ kiểm tra lịch sử liên quan để xử lý sự cố.
             </label>
             <div className="inline-actions" style={{ justifyContent: "space-between" }}>
-              <button className="button button-ghost" type="button" onClick={() => setTicketStep(1)}>Quay lại</button>
-              <button className="button button-primary" type="submit" disabled={!agreePrivacy}>Gửi yêu cầu ➜</button>
+              <button className="button button-ghost" type="button" onClick={() => setTicketStep(1)} disabled={isSubmitting}>Quay lại</button>
+              <button className="button button-primary" type="submit" disabled={!agreePrivacy || isSubmitting}>{isSubmitting ? "Đang gửi..." : "Gửi yêu cầu ➜"}</button>
             </div>
           </form>
         )}
 
         {ticketStep === 3 && (
           <div className="stack" style={{ gap: 16, alignItems: "center", textAlign: "center", padding: "24px 0" }}>
-            <span className="info-card-icon" style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--green)", color: "#FFF", fontSize: 28 }}>
+            <span className="info-card-icon" style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--green-ok)", color: "#FFF", fontSize: 28 }}>
               <Icon name="check" />
             </span>
             <h3 style={{ margin: 0, fontSize: 22, color: "var(--jungle)" }}>Gửi yêu cầu thành công!</h3>

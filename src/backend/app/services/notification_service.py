@@ -12,6 +12,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.notification import Notification
+from app.models.story import Story
+from app.models.chapter import Chapter
+from app.models.library import Library
 
 logger = logging.getLogger(__name__)
 
@@ -223,3 +226,53 @@ def get_unread_count(db: Session, user_id: UUID) -> int:
         .filter(Notification.user_id == user_id, Notification.read_at.is_(None))
         .count()
     )
+
+
+def notify_chapter_moderation_result(db: Session, chapter: Chapter, previous_status: str, new_status: str):
+    """Sends notification to author when chapter is approved/rejected and to readers when published."""
+    if previous_status == new_status:
+        return
+        
+    story = chapter.story
+    if not story:
+        story = db.query(Story).filter(Story.id == chapter.story_id).first()
+        
+    if not story:
+        return
+        
+    author_id = story.author_id
+
+    if new_status == "approved":
+        # Notify author
+        create_notification(
+            db, 
+            user_id=author_id, 
+            type="chapter_approved", 
+            title="Chương đã được duyệt", 
+            message=f"Chương {chapter.chapter_number} của tác phẩm '{story.title}' đã được duyệt thành công.",
+            payload={"chapter_id": str(chapter.id), "story_id": str(story.id)}
+        )
+        
+        # Notify readers who bookmarked this story
+        libraries = db.query(Library).filter(Library.story_id == story.id).all()
+        for lib in libraries:
+            if lib.user_id != author_id:
+                create_notification(
+                    db,
+                    user_id=lib.user_id,
+                    type="new_chapter",
+                    title="Chương mới đã cập nhật",
+                    message=f"Truyện '{story.title}' vừa có chương mới: Chương {chapter.chapter_number} - {chapter.title}.",
+                    payload={"chapter_id": str(chapter.id), "story_id": str(story.id)}
+                )
+
+    elif new_status == "rejected":
+        # Notify author
+        create_notification(
+            db, 
+            user_id=author_id, 
+            type="chapter_rejected", 
+            title="Chương bị từ chối", 
+            message=f"Chương {chapter.chapter_number} của tác phẩm '{story.title}' đã bị từ chối do vi phạm quy định.",
+            payload={"chapter_id": str(chapter.id), "story_id": str(story.id)}
+        )

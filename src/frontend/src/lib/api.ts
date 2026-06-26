@@ -359,5 +359,12 @@ export const yagApi = {
         body: { content },
       }),
   },
+  support: {
+    submitTicket: (body: { name: string; email: string; subject: string; content: string; agreePrivacy: boolean }) =>
+      apiFetch<any>("/api/v1/support/ticket", {
+        method: "POST",
+        body,
+      }),
+  },
 };
 

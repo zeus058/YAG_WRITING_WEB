@@ -101,6 +101,12 @@ def _override_reader_token():
     return {"sub": "reader-1", "role": "reader"}
 
 
+def _override_reader_user_optional():
+    class FakeUser:
+        id = "reader-1"
+    return FakeUser()
+
+
 def test_recommendations_filter_seen_stories(monkeypatch):
     fake_db = FakeDb()
 
@@ -137,7 +143,7 @@ def test_recommendations_filter_seen_stories(monkeypatch):
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
     monkeypatch.setattr(ai_gateway.httpx.AsyncClient, "post", fake_post)
     app.dependency_overrides[deps.get_db] = lambda: fake_db
-    app.dependency_overrides[deps.require_authenticated_user] = _override_reader_token
+    app.dependency_overrides[deps.get_current_user_optional] = _override_reader_user_optional
     try:
         response = client.get("/api/v1/recommendations")
         body = response.json()

@@ -1544,7 +1544,7 @@ export function ForumScreen() {
                     <div className="avatar" style={{ background: post.authorName === "Bạn" ? "var(--crimson)" : "var(--jungle)" }}>
                       {post.authorAvatar || post.authorName.substring(0, 2).toUpperCase()}
                     </div>
-                    {post.replies.length > 0 && <div className="thread-line"></div>}
+                    {post.replies && post.replies.length > 0 && <div className="thread-line"></div>}
                   </div>
 
                   <div className="thread-right-col">
@@ -1656,27 +1656,33 @@ export function ForumScreen() {
                 )}
 
                 {/* Replies list */}
-                {post.replies.length > 0 && (
+                {post.replies && post.replies.length > 0 && (
                   <div className="thread-replies-list">
-                    {post.replies.map((reply: any) => (
-                      <div className="thread-reply" key={reply.id}>
-                        <div className="thread-left-col">
-                          <div className="avatar mini" style={{ background: reply.author === "Bạn" ? "var(--crimson)" : "var(--jungle)" }}>
-                            {reply.authorAvatar || reply.author.substring(0, 2).toUpperCase()}
-                          </div>
-                        </div>
-                        <div className="thread-right-col">
-                          <div className="thread-reply-header">
-                            <div className="thread-author-info">
-                              <span className="thread-author-name">{reply.author}</span>
-                              {reply.isVerified && <VerifiedBadge />}
+                    {post.replies.map((reply: any) => {
+                      const author = reply.author || reply.display_name || reply.username || "Ẩn danh";
+                      const avatar = reply.authorAvatar || reply.avatar_url || null;
+                      const verified = reply.isVerified || reply.is_verified || false;
+                      const created = reply.createdAt || reply.created_at || null;
+                      return (
+                        <div className="thread-reply" key={reply.id}>
+                          <div className="thread-left-col">
+                            <div className="avatar mini" style={{ background: author === "Bạn" ? "var(--crimson)" : "var(--jungle)" }}>
+                              {avatar || author.substring(0, 2).toUpperCase()}
                             </div>
-                            <span className="thread-time">Vừa xong</span>
                           </div>
-                          <div className="thread-content" style={{ fontSize: 14 }}>{reply.content}</div>
+                          <div className="thread-right-col">
+                            <div className="thread-reply-header">
+                              <div className="thread-author-info">
+                                <span className="thread-author-name">{author}</span>
+                                {verified && <VerifiedBadge />}
+                              </div>
+                              <span className="thread-time">{created ? formatRelativeTime(created) : "Vừa xong"}</span>
+                            </div>
+                            <div className="thread-content" style={{ fontSize: 14 }}>{reply.content}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

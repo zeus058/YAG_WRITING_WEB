@@ -16,6 +16,7 @@ from app.ai.tools import get_moderation_policy, safe_truncate
 from app.core.config import settings
 from app.models.ai_moderation_log import AIModerationLog
 from app.models.chapter import Chapter
+from app.services.notification_service import notify_chapter_moderation_result
 
 logger = logging.getLogger(__name__)
 
@@ -314,7 +315,9 @@ def apply_moderation_result(chapter_id: str, report: ModerationReport, db) -> Ch
     if report.result == ModerationResult.ERROR:
         chapter.moderation_status = "pending"
     else:
+        previous_status = chapter.moderation_status
         chapter.moderation_status = report.result.value
+        notify_chapter_moderation_result(db, chapter, previous_status, chapter.moderation_status)
 
     categories = [str(category) for category in report.flagged_categories]
     log = (

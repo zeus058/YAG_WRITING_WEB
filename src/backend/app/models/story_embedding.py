@@ -15,7 +15,7 @@ class StoryEmbedding(Base):
         primary_key=True,
     )
     plot_summary = Column(Text, nullable=False)
-    embedding = Column(Vector(1536), nullable=False)
+    embedding = Column(Vector(768), nullable=False)
     embedding_model = Column(
         String(100),
         nullable=False,

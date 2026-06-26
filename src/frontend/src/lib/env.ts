@@ -12,7 +12,7 @@ export const appEnv = {
       .replace(/^http:/, "ws:")
       .replace(/^https:/, "wss:"),
   useMocks: false,
-  requestTimeoutMs: Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 12000),
+  requestTimeoutMs: Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 120000),
 } as const;
 
 const localUrlMarkers = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"];

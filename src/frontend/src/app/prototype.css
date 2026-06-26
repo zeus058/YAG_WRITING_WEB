@@ -2498,13 +2498,20 @@ svg {
   display: grid;
   gap: 16px;
   padding: 36px;
-  border: 1px solid rgba(255, 236, 206, 0.14);
+  border: 1px solid rgba(200, 28, 48, 0.14);
   border-radius: 8px;
   background:
     radial-gradient(circle at 92% 8%, rgba(254, 189, 178, 0.24), transparent 26%),
-    linear-gradient(135deg, #243020 0%, var(--jungle) 68%, #536346 100%);
-  color: var(--petal);
+    linear-gradient(135deg, var(--crimson-dark) 0%, var(--jungle-dark) 68%, var(--jungle) 100%);
+  color: #FAF5EB;
   box-shadow: var(--shadow);
+}
+
+.dark .info-hero {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(200, 28, 48, 0.24), transparent 26%),
+    linear-gradient(135deg, #1C241E 0%, #0E1310 68%, #141C17 100%);
+  border-color: rgba(229, 236, 228, 0.14);
 }
 
 .info-hero::after {
@@ -2512,7 +2519,7 @@ svg {
   position: absolute;
   right: -20px;
   bottom: -44px;
-  color: rgba(255, 236, 206, 0.08);
+  color: rgba(255, 255, 255, 0.04);
   font-size: 132px;
   font-weight: 800;
   line-height: 1;
@@ -2608,7 +2615,7 @@ svg {
   border: 1px solid rgba(255, 236, 206, 0.16);
   border-radius: 8px;
   background: rgba(255, 236, 206, 0.08);
-  color: var(--petal);
+  color: #FAF5EB;
   font-size: 13px;
   font-weight: 800;
 }
@@ -2751,6 +2758,42 @@ svg {
   border-radius: 8px;
   background: var(--surface);
   color: var(--jungle);
+}
+
+/* Chế độ tối cho các trang thông tin (about, terms, privacy, contact) */
+.dark .info-page {
+  background: linear-gradient(180deg, #141C17 0%, var(--background) 100%);
+}
+
+.dark .info-header nav a {
+  border-color: var(--line);
+  background: rgba(30, 39, 33, 0.62);
+  color: var(--foreground);
+}
+
+.dark .info-header nav a:hover {
+  border-color: rgba(254, 189, 178, 0.24);
+  background: rgba(254, 189, 178, 0.10);
+  color: var(--coral);
+}
+
+.dark .info-page-nav {
+  background: var(--surface-panel);
+  border-color: var(--line);
+}
+
+.dark .info-focus-panel {
+  background: var(--surface-panel);
+  border-color: var(--line);
+}
+
+.dark .info-flow-strip>div {
+  background: var(--surface-panel);
+  border-color: var(--line);
+}
+
+.dark .step::before {
+  background: var(--line);
 }
 
 .action-strip>div {
@@ -3202,8 +3245,13 @@ svg {
 }
 
 .reader-page.reader-dark .reader-content h1,
-.reader-page.reader-dark .reader-content p {
-  color: #F7ECD4;
+.reader-page.reader-dark .reader-content p,
+.reader-page.reader-dark .reader-paper,
+.reader-page.reader-dark .reader-paper h1,
+.reader-page.reader-dark .reader-paper p,
+.reader-page.reader-dark .reader-text-body p,
+.reader-page.reader-dark .reader-chapter-kicker {
+  color: #F7ECD4 !important;
 }
 
 .reader-page.reader-dark .locked-preview::after {
@@ -4884,7 +4932,12 @@ svg {
   display: none;
   place-items: center;
   padding: 24px;
-  background: rgba(36, 48, 32, 0.56);
+  background: rgba(65, 80, 61, 0.25);
+  backdrop-filter: blur(6px);
+}
+
+.dark .modal-backdrop {
+  background: rgba(10, 13, 11, 0.5);
 }
 
 .modal-backdrop.open {

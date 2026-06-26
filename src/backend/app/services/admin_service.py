@@ -13,6 +13,7 @@ from app.models.chapter import Chapter
 from app.models import Transaction
 from app.models.story import Story
 from app.models.user import User
+from app.services.notification_service import notify_chapter_moderation_result
 
 
 def _as_utc(value: datetime | None) -> datetime | None:
@@ -446,4 +447,7 @@ class AdminService:
         )
         db.commit()
         db.refresh(chapter)
+
+        notify_chapter_moderation_result(db, chapter, previous_status, decision)
+
         return chapter

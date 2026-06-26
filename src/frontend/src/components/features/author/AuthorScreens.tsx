@@ -155,7 +155,7 @@ export function AuthorWorksScreen() {
   const loadWorks = async () => {
     try {
       const res = await yagApi.author.getStories();
-        setWorks(res.data || []);
+      setWorks(res.data || []);
     } catch (err) {
       console.error("Failed to load author works:", err);
     } finally {
@@ -297,8 +297,8 @@ export function AuthorWorksScreen() {
 
     try {
       await yagApi.author.deleteStory(story.id);
-        triggerLiveToast("Đã xóa tác phẩm thành công!");
-        void loadWorks();
+      triggerLiveToast("Đã xóa tác phẩm thành công!");
+      void loadWorks();
     } catch (err) {
       console.error("Failed to delete story:", err);
       triggerLiveToast("Không thể xóa tác phẩm. Vui lòng thử lại sau.", "warning");
@@ -713,7 +713,7 @@ export function AuthorWorksScreen() {
                     </label>
                   </div>
                 </section>
-                
+
                 <section className="story-setup-section">
                   <div className="story-setup-section-head">
                     <span className="story-setup-step">4</span>
@@ -762,33 +762,33 @@ const extractSuggestionsFromBrokenJson = (jsonStr: string): any[] => {
   const contentRegex = /"content"\s*:\s*"((?:[^"\\]|\\.)*)"/gi;
   const reasonRegex = /"reason"\s*:\s*"((?:[^"\\]|\\.)*)"/gi;
   const insertableRegex = /"insertable_?text"\s*:\s*"((?:[^"\\]|\\.)*)"/gi;
-  
+
   const titles: string[] = [];
   const contents: string[] = [];
   const reasons: string[] = [];
   const insertables: string[] = [];
-  
+
   let match;
   while ((match = titleRegex.exec(jsonStr)) !== null) {
     titles.push(match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
   }
   titleRegex.lastIndex = 0;
-  
+
   while ((match = contentRegex.exec(jsonStr)) !== null) {
     contents.push(match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
   }
   contentRegex.lastIndex = 0;
-  
+
   while ((match = reasonRegex.exec(jsonStr)) !== null) {
     reasons.push(match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
   }
   reasonRegex.lastIndex = 0;
-  
+
   while ((match = insertableRegex.exec(jsonStr)) !== null) {
     insertables.push(match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
   }
   insertableRegex.lastIndex = 0;
-  
+
   const count = Math.max(contents.length, insertables.length);
   for (let i = 0; i < count; i++) {
     suggestions.push({
@@ -859,12 +859,12 @@ const htmlToMarkdown = (html: string): string => {
 
   const lines: string[] = [];
   const children = Array.from(tempDiv.childNodes);
-  
+
   for (const node of children) {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as HTMLElement;
       const tag = el.tagName.toLowerCase();
-      
+
       if (tag.startsWith("h") && tag.length === 2) {
         const level = parseInt(tag[1]) - 1;
         lines.push("#".repeat(Math.max(1, level)) + " " + convertInlineHtmlToMarkdown(el.innerHTML));
@@ -883,7 +883,7 @@ const htmlToMarkdown = (html: string): string => {
       lines.push(node.textContent || "");
     }
   }
-  
+
   return lines.join("\n");
 };
 
@@ -1506,7 +1506,7 @@ export function AuthorStudioScreen() {
         if (cleanText.startsWith("```")) {
           cleanText = cleanText.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
         }
-        
+
         const startIdx = cleanText.indexOf("{");
         const endIdx = cleanText.lastIndexOf("}");
         if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
@@ -1844,7 +1844,7 @@ export function AuthorStudioScreen() {
               >
                 <span>U</span>
               </button>
-              
+
               {/* Highlight with Color Picker */}
               <div style={{ position: "relative", display: "inline-block" }}>
                 <button
@@ -1856,31 +1856,31 @@ export function AuthorStudioScreen() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--foreground)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="m9 11-6 6v3h9l3-3"/>
-                      <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>
+                      <path d="m9 11-6 6v3h9l3-3" />
+                      <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
                     </svg>
                     <span style={{ fontSize: 9, opacity: 0.7, color: "var(--foreground)" }}>▼</span>
                   </div>
-                  <div style={{ 
-                    width: 18, 
-                    height: 3, 
+                  <div style={{
+                    width: 18,
+                    height: 3,
                     background: activeHighlightColor,
                     borderRadius: 1,
                     border: "1px solid rgba(255,255,255,0.15)"
                   }} />
                 </button>
                 {showColorPicker && (
-                  <div style={{ 
-                    position: "absolute", 
-                    top: "100%", 
-                    left: 0, 
-                    zIndex: 100, 
-                    background: "var(--surface)", 
-                    border: "1px solid var(--line)", 
-                    borderRadius: 6, 
-                    padding: 8, 
-                    display: "flex", 
-                    gap: 6, 
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    zIndex: 100,
+                    background: "var(--surface)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 6,
+                    padding: 8,
+                    display: "flex",
+                    gap: 6,
                     boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                     marginTop: 4
                   }}>
@@ -2023,22 +2023,17 @@ export function AuthorStudioScreen() {
             {/* Left Chapter Outline */}
             <aside className="chapter-outline">
               <div className="outline-head" style={{ marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <strong>Dàn ý chương</strong>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <strong style={{ fontSize: 16, color: "var(--jungle)" }}>Dàn ý chương</strong>
                   <button
-                    className="button button-soft"
-                    style={{ padding: "2px 8px", fontSize: 12 }}
+                    className="button button-primary"
+                    style={{ padding: "4px 12px", fontSize: 12, borderRadius: 20 }}
                     onClick={handleCreateNewChapter}
                     disabled={isCreatingChapter}
                     aria-label="Tạo chương mới"
                   >
-                    {isCreatingChapter ? "..." : "+"}
+                    {isCreatingChapter ? "Đang tạo..." : "+ Thêm chương"}
                   </button>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
-                  <span className={`badge ${canSubmitActiveChapter ? "badge-green" : "badge-blue"}`} style={{ fontSize: 10 }}>
-                    {canSubmitActiveChapter ? "Sẵn sàng gửi duyệt" : "Đang soạn"}
-                  </span>
                 </div>
               </div>
 
@@ -2072,7 +2067,8 @@ export function AuthorStudioScreen() {
             {/* Center Editor Paper */}
             <div className="editor-paper" style={{ background: "var(--surface)", borderRadius: 8, padding: 24, minHeight: 500, display: "flex", flexDirection: "column", border: "1px solid var(--line)" }}>
               {/* Inline CSS style for WYSIWYG editor placeholder */}
-              <style dangerouslySetInnerHTML={{__html: `
+              <style dangerouslySetInnerHTML={{
+                __html: `
                 .wysiwyg-editor:empty:before {
                   content: attr(placeholder);
                   color: var(--muted);
@@ -2124,7 +2120,7 @@ export function AuthorStudioScreen() {
                     minHeight: 400,
                     width: "100%",
                     padding: "8px 12px",
-                    color: "var(--ink)",
+                    color: "var(--foreground)",
                     background: "rgba(255, 255, 255, 0.02)",
                     border: "1px dashed var(--line)",
                     borderRadius: 4,
@@ -2166,7 +2162,7 @@ export function AuthorStudioScreen() {
                     minHeight: 400,
                     width: "100%",
                     background: "transparent",
-                    color: "var(--ink)",
+                    color: "var(--foreground)",
                     overflowY: "auto"
                   }}
                 />
@@ -2189,7 +2185,7 @@ export function AuthorStudioScreen() {
             </div>
             <div>
               <strong>Miu AI</strong>
-              <div className="story-meta">Agent đồng hành viết chương</div>
+              <div className="story-meta">Agent đồng hành viết truyện</div>
             </div>
             <span className="badge badge-green">Online</span>
           </div>
@@ -2220,7 +2216,7 @@ export function AuthorStudioScreen() {
             >
               AI Co-Writer
             </button>
-             <button
+            <button
               className={`tab-button ${activeAiPanel === "lores" ? "active" : ""}`}
               type="button"
               onClick={() => setActiveAiPanel("lores")}
@@ -2343,14 +2339,14 @@ export function AuthorStudioScreen() {
                           <small style={{ display: "block", fontSize: "0.75rem", color: "var(--text-secondary)", opacity: 0.8, marginBottom: 8, fontStyle: "italic" }}>📌 {item.reason}</small>
                         ) : null}
                         {insertableText ? (
-                          <blockquote style={{ 
-                            margin: "8px 0", 
-                            padding: "8px 10px", 
-                            borderLeft: "3px solid var(--color-primary)", 
-                            borderRadius: "4px", 
-                            background: "rgba(59, 130, 246, 0.05)", 
-                            color: "var(--text-primary)", 
-                            fontSize: "0.8rem", 
+                          <blockquote style={{
+                            margin: "8px 0",
+                            padding: "8px 10px",
+                            borderLeft: "3px solid var(--color-primary)",
+                            borderRadius: "4px",
+                            background: "rgba(59, 130, 246, 0.05)",
+                            color: "var(--text-primary)",
+                            fontSize: "0.8rem",
                             lineHeight: "1.45",
                             maxHeight: "220px",
                             overflowY: "auto",
@@ -2430,7 +2426,7 @@ export function AuthorStudioScreen() {
                   rows={4}
                   value={coWriterPrompt}
                   onChange={(e) => setCoWriterPrompt(e.target.value)}
-                  placeholder="Ý tưởng viết chương: ví dụ 'Viết chương 1 kể về một chiến binh đi thám hiểm đền cổ, phát hiện bí ẩn gia tộc...'" 
+                  placeholder="Ý tưởng viết chương: ví dụ 'Viết chương 1 kể về một chiến binh đi thám hiểm đền cổ, phát hiện bí ẩn gia tộc...'"
                   disabled={isEditingDisabled}
                 />
 
@@ -2496,14 +2492,14 @@ export function AuthorStudioScreen() {
                           <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "0 0 6px 0", lineHeight: "1.4" }}>{draft.content}</p>
                         ) : null}
                         {draftText ? (
-                          <blockquote style={{ 
-                            margin: "8px 0", 
-                            padding: "8px 10px", 
-                            borderLeft: "3px solid var(--color-primary)", 
-                            borderRadius: "4px", 
-                            background: "rgba(59, 130, 246, 0.05)", 
-                            color: "var(--text-primary)", 
-                            fontSize: "0.8rem", 
+                          <blockquote style={{
+                            margin: "8px 0",
+                            padding: "8px 10px",
+                            borderLeft: "3px solid var(--color-primary)",
+                            borderRadius: "4px",
+                            background: "rgba(59, 130, 246, 0.05)",
+                            color: "var(--text-primary)",
+                            fontSize: "0.8rem",
                             lineHeight: "1.45",
                             maxHeight: "220px",
                             overflowY: "auto",
@@ -2569,7 +2565,7 @@ export function AuthorStudioScreen() {
                     }} style={{ padding: "2px 6px", fontSize: 11 }}>Hủy</button>
                   )}
                 </div>
-                
+
                 <div style={{ display: "flex", gap: 8 }}>
                   <input
                     type="text"
@@ -2623,9 +2619,9 @@ export function AuthorStudioScreen() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                         <span className="badge" style={{ fontSize: 10, background: "var(--primary-soft)", color: "var(--primary)" }}>
                           {lore.entity_type === "character" ? "Nhân vật" :
-                           lore.entity_type === "location" ? "Địa danh" :
-                           lore.entity_type === "item" ? "Vật phẩm" :
-                           lore.entity_type === "skill" ? "Kỹ năng" : "Khác"}
+                            lore.entity_type === "location" ? "Địa danh" :
+                              lore.entity_type === "item" ? "Vật phẩm" :
+                                lore.entity_type === "skill" ? "Kỹ năng" : "Khác"}
                         </span>
                         <div style={{ display: "flex", gap: 6 }}>
                           <button type="button" className="button button-soft" onClick={() => startEditLore(lore)} style={{ padding: "2px 6px", fontSize: 11 }}>Sửa</button>
@@ -2645,8 +2641,8 @@ export function AuthorStudioScreen() {
 
       {/* Preview Modal */}
       {isPreviewOpen && (
-        <div className="modal-backdrop" onClick={() => setIsPreviewOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, maxHeight: "85vh", overflow: "auto" }}>
+        <div className="modal-backdrop open" onClick={() => setIsPreviewOpen(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, maxHeight: "85vh", overflow: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--jungle)" }}>Xem trước chương</h2>
               <button className="button" type="button" onClick={() => setIsPreviewOpen(false)} style={{ padding: "4px 10px" }}>✕</button>
@@ -2655,7 +2651,7 @@ export function AuthorStudioScreen() {
               <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 16, color: "var(--jungle)", borderBottom: "1px solid var(--line)", paddingBottom: 12 }}>
                 {editorTitle || "Chưa có tiêu đề"}
               </h1>
-              <div className="preview-body" style={{ whiteSpace: "pre-wrap", wordWrap: "break-word", color: "var(--ink)" }}>
+              <div className="preview-body" style={{ whiteSpace: "pre-wrap", wordWrap: "break-word", color: "var(--foreground)" }}>
                 {editorContent || "Chưa có nội dung."}
               </div>
             </div>
@@ -2669,8 +2665,8 @@ export function AuthorStudioScreen() {
 
       {/* Style Reference Modal */}
       {isStyleReferenceModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsStyleReferenceModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
+        <div className="modal-backdrop open" onClick={() => setIsStyleReferenceModalOpen(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--jungle)" }}>Style Reference Metadata</h2>
               <button className="button" type="button" onClick={() => setIsStyleReferenceModalOpen(false)} style={{ padding: "4px 10px" }}>✕</button>
@@ -3029,60 +3025,60 @@ export function ScheduleScreen() {
     const loadData = async () => {
       try {
         const res = await yagApi.author.getStories();
-          const storiesList = res.data || [];
-          setWorks(storiesList);
-          const now = new Date();
-          const month = now.getMonth();
-          const year = now.getFullYear();
-          const numDays = new Date(year, month + 1, 0).getDate();
-          const fetchedChapters: any[] = [];
-          for (const s of storiesList) {
-                      try {
-                        const chRes = await yagApi.author.getChapters(s.id);
-                        if (chRes.data) {
-                          fetchedChapters.push(...chRes.data.map((c: any) => ({ ...c, story_id: s.id, storyTitle: s.title })));
-                        }
-                      } catch (err) {
-                        console.error(`Failed to load chapters for story ${s.id}:`, err);
-                      }
-                    }
-          setAllChapters(fetchedChapters);
-          const daysList = Array.from({ length: numDays }, (_, index) => {
-                      const dayNum = index + 1;
-                      const scheduledChapter = fetchedChapters.find((c: any) => {
-                        if (!c.publish_at) return false;
-                        const pubDate = new Date(c.publish_at);
-                        return (
-                          pubDate.getDate() === dayNum &&
-                          pubDate.getMonth() === month &&
-                          pubDate.getFullYear() === year
-                        );
-                      });
-
-                      let event = null;
-                      if (scheduledChapter) {
-                        const pubDate = new Date(scheduledChapter.publish_at);
-                        const hrs = String(pubDate.getHours()).padStart(2, "0");
-                        const mins = String(pubDate.getMinutes()).padStart(2, "0");
-                        event = {
-                          title: `C${scheduledChapter.chapter_number}: ${scheduledChapter.title.slice(0, 10)}...`,
-                          status: scheduledChapter.moderation_status,
-                          time: `${hrs}:${mins}`
-                        };
-                      }
-                      return { dayNum, event };
-                    });
-          setCalendarDays(daysList);
-          setCurrentMonthStr(`Tháng ${String(month + 1).padStart(2, "0")}/${year}`);
+        const storiesList = res.data || [];
+        setWorks(storiesList);
+        const now = new Date();
+        const month = now.getMonth();
+        const year = now.getFullYear();
+        const numDays = new Date(year, month + 1, 0).getDate();
+        const fetchedChapters: any[] = [];
+        for (const s of storiesList) {
           try {
-                      const overviewRes = await yagApi.author.getScheduleOverview();
-                      if (overviewRes.data) {
-                        setOverview(overviewRes.data);
-                        await refreshUser();
-                      }
-                    } catch (err) {
-                      console.error("Failed to load schedule overview:", err);
-                    }
+            const chRes = await yagApi.author.getChapters(s.id);
+            if (chRes.data) {
+              fetchedChapters.push(...chRes.data.map((c: any) => ({ ...c, story_id: s.id, storyTitle: s.title })));
+            }
+          } catch (err) {
+            console.error(`Failed to load chapters for story ${s.id}:`, err);
+          }
+        }
+        setAllChapters(fetchedChapters);
+        const daysList = Array.from({ length: numDays }, (_, index) => {
+          const dayNum = index + 1;
+          const scheduledChapter = fetchedChapters.find((c: any) => {
+            if (!c.publish_at) return false;
+            const pubDate = new Date(c.publish_at);
+            return (
+              pubDate.getDate() === dayNum &&
+              pubDate.getMonth() === month &&
+              pubDate.getFullYear() === year
+            );
+          });
+
+          let event = null;
+          if (scheduledChapter) {
+            const pubDate = new Date(scheduledChapter.publish_at);
+            const hrs = String(pubDate.getHours()).padStart(2, "0");
+            const mins = String(pubDate.getMinutes()).padStart(2, "0");
+            event = {
+              title: `C${scheduledChapter.chapter_number}: ${scheduledChapter.title.slice(0, 10)}...`,
+              status: scheduledChapter.moderation_status,
+              time: `${hrs}:${mins}`
+            };
+          }
+          return { dayNum, event };
+        });
+        setCalendarDays(daysList);
+        setCurrentMonthStr(`Tháng ${String(month + 1).padStart(2, "0")}/${year}`);
+        try {
+          const overviewRes = await yagApi.author.getScheduleOverview();
+          if (overviewRes.data) {
+            setOverview(overviewRes.data);
+            await refreshUser();
+          }
+        } catch (err) {
+          console.error("Failed to load schedule overview:", err);
+        }
       } catch (err) {
         console.error("Failed to load schedule data:", err);
       } finally {
@@ -3143,7 +3139,7 @@ export function ScheduleScreen() {
 
   // Calculate counts for frequencies
   const now = new Date();
-  
+
   // 1. Week View (current week Mon-Sun)
   const currentDay = now.getDay();
   const mondayDiff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
@@ -3298,10 +3294,10 @@ export function ScheduleScreen() {
                                   ? "var(--blue-info, #3B82F6)"
                                   : "var(--amber, #F59E0B)",
                             borderLeft: `2.5px solid ${day.event.status === "approved"
-                                ? "var(--green-ok, #22C55E)"
-                                : day.event.status === "pending"
-                                  ? "var(--blue-info, #3B82F6)"
-                                  : "var(--amber, #F59E0B)"
+                              ? "var(--green-ok, #22C55E)"
+                              : day.event.status === "pending"
+                                ? "var(--blue-info, #3B82F6)"
+                                : "var(--amber, #F59E0B)"
                               }`,
                             lineHeight: 1.2
                           }}

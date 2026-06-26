@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     notifications,
     internal,
     forum,
+    support,
 )
 
 api_router = APIRouter()
@@ -63,7 +64,10 @@ api_router.include_router(
     notifications.router, prefix="/notifications", tags=["Notifications"]
 )
 api_router.include_router(
-    forum.router, prefix="/forum", tags=["F6 - Community Forum"]
+    forum.router, prefix="/forum", tags=["F8 - Forum (Yến Nhi)"]
+)
+api_router.include_router(
+    support.router, prefix="/support", tags=["Support (Trang)"]
 )
 api_router.include_router(publish.router, tags=["Publishing"])
 api_router.include_router(internal.router, tags=["Internal"])

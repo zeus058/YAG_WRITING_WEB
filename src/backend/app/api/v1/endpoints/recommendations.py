@@ -1,7 +1,3 @@
-"""
-Root-level personalized recommendations endpoint for U009.
-"""
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -19,7 +15,9 @@ router = APIRouter()
 )
 async def recommendations(
     db: Session = Depends(deps.get_db),
-    token_payload=Depends(deps.require_authenticated_user),
+    current_user=Depends(deps.get_current_user_optional),
 ):
-    user_id = str(token_payload.get("sub", "anonymous"))
+    user_id = "anonymous"
+    if current_user:
+        user_id = str(current_user.id)
     return await recommend_stories_for_user(db, user_id)

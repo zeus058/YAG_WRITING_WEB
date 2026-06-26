@@ -123,7 +123,7 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: Optional[str] = None
     CLOUDINARY_COVER_FOLDER: str = "yag/covers"
 
-    GEMINI_TIMEOUT_SECONDS: float = 30.0
+    GEMINI_TIMEOUT_SECONDS: float = 120.0
     GEMINI_RPM_LIMIT: int = 10
     AI_CONTEXT_WORD_LIMIT: int = 500
     AI_AGENT_ENABLED: bool = True

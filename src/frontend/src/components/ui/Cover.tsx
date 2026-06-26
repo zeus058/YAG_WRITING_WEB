@@ -1,9 +1,18 @@
 type CoverProps = {
   index: number;
   small?: boolean;
+  coverUrl?: string | null;
 };
 
-export function Cover({ index, small = false }: CoverProps) {
+export function Cover({ index, small = false, coverUrl }: CoverProps) {
+  if (coverUrl) {
+    return (
+      <div className={small ? "cover-art small" : "cover-art"} style={{ overflow: "hidden" }}>
+        <img src={coverUrl} alt="Cover image" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      </div>
+    );
+  }
+
   const palettes = [
     ["#41503D", "#C81C30", "#FFECCE"],
     ["#2E3829", "#3B82F6", "#FEBDB2"],
@@ -24,3 +33,4 @@ export function Cover({ index, small = false }: CoverProps) {
     </div>
   );
 }
+

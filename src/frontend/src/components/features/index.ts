@@ -14,4 +14,5 @@
  * - Sử dụng Atomic UI Component từ ../ui/ để xây dựng.
  */
 
-export {};
+export { RequireAuth } from "../auth/RequireAuth";
+

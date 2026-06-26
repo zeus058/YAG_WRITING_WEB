@@ -2,49 +2,49 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { appEnv, yagApi } from "@/lib";
+import { yagApi } from "@/lib";
 
 const legacyRoutes: Record<string, string> = {
   "s02-auth.html": "/auth",
   "s03-password-recovery.html": "/auth/recovery",
-  "s04-home-feed.html": "/dashboard",
+  "s04-home-feed.html": "/home",
   "s05-discover-search.html": "/discover",
-  "s06-story-detail.html": "/story-detail",
-  "s07-reader-mode.html": "/reader-mode",
+  "s06-story-detail.html": "/discover",
+  "s07-reader-mode.html": "/library",
   "s08-forum.html": "/forum",
   "s09-membership.html": "/membership",
-  "s10-payment-result.html": "/payment-result",
+  "s10-payment-result.html": "/payment/result",
   "s11-library.html": "/library",
-  "s12-profile.html": "/profile",
-  "s13-account-settings.html": "/account-settings",
+  "s12-profile.html": "/profile/me",
+  "s13-account-settings.html": "/settings",
   "s14-notifications.html": "/notifications",
-  "s15-author-works.html": "/author-works",
-  "s16-author-studio.html": "/author-studio",
-  "s17-publish-chapter.html": "/publish-chapter",
-  "s18-schedule-commitment.html": "/schedule-commitment",
-  "s19-admin-dashboard.html": "/admin-dashboard",
-  "s20-content-moderation.html": "/content-moderation",
-  "s21-reports.html": "/reports",
+  "s15-author-works.html": "/author/stories",
+  "s16-author-studio.html": "/author/stories",
+  "s17-publish-chapter.html": "/author/stories",
+  "s18-schedule-commitment.html": "/author/schedule",
+  "s19-admin-dashboard.html": "/admin",
+  "s20-content-moderation.html": "/admin/moderation",
+  "s21-reports.html": "/admin/stats",
   "/auth": "/auth",
   "/auth/recovery": "/auth/recovery",
-  "/dashboard": "/dashboard",
+  "/dashboard": "/home",
   "/discover": "/discover",
-  "/story-detail": "/story-detail",
-  "/reader-mode": "/reader-mode",
+  "/story-detail": "/discover",
+  "/reader-mode": "/library",
   "/forum": "/forum",
   "/membership": "/membership",
-  "/payment-result": "/payment-result",
+  "/payment-result": "/payment/result",
   "/library": "/library",
-  "/profile": "/profile",
-  "/account-settings": "/account-settings",
+  "/profile": "/profile/me",
+  "/account-settings": "/settings",
   "/notifications": "/notifications",
-  "/author-works": "/author-works",
-  "/author-studio": "/author-studio",
-  "/publish-chapter": "/publish-chapter",
-  "/schedule-commitment": "/schedule-commitment",
-  "/admin-dashboard": "/admin-dashboard",
-  "/content-moderation": "/content-moderation",
-  "/reports": "/reports",
+  "/author-works": "/author/stories",
+  "/author-studio": "/author/stories",
+  "/publish-chapter": "/author/stories",
+  "/schedule-commitment": "/author/schedule",
+  "/admin-dashboard": "/admin",
+  "/content-moderation": "/admin/moderation",
+  "/reports": "/admin/stats",
 };
 
 function normalizeRoute(target: string) {
@@ -63,10 +63,18 @@ function showToast(message: string, type = "success") {
 
   const toast = document.createElement("div");
   toast.className = `toast ${type} toast-${type}`;
-  toast.innerHTML = `<strong>${type === "warning" ? "Cần chú ý" : "YAG"}</strong><span>${message}</span>`;
+  
+  const strong = document.createElement("strong");
+  strong.textContent = type === "warning" ? "Cần chú ý" : "YAG";
+  
+  const span = document.createElement("span");
+  span.textContent = message;
+  
+  toast.appendChild(strong);
+  toast.appendChild(span);
   stack.appendChild(toast);
 
-  window.setTimeout(() => {
+  setTimeout(() => {
     toast.remove();
     if (stack && stack.childElementCount === 0) stack.remove();
   }, 3600);
@@ -178,19 +186,19 @@ export function ClientInteractions() {
       }
 
       const billingTarget = target.closest<HTMLElement>("[data-billing-plan]");
-      if (billingTarget?.dataset.billingPlan && !appEnv.useMocks) {
+      if (billingTarget?.dataset.billingPlan) {
         event.preventDefault();
-        showToast("Đang tạo phiên thanh toán VNPAY...", "success");
+        showToast("Đang tạo phiên thanh toán PayOS...", "success");
         void yagApi.billing
-          .createVnpayCheckout({
+          .createPayosCheckout({
             planCode: billingTarget.dataset.billingPlan,
-            returnUrl: `${window.location.origin}/payment-result`,
+            returnUrl: `${window.location.origin}/payment/result`,
           })
           .then((result) => {
             window.location.href = result.data.paymentUrl;
           })
           .catch(() => {
-            showToast("Không thể tạo phiên thanh toán. Vui lòng thử lại sau.", "warning");
+            showToast("Không thể tạo phiên thanh toán PayOS. Vui lòng thử lại sau.", "warning");
           });
       }
 
@@ -212,6 +220,12 @@ export function ClientInteractions() {
 
       const sidebarClose = target.closest("[data-sidebar-close]");
       if (sidebarClose) document.querySelector(".prototype-sidebar")?.classList.remove("open");
+
+      // Close sidebar if open and clicked outside on mobile
+      const sidebar = document.querySelector(".prototype-sidebar");
+      if (sidebar && sidebar.classList.contains("open") && !target.closest(".prototype-sidebar") && !sidebarOpen) {
+        sidebar.classList.remove("open");
+      }
 
       const passwordToggle = target.closest<HTMLElement>("[data-password-toggle]");
       if (passwordToggle) {

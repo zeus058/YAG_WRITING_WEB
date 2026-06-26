@@ -1,0 +1,320 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  YAG — Docker Compose Orchestration                             ║
+# ║                                                                  ║
+# ║  Profiles:                                                       ║
+# ║    (default)  → postgres, redis, rabbitmq (local dev infra)      ║
+# ║    app        → full-stack trong Docker (local testing)          ║
+# ║    prod       → production deployment (self-hosted VM/VPS)       ║
+# ║                                                                  ║
+# ║  Usage:                                                          ║
+# ║    docker-compose up -d                    # dev infra only      ║
+# ║    docker-compose --profile app up -d      # full-stack local    ║
+# ║    docker-compose --profile prod up -d     # production          ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+# ── YAML Anchors: Shared environment block (DRY) ─────────────────
+x-backend-env: &backend-env
+  SECRET_KEY: ${SECRET_KEY:-dev_secret_key}
+  QUEUE_PROVIDER: ${QUEUE_PROVIDER:-rabbitmq}
+  INTERNAL_TASK_TOKEN: ${INTERNAL_TASK_TOKEN:-}
+  INTERNAL_SERVICE_ACCOUNT_EMAIL: ${INTERNAL_SERVICE_ACCOUNT_EMAIL:-}
+  INTERNAL_AUTH_AUDIENCE: ${INTERNAL_AUTH_AUDIENCE:-}
+  
+  # Database Configuration (PostgreSQL with pgvector)
+  DATABASE_URL: ${DATABASE_URL:-}
+  POSTGRES_SERVER: ${POSTGRES_SERVER:-postgres}
+  POSTGRES_USER: ${POSTGRES_USER:-yag_user}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yag_secret}
+  POSTGRES_DB: ${POSTGRES_DB:-yag_db}
+  DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+  DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
+  DB_POOL_TIMEOUT: ${DB_POOL_TIMEOUT:-30}
+  DB_POOL_RECYCLE_SECONDS: ${DB_POOL_RECYCLE_SECONDS:-1800}
+
+  # Redis Cache & Session Configuration
+  REDIS_URL: ${REDIS_URL:-}
+  REDIS_HOST: ${REDIS_HOST:-redis}
+  REDIS_PORT: ${REDIS_PORT:-6379}
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+  # RabbitMQ Message Broker Configuration
+  RABBITMQ_URL: ${RABBITMQ_URL:-}
+  RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+  RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+  RABBITMQ_USER: ${RABBITMQ_USER:-yag_mq}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-yag_mq_secret}
+  RABBITMQ_MODERATION_QUEUE: ${RABBITMQ_MODERATION_QUEUE:-ai.moderation}
+  RABBITMQ_MODERATION_RETRY_QUEUE: ${RABBITMQ_MODERATION_RETRY_QUEUE:-ai.moderation.retry}
+  RABBITMQ_MODERATION_DLQ: ${RABBITMQ_MODERATION_DLQ:-ai.moderation.dlq}
+  RABBITMQ_MODERATION_MAX_RETRIES: ${RABBITMQ_MODERATION_MAX_RETRIES:-5}
+
+  # Google Pub/Sub queue option for Cloud Run production deployments
+  GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
+  PUBSUB_PROJECT_ID: ${PUBSUB_PROJECT_ID:-}
+  PUBSUB_MODERATION_TOPIC: ${PUBSUB_MODERATION_TOPIC:-yag-async-tasks}
+
+  # CORS Settings
+  CORS_ORIGINS: ${CORS_ORIGINS:-*}
+
+  # Google Gemini API Settings (suggestions, embeddings, moderation)
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+  # Cloudinary CDN Configuration (covers & avatars)
+  CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+  CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+  CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+
+  # PayOS Integration Settings (VIP membership billing)
+  PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-payos}
+  PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+  PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+  PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+  PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-}
+  PAYOS_MOCK_ENABLED: ${PAYOS_MOCK_ENABLED:-false}
+
+  # SMTP for password reset and schedule notifications
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-465}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_FROM: ${SMTP_FROM:-}
+
+  # Database Initialization Lifecycle (managed via migrate service)
+  AUTO_CREATE_TABLES: "false"
+  APPLY_MIGRATIONS_ON_STARTUP: "false"
+
+x-backend-logging: &backend-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ────────────────────────────────────────────────────────────
+  # INFRASTRUCTURE SERVICES (Started by default)
+  # ────────────────────────────────────────────────────────────
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-yag_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yag_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-yag_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-yag_user} -d $${POSTGRES_DB:-yag_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *backend-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command: >
+      sh -c '
+      if [ -n "$$REDIS_PASSWORD" ]; then
+        exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
+      else
+        exec redis-server --appendonly yes
+      fi
+      '
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: >
+        sh -c '
+        if [ -n "$$REDIS_PASSWORD" ]; then
+          redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG
+        else
+          redis-cli ping | grep PONG
+        fi
+        '
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *backend-logging
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_DASHBOARD_PORT:-15672}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-yag_mq}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-yag_mq_secret}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    logging: *backend-logging
+
+  # ────────────────────────────────────────────────────────────
+  # APPLICATION SERVICES (profile: app | prod)
+  # ────────────────────────────────────────────────────────────
+
+  # Init container — apply SQL migrations then exit
+  migrate:
+    profiles: [app, prod]
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    restart: "no"
+    command: ["python", "-m", "app.manage_migrations"]
+    environment:
+      <<: *backend-env
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SERVICE_ROLE: migrate
+      ALLOW_WEBSOCKET_QUERY_TOKEN: "false"
+      SCHEDULER_ENABLED: "false"
+      VIEW_COUNT_FLUSH_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *backend-logging
+
+  # FastAPI API server (Stateless, lightweight, handles incoming web traffic)
+  backend:
+    profiles: [app, prod]
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      <<: *backend-env
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SERVICE_ROLE: api
+      ALLOW_WEBSOCKET_QUERY_TOKEN: "false"
+      # SCHEDULER_ENABLED must be false on API instances in production to prevent crashes and duplication
+      SCHEDULER_ENABLED: "false"
+      VIEW_COUNT_FLUSH_ENABLED: "false"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    logging: *backend-logging
+
+  # Dedicated Scheduler service (runs cron jobs & background tasks once to avoid double scheduling)
+  scheduler:
+    profiles: [app, prod]
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # Employs backend image; runs standard web lifespan to trigger startup/shutdown hooks
+    expose:
+      - "8000"
+    environment:
+      <<: *backend-env
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SERVICE_ROLE: scheduler
+      ALLOW_WEBSOCKET_QUERY_TOKEN: "false"
+      SCHEDULER_ENABLED: "true"
+      VIEW_COUNT_FLUSH_ENABLED: "true"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *backend-logging
+
+  # RabbitMQ moderation consumer (reads pending chapters, invokes Gemini API)
+  moderation-worker:
+    profiles: [app, prod]
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["python", "worker.py"]
+    environment:
+      <<: *backend-env
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      SERVICE_ROLE: worker
+      ALLOW_WEBSOCKET_QUERY_TOKEN: "false"
+      SCHEDULER_ENABLED: "false"
+      VIEW_COUNT_FLUSH_ENABLED: "false"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    logging: *backend-logging
+
+  # Next.js frontend (standalone mode)
+  frontend:
+    profiles: [app, prod]
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_DEPLOY_ENV: ${ENVIRONMENT:-production}
+        NEXT_PUBLIC_APP_URL: ${FRONTEND_PUBLIC_URL:-http://localhost}
+        NEXT_PUBLIC_API_BASE_URL: ${API_PUBLIC_URL:-http://localhost}
+        NEXT_PUBLIC_WS_BASE_URL: ${WS_PUBLIC_URL:-ws://localhost/ws}
+        NEXT_PUBLIC_API_TIMEOUT_MS: ${API_TIMEOUT_MS:-12000}
+        NEXT_PUBLIC_USE_MOCKS: "false"
+    restart: unless-stopped
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+    logging: *backend-logging
+
+  # Nginx reverse proxy (SSL termination, rate limiting, routing)
+  nginx:
+    profiles: [app, prod]
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *backend-logging
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

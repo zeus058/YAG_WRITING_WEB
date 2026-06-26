@@ -100,6 +100,13 @@ export function Icon({ name, className = "icon" }: IconProps) {
           <path d="m12 5 7 7-7 7" />
         </svg>
       );
+    case "arrow-left":
+      return (
+        <svg {...common}>
+          <path d="M19 12H5" />
+          <path d="m12 5-7 7 7 7" />
+        </svg>
+      );
     case "check":
       return (
         <svg {...common}>
@@ -111,6 +118,15 @@ export function Icon({ name, className = "icon" }: IconProps) {
         <svg {...common}>
           <path d="M18 6 6 18" />
           <path d="m6 6 12 12" />
+        </svg>
+      );
+    case "trash":
+      return (
+        <svg {...common}>
+          <path d="M3 6h18" />
+          <path d="M8 6V4h8v2" />
+          <path d="M19 6l-1 15H6L5 6" />
+          <path d="M10 11v6M14 11v6" />
         </svg>
       );
     case "eye":
@@ -147,6 +163,47 @@ export function Icon({ name, className = "icon" }: IconProps) {
         <svg {...common}>
           <rect x="4" y="11" width="16" height="10" rx="2" />
           <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+      );
+    case "sun":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+        </svg>
+      );
+    case "moon":
+      return (
+        <svg {...common}>
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </svg>
+      );
+    case "heart":
+      return (
+        <svg {...common} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+        </svg>
+      );
+    case "message":
+      return (
+        <svg {...common} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </svg>
+      );
+    case "repost":
+      return (
+        <svg {...common} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 1l4 4-4 4" />
+          <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+          <path d="M7 23l-4-4 4-4" />
+          <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+        </svg>
+      );
+    case "send":
+      return (
+        <svg {...common} strokeLinecap="round" strokeLinejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13" />
+          <polygon points="22 2 15 22 11 13 2 9 22 2" />
         </svg>
       );
   }

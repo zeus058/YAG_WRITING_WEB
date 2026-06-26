@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { IconName } from "@/data/yag";
 import { ProductFooter } from "@/components/layout";
 import { BrandLogo, Icon } from "@/components/ui";
+import { yagApi } from "@/lib/api";
 
 type InfoSection = {
   title: string;
@@ -42,7 +43,7 @@ const infoPages = {
     focusBody:
       "YAG định hình là không gian văn học mạng thế hệ mới, ứng dụng AI hỗ trợ viết lách thông minh, bảo vệ bản quyền tối đa và tối ưu hóa doanh thu chia sẻ bền vững cho tác giả.",
     facts: ["100K+ Độc giả", "Gợi ý AI thông minh", "Kết nối trực tiếp"],
-    primaryAction: { label: "Bắt đầu đọc", href: "/dashboard" },
+    primaryAction: { label: "Bắt đầu đọc", href: "/home" },
     sections: [
       {
         title: "Không gian Độc giả",
@@ -108,7 +109,7 @@ const infoPages = {
     focusBody:
       "Mọi dữ liệu cá nhân của người dùng trên YAG đều được mã hóa bằng chuẩn bảo mật tiên tiến nhất. Chúng tôi cam kết không bao giờ chia sẻ thông tin cá nhân, lịch sử đọc hay lịch sử thanh toán của bạn cho bất kỳ bên thứ ba nào.",
     facts: ["Mã hóa SSL/TLS", "Quyền kiểm soát dữ liệu", "Bảo mật tuyệt đối"],
-    primaryAction: { label: "Cài đặt tài khoản", href: "/account-settings" },
+    primaryAction: { label: "Cài đặt tài khoản", href: "/settings" },
     sections: [
       {
         title: "Thu thập Dữ liệu",
@@ -155,7 +156,7 @@ const infoPages = {
       },
       {
         title: "Xác minh giao dịch",
-        body: "Hỗ trợ kiểm tra, đối soát giao dịch thanh toán gói Membership qua cổng VNPAY và kích hoạt tài khoản nhanh chóng.",
+        body: "Hỗ trợ kiểm tra, đối soát giao dịch thanh toán gói Membership qua cổng PayOS và kích hoạt tài khoản nhanh chóng.",
         icon: "card",
       },
       {
@@ -177,28 +178,55 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
   const [ticketSubject, setTicketSubject] = useState<string>("Tài khoản");
   const [ticketStep, setTicketStep] = useState<number>(1);
   const [agreePrivacy, setAgreePrivacy] = useState<boolean>(true);
+  
+  const [ticketName, setTicketName] = useState("");
+  const [ticketEmail, setTicketEmail] = useState("");
+  const [ticketContent, setTicketContent] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleTicketSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketName || !ticketEmail || !ticketContent || !agreePrivacy) return;
+    
+    setIsSubmitting(true);
+    try {
+      await yagApi.support.submitTicket({
+        name: ticketName,
+        email: ticketEmail,
+        subject: ticketSubject,
+        content: ticketContent,
+        agreePrivacy
+      });
+      setTicketStep(3);
+    } catch (err) {
+      console.error("Failed to submit ticket", err);
+      alert("Đã xảy ra lỗi khi gửi yêu cầu. Vui lòng thử lại sau.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Custom renders for premium interactive experience
   const renderInteractiveAbout = () => (
     <div className="stack" style={{ gap: 24 }}>
       {/* Ecosystem Visual Stats */}
-      <section className="panel panel-pad info-focus-panel" style={{ background: "rgba(255, 255, 255, 0.86)", border: "1px solid var(--line)" }}>
+      <section className="panel panel-pad info-focus-panel" style={{ background: "var(--surface-panel)", border: "1px solid var(--line)" }}>
         <h2 className="section-title" style={{ gridColumn: "1 / -1", marginBottom: 12 }}>Chỉ số hệ sinh thái YAG</h2>
         <div className="grid grid-4" style={{ gridColumn: "1 / -1", width: "100%", gap: 16 }}>
-          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "#FFFFFF", padding: 16 }}>
-            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--crimson)" }}>100K+</span>
+          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
+            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--accent-text, var(--crimson))" }}>100K+</span>
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Độc giả hoạt động</small>
           </div>
-          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "#FFFFFF", padding: 16 }}>
-            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--green)" }}>5,000+</span>
+          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
+            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--green-ok)" }}>5,000+</span>
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Tác phẩm hoàn thiện</small>
           </div>
-          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "#FFFFFF", padding: 16 }}>
+          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
             <span style={{ fontSize: 32, fontWeight: 900, color: "var(--amber)" }}>98.6%</span>
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Độ hài lòng UX</small>
           </div>
-          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "#FFFFFF", padding: 16 }}>
-            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--blue)" }}>Realtime</span>
+          <div className="panel panel-pad stack" style={{ alignItems: "center", textAlign: "center", background: "var(--surface)", padding: 16 }}>
+            <span style={{ fontSize: 32, fontWeight: 900, color: "var(--blue-info)" }}>Realtime</span>
             <small style={{ color: "var(--muted)", fontWeight: 700 }}>Bình luận & Thông báo</small>
           </div>
         </div>
@@ -219,8 +247,8 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             key={section.title}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span className="info-card-icon" style={{ background: activeTab === idx ? "var(--coral)" : "", color: activeTab === idx ? "#FFF" : "" }}><Icon name={section.icon} /></span>
-              <h2 className="section-title" style={{ margin: 0, fontSize: 18 }}>{section.title}</h2>
+              <span className="info-card-icon" style={{ background: activeTab === idx ? "var(--coral)" : "", color: activeTab === idx ? "var(--jungle)" : "" }}><Icon name={section.icon} /></span>
+              <h2 className="section-title" style={{ margin: 0, fontSize: 18, color: activeTab === idx ? "var(--crimson)" : "var(--jungle)" }}>{section.title}</h2>
             </div>
             <p style={{ marginTop: 12 }}>{section.body}</p>
             <span style={{ marginTop: "auto", fontSize: 12, fontWeight: 800, color: "var(--muted)" }}>Click để xem chi tiết ➜</span>
@@ -229,22 +257,22 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
       </section>
 
       {/* Visual Timeline Section */}
-      <section className="panel panel-pad stack" style={{ background: "rgba(255, 255, 255, 0.78)" }}>
+      <section className="panel panel-pad stack" style={{ background: "var(--surface-panel)" }}>
         <h2 className="section-title">Lộ trình nâng cấp nền tảng</h2>
         <div className="stack" style={{ gap: 20, marginTop: 16, position: "relative", paddingLeft: 24 }}>
-          <div style={{ position: "absolute", left: 8, top: 0, bottom: 0, width: 2, background: "rgba(65, 80, 61, 0.16)" }}></div>
+          <div style={{ position: "absolute", left: 8, top: 0, bottom: 0, width: 2, background: "var(--line)" }}></div>
           <div style={{ position: "relative" }}>
-            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--crimson)", border: "3px fill #FFF" }}></div>
+            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--crimson)", border: "3px solid var(--surface)" }}></div>
             <strong>Quý 1 - Quý 2 / 2026: Phiên bản 1.0 (Hiện tại)</strong>
-            <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>Ra mắt giao diện đọc tối giản, split-screen soạn thảo dành cho tác giả, kiểm duyệt AI thời gian thực và tích hợp ví điện tử VNPAY.</p>
+            <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>Ra mắt giao diện đọc tối giản, split-screen soạn thảo dành cho tác giả, kiểm duyệt AI thời gian thực và tích hợp ví điện tử PayOS.</p>
           </div>
           <div style={{ position: "relative" }}>
-            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--green)" }}></div>
+            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--green-ok)" }}></div>
             <strong>Quý 3 - Quý 4 / 2026: Trợ lý Miu AI & Diễn đàn</strong>
             <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>Đồng bộ trợ lý viết Miu AI sâu vào trình soạn thảo, kích hoạt phòng thảo luận nhóm và triển khai cam kết điểm uy tín tác giả.</p>
           </div>
           <div style={{ position: "relative" }}>
-            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--blue)" }}></div>
+            <div style={{ position: "absolute", left: -21, top: 4, width: 12, height: 12, borderRadius: "50%", background: "var(--blue-info)" }}></div>
             <strong>Kế hoạch 2027: Bản quyền số Blockchain & App di động</strong>
             <p style={{ margin: "4px 0 0", color: "var(--muted)" }}>Ứng dụng NFT hóa bản quyền tác phẩm và phát hành ứng dụng di động native trên cả iOS và Android.</p>
           </div>
@@ -256,7 +284,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
   const renderInteractiveTerms = () => (
     <div className="stack" style={{ gap: 24 }}>
       {/* Interactive Tabs Accordion */}
-      <section className="info-focus-panel" style={{ display: "grid", gridTemplateColumns: "1fr", background: "rgba(255, 255, 255, 0.86)", gap: 16 }}>
+      <section className="info-focus-panel" style={{ display: "grid", gridTemplateColumns: "1fr", background: "var(--surface-panel)", gap: 16 }}>
         <h2 className="section-title">Xem nhanh các điều khoản cốt lõi</h2>
         <div className="grid grid-4" style={{ gap: 8 }}>
           {page.sections.map((section, idx) => (
@@ -271,7 +299,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             </button>
           ))}
         </div>
-        <div className="panel panel-pad stack" style={{ background: "#FFFFFF", border: "1px solid var(--line)", padding: 20 }}>
+        <div className="panel panel-pad stack" style={{ background: "var(--surface)", border: "1px solid var(--line)", padding: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
             <span className="info-card-icon"><Icon name={page.sections[activeTab].icon} /></span>
             <strong style={{ fontSize: 18, color: "var(--jungle)" }}>{page.sections[activeTab].title}</strong>
@@ -285,7 +313,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
       </section>
 
       {/* Focus Panel */}
-      <section className="panel panel-pad stack" style={{ background: "rgba(255, 255, 255, 0.78)" }}>
+      <section className="panel panel-pad stack" style={{ background: "var(--surface-panel)" }}>
         <h2 className="section-title">{page.focusTitle}</h2>
         <p style={{ color: "var(--muted)", margin: "8px 0 0" }}>{page.focusBody}</p>
       </section>
@@ -295,24 +323,24 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
   const renderInteractivePrivacy = () => (
     <div className="stack" style={{ gap: 24 }}>
       {/* Security Health Dashboard */}
-      <section className="panel panel-pad info-focus-panel" style={{ background: "rgba(255, 255, 255, 0.86)" }}>
+      <section className="panel panel-pad info-focus-panel" style={{ background: "var(--surface-panel)" }}>
         <div className="stack" style={{ gap: 12 }}>
           <span className="badge badge-green"><Icon name="shield" /> An toàn tuyệt đối</span>
           <h2 className="section-title">Chỉ số bảo mật YAG</h2>
           <p style={{ color: "var(--muted)" }}>Dữ liệu của bạn được quản lý và bảo vệ nghiêm ngặt dưới hạ tầng đám mây được mã hóa.</p>
         </div>
         <div className="stack" style={{ gap: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Mã hóa đầu cuối SSL</strong><span style={{ color: "var(--green)", fontWeight: 800 }}>100% Hoạt động</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Mã hóa đầu cuối SSL</strong><span style={{ color: "var(--green-ok)", fontWeight: 800 }}>100% Hoạt động</span></div>
           <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ width: "100%", height: "100%", background: "var(--green)" }}></div>
+            <div style={{ width: "100%", height: "100%", background: "var(--green-ok)" }}></div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Bảo mật mật khẩu (SHA-256)</strong><span style={{ color: "var(--green)", fontWeight: 800 }}>Đã kích hoạt</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Bảo mật mật khẩu (SHA-256)</strong><span style={{ color: "var(--green-ok)", fontWeight: 800 }}>Đã kích hoạt</span></div>
           <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ width: "100%", height: "100%", background: "var(--green)" }}></div>
+            <div style={{ width: "100%", height: "100%", background: "var(--green-ok)" }}></div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Cổng thanh toán trung gian</strong><span style={{ color: "var(--green)", fontWeight: 800 }}>VNPAY (Không lưu số thẻ)</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><strong>Cổng thanh toán trung gian</strong><span style={{ color: "var(--green-ok)", fontWeight: 800 }}>PayOS (Không lưu số thẻ)</span></div>
           <div style={{ height: 8, background: "var(--line)", borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ width: "100%", height: "100%", background: "var(--green)" }}></div>
+            <div style={{ width: "100%", height: "100%", background: "var(--green-ok)" }}></div>
           </div>
         </div>
       </section>
@@ -324,7 +352,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             key={section.title} 
             className="panel panel-pad stack" 
             style={{ 
-              background: "rgba(255, 255, 255, 0.78)",
+              background: "var(--surface-panel)",
               cursor: "pointer",
               transition: "transform 0.2s",
               border: activeTab === idx ? "1px solid var(--coral)" : ""
@@ -333,8 +361,8 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             onMouseEnter={() => setActiveTab(idx)}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-              <span className="info-card-icon" style={{ background: activeTab === idx ? "var(--coral)" : "", color: activeTab === idx ? "#FFF" : "" }}><Icon name={section.icon} /></span>
-              <strong style={{ fontSize: 16, color: "var(--jungle)" }}>{section.title}</strong>
+              <span className="info-card-icon" style={{ background: activeTab === idx ? "var(--coral)" : "", color: activeTab === idx ? "var(--jungle)" : "" }}><Icon name={section.icon} /></span>
+              <strong style={{ fontSize: 16, color: activeTab === idx ? "var(--crimson)" : "var(--jungle)" }}>{section.title}</strong>
             </div>
             <p style={{ color: "var(--muted)", margin: 0, fontSize: 14 }}>{section.body}</p>
           </div>
@@ -346,7 +374,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
   const renderInteractiveContact = () => (
     <div className="stack" style={{ gap: 24 }}>
       {/* Visual Ticketing Guide Stepper */}
-      <section className="panel panel-pad stack" style={{ background: "rgba(255, 255, 255, 0.86)" }}>
+      <section className="panel panel-pad stack" style={{ background: "var(--surface-panel)" }}>
         <h2 className="section-title">Gửi phiếu yêu cầu hỗ trợ (Support Ticket)</h2>
         <div className="stepper" style={{ marginTop: 12, marginBottom: 12 }}>
           <div className={`step ${ticketStep >= 1 ? "active" : ""}`}>1. Chọn chủ đề</div>
@@ -369,7 +397,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
                     justifyContent: "center",
                     padding: 16,
                     border: ticketSubject === subject ? "2px solid var(--coral)" : "1px solid var(--line)",
-                    background: ticketSubject === subject ? "var(--petal)" : "#FFFFFF",
+                    background: ticketSubject === subject ? "var(--petal)" : "var(--surface)",
                     transition: "all 0.2s"
                   }}
                 >
@@ -383,15 +411,15 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
         )}
 
         {ticketStep === 2 && (
-          <form className="stack" style={{ gap: 16 }} onSubmit={(e) => { e.preventDefault(); setTicketStep(3); }}>
+          <form className="stack" style={{ gap: 16 }} onSubmit={handleTicketSubmit}>
             <div className="grid grid-2">
               <div className="field">
                 <label>Họ tên</label>
-                <input className="input" defaultValue="Minh Nguyệt" required />
+                <input className="input" required value={ticketName} onChange={e => setTicketName(e.target.value)} disabled={isSubmitting} />
               </div>
               <div className="field">
                 <label>Email liên hệ</label>
-                <input className="input" type="email" defaultValue="reader@yag.vn" required />
+                <input className="input" type="email" required value={ticketEmail} onChange={e => setTicketEmail(e.target.value)} disabled={isSubmitting} />
               </div>
             </div>
             <div className="field">
@@ -400,22 +428,22 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
             </div>
             <div className="field">
               <label>Nội dung chi tiết</label>
-              <textarea className="textarea" placeholder="Vui lòng mô tả chi tiết vấn đề bạn đang gặp phải..." defaultValue="Tôi cần kiểm tra giao dịch Membership vừa thanh toán..." required />
+              <textarea className="textarea" placeholder="Vui lòng mô tả chi tiết vấn đề bạn đang gặp phải..." required value={ticketContent} onChange={e => setTicketContent(e.target.value)} disabled={isSubmitting} />
             </div>
             <label className="remember-row">
-              <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} />
+              <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} disabled={isSubmitting} />
               Tôi đồng ý cho phép bộ phận hỗ trợ kiểm tra lịch sử liên quan để xử lý sự cố.
             </label>
             <div className="inline-actions" style={{ justifyContent: "space-between" }}>
-              <button className="button button-ghost" type="button" onClick={() => setTicketStep(1)}>Quay lại</button>
-              <button className="button button-primary" type="submit" disabled={!agreePrivacy}>Gửi yêu cầu ➜</button>
+              <button className="button button-ghost" type="button" onClick={() => setTicketStep(1)} disabled={isSubmitting}>Quay lại</button>
+              <button className="button button-primary" type="submit" disabled={!agreePrivacy || isSubmitting}>{isSubmitting ? "Đang gửi..." : "Gửi yêu cầu ➜"}</button>
             </div>
           </form>
         )}
 
         {ticketStep === 3 && (
           <div className="stack" style={{ gap: 16, alignItems: "center", textAlign: "center", padding: "24px 0" }}>
-            <span className="info-card-icon" style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--green)", color: "#FFF", fontSize: 28 }}>
+            <span className="info-card-icon" style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--green-ok)", color: "#FFF", fontSize: 28 }}>
               <Icon name="check" />
             </span>
             <h3 style={{ margin: 0, fontSize: 22, color: "var(--jungle)" }}>Gửi yêu cầu thành công!</h3>
@@ -428,7 +456,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
       {/* Support FAQ Cards */}
       <section className="grid grid-2" style={{ gap: 16 }}>
         {page.sections.map((section) => (
-          <article className="panel panel-pad stack info-card" key={section.title} style={{ background: "rgba(255, 255, 255, 0.78)" }}>
+          <article className="panel panel-pad stack info-card" key={section.title} style={{ background: "var(--surface-panel)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <span className="info-card-icon"><Icon name={section.icon} /></span>
               <h2 className="section-title" style={{ margin: 0, fontSize: 16 }}>{section.title}</h2>
@@ -447,7 +475,7 @@ export function InfoPage({ kind }: { kind: InfoKind }) {
           <BrandLogo />
         </Link>
         <Link href="/" className="button button-ghost" style={{ display: "inline-flex", alignItems: "center", gap: "8px", borderRadius: "99px", padding: "8px 16px" }}>
-          <span style={{ display: "inline-flex", transform: "rotate(180deg)" }}><Icon name="arrow" /></span>
+          <Icon name="arrow-left" />
           <span>Về trang chủ</span>
         </Link>
       </header>

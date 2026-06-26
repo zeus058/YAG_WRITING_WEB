@@ -1,0 +1,712 @@
+# CI/CD FINAL
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+    inputs:
+      demo_author_access:
+        description: "Manage login access for the 10 synthetic demo authors"
+        required: true
+        default: preserve
+        type: choice
+        options:
+          - preserve
+          - enable
+          - disable
+
+# Đảm bảo chỉ 1 workflow chạy trên cùng branch/PR tại 1 thời điểm
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║                       PERMISSIONS                               ║
+# ╚══════════════════════════════════════════════════════════════════╝
+permissions:
+  contents: read
+  pull-requests: write  # Để comment coverage lên PR
+  id-token: write       # BẮT BUỘC: Cho phép GitHub Actions tạo OIDC token để xác thực với GCP qua WIF
+
+jobs:
+  # ────────────────────────────────────────────────────────────
+  # JOB 0: Check Secrets Presence
+  # ────────────────────────────────────────────────────────────
+  check-secrets:
+    name: "Check Secrets Presence"
+    runs-on: ubuntu-latest
+    outputs:
+      has_gcp: ${{ steps.check.outputs.has_gcp }}
+      has_db: ${{ steps.check.outputs.has_db }}
+    steps:
+      - id: check
+        env:
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GCP_PROJECT_ID: sewritingweb
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -n "$GCP_WORKLOAD_IDENTITY_PROVIDER" ] && [ -n "$GCP_SERVICE_ACCOUNT" ] && [ -n "$GCP_PROJECT_ID" ]; then
+            echo "has_gcp=true" >> $GITHUB_OUTPUT
+            echo "GCP WIF secrets are configured"
+          else
+            echo "has_gcp=false" >> $GITHUB_OUTPUT
+            echo "GCP WIF secrets are NOT configured"
+          fi
+          if [ -n "$DATABASE_URL" ]; then
+            echo "has_db=true" >> $GITHUB_OUTPUT
+            echo "DATABASE_URL is configured"
+          else
+            echo "has_db=false" >> $GITHUB_OUTPUT
+            echo "DATABASE_URL is NOT configured"
+          fi
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 1: Backend CI — Lint, Migrate, Test
+  # ────────────────────────────────────────────────────────────
+  backend:
+    name: "Backend CI (Python 3.11)"
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: yag_user
+          POSTGRES_PASSWORD: yag_secret
+          POSTGRES_DB: yag_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:3.13-alpine
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_running"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: ./src/backend
+
+    env:
+      DATABASE_URL: postgresql://yag_user:yag_secret@localhost:5432/yag_db
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: localhost
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      GEMINI_API_KEY: ""
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: src/backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 pytest pytest-cov
+
+      - name: Lint — Syntax errors & critical issues
+        run: flake8 app tests --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Lint — Code quality warnings
+        run: flake8 app tests --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+
+      - name: Run database migrations
+        run: python -m app.manage_migrations
+
+      - name: Run tests with coverage
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=80 -v
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: src/backend/coverage.xml
+          retention-days: 7
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 2: Frontend CI — Lint, Type-check, Build
+  # ────────────────────────────────────────────────────────────
+  frontend:
+    name: "Frontend CI (Node.js 20)"
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./src/frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint with ESLint
+        run: npm run lint
+
+      - name: Build check (type-safe compilation)
+        run: npm run build
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 3: Security Scanning — Dependency vulnerabilities
+  # ────────────────────────────────────────────────────────────
+  security:
+    name: "Security Scan"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Audit Python dependencies
+        working-directory: ./src/backend
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt --desc --output json
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Audit npm dependencies
+        working-directory: ./src/frontend
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Run Bandit Security Scan
+        working-directory: ./src/backend
+        run: |
+          pip install bandit
+          bandit -r app/ -ll
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 4: Docker Build Validation (PRs + push to dev)
+  # ────────────────────────────────────────────────────────────
+  docker:
+    name: "Docker Build Check"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build backend Docker image
+        run: |
+          docker build -t yag-backend:ci-${{ github.sha }} ./src/backend
+          echo " Backend Docker image built successfully"
+
+      - name: Build frontend Docker image
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_APP_URL=https://ci-test.local \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=https://ci-test.local \
+            --build-arg NEXT_PUBLIC_WS_BASE_URL=wss://ci-test.local/ws \
+            --build-arg NEXT_PUBLIC_DEPLOY_ENV=production \
+            --build-arg NEXT_PUBLIC_API_TIMEOUT_MS=12000 \
+            -t yag-frontend:ci-${{ github.sha }} ./src/frontend
+          echo " Frontend Docker image built successfully"
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 6: CD — Database Migrations (Production/Staging)
+  # ────────────────────────────────────────────────────────────
+  deploy-migrations:
+    name: "Apply Production Migrations"
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    # Production environment secrets are only visible inside this job.
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.demo_author_access != 'preserve')
+
+    environment: production
+
+    defaults:
+      run:
+        working-directory: ./src/backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: src/backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Apply database migrations
+        timeout-minutes: 5
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGCONNECT_TIMEOUT: "15"
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL secret is not configured."
+            exit 1
+          fi
+          python -m app.manage_migrations
+          python -m app.manage_migrations --check
+          echo "Database migrations applied successfully."
+
+      - name: Import licensed synthetic story library
+        timeout-minutes: 15
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEMO_AUTHOR_PASSWORD: ${{ secrets.DEMO_AUTHOR_PASSWORD }}
+          DEMO_AUTHOR_ACCESS: ${{ inputs.demo_author_access || 'preserve' }}
+          PGCONNECT_TIMEOUT: "15"
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -euo pipefail
+          IMPORT_ARGS=(--apply --confirm-remote --skip-migrations)
+          case "$DEMO_AUTHOR_ACCESS" in
+            enable)
+              if [ -z "$DEMO_AUTHOR_PASSWORD" ]; then
+                echo "DEMO_AUTHOR_PASSWORD production secret is required to enable login."
+                exit 1
+              fi
+              IMPORT_ARGS+=(--enable-author-login)
+              ;;
+            disable)
+              IMPORT_ARGS+=(--disable-author-login)
+              ;;
+          esac
+          python -u -m app.import_demo_library "${IMPORT_ARGS[@]}"
+          echo "Synthetic story library imported and verified successfully."
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 7: CD — Deploy Backend to Google Cloud Run (via WIF)
+  # ────────────────────────────────────────────────────────────
+  deploy-backend:
+    name: "Deploy Backend to Cloud Run"
+    needs: [deploy-migrations, check-secrets, backend, frontend, security, docker]
+    runs-on: ubuntu-latest
+    # A successful deploy-migrations job proves the production DB secret is available.
+    # Explicitly depends on backend, frontend, security, and docker so any CI failure hard-blocks CD.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has_gcp == 'true'
+
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          project_id: sewritingweb
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Resolve deployment variables
+        id: deploy_vars
+        env:
+          GCP_REGION: ${{ secrets.GCP_REGION }}
+          GCP_PROJECT_ID: sewritingweb
+          GCP_GAR_REPO: ${{ secrets.GCP_GAR_REPO }}
+          GCP_PUBSUB_TOPIC: ${{ secrets.GCP_PUBSUB_TOPIC }}
+          GCP_PUBSUB_SUBSCRIPTION: ${{ secrets.GCP_PUBSUB_SUBSCRIPTION }}
+        run: |
+          REGION="${GCP_REGION:-asia-southeast1}"
+          GAR_REPO="${GCP_GAR_REPO:-yag-repo}"
+          PUBSUB_TOPIC="${GCP_PUBSUB_TOPIC:-yag-async-tasks}"
+          PUBSUB_SUBSCRIPTION="${GCP_PUBSUB_SUBSCRIPTION:-yag-async-tasks-cloud-run}"
+          IMAGE="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPO/yag-backend:${{ github.sha }}"
+
+          echo "region=$REGION" >> "$GITHUB_OUTPUT"
+          echo "gar_repo=$GAR_REPO" >> "$GITHUB_OUTPUT"
+          echo "pubsub_topic=$PUBSUB_TOPIC" >> "$GITHUB_OUTPUT"
+          echo "pubsub_subscription=$PUBSUB_SUBSCRIPTION" >> "$GITHUB_OUTPUT"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Debug — verify project identity
+        run: |
+          echo "Hardcoded project: sewritingweb"
+          gcloud config get-value project
+          gcloud auth list
+
+      - name: Preflight GCP deployment dependencies
+        id: preflight
+        env:
+          GCP_PROJECT_ID: sewritingweb
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          REGION: ${{ steps.deploy_vars.outputs.region }}
+          GAR_REPO: ${{ steps.deploy_vars.outputs.gar_repo }}
+          PUBSUB_MODERATION_TOPIC: ${{ steps.deploy_vars.outputs.pubsub_topic }}
+          PUBSUB_SUBSCRIPTION: ${{ steps.deploy_vars.outputs.pubsub_subscription }}
+          SCHEDULER_JOB: yag-schedule-scan
+        run: |
+          set -euo pipefail
+
+          echo "Checking Artifact Registry repository..."
+          gcloud artifacts repositories describe "$GAR_REPO" \
+            --project "$GCP_PROJECT_ID" \
+            --location "$REGION" >/dev/null
+
+          echo "Checking required Secret Manager secrets..."
+          REQUIRED_SECRETS=(
+            YAG_DATABASE_URL
+            YAG_SECRET_KEY
+            YAG_CORS_ORIGINS
+            YAG_REDIS_URL
+            YAG_GEMINI_API_KEY
+            YAG_CLOUDINARY_CLOUD_NAME
+            YAG_CLOUDINARY_API_KEY
+            YAG_CLOUDINARY_API_SECRET
+            YAG_PAYOS_CLIENT_ID
+            YAG_PAYOS_API_KEY
+            YAG_PAYOS_CHECKSUM_KEY
+            YAG_PAYOS_RETURN_URL
+            YAG_SMTP_HOST
+            YAG_SMTP_USER
+            YAG_SMTP_PASSWORD
+            YAG_SMTP_FROM
+          )
+          for secret_name in "${REQUIRED_SECRETS[@]}"; do
+            gcloud secrets describe "$secret_name" \
+              --project "$GCP_PROJECT_ID" >/dev/null
+          done
+
+          echo "Checking existing Pub/Sub topic..."
+          gcloud pubsub topics describe "$PUBSUB_MODERATION_TOPIC" \
+            --project "$GCP_PROJECT_ID" >/dev/null
+
+          CURRENT_BACKEND_URL="$(gcloud run services describe yag-backend \
+            --project "$GCP_PROJECT_ID" \
+            --region "$REGION" \
+            --format='value(status.url)' 2>/dev/null || true)"
+
+          echo "backend_url=$CURRENT_BACKEND_URL" >> "$GITHUB_OUTPUT"
+          echo "subscription_configured=false" >> "$GITHUB_OUTPUT"
+          echo "scheduler_configured=false" >> "$GITHUB_OUTPUT"
+          if [ -n "$CURRENT_BACKEND_URL" ]; then
+            echo "Existing Cloud Run service found. Pre-configuring push targets before deploy."
+            PUSH_ENDPOINT="$CURRENT_BACKEND_URL/api/v1/internal/pubsub/moderation"
+            if gcloud pubsub subscriptions describe "$PUBSUB_SUBSCRIPTION" \
+              --project "$GCP_PROJECT_ID" >/dev/null 2>&1; then
+              gcloud pubsub subscriptions update "$PUBSUB_SUBSCRIPTION" \
+                --project "$GCP_PROJECT_ID" \
+                --push-endpoint "$PUSH_ENDPOINT" \
+                --push-auth-service-account "$GCP_SERVICE_ACCOUNT" \
+                --push-auth-token-audience "$CURRENT_BACKEND_URL"
+            else
+              gcloud pubsub subscriptions create "$PUBSUB_SUBSCRIPTION" \
+                --project "$GCP_PROJECT_ID" \
+                --topic "$PUBSUB_MODERATION_TOPIC" \
+                --push-endpoint "$PUSH_ENDPOINT" \
+                --push-auth-service-account "$GCP_SERVICE_ACCOUNT" \
+                --push-auth-token-audience "$CURRENT_BACKEND_URL" \
+                --ack-deadline 60
+            fi
+            echo "subscription_configured=true" >> "$GITHUB_OUTPUT"
+
+            SCAN_ENDPOINT="$CURRENT_BACKEND_URL/api/v1/internal/schedule/scan"
+            SCHEDULER_CRON="${{ vars.SCHEDULER_CRON || '5 17 * * *' }}"
+            if gcloud scheduler jobs describe "$SCHEDULER_JOB" \
+              --project "$GCP_PROJECT_ID" \
+              --location "$REGION" >/dev/null 2>&1; then
+              gcloud scheduler jobs update http "$SCHEDULER_JOB" \
+                --project "$GCP_PROJECT_ID" \
+                --location "$REGION" \
+                --schedule "$SCHEDULER_CRON" \
+                --time-zone "UTC" \
+                --uri "$SCAN_ENDPOINT" \
+                --http-method POST \
+                --oidc-service-account-email "$GCP_SERVICE_ACCOUNT" \
+                --oidc-token-audience "$CURRENT_BACKEND_URL"
+            else
+              gcloud scheduler jobs create http "$SCHEDULER_JOB" \
+                --project "$GCP_PROJECT_ID" \
+                --location "$REGION" \
+                --schedule "$SCHEDULER_CRON" \
+                --time-zone "UTC" \
+                --uri "$SCAN_ENDPOINT" \
+                --http-method POST \
+                --oidc-service-account-email "$GCP_SERVICE_ACCOUNT" \
+                --oidc-token-audience "$CURRENT_BACKEND_URL"
+            fi
+            echo "scheduler_configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No existing Cloud Run URL found. Push targets will be configured after first deploy."
+          fi
+
+      - name: Configure Docker to use Google Artifact Registry
+        run: gcloud auth configure-docker ${{ steps.deploy_vars.outputs.region }}-docker.pkg.dev --quiet
+
+      - name: Build and Push Backend Image
+        run: |
+          IMAGE="${{ steps.deploy_vars.outputs.image }}"
+          docker build -t $IMAGE ./src/backend
+          docker push $IMAGE
+          echo "Image pushed: $IMAGE"
+
+      - name: Remove legacy conflicting env vars before deploy
+        run: |
+          gcloud run services update yag-backend \
+            --region ${{ steps.deploy_vars.outputs.region }} \
+            --remove-env-vars CORS_ORIGINS,PAYOS_RETURN_URL,RABBITMQ_URL,VNP_TMN_CODE,VNP_HASH_SECRET,VNP_URL,VNP_RETURN_URL,VNP_API_URL \
+            --quiet 2>/dev/null || true
+          echo "Removed old conflicting env vars without clearing configured secrets"
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: yag-backend
+          image: ${{ steps.deploy_vars.outputs.image }}
+          region: ${{ steps.deploy_vars.outputs.region }}
+          env_vars: |
+            ENVIRONMENT=production
+            SERVICE_ROLE=api
+            QUEUE_PROVIDER=pubsub
+            PAYMENT_PROVIDER=payos
+            GCP_PROJECT_ID=sewritingweb
+            PUBSUB_PROJECT_ID=sewritingweb
+            PUBSUB_MODERATION_TOPIC=${{ steps.deploy_vars.outputs.pubsub_topic }}
+            INTERNAL_SERVICE_ACCOUNT_EMAIL=${{ secrets.GCP_SERVICE_ACCOUNT }}
+            ALLOW_WEBSOCKET_QUERY_TOKEN=false
+            PAYOS_MOCK_ENABLED=false
+            AUTO_CREATE_TABLES=false
+            APPLY_MIGRATIONS_ON_STARTUP=false
+            SCHEDULER_ENABLED=false
+            VIEW_COUNT_FLUSH_ENABLED=false
+          secrets: |
+            DATABASE_URL=YAG_DATABASE_URL:latest
+            SECRET_KEY=YAG_SECRET_KEY:latest
+            CORS_ORIGINS=YAG_CORS_ORIGINS:latest
+            REDIS_URL=YAG_REDIS_URL:latest
+            GEMINI_API_KEY=YAG_GEMINI_API_KEY:latest
+            CLOUDINARY_CLOUD_NAME=YAG_CLOUDINARY_CLOUD_NAME:latest
+            CLOUDINARY_API_KEY=YAG_CLOUDINARY_API_KEY:latest
+            CLOUDINARY_API_SECRET=YAG_CLOUDINARY_API_SECRET:latest
+            PAYOS_CLIENT_ID=YAG_PAYOS_CLIENT_ID:latest
+            PAYOS_API_KEY=YAG_PAYOS_API_KEY:latest
+            PAYOS_CHECKSUM_KEY=YAG_PAYOS_CHECKSUM_KEY:latest
+            PAYOS_RETURN_URL=YAG_PAYOS_RETURN_URL:latest
+            SMTP_HOST=YAG_SMTP_HOST:latest
+            SMTP_USER=YAG_SMTP_USER:latest
+            SMTP_PASSWORD=YAG_SMTP_PASSWORD:latest
+            SMTP_FROM=YAG_SMTP_FROM:latest
+          flags: |
+            --allow-unauthenticated
+            --cpu=1
+            --memory=512Mi
+            --min-instances=0
+            --max-instances=3
+            --timeout=300
+
+      - name: Pin internal OIDC audience
+        env:
+          GCP_PROJECT_ID: sewritingweb
+          REGION: ${{ steps.deploy_vars.outputs.region }}
+          BACKEND_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          gcloud run services update yag-backend \
+            --project "$GCP_PROJECT_ID" \
+            --region "$REGION" \
+            --set-env-vars "INTERNAL_AUTH_AUDIENCE=$BACKEND_URL" \
+            --quiet
+
+      - name: Configure Pub/Sub push moderation
+        if: steps.preflight.outputs.subscription_configured != 'true'
+        env:
+          GCP_PROJECT_ID: sewritingweb
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          BACKEND_URL: ${{ steps.deploy.outputs.url }}
+          PUBSUB_MODERATION_TOPIC: ${{ steps.deploy_vars.outputs.pubsub_topic }}
+          PUBSUB_SUBSCRIPTION: ${{ steps.deploy_vars.outputs.pubsub_subscription }}
+        run: |
+          set -euo pipefail
+          gcloud pubsub topics describe "$PUBSUB_MODERATION_TOPIC" \
+            --project "$GCP_PROJECT_ID" >/dev/null
+
+          PUSH_ENDPOINT="$BACKEND_URL/api/v1/internal/pubsub/moderation"
+          if gcloud pubsub subscriptions describe "$PUBSUB_SUBSCRIPTION" \
+            --project "$GCP_PROJECT_ID" >/dev/null 2>&1; then
+            gcloud pubsub subscriptions update "$PUBSUB_SUBSCRIPTION" \
+              --project "$GCP_PROJECT_ID" \
+              --push-endpoint "$PUSH_ENDPOINT" \
+              --push-auth-service-account "$GCP_SERVICE_ACCOUNT" \
+              --push-auth-token-audience "$BACKEND_URL"
+          else
+            gcloud pubsub subscriptions create "$PUBSUB_SUBSCRIPTION" \
+              --project "$GCP_PROJECT_ID" \
+              --topic "$PUBSUB_MODERATION_TOPIC" \
+              --push-endpoint "$PUSH_ENDPOINT" \
+              --push-auth-service-account "$GCP_SERVICE_ACCOUNT" \
+              --push-auth-token-audience "$BACKEND_URL" \
+              --ack-deadline 60
+          fi
+
+      - name: Configure Cloud Scheduler scan
+        if: steps.preflight.outputs.scheduler_configured != 'true'
+        env:
+          GCP_PROJECT_ID: sewritingweb
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          REGION: ${{ steps.deploy_vars.outputs.region }}
+          BACKEND_URL: ${{ steps.deploy.outputs.url }}
+          SCHEDULER_JOB: yag-schedule-scan
+        run: |
+          set -euo pipefail
+          SCHEDULER_CRON="${{ vars.SCHEDULER_CRON || '5 17 * * *' }}"
+          SCAN_ENDPOINT="$BACKEND_URL/api/v1/internal/schedule/scan"
+          if gcloud scheduler jobs describe "$SCHEDULER_JOB" \
+            --project "$GCP_PROJECT_ID" \
+            --location "$REGION" >/dev/null 2>&1; then
+            gcloud scheduler jobs update http "$SCHEDULER_JOB" \
+              --project "$GCP_PROJECT_ID" \
+              --location "$REGION" \
+              --schedule "$SCHEDULER_CRON" \
+              --time-zone "UTC" \
+              --uri "$SCAN_ENDPOINT" \
+              --http-method POST \
+              --oidc-service-account-email "$GCP_SERVICE_ACCOUNT" \
+              --oidc-token-audience "$BACKEND_URL"
+          else
+            gcloud scheduler jobs create http "$SCHEDULER_JOB" \
+              --project "$GCP_PROJECT_ID" \
+              --location "$REGION" \
+              --schedule "$SCHEDULER_CRON" \
+              --time-zone "UTC" \
+              --uri "$SCAN_ENDPOINT" \
+              --http-method POST \
+              --oidc-service-account-email "$GCP_SERVICE_ACCOUNT" \
+              --oidc-token-audience "$BACKEND_URL"
+          fi
+
+      - name: Verify deployment health
+        run: |
+          URL="${{ steps.deploy.outputs.url }}"
+          echo "Checking health at $URL/health/ready ..."
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/health/ready" || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            echo "Backend deployment healthy (HTTP $STATUS)"
+          else
+            echo "Health check returned HTTP $STATUS (service may still be starting)"
+          fi
+
+  # ────────────────────────────────────────────────────────────
+  # JOB 8: CD — Deployment Summary
+  # ────────────────────────────────────────────────────────────
+  deploy-summary:
+    name: "Deployment Summary"
+    needs: [deploy-migrations, deploy-backend]
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Check Vercel deployment status
+        id: vercel_status
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "status=Token not configured — auto-deployed via GitHub integration" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Poll for up to 3 minutes for a Vercel deployment matching this commit
+          TEAM_PARAM=""
+          [ -n "$VERCEL_TEAM_ID" ] && TEAM_PARAM="&teamId=$VERCEL_TEAM_ID"
+          for i in $(seq 1 18); do
+            RESPONSE=$(curl -sf \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?meta-githubCommitSha=$COMMIT_SHA&limit=5$TEAM_PARAM" || echo "{}")
+            VERCEL_STATE=$(echo "$RESPONSE" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          deploys = data.get('deployments', [])
+          if not deploys:
+              print('PENDING')
+          else:
+              print(deploys[0].get('state', 'UNKNOWN').upper())
+          " 2>/dev/null || echo "UNKNOWN")
+            echo "Attempt $i — Vercel state: $VERCEL_STATE"
+            case "$VERCEL_STATE" in
+              READY)   echo "status=Deployed" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              ERROR)   echo "status=Failed"   >> "$GITHUB_OUTPUT"; exit 0 ;;
+              CANCELED) echo "status=Canceled" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              PENDING|BUILDING|INITIALIZING|QUEUED) sleep 10 ;;
+              *) echo "status=Unknown ($VERCEL_STATE)" >> "$GITHUB_OUTPUT"; exit 0 ;;
+            esac
+          done
+          echo "status=Timed out waiting for Vercel" >> "$GITHUB_OUTPUT"
+
+      - name: Generate deployment report
+        run: |
+          echo "## Deployment Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| DB Migrations | ${{ needs.deploy-migrations.result == 'success' && 'Applied' || needs.deploy-migrations.result == 'skipped' && 'Skipped' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend (Cloud Run) | ${{ needs.deploy-backend.result == 'success' && 'Deployed' || needs.deploy-backend.result == 'skipped' && 'Skipped' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend (Vercel) | ${{ steps.vercel_status.outputs.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY

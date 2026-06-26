@@ -65,7 +65,7 @@
 | :--- | :--- |
 | ***Thiết kế UI/UX Design*** | Thiết kế Screen Diagram, liệt kê các màn hình chính và luồng chuyển đổi giữa chúng. |
 | ***Code Frontend*** | Code cho các màn hình S01 đến S04. |
-| ***Design giao diện cơ bản*** | Design 21 giao diện UI cơ bản |
+| ***Design giao diện cơ bản*** | Design 21 giao diện UI cơ bản web |
 
 ![Task Hien](images_design/hien_task.png)
 

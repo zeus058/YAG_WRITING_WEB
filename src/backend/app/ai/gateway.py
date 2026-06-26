@@ -249,7 +249,6 @@ class GeminiGateway:
         payload = {
             "model": model_name,
             "content": {"parts": [{"text": text}]},
-            "outputDimensionality": 768,
         }
         data = await self._post_async(
             self._url(settings.GEMINI_EMBEDDING_MODEL, "embedContent"), payload

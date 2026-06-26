@@ -284,7 +284,7 @@ export const yagApi = {
         amount?: number;
         premium_until?: string;
         message: string;
-      }>("/api/v1/payments/payos/verify", {
+      }>("/api/v1/payment/verify", {
         method: "POST",
         body: queryParams,
       }),

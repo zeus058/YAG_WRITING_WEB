@@ -1,0 +1,4 @@
+FILE KIỂM TRA TIẾN ĐỘ THỰC HIỆN TEST: https://docs.google.com/spreadsheets/d/16gZkBE-b4ojyP1vEciEa9i_ngCEpy6uA6TohSoCnkDs/edit?usp=sharing
+(có thể thêm test case tùy ý)
+
+FILE REPORT VÀ BUG: https://docs.google.com/spreadsheets/d/1TzWI0l77HuDf4ghJ9Nw56COiLd28blzet3zXmSdkbg4/edit?usp=sharing

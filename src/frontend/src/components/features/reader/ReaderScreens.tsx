@@ -65,12 +65,12 @@ const formatRelativeTime = (dateStr?: string | null) => {
   if (isNaN(date.getTime())) return "Vừa xong";
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
+
   if (diffInSeconds < 60) return "Vừa xong";
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
   if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} ngày trước`;
-  
+
   return date.toLocaleDateString("vi-VN", {
     year: "numeric",
     month: "long",
@@ -343,11 +343,11 @@ export function DiscoverScreen() {
             };
           }).filter((s: any) => s.id || (s as any).title);
           setStoriesList(mapped);
-          
+
           setAiMessage(
             response.data.message ||
-            (response.data.fallback 
-              ? "Tính năng tìm kiếm ngữ nghĩa tạm thời không khả dụng, đây là kết quả tìm kiếm thông thường:" 
+            (response.data.fallback
+              ? "Tính năng tìm kiếm ngữ nghĩa tạm thời không khả dụng, đây là kết quả tìm kiếm thông thường:"
               : `Hệ thống đã phân tích ngữ nghĩa của mô tả và tìm thấy ${mapped.length} kết quả có nội dung tương đồng nhất.`)
           );
         } else {
@@ -486,7 +486,7 @@ export function DiscoverScreen() {
           </div>
           <button className="button button-primary search-submit-btn" type="button" onClick={handleSearch} disabled={isLoading}>
             <Icon name="search" />
-            {isLoading ? "Đang tìm..." : "Tìm truyện"}
+            {isLoading ? (searchMode === "ai" ? "AI đang phân tích..." : "Đang tìm...") : "Tìm truyện"}
           </button>
         </div>
         {searchMode === "ai" && !searched && (
@@ -2509,7 +2509,7 @@ export function ProfileScreen({ modeOverride }: { modeOverride?: "reader" | "aut
     if (modeOverride === "author" && user) {
       yagApi.author.getStories()
         .then(res => setWorks(res.data))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [modeOverride, user]);
 

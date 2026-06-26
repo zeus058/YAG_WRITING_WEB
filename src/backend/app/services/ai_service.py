@@ -142,11 +142,31 @@ async def search_stories_semantic(
         )
         rows = result_rows(result)
         items = [_build_search_item(row, query_vector) for row in rows[:limit]]
+
+        message = None
+        if items:
+            try:
+                from app.ai.gateway import GeminiGateway
+                titles = ", ".join([f"'{item.title}'" for item in items[:3] if item.title])
+                prompt = f"Người dùng vừa tìm kiếm truyện với yêu cầu: '{query}'. Hệ thống đã tìm thấy các truyện: {titles}. Hãy viết 1 câu ngắn gọn (dưới 30 chữ) bằng tiếng Việt giải thích lý do tại sao các truyện này phù hợp với yêu cầu của người dùng để hiển thị lên UI."
+                gateway = GeminiGateway()
+                raw_json, _ = await gateway.generate_json(
+                    system_prompt="Bạn là trợ lý AI giải thích kết quả tìm kiếm truyện. Chỉ trả về object JSON có 1 field 'message' chứa lời giải thích ngắn gọn bằng Tiếng Việt.",
+                    user_prompt=prompt,
+                    temperature=0.7,
+                    max_output_tokens=100,
+                    response_schema={"type": "OBJECT", "properties": {"message": {"type": "STRING"}}},
+                )
+                message = raw_json.get("message")
+            except Exception as e:
+                logger.warning(f"Failed to generate search explanation: {e}")
+
         return AISemanticSearchResponse(
             query=query,
             provider="gemini",
             fallback=False,
             results=items,
+            message=message,
         )
     except Exception as exc:
         logger.warning("Semantic search fallback: %s", type(exc).__name__)

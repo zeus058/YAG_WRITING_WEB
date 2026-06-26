@@ -261,7 +261,7 @@ def moderate_content(content: str, chapter_id: str) -> ModerationReport:
             system_prompt=MODERATION_SYSTEM_PROMPT,
             user_prompt=_build_user_prompt(content),
             temperature=0.0,
-            max_output_tokens=min(settings.GEMINI_MAX_OUTPUT_TOKENS, 256),
+            max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
             model=settings.GEMINI_MODERATION_MODEL,
             response_schema=MODERATION_SCHEMA,
         )

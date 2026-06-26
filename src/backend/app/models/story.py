@@ -123,7 +123,7 @@ class Story(Base):
         return sum(
             1
             for c in self.chapters
-            if c.moderation_status == "pending"
+            if c.moderation_status == "pending" or (c.moderation_status in ["flagged", "rejected"] and not getattr(c, "is_admin_reviewed", False))
         )
 
     __table_args__ = (

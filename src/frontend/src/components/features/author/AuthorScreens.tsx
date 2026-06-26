@@ -1631,7 +1631,11 @@ export function AuthorStudioScreen() {
     setSaveError(null);
   };
 
-  const isEditingDisabled = activeChapter && activeChapter.moderation_status === "pending";
+  const isEditingDisabled = activeChapter && (
+    activeChapter.moderation_status === "pending" ||
+    activeChapter.moderation_status === "flagged" ||
+    (activeChapter.moderation_status === "rejected" && !activeChapter.is_admin_reviewed)
+  );
   const editorWordCount = editorContent.split(/\s+/).filter(Boolean).length;
   const editorReadingMinutes = Math.max(1, Math.ceil(editorWordCount / 250));
   const canRunAi = !isEditingDisabled && !aiLoading && (editorContent.trim().length > 0 || aiInput.trim().length > 0);

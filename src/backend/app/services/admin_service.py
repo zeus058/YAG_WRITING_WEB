@@ -448,6 +448,11 @@ class AdminService:
         db.commit()
         db.refresh(chapter)
 
-        notify_chapter_moderation_result(db, chapter, previous_status, decision)
+        if decision == "approved":
+            notify_chapter_moderation_result(db, chapter, previous_status, decision)
+        from app.services.notification_service import create_notification
+        if decision in ["rejected", "flagged"]:
+            create_notification(db, user_id=chapter.story.author_id, type="chapter_rejected", title="Admin từ chối chương", message=f"Chương {chapter.chapter_number} đã bị Admin từ chối. Lý do: {reason}", payload={"chapter_id": str(chapter.id), "story_id": str(chapter.story_id)})
 
         return chapter
+

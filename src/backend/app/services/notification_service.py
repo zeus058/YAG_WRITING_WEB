@@ -266,13 +266,13 @@ def notify_chapter_moderation_result(db: Session, chapter: Chapter, previous_sta
                     payload={"chapter_id": str(chapter.id), "story_id": str(story.id)}
                 )
 
-    elif new_status == "rejected":
+    elif new_status == "rejected" or new_status == "flagged":
         # Notify author
         create_notification(
             db, 
             user_id=author_id, 
             type="chapter_rejected", 
             title="Chương bị từ chối", 
-            message=f"Chương {chapter.chapter_number} của tác phẩm '{story.title}' đã bị từ chối do vi phạm quy định.",
+            message=f"Chương {chapter.chapter_number} bị AI hệ thống cảnh báo/từ chối. Vui lòng đợi tối đa 1 ngày để Admin xem xét.",
             payload={"chapter_id": str(chapter.id), "story_id": str(story.id)}
         )

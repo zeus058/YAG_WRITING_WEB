@@ -67,6 +67,7 @@ class ChapterResponse(BaseModel):
         ...,
         description="Trạng thái kiểm duyệt (pending / approved / rejected / flagged)",
     )
+    is_admin_reviewed: bool = Field(default=False, description="Đã được Admin duyệt thủ công")
     publish_at: Optional[datetime] = Field(
         default=None, description="Thời gian xuất bản"
     )

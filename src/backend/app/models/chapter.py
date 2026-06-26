@@ -62,6 +62,10 @@ class Chapter(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+
+    @property
+    def is_admin_reviewed(self) -> bool:
+        return self.moderation_log is not None and self.moderation_log.model_name == "admin_override"
     reading_histories = relationship(
         "ReadingHistory",
         back_populates="chapter",

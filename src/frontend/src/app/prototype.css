@@ -7037,6 +7037,11 @@ svg {
   box-shadow: var(--shadow-soft);
 }
 
+.dark .admin-health-strip {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
 .admin-health-strip strong,
 .admin-health-strip span {
   display: block;

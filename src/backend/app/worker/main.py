@@ -173,12 +173,18 @@ def handle_publish_chapter(payload: dict, db=None) -> None:
         )
         if author_id:
             notification_payload = _build_notification(chapter, report)
+            
+            if report.result in (ModerationResult.FLAGGED, ModerationResult.REJECTED):
+                msg = f"Chương '{chapter.title}' bị cảnh báo/từ chối bởi AI. Lý do: {report.reason[:150]}... Vui lòng đợi tối đa 1 ngày để Admin duyệt."
+            else:
+                msg = f"Chương '{chapter.title}' đã được AI duyệt tự động thành công."
+                
             create_notification(
                 db=db,
                 user_id=UUID(str(author_id)),
                 type="chapter_moderation_result",
-                title="Ket qua kiem duyet chuong",
-                message=f"Chuong '{chapter.title}' da duoc cap nhat trang thai: {chapter.moderation_status}.",
+                title="Kết quả kiểm duyệt AI",
+                message=msg,
                 payload=notification_payload,
             )
 

@@ -533,7 +533,7 @@ async def sync_all_missing_embeddings_async() -> int:
         if not story_records:
             return 0
         logger.info("Found %d stories missing embeddings. Batch syncing...", len(story_records))
-        batch_size = 50 # Gemini allows up to 100 requests per batch API call
+        batch_size = 10 # Reduced to 10 to prevent Gemini API from taking >30s and causing Gunicorn worker timeout
         count = 0
         for i in range(0, len(story_records), batch_size):
             batch = story_records[i:i + batch_size]

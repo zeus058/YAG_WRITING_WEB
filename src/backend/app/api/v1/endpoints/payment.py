@@ -319,8 +319,17 @@ async def verify_payos_checkout(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
 ):
-    order_code = query_params.get("orderCode")
-    status_param = query_params.get("status")
+    order_code = (
+        query_params.get("orderCode")
+        or query_params.get("vnp_TxnRef")
+        or query_params.get("transactionId")
+        or query_params.get("txnRef")
+    )
+    status_param = (
+        query_params.get("status")
+        or query_params.get("code")
+        or query_params.get("vnp_ResponseCode")
+    )
 
     if not order_code:
         return {

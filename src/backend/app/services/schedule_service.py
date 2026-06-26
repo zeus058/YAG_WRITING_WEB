@@ -18,7 +18,7 @@ from app.models.profile import Profile
 from app.models.publish_schedule import PublishSchedule
 from app.models.story import Story
 from app.models.user import User
-from app.services.notification_service import publish_user_notification
+from app.services.notification_service import publish_user_notification, create_notification
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +159,6 @@ def _mark_schedule_published_if_fulfilled(
                 old_score,
                 profile.reputation_score,
             )
-            from app.services.notification_service import create_notification
             create_notification(
                 db=db,
                 user_id=story.author_id,
@@ -222,7 +221,6 @@ def _handle_missed_schedule(
     db.add(alert)
     db.flush()
 
-    from app.services.notification_service import create_notification
     create_notification(
         db=db,
         user_id=story.author_id,
@@ -304,7 +302,6 @@ def scan_publish_schedules(db: Session, now: Optional[datetime] = None) -> dict:
         if published_chapters_count < required_chapters:
             story = db.query(Story).filter(Story.id == schedule.story_id).first()
             if story:
-                from app.services.notification_service import create_notification
                 create_notification(
                     db=db,
                     user_id=story.author_id,

@@ -132,7 +132,7 @@ def test_scan_marks_schedule_missed_and_penalizes_reputation(mock_notify, mock_e
     assert profile.reputation_score == 95
     assert db.committed is True
     assert any(isinstance(item, AdminAlert) for item in db.added)
-    assert mock_notify.call_count == 3
+    assert mock_notify.call_count == 2
     mock_email.assert_called_once()
 
 

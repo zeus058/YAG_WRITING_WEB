@@ -1631,7 +1631,7 @@ export function AuthorStudioScreen() {
     setSaveError(null);
   };
 
-  const isEditingDisabled = activeChapter && activeChapter.moderation_status && activeChapter.moderation_status !== "draft" && activeChapter.moderation_status !== "nháp";
+  const isEditingDisabled = activeChapter && activeChapter.moderation_status === "pending";
   const editorWordCount = editorContent.split(/\s+/).filter(Boolean).length;
   const editorReadingMinutes = Math.max(1, Math.ceil(editorWordCount / 250));
   const canRunAi = !isEditingDisabled && !aiLoading && (editorContent.trim().length > 0 || aiInput.trim().length > 0);

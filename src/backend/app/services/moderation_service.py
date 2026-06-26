@@ -27,28 +27,26 @@ Nhiệm vụ: Kiểm duyệt nội dung tiểu thuyết mạng Việt Nam. Bạn
 PHÂN LOẠI AN TOÀN (Safety Classification):
 
 ✅ APPROVED (Hợp lệ - cho phép xuất bản):
-- Bạo lực tu tiên/kiếm hiệp/kỳ ảo: Cảnh chiến đấu, thi triển phép thuật, đâm chém trong bối cảnh võ hiệp/fantasy.
-- Lãng mạn nhẹ nhàng: Cảnh thân mật nhẹ (ôm, hôn, nắm tay), cảm xúc lãng mạn.
-- Kinh dị/Rùng rợn (fiction): Bối cảnh ma quái, quái vật, không gian u ám trong thể loại kinh dị.
+- Bạo lực tu tiên/kiếm hiệp/kỳ ảo: Cảnh chiến đấu, thi triển phép thuật, đâm chém trong bối cảnh võ hiệp/fantasy, hành động.
+- Lãng mạn: Cảnh thân mật (ôm, hôn), cảm xúc lãng mạn, các tình tiết ngôn tình phổ biến, miễn không miêu tả chi tiết quan hệ tình dục.
+- Kinh dị/Rùng rợn: Bối cảnh ma quái, quái vật, không gian u ám trong thể loại kinh dị.
 - Xung đột tâm lý: Nhân vật trải qua đau khổ, mất mát, tranh đấu nội tâm.
+HÃY MẶC ĐỊNH LÀ APPROVED CHO CÁC NỘI DUNG TIỂU THUYẾT THÔNG THƯỜNG.
 
 ❌ REJECTED (Vi phạm nghiêm trọng - từ chối):
 - Bạo lực cực đoan thực tế: Miêu tả chi tiết tra tấn dã man, máu me phi nhân tính ở bối cảnh THỰC TẾ (không phải fantasy).
-- Tình dục/Khiêu dâm: Miêu tả chi tiết hành vi tình dục, nội dung 18+, ấu dâm (ZERO tolerance).
+- Tình dục/Khiêu dâm: Miêu tả trực tiếp và chi tiết bộ phận sinh dục hoặc hành vi tình dục (18+), ấu dâm.
 - Kích động thù hận: Nội dung phân biệt chủng tộc, giới tính, tôn giáo; kêu gọi bạo lực thực tế.
 - Vi phạm chính trị/văn hóa Việt Nam: Nội dung chống phá nhà nước, xuyên tạc lịch sử, xúc phạm lãnh đạo.
 - Hướng dẫn hoạt động phi pháp: Ma túy, vũ khí, hacking hệ thống thực.
 
 ⚠️ FLAGGED (Cần Admin xem xét):
-- Nội dung bạo lực ở ranh giới mơ hồ giữa fantasy và thực tế.
-- Cảnh tình cảm vượt quá mức "lãng mạn nhẹ" nhưng chưa đến mức "18+".
-- Nội dung nhạy cảm xã hội nhưng trong ngữ cảnh phản biện/giáo dục.
-- Ngôn ngữ thô tục quá mức.
+- Nội dung cực kỳ nhạy cảm ở ranh giới mơ hồ giữa vi phạm và không vi phạm, mà bạn không thể tự quyết định.
+- Ngôn ngữ thô tục quá mức, chửi rủa liên tục không vì mục đích nghệ thuật.
 
-QUY TẮC QUYẾT ĐỊNH:
-- Nếu CHẮC CHẮN vi phạm → "rejected" (confidence ≥ 0.85)
-- Nếu CHẮC CHẮN an toàn → "approved" (confidence ≥ 0.75)
-- Nếu MƠ HỒ hoặc KHÔNG CHẮC → "flagged" (để Admin duyệt)
+QUY TẮC QUYẾT ĐỊNH & LÝ DO (Reason):
+- Luôn ưu tiên trả về "approved" nếu nội dung là tiểu thuyết hư cấu bình thường, dù có bạo lực nhẹ hoặc tình cảm.
+- Trường "reason": BẮT BUỘC viết MỘT ĐOẠN NHẬN XÉT CHI TIẾT BẰNG TIẾNG VIỆT (ít nhất 2 câu) giải thích TẠI SAO truyện bị vi phạm hoặc TẠI SAO cần admin duyệt. Admin sẽ trực tiếp đọc đoạn này để đánh giá. Nếu là approved, có thể ghi ngắn gọn "Nội dung hợp lệ".
 - Luôn trả về cấu trúc JSON hợp lệ.
 """.strip()
 

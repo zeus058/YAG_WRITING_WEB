@@ -301,7 +301,15 @@ export function DiscoverScreen() {
         let mapped: any[] = [];
         if (storyIds.length > 0) {
           const storiesRes = await yagApi.reader.listStories({ ids: storyIds.join(",") });
-          mapped = storiesRes.data || [];
+          mapped = (storiesRes.data || []).map((s: any) => {
+            const aiData = results.find((r: any) => r.story_id === s.id);
+            if (aiData) {
+              s.ai_reason = aiData.plot_summary ? `Theo tìm kiếm: ${aiData.plot_summary}` : "Phù hợp với mô tả tìm kiếm của bạn.";
+              s.match_score = aiData.distance !== undefined ? Math.max(1, Math.round((1 - aiData.distance) * 100)) : 90;
+              s.source = "semantic";
+            }
+            return s;
+          });
         }
         setStoriesList(mapped);
       } else {
@@ -556,7 +564,11 @@ export function DiscoverScreen() {
               </div>
             </>
           ) : (
-            <QuickStories storiesList={filteredStories} />
+            searchMode === "ai" ? (
+              <AIRecommendationStories storiesList={filteredStories} />
+            ) : (
+              <QuickStories storiesList={filteredStories} />
+            )
           )}
         </main>
       </section>
@@ -798,6 +810,29 @@ export function StoryDetailScreen() {
     </AppShell>
   );
 }
+
+const parseInlineMarkdown = (text: string): React.ReactNode[] => {
+  const regex = /(\*\*.*?\*\*|\*.*?\*|<u>.*?<\/u>|<mark[^>]*>.*?<\/mark>)/g;
+  const parts = text.split(regex);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    if (part.startsWith("<u>") && part.endsWith("</u>")) {
+      return <u key={i}>{part.slice(3, -4)}</u>;
+    }
+    if (part.startsWith("<mark") && part.endsWith("</mark>")) {
+      const match = part.match(/<mark\s+style="background-color:\s*(.*?);?">/i);
+      const bgColor = match ? match[1] : undefined;
+      const textInside = part.replace(/<mark[^>]*>/i, "").replace(/<\/mark>/i, "");
+      return <mark key={i} style={bgColor ? { backgroundColor: bgColor } : undefined}>{textInside}</mark>;
+    }
+    return part;
+  });
+};
 
 export function ReaderScreen() {
   const params = useParams();
@@ -1072,7 +1107,7 @@ export function ReaderScreen() {
                   if (para.trim().startsWith(">")) {
                     return <blockquote key={idx}>{para.replace(/^>\s*/, "")}</blockquote>;
                   }
-                  return <p key={idx} style={{ fontSize: `${fontSize}px` }}>{para}</p>;
+                  return <p key={idx} style={{ fontSize: `${fontSize}px` }}>{parseInlineMarkdown(para)}</p>;
                 })}
               </div>
             )}
@@ -3156,12 +3191,18 @@ export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" 
     }
 
     if (payload) {
-      if (payload.story_id && modeOverride === "author") {
-        router.push(`/author/schedule`);
-      } else if (payload.story_id && payload.chapter_id) {
-        router.push(`/stories/${payload.story_id}/chapters/${payload.chapter_id}`);
-      } else if (payload.story_id) {
-        router.push(`/stories/${payload.story_id}`);
+      if (modeOverride === "author") {
+        if (payload.type === "chapter_moderation_result" && payload.story_id && payload.chapter_id) {
+          router.push(`/author/stories/${payload.story_id}/edit?chapter_id=${payload.chapter_id}`);
+        } else if (payload.story_id) {
+          router.push(`/author/schedule`);
+        }
+      } else {
+        if (payload.story_id && payload.chapter_id) {
+          router.push(`/stories/${payload.story_id}/chapters/${payload.chapter_id}`);
+        } else if (payload.story_id) {
+          router.push(`/stories/${payload.story_id}`);
+        }
       }
     }
   };

@@ -261,6 +261,39 @@ class GeminiGateway:
             raise GeminiResponseError("Gemini embedding response is invalid.")
         return [float(value) for value in values]
 
+    async def batch_embed_texts(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        model_name = settings.GEMINI_EMBEDDING_MODEL
+        if not model_name.startswith("models/"):
+            model_name = f"models/{model_name}"
+        
+        requests = [
+            {
+                "model": model_name,
+                "content": {"parts": [{"text": text or " "}]},
+            }
+            for text in texts
+        ]
+        
+        data = await self._post_async(
+            self._url(settings.GEMINI_EMBEDDING_MODEL, "batchEmbedContents"),
+            {"requests": requests}
+        )
+        
+        embeddings = data.get("embeddings") or []
+        if not embeddings or len(embeddings) != len(texts):
+            raise GeminiResponseError(f"Gemini batch embedding response is invalid. Expected {len(texts)} embeddings, got {len(embeddings)}.")
+            
+        results = []
+        for embedding in embeddings:
+            values = embedding.get("values") or embedding.get("vector") or embedding.get("embedding")
+            if not isinstance(values, list) or not values:
+                raise GeminiResponseError("A Gemini embedding item is invalid.")
+            results.append([float(value) for value in values])
+            
+        return results
+
     async def generate_stream(
         self,
         *,

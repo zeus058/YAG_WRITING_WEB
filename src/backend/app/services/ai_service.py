@@ -532,16 +532,59 @@ async def sync_all_missing_embeddings_async() -> int:
         story_records = result.all()
         if not story_records:
             return 0
-        logger.info("Found %d stories missing embeddings. Syncing...", len(story_records))
+        logger.info("Found %d stories missing embeddings. Batch syncing...", len(story_records))
+        batch_size = 50 # Gemini allows up to 100 requests per batch API call
         count = 0
-        for story_id, description in story_records:
+        for i in range(0, len(story_records), batch_size):
+            batch = story_records[i:i + batch_size]
+            texts = [desc or " " for _, desc in batch]
+            story_ids = [str(sid) for sid, _ in batch]
             try:
-                await sync_story_embedding(db, str(story_id), description or "")
-                count += 1
-                # Sleep to stay within Gemini API Free Tier rate limit (15 requests per minute = 4s/request)
-                await asyncio.sleep(4.5)
+                # 1. Generate embeddings in bulk
+                embeddings = await GeminiGateway().batch_embed_texts(texts)
+                
+                # 2. Insert into DB in a single transaction
+                for j, story_id in enumerate(story_ids):
+                    vector_literal = _format_vector_literal(embeddings[j])
+                    db.execute(
+                        text("""
+                            INSERT INTO story_embeddings (
+                                story_id,
+                                embedding,
+                                plot_summary,
+                                embedding_model
+                            )
+                            VALUES (
+                                :story_id,
+                                CAST(:embedding AS vector),
+                                :plot_summary,
+                                :embedding_model
+                            )
+                            ON CONFLICT (story_id) DO UPDATE
+                            SET embedding = EXCLUDED.embedding,
+                                plot_summary = EXCLUDED.plot_summary,
+                                embedding_model = EXCLUDED.embedding_model,
+                                last_embedded_at = NOW(),
+                                updated_at = NOW()
+                            """),
+                        {
+                            "story_id": story_id,
+                            "embedding": vector_literal,
+                            "plot_summary": texts[j],
+                            "embedding_model": settings.GEMINI_EMBEDDING_MODEL,
+                        },
+                    )
+                db.commit()
+                count += len(batch)
+                logger.info("Successfully batched %d embeddings.", len(batch))
+                
+                # Sleep to respect rate limits if there are more batches
+                if i + batch_size < len(story_records):
+                    await asyncio.sleep(4.5)
             except Exception as e:
-                logger.error("Failed to sync embedding for story %s: %s", story_id, e)
+                logger.error("Failed to sync embedding batch starting at story %s: %s", story_ids[0] if story_ids else "N/A", e)
+                if hasattr(db, "rollback"):
+                    db.rollback()
         return count
     except Exception as exc:
         logger.error("Error in sync_all_missing_embeddings_async: %s", exc)

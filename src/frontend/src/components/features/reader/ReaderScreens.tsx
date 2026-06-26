@@ -481,7 +481,7 @@ export function DiscoverScreen() {
               type="button"
               onClick={() => setSearchMode("ai")}
             >
-              🤖 AI
+              AI
             </button>
           </div>
           <button className="button button-primary search-submit-btn" type="button" onClick={handleSearch} disabled={isLoading}>

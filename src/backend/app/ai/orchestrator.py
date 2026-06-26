@@ -801,7 +801,7 @@ class RecommendationAgent:
                 "title": candidate.get("title"),
                 "plot_summary": safe_truncate(candidate.get("plot_summary"), 900),
                 "category": candidate.get("category"),
-                "rating_avg": candidate.get("rating_avg"),
+                "rating_avg": float(candidate.get("rating_avg") or 0.0),
                 "view_count": candidate.get("view_count"),
                 "similarity": candidate.get("similarity"),
                 "source": candidate.get("source", "semantic"),

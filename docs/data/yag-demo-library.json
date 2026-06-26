@@ -1,0 +1,912 @@
+{
+  "batch_id": "yag-synthetic-library-v1",
+  "provenance": "Generated from original YAG project templates. No third-party story text was downloaded, copied, translated, summarized, or used as a style reference.",
+  "rights_holder": "YAG project team - synthetic demo corpus",
+  "license_code": "YAG-SYNTHETIC-DEMO-1.0",
+  "story_count": 100,
+  "free_story_count": 80,
+  "premium_story_count": 20,
+  "chapter_count": 500,
+  "stories": [
+    {
+      "id": "634af994-0189-5f22-9c25-e32a1f230e76",
+      "title": "Dấu Vết Linh Mạch",
+      "category": "Tiên hiệp",
+      "author_account": "yag_system_author_01",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "55abb4eecb5548d37260046a30e960eb5642db12ea089bec848e8132f9fb7686"
+    },
+    {
+      "id": "6d407e71-dc58-5ab9-8f3b-f019dd638202",
+      "title": "Người Giữ Cửu Vân",
+      "category": "Tiên hiệp",
+      "author_account": "yag_system_author_01",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "427a573c9f0581a319b02d39cee5271203d48a822da05970c22f3e08cadc729c"
+    },
+    {
+      "id": "d5cc611e-e9dc-5fed-a973-746b2791e27d",
+      "title": "Bản Đồ Thiên Sơn",
+      "category": "Tiên hiệp",
+      "author_account": "yag_system_author_01",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "c0d45171445e3e0aa394490a06df8d1cd5ab061685efa4821503abdd0d56c9ac"
+    },
+    {
+      "id": "803fc362-93a2-57c1-b853-d25d88a03286",
+      "title": "Khúc Hát Ngọc Đăng",
+      "category": "Tiên hiệp",
+      "author_account": "yag_system_author_01",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "6755851ac2661c49d5c4173cde00d4452c7285ebd94c4f17e09290d4dba928ef"
+    },
+    {
+      "id": "e7c9c5e0-2342-51a1-a7d5-c4d331942556",
+      "title": "Mùa Mộc Kiếm",
+      "category": "Tiên hiệp",
+      "author_account": "yag_system_author_01",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "b7bb5048f7a608752341f9a68582a1424b082c94aee845f37919b62c91f356b5"
+    },
+    {
+      "id": "4aa586c0-87de-56aa-9500-9937c983922b",
+      "title": "Bí Mật Tinh Trì",
+      "category": "Tiên hiệp",
+      "author_account": "yag_system_author_01",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "47052ad550077c5e357a9c72a366d522049a499d748781822a1bac9e1483b7cc"
+    },
+    {
+      "id": "979ee168-2255-5fbc-9b6c-b75057107111",
+      "title": "Phía Sau Dược Cốc",
+      "category": "Tiên hiệp",
+      "author_account": "yag_system_author_01",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "f8b529ad7cb81a2fa90dd21a9e07e36da38486f035f927903fc4ad8703bd7aff"
+    },
+    {
+      "id": "74bfea06-4a7b-5843-ae02-1230f140f5e1",
+      "title": "Chuyện Về Hạc Trắng",
+      "category": "Tiên hiệp",
+      "author_account": "yag_system_author_01",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "bf9c7492c0401f1e855c8e056a8970f4d30f1d658c7fd3a60e45de50228c69be"
+    },
+    {
+      "id": "3d731a31-ab75-50d9-b139-ae05095ee5e1",
+      "title": "Người Giữ Vương Miện Tro",
+      "category": "Huyền huyễn",
+      "author_account": "yag_system_author_01",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "dd2f3da6d95a4d30bf3c715e0c2c5fd4789c7dd2b31ced6024bd00fe922336ba"
+    },
+    {
+      "id": "4a1ed40f-216a-599f-bfbe-afdaca2006b4",
+      "title": "Bản Đồ Cổng Lam",
+      "category": "Huyền huyễn",
+      "author_account": "yag_system_author_01",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "2a831a2ede2a1761bc4c7cf7404265f3ccd8439d22feba33424507b1cb3789ec"
+    },
+    {
+      "id": "1c7bca19-37d5-5241-92c0-48ee6308ee67",
+      "title": "Khúc Hát Rừng Kính",
+      "category": "Huyền huyễn",
+      "author_account": "yag_system_author_02",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "afdcb97b5c75d479a58e567afa06bc4fb03497f71f70758714751490577aada5"
+    },
+    {
+      "id": "e67f554c-9054-5992-97a7-3a6e6abc89b6",
+      "title": "Mùa Thành Không Tên",
+      "category": "Huyền huyễn",
+      "author_account": "yag_system_author_02",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "0c4582600b0aae5e85d41d83663ce9fe3e0629002d3abee6e452c3ea74e3250f"
+    },
+    {
+      "id": "8e512b0a-5d63-5342-884c-5a3d9446056e",
+      "title": "Bí Mật Trăng Đồng",
+      "category": "Huyền huyễn",
+      "author_account": "yag_system_author_02",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "b04e1de4c3bbc1e58df3b1700f26725c901a8f1d3f0708ac0454afcdde374815"
+    },
+    {
+      "id": "38dbf3da-5beb-5c28-9815-a14aa7dd48dc",
+      "title": "Phía Sau Sư Tử Đá",
+      "category": "Huyền huyễn",
+      "author_account": "yag_system_author_02",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "b602c285a9ae329923eb026bb96705a5e195fdc4f42e3385df5891a178705dcb"
+    },
+    {
+      "id": "a5cb6078-c15d-55d1-a7d6-93b6e18f7e9d",
+      "title": "Chuyện Về Tháp Mưa",
+      "category": "Huyền huyễn",
+      "author_account": "yag_system_author_02",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "f60fc3fb9c3e00e38658c90351074ded50c09dfe558aa3e85e43c3c71713212b"
+    },
+    {
+      "id": "a3f7692f-801a-5ede-953b-bc2d5b548375",
+      "title": "Lời Hẹn Bản Đồ Sao",
+      "category": "Huyền huyễn",
+      "author_account": "yag_system_author_02",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "8aba3a4be4ff4ebed6e72478723b9f2d3f36765ffea7bf530b7a5d7ab7984e80"
+    },
+    {
+      "id": "8d05ee42-cd65-5a20-87c8-1f2c5091f7da",
+      "title": "Bản Đồ Đảo Gió Ngược",
+      "category": "Phiêu lưu",
+      "author_account": "yag_system_author_02",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "452cc0a48f5b77a4a6cb3aed4d5a892829d762aca226b076d612d30661434083"
+    },
+    {
+      "id": "989b313f-80d1-562d-8f9d-7cd70db53e07",
+      "title": "Khúc Hát Hải Đồ Xanh",
+      "category": "Phiêu lưu",
+      "author_account": "yag_system_author_02",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "67699b4eff654e7f0f357f323a2305eb8766c65cd5022d15e7e833d8e6b717ad"
+    },
+    {
+      "id": "5769d1ea-2d74-5c89-bbf4-d200e7d67788",
+      "title": "Mùa Thung Lũng Mù",
+      "category": "Phiêu lưu",
+      "author_account": "yag_system_author_02",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "442ea9791b64d7d7bc39e28eaffa2d353812fb633bca1e3cbdcd73a8d8e06b14"
+    },
+    {
+      "id": "28cb50e8-e456-5999-b8f7-77000616b67c",
+      "title": "Bí Mật Con Tàu Giấy",
+      "category": "Phiêu lưu",
+      "author_account": "yag_system_author_02",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "ff897b902fbc9b8775756e82bc4ccb3117f291af5b27433375e1e8bce845e1a1"
+    },
+    {
+      "id": "84e32eb8-694b-5e08-a9c9-d398bbc00974",
+      "title": "Phía Sau Mỏ Neo Bạc",
+      "category": "Phiêu lưu",
+      "author_account": "yag_system_author_03",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "90583e7d6283e162cfef34d53a1a229b8df257704c3a0630e81783e6c910bb35"
+    },
+    {
+      "id": "c9ec4528-acda-574f-8f7c-3e119e786c57",
+      "title": "Chuyện Về Rạn San Hô Đen",
+      "category": "Phiêu lưu",
+      "author_account": "yag_system_author_03",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "59ebb071d0272b8cc93b92980a2d46459c84ec3fbb96594127fdd4127c0ca11f"
+    },
+    {
+      "id": "d29abe48-5212-5341-9ee2-b5add5350fe6",
+      "title": "Lời Hẹn Đường Chân Trời",
+      "category": "Phiêu lưu",
+      "author_account": "yag_system_author_03",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "b6a1495615ff65241d606fe7a552ae826334724ed7173dbb2f440ced385789b2"
+    },
+    {
+      "id": "99a51003-a718-5d17-b4dc-034328a49400",
+      "title": "Nhật Ký Hang Thủy Triều",
+      "category": "Phiêu lưu",
+      "author_account": "yag_system_author_03",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "5318a3a79ae793df5cb898ae86ad65208f41b32b023c16cfdfb721cf432c0340"
+    },
+    {
+      "id": "3c0eca0f-9d5a-55c1-ad7a-0001012f9ba0",
+      "title": "Khúc Hát Ván Đấu Thứ Sáu",
+      "category": "Esport",
+      "author_account": "yag_system_author_03",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "1601fa84b3ff9462dc867f7cc260aa9938eeb0d8d7fa6a00e5a2be3ce4335b31"
+    },
+    {
+      "id": "b1e854c2-0c40-5d77-be40-231bd6d3543b",
+      "title": "Mùa Đường Giữa Không Ngủ",
+      "category": "Esport",
+      "author_account": "yag_system_author_03",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "c39b3ecae76365884610d63c9ba737e9df83a960597c60ae6fb4d4489d1d1d85"
+    },
+    {
+      "id": "520794f5-c350-57f7-b262-d4c4af9944d2",
+      "title": "Bí Mật Chiến Thuật Mù",
+      "category": "Esport",
+      "author_account": "yag_system_author_03",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "0d4154c8d5891e21c1822a1d71940a5a22701b9db2b7491dea95f4b53d5774f2"
+    },
+    {
+      "id": "bc23fbd5-8b47-5a3c-845b-18b95d08d4f9",
+      "title": "Phía Sau Phút Bù Giờ",
+      "category": "Esport",
+      "author_account": "yag_system_author_03",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "d59a83b293074b9d03100b43d095474952c53b7ba802d4672757d4427c0b0d08"
+    },
+    {
+      "id": "a637057d-16e7-5ea9-92f5-23a113942d7b",
+      "title": "Chuyện Về Đội Hình Số Không",
+      "category": "Esport",
+      "author_account": "yag_system_author_03",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "e39f566532c9bab12a682af71d5f7bc93a01dc616e775537bc025a448f384f3a"
+    },
+    {
+      "id": "e13962b2-c65a-5886-aa1a-c1043eed0e3b",
+      "title": "Lời Hẹn Máy Chủ Mùa Hạ",
+      "category": "Esport",
+      "author_account": "yag_system_author_03",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "71311082653f4102a41223baa1072e2257b742bc367d1a936c1171e59e2bc08a"
+    },
+    {
+      "id": "6ccab2af-9915-5b07-91bf-072ca8b2e006",
+      "title": "Nhật Ký Pha Lật Kèo",
+      "category": "Esport",
+      "author_account": "yag_system_author_04",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "889496fc528a78dd0c6d58292bd30c7bef54b698afaa475896d140fcb5373835"
+    },
+    {
+      "id": "527f9917-a04d-56e9-a208-992866a0f446",
+      "title": "Dấu Vết Bản Cập Nhật Cuối",
+      "category": "Esport",
+      "author_account": "yag_system_author_04",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "ef06c21cf0da8370f6c7d0cd38c73ed6ab51b19d00eb1cbac71fc8e30f5d2d3b"
+    },
+    {
+      "id": "ccea0fbd-5f63-5013-a8a3-433a945e1ffc",
+      "title": "Mùa Quỹ Đạo Đỏ",
+      "category": "Sci-fi",
+      "author_account": "yag_system_author_04",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "4de482927218d2c4d2fee55527b8c3ca6a776e0359e3b69ff00a5739b4084266"
+    },
+    {
+      "id": "2e5fae7c-6bde-5626-9718-15666cc3d505",
+      "title": "Bí Mật Trạm Ký Ức",
+      "category": "Sci-fi",
+      "author_account": "yag_system_author_04",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "dc90d1939a52e9f9effad4687babdd1c64069cdff15a986b161654744223adb7"
+    },
+    {
+      "id": "65959950-f413-5c8c-a37f-b4ec952a5568",
+      "title": "Phía Sau Mặt Trời Thứ Hai",
+      "category": "Sci-fi",
+      "author_account": "yag_system_author_04",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "baa2e1944fe5bc91737bf79a732ebc2d6b0afaff2657ddeba405831e39b13d16"
+    },
+    {
+      "id": "ec54f2d1-2d2a-5550-94a5-8ba66f90223f",
+      "title": "Chuyện Về Tàu Ngủ Đông",
+      "category": "Sci-fi",
+      "author_account": "yag_system_author_04",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "c8c5ebcf5a3ce577f5d151ad0a681cdb38b2fda798d8797e1110f0444bd8b4ab"
+    },
+    {
+      "id": "f97dd351-39ee-5a82-bc45-11cbcedd1d9c",
+      "title": "Lời Hẹn Tín Hiệu Im Lặng",
+      "category": "Sci-fi",
+      "author_account": "yag_system_author_04",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "6a7054e4b16565784c9b71613d954a11c123500697f87878bf4e361d24c5db18"
+    },
+    {
+      "id": "7a8dc3a9-c68d-592c-93a9-002efc2b0957",
+      "title": "Nhật Ký Vườn Sao",
+      "category": "Sci-fi",
+      "author_account": "yag_system_author_04",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "acbf729c82c1a380519d6cf1d0ff75444a4341577136ea77fc48c2c117e13954"
+    },
+    {
+      "id": "7b651227-ad18-5415-a7f4-e771e775b5e0",
+      "title": "Dấu Vết Mã Gene Xanh",
+      "category": "Sci-fi",
+      "author_account": "yag_system_author_04",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "5ca49abebfd548f0c8b08cf9d94fcf3220a116feaa0a6a6d6b9754e7e24735e8"
+    },
+    {
+      "id": "d8447a72-0a52-5f57-966d-a8bbe577132a",
+      "title": "Người Giữ Thành Phố Sao Chổi",
+      "category": "Sci-fi",
+      "author_account": "yag_system_author_04",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "436b636337e78496aa638315807f2de64a52a4d9448047d2a729b1b2068abec7"
+    },
+    {
+      "id": "47ce8d1e-4ba0-55a3-8e42-a2c9f570066f",
+      "title": "Bí Mật Ban Công Tháng Sáu",
+      "category": "Đời thường",
+      "author_account": "yag_system_author_05",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "9a1e840cfdc702dfadf471bb0aa6f74f9293528c708097dba8c6a0526979dea0"
+    },
+    {
+      "id": "6b5c3e86-8d52-5784-b4a5-d887a5e880f9",
+      "title": "Phía Sau Tiệm Bánh Góc Phố",
+      "category": "Đời thường",
+      "author_account": "yag_system_author_05",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "a06eb0310daf965dbb468487898ccd7b0da1e262ff10c8df79493874eb32fc81"
+    },
+    {
+      "id": "64ff2322-941b-5cbf-8cc3-dd226553d0aa",
+      "title": "Chuyện Về Chuyến Xe Sớm",
+      "category": "Đời thường",
+      "author_account": "yag_system_author_05",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "911ed3e0783f3630c676e70c6f8a92141280473719dfd3ebd33df1176cf53474"
+    },
+    {
+      "id": "411eff73-723a-5207-bf7e-cca809f49510",
+      "title": "Lời Hẹn Căn Phòng Có Nắng",
+      "category": "Đời thường",
+      "author_account": "yag_system_author_05",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "9a4a2b9063649e90fcdeb9cab3f80336cb8a26be50ced96e607e60f5c1c1b607"
+    },
+    {
+      "id": "075503c4-7f45-5ca6-b3fe-4a5bef0c047a",
+      "title": "Nhật Ký Mùi Cà Phê Mới",
+      "category": "Đời thường",
+      "author_account": "yag_system_author_05",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "536dbe14793b0e789a7e87efa62e245e88e0a47ece76f7705f35829bcac2b593"
+    },
+    {
+      "id": "e6463979-0d63-52e6-b426-4c669bdde3dc",
+      "title": "Dấu Vết Ngày Mưa Không Vội",
+      "category": "Đời thường",
+      "author_account": "yag_system_author_05",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "74fae670d6b5a624599f54a597f8d85534018939806cc7b21a4bfad977500cd3"
+    },
+    {
+      "id": "a8317c52-73c3-5527-8c4f-f94e27df29d4",
+      "title": "Người Giữ Sân Thượng Trồng Rau",
+      "category": "Đời thường",
+      "author_account": "yag_system_author_05",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "994dbe457f518e06aba68c132d6e40a94b42d03f47583a13fb9feb1542510a02"
+    },
+    {
+      "id": "c5cee4d3-7cd6-57c1-893b-f7135fe73751",
+      "title": "Bản Đồ Bức Thư Trong Hộp",
+      "category": "Đời thường",
+      "author_account": "yag_system_author_05",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "648956e8d1dddd7dc69d47233d03c1e8f666d091bb06d2a0baf971d1d5b34baa"
+    },
+    {
+      "id": "95bf5680-65b5-5740-af75-e9ccce832f02",
+      "title": "Phía Sau Ngày Trở Lại",
+      "category": "Trọng sinh",
+      "author_account": "yag_system_author_05",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "a4bb9ea5896e98c376107748434afa5306ec7cf5ae2c09c953f12276cc9e5cc0"
+    },
+    {
+      "id": "895a7092-513a-5555-869e-415ed8827ea9",
+      "title": "Chuyện Về Đồng Hồ Không Kim",
+      "category": "Trọng sinh",
+      "author_account": "yag_system_author_05",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "370f31acee768a7fdb79909a5385d5dc1e034b8c9d3065271d11b64d6cab4dee"
+    },
+    {
+      "id": "c24a8dcf-5a23-5f07-bc99-6061e853fa35",
+      "title": "Lời Hẹn Lựa Chọn Thứ Hai",
+      "category": "Trọng sinh",
+      "author_account": "yag_system_author_06",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "62e9a55af6628a0686b8cccff04708741e7d4b8236253464cd7ff3b87b0f988f"
+    },
+    {
+      "id": "326ea016-9bec-56e4-855d-cbcbf4e8727d",
+      "title": "Nhật Ký Mùa Hè Viết Lại",
+      "category": "Trọng sinh",
+      "author_account": "yag_system_author_06",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "da56e2822b8f5e732ae88b885be09c64f04a76eddf22a55aa10fff7c8bcb7d4c"
+    },
+    {
+      "id": "ec675b17-0b8a-546a-8587-c8550a11768f",
+      "title": "Dấu Vết Bản Nháp Cuộc Đời",
+      "category": "Trọng sinh",
+      "author_account": "yag_system_author_06",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "19d469125ae7a9911c88822503dee979442ab1454732c490eeeee7121c8f8c17"
+    },
+    {
+      "id": "1a7f6c4c-753c-5b33-b914-af60bf4841db",
+      "title": "Người Giữ Ngã Rẽ Năm Xưa",
+      "category": "Trọng sinh",
+      "author_account": "yag_system_author_06",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "9b4d76840cd2e69f1adb20276d86cb86a5f3cecd5034f587ac6613c826beb181"
+    },
+    {
+      "id": "d92d2413-cd15-59de-9b9c-521602449850",
+      "title": "Bản Đồ Tin Nhắn Chưa Gửi",
+      "category": "Trọng sinh",
+      "author_account": "yag_system_author_06",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "52572415bf0a908f53b1734bfab1bae900c0a245395bd8f514a61aa07b2c8772"
+    },
+    {
+      "id": "cfb1e4ec-ad7b-5f09-af50-a4146798649b",
+      "title": "Khúc Hát Bình Minh Cũ",
+      "category": "Trọng sinh",
+      "author_account": "yag_system_author_06",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "660595b64c55f83ebec9810f5e05c48f58edbce2f69619a67bb357a395d39cf9"
+    },
+    {
+      "id": "eecfc65c-43ea-5f7e-b61b-23271898a92f",
+      "title": "Chuyện Về Nhà Ga Sau Nửa Đêm",
+      "category": "Kinh dị",
+      "author_account": "yag_system_author_06",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "19ce410e5c3b68cb3a36dbe98e1da28edb3ea39e4c01697e35ffde7ebc8de5ed"
+    },
+    {
+      "id": "010dc2b4-bb93-5776-b65c-c11cd331aa13",
+      "title": "Lời Hẹn Căn Phòng Số Mười Ba",
+      "category": "Kinh dị",
+      "author_account": "yag_system_author_06",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "e4a0e4e4afbfee858b628e0e312b4cf23b5b45e5f8f118405a5e5b7f6c6a8460"
+    },
+    {
+      "id": "6ab81102-0500-5af2-8db4-a74e2b36efdd",
+      "title": "Nhật Ký Tiếng Gõ Dưới Hồ",
+      "category": "Kinh dị",
+      "author_account": "yag_system_author_06",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "655deb71ad69e6efced9b06a17f8a6932350bcd7fe78679f2547777a5b244fad"
+    },
+    {
+      "id": "7245e149-d9a5-5033-a365-8c87594c2950",
+      "title": "Dấu Vết Gương Không Phản Chiếu",
+      "category": "Kinh dị",
+      "author_account": "yag_system_author_06",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "5098d62dbfcc9a85933f8a3e8cfd5f668420f36d1d57af2ef75d6c317939ff91"
+    },
+    {
+      "id": "baedce3a-57a0-5875-a546-f91d59695a97",
+      "title": "Người Giữ Đèn Hành Lang",
+      "category": "Kinh dị",
+      "author_account": "yag_system_author_07",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "a10ffe1be61ae022c0593c377f6be68c3c892e87584ea2e8dea582a0b153f631"
+    },
+    {
+      "id": "ab9585d1-04ff-5800-9848-1b571884802a",
+      "title": "Bản Đồ Khách Sạn Mùa Sương",
+      "category": "Kinh dị",
+      "author_account": "yag_system_author_07",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "dff669fc57d8ba9a296d6e0b9af3b8baf0b6f1a23499b205f125a7f40723cd6d"
+    },
+    {
+      "id": "018e3b80-f93d-5f21-adea-f51ff0aadfd4",
+      "title": "Khúc Hát Bản Thu Âm Cũ",
+      "category": "Kinh dị",
+      "author_account": "yag_system_author_07",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "01df48606452c50f2d960427d4fa9e5a76a4b94368a7f13574380c1af7c2f243"
+    },
+    {
+      "id": "ec231fbb-0ab4-5f98-a1c1-e6181ce45373",
+      "title": "Mùa Ngôi Nhà Thiếu Cửa",
+      "category": "Kinh dị",
+      "author_account": "yag_system_author_07",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "cae60efa5cb9f1ac93ad88f0ee58a336f632d7b5e6eefb1839f1d65eed4d43ef"
+    },
+    {
+      "id": "73cfe74b-7202-5e91-bf13-4099a7f6cd01",
+      "title": "Lời Hẹn Hẹn Nhau Bên Sông",
+      "category": "Ngôn tình",
+      "author_account": "yag_system_author_07",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "d535ba1c2424ff533777a3d88ad549eae016a20dcb274988dca51d134667f258"
+    },
+    {
+      "id": "ecd3c3f4-c967-58fa-bf33-51d304c099a2",
+      "title": "Nhật Ký Mùa Gió Gửi Thư",
+      "category": "Ngôn tình",
+      "author_account": "yag_system_author_07",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "0b57bbb14ee305ef24fd168a49953ee0cd72f26e67b6a8c484ff5597979aa097"
+    },
+    {
+      "id": "708c5274-646a-5a41-a07a-ebb6568e976d",
+      "title": "Dấu Vết Quán Nhỏ Có Em",
+      "category": "Ngôn tình",
+      "author_account": "yag_system_author_07",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "a4fe3beb8eb5fb2a14f776cf0d986189e004346b709df26516de997e76de86ca"
+    },
+    {
+      "id": "bc6c43a7-3e48-5e14-aecd-3e207b20e450",
+      "title": "Người Giữ Chuyến Tàu Tháng Chín",
+      "category": "Ngôn tình",
+      "author_account": "yag_system_author_07",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "74abe9f77bb3d8141fd8b32b7910b2187447c9dd7eac6c6dbedfefa74f1898dd"
+    },
+    {
+      "id": "403f1d89-0757-52d9-9667-bd1e3e20813d",
+      "title": "Bản Đồ Một Ngày Thành Đôi",
+      "category": "Ngôn tình",
+      "author_account": "yag_system_author_07",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "1eee58d85c10c506f09994376bc0f1179d3a6878cd88aebd136e55d7e18e6dae"
+    },
+    {
+      "id": "f688db05-23ef-52b0-b3ca-9eb2101ea982",
+      "title": "Khúc Hát Bản Nhạc Chưa Đặt Tên",
+      "category": "Ngôn tình",
+      "author_account": "yag_system_author_07",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "ec7388e32cd51b6a9baf0fbf415d967934fa3a041207407493398545766345b1"
+    },
+    {
+      "id": "3aac67a4-b722-5fe2-8910-dfc403aa8089",
+      "title": "Mùa Mưa Qua Ô Cửa",
+      "category": "Ngôn tình",
+      "author_account": "yag_system_author_08",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "c3e46f78c03fdde16c802abeb90f261942b31b5e3a862dad7060a5c072f59bb4"
+    },
+    {
+      "id": "7fa2b938-6bf1-5189-a024-201873e39545",
+      "title": "Bí Mật Lời Nhắn Trên Ly",
+      "category": "Ngôn tình",
+      "author_account": "yag_system_author_08",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "4c28b60ff443b3192dbabc1cd8b7a66d61fc74a0833a2be9c0819a489de0790c"
+    },
+    {
+      "id": "e146a345-f9c6-5c2d-9e9c-f08971d55024",
+      "title": "Nhật Ký Bản Phác Thảo Mùa Thu",
+      "category": "Đam mỹ",
+      "author_account": "yag_system_author_08",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "1bb0a00a47848206043f83401fe5ab217761a8884721f17b0b912659a7973035"
+    },
+    {
+      "id": "a4ebc2fe-c3a9-5c79-9072-18ed170dc365",
+      "title": "Dấu Vết Sân Khấu Sau Màn",
+      "category": "Đam mỹ",
+      "author_account": "yag_system_author_08",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "a36b0a341bba4510b51a678c9786b56be02ed7f7d8f958136ffb8edff2494809"
+    },
+    {
+      "id": "791e308f-8193-5d07-a1af-b2300db38be3",
+      "title": "Người Giữ Nốt Nhạc Màu Lam",
+      "category": "Đam mỹ",
+      "author_account": "yag_system_author_08",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "c1f2ee1d2c7be0eac9a3afe33059abc2a8d4abcc43e8fbd8cda5f6f82941bc07"
+    },
+    {
+      "id": "9962c2f2-5647-5b62-8572-2303e573c550",
+      "title": "Bản Đồ Phòng Tranh Có Gió",
+      "category": "Đam mỹ",
+      "author_account": "yag_system_author_08",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "5365ece4e74d17d53e933f129c21625531ac6db2e464b0a06c768d6dc55ef855"
+    },
+    {
+      "id": "77f824ad-c6da-5917-a506-1f90dfed9394",
+      "title": "Khúc Hát Ngày Ta Cùng Diễn",
+      "category": "Đam mỹ",
+      "author_account": "yag_system_author_08",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "2ac4ac23b03fe849e6a5b293cbeaedb7c4aba2683f64f4a787825c5c666dadd8"
+    },
+    {
+      "id": "45de6b4e-a3b5-561c-a6db-0406eb9f2a14",
+      "title": "Mùa Máy Ảnh Cũ",
+      "category": "Đam mỹ",
+      "author_account": "yag_system_author_08",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "edf7f68819a9ba814c1e0025a9a3713760e83ae60b2f3840e7fda4cb7363ba6d"
+    },
+    {
+      "id": "9b330e46-27a1-5b64-b199-d85da83ba686",
+      "title": "Bí Mật Bức Tượng Chưa Xong",
+      "category": "Đam mỹ",
+      "author_account": "yag_system_author_08",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "6b7cfd2660d4960acd64025cffc9146ee9f6d1d8d6b66eab91fdc9949e73d591"
+    },
+    {
+      "id": "cb082d3a-fab8-5e0e-b253-cb3bcdc5ddca",
+      "title": "Dấu Vết Vườn Hoa Trên Dốc",
+      "category": "Bách hợp",
+      "author_account": "yag_system_author_08",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "d686b42178828a7b599f4629e52593b93752ac16b752233b8c8c05d6e5124883"
+    },
+    {
+      "id": "76fe0015-1c38-5e87-ab2c-0bebc4b815b7",
+      "title": "Người Giữ Mùa Tím Có Nhau",
+      "category": "Bách hợp",
+      "author_account": "yag_system_author_09",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "70f814985e93b6b3bb61faf0edd8ebe36971bc34d280df3d19a6f887f65fe073"
+    },
+    {
+      "id": "de878dd0-ab32-5dd6-9b54-11d9fb0b6a2f",
+      "title": "Bản Đồ Nhà Kính Ban Mai",
+      "category": "Bách hợp",
+      "author_account": "yag_system_author_09",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "887aec1176e196ad2c4807a17d0ed71829dbf31c2b7894568acb3c08889ad420"
+    },
+    {
+      "id": "b859f23a-7124-5055-aedb-7149a18a596b",
+      "title": "Khúc Hát Bức Bưu Thiếp Hoa",
+      "category": "Bách hợp",
+      "author_account": "yag_system_author_09",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "928d40bbcbb9778798615fb7bf45ea7fa6f4de1f05cac52a3e74f6487e725fcb"
+    },
+    {
+      "id": "fa270f00-8911-5ef9-82af-446a0aae4fda",
+      "title": "Mùa Tiệm Sách Trên Đồi",
+      "category": "Bách hợp",
+      "author_account": "yag_system_author_09",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "c59b196c7aeeac6cfe90fcf06776d7fa4f8dc758fc8239fa2e2ff1ec69d015db"
+    },
+    {
+      "id": "f6ee8916-5e89-56d0-818e-bc067b42299a",
+      "title": "Bí Mật Con Đường Hương Thảo",
+      "category": "Bách hợp",
+      "author_account": "yag_system_author_09",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "2e157bedb318039cfcb041793332cb1365472fd4e300c97af0ea728bcb2ffeac"
+    },
+    {
+      "id": "f1f511c5-3ada-596b-a35e-402355db4f92",
+      "title": "Phía Sau Chiếc Ô Màu Trắng",
+      "category": "Bách hợp",
+      "author_account": "yag_system_author_09",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "79dc6154ad2e5f17ff5af98aab4dddc0c7556326a34e94f9fdb790d4a2692bbd"
+    },
+    {
+      "id": "b22202c9-feb3-50e2-a3e1-681cceca9bbd",
+      "title": "Người Giữ Hồ Sơ Đồng Xu",
+      "category": "Trinh thám",
+      "author_account": "yag_system_author_09",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "0d819f71300b007994ac7a16f9116d1f7165c3bd28268c7df50c802a3e8958e4"
+    },
+    {
+      "id": "842154d7-9e73-5cf2-8c3b-cfba022bc5b2",
+      "title": "Bản Đồ Căn Phòng Khóa Trái",
+      "category": "Trinh thám",
+      "author_account": "yag_system_author_09",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "d5b8df8e989e7c153a54df94f9e9b820d8bf1b44fd8bd589b45e76da825d297d"
+    },
+    {
+      "id": "bff2e610-05a3-5127-b4af-8a02fbc570ec",
+      "title": "Khúc Hát Bức Ảnh Thừa Một Người",
+      "category": "Trinh thám",
+      "author_account": "yag_system_author_09",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "025c2f5fff05b79e02d56f2ac4e08197ada3ce3774ceaf58b6c87bd11d7394d8"
+    },
+    {
+      "id": "6a40124b-bb9b-56d3-b82d-d0845b089921",
+      "title": "Mùa Dấu Chân Trên Cát",
+      "category": "Trinh thám",
+      "author_account": "yag_system_author_09",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "14089609b6c5e5f756cebfdfa44e5981c1008c4fe91e38f4c8527056bad2560b"
+    },
+    {
+      "id": "0198f657-cb6b-5eef-a77a-5ad721baecf7",
+      "title": "Bí Mật Mật Mã Bến Cảng",
+      "category": "Trinh thám",
+      "author_account": "yag_system_author_10",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "104c1ac0c184adf65d83f1fcffd0ebfc6c9645d2ec878b1ad69047afc75d195d"
+    },
+    {
+      "id": "3ba1d189-67bb-591f-a1d4-dc644d6ff145",
+      "title": "Phía Sau Chiếc Vé Không Tên",
+      "category": "Trinh thám",
+      "author_account": "yag_system_author_10",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "3d97d33bcf1e39552b0a599e3f57f9bfc2bb73ffed218d06f34c2e5fb819f968"
+    },
+    {
+      "id": "3c8e64f7-6ab6-57d0-81a4-e7fe83729057",
+      "title": "Chuyện Về Ba Phút Mất Đi",
+      "category": "Trinh thám",
+      "author_account": "yag_system_author_10",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "229f4186d7588e78d79afa5e0eb42a0800870b4a2a8256f23792c0c4d6bac59d"
+    },
+    {
+      "id": "661189ab-6963-52fd-8d2d-1f8302664792",
+      "title": "Bản Đồ Tháng Làm Người Khác",
+      "category": "Khác",
+      "author_account": "yag_system_author_10",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "19d56c4acbe0c6c88ceabe0f824fa160f340586b188419ad8e8401a134dab36c"
+    },
+    {
+      "id": "239bcd38-c01c-526d-8e89-faf1607d50e0",
+      "title": "Khúc Hát Cửa Hàng Bán Thời Gian",
+      "category": "Khác",
+      "author_account": "yag_system_author_10",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "9a2e0eb81cbd1f9305c7d059b32c66891c0d6a43550712033bf65cdcd40f6b9a"
+    },
+    {
+      "id": "69b22f58-ed00-56b2-9f4c-1d9b3fe54924",
+      "title": "Mùa Bưu Điện Gửi Giấc Mơ",
+      "category": "Khác",
+      "author_account": "yag_system_author_10",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "2156091993423bae6844b1cfd840980ac34dd5ccc84a511ddf2fefa26b831b38"
+    },
+    {
+      "id": "ead05dcf-03cd-53fe-8557-df5c829cfea2",
+      "title": "Bí Mật Người Thu Gom Tiếng Cười",
+      "category": "Khác",
+      "author_account": "yag_system_author_10",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "b97a9e4106a428e6a8e8767172da183ffa842484e7dc64a953cd3a4f4bb1ea32"
+    },
+    {
+      "id": "814ffff2-b84c-5105-a08a-42823ae0259a",
+      "title": "Phía Sau Khu Phố Không Biển Hiệu",
+      "category": "Khác",
+      "author_account": "yag_system_author_10",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "a8bbac6ac5a1d48879e14cc59684d6e5d262b4907ab83842ef61cc96247bd4bc"
+    },
+    {
+      "id": "822f56eb-e47d-5c06-9e9c-153931d60165",
+      "title": "Chuyện Về Ngày Nghỉ Của Thành Phố",
+      "category": "Khác",
+      "author_account": "yag_system_author_10",
+      "access": "free",
+      "chapter_count": 5,
+      "content_sha256": "91156bfbf6401b1439e264a0c3f508dcc32c9837dc4abc2ebfc50abeda8455ec"
+    },
+    {
+      "id": "0dc1f62b-8bba-5df7-90e9-56bd65acd10b",
+      "title": "Lời Hẹn Chiếc Hộp Biết Hỏi",
+      "category": "Khác",
+      "author_account": "yag_system_author_10",
+      "access": "premium",
+      "chapter_count": 5,
+      "content_sha256": "b74d200ee4f6235089fd7a43a84634496eec55278e77de87c060065ed57e46f2"
+    }
+  ]
+}

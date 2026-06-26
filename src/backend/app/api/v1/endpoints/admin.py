@@ -268,3 +268,65 @@ def run_schedule_scan_now(
     current_user: User = Depends(_require_admin),
 ):
     return scan_publish_schedules(db)
+
+
+@router.get("/embedding-diag", summary="Diagnose embedding status and test Gemini API")
+async def embedding_diag(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(_require_admin),
+):
+    """Check embedding table status and test Gemini embedding API directly."""
+    from sqlalchemy import text as sqlt
+    from app.ai.gateway import GeminiGateway
+    import traceback
+
+    result = {}
+
+    # 1. Count stories vs embeddings
+    try:
+        story_count = db.execute(sqlt("SELECT COUNT(*) FROM stories")).scalar()
+        emb_count = db.execute(sqlt("SELECT COUNT(*) FROM story_embeddings")).scalar()
+        missing = db.execute(sqlt(
+            "SELECT COUNT(*) FROM stories WHERE id NOT IN (SELECT story_id FROM story_embeddings)"
+        )).scalar()
+        result["db"] = {
+            "total_stories": story_count,
+            "total_embeddings": emb_count,
+            "missing_embeddings": missing,
+        }
+        # Sample embedding dims
+        dim_row = db.execute(sqlt("SELECT vector_dims(embedding) FROM story_embeddings LIMIT 1")).fetchone()
+        result["db"]["sample_embedding_dims"] = dim_row[0] if dim_row else None
+    except Exception as e:
+        result["db"] = {"error": str(e)}
+
+    # 2. Test Gemini embedding API directly
+    try:
+        gateway = GeminiGateway()
+        vec = await gateway.embed_text("test embedding")
+        result["gemini_embedding_api"] = {
+            "status": "ok",
+            "dimension": len(vec),
+            "model": "gemini-embedding-001",
+        }
+    except Exception as e:
+        result["gemini_embedding_api"] = {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()[-500:],
+        }
+
+    return result
+
+
+@router.post("/sync-embeddings", summary="Manually trigger embedding sync for all missing stories")
+async def sync_embeddings_now(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(_require_admin),
+):
+    """Trigger embedding sync in background. Returns immediately."""
+    import asyncio
+    from app.services.ai_service import sync_all_missing_embeddings_async
+
+    asyncio.create_task(sync_all_missing_embeddings_async())
+    return {"message": "Embedding sync task started in background. Check logs for progress."}

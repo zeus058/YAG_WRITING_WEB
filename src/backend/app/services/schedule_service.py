@@ -159,16 +159,21 @@ def _mark_schedule_published_if_fulfilled(
                 old_score,
                 profile.reputation_score,
             )
-            author_payload = {
-                "type": "reputation_reward",
-                "story_id": str(story.id),
-                "story_title": story.title,
-                "schedule_id": str(schedule.id),
-                "reward": 2,
-                "reputation_score": profile.reputation_score,
-                "message": f"Bạn được cộng +2 điểm uy tín vì hoàn thành chương đúng hạn cho truyện '{story.title}'!",
-            }
-            publish_user_notification(str(story.author_id), author_payload)
+            from app.services.notification_service import create_notification
+            create_notification(
+                db=db,
+                user_id=story.author_id,
+                type="reputation_reward",
+                title="Hoàn thành cam kết",
+                message=f"Bạn được cộng +2 điểm uy tín vì hoàn thành chương đúng hạn cho truyện '{story.title}'!",
+                payload={
+                    "story_id": str(story.id),
+                    "story_title": story.title,
+                    "schedule_id": str(schedule.id),
+                    "reward": 2,
+                    "reputation_score": profile.reputation_score,
+                }
+            )
 
     return True
 
@@ -217,17 +222,22 @@ def _handle_missed_schedule(
     db.add(alert)
     db.flush()
 
-    author_payload = {
-        "type": "schedule_missed",
-        "story_id": str(story.id),
-        "story_title": story.title,
-        "schedule_id": str(schedule.id),
-        "days_late": days_late,
-        "penalty": penalty,
-        "reputation_score": new_score,
-        "message": message,
-    }
-    publish_user_notification(str(story.author_id), author_payload)
+    from app.services.notification_service import create_notification
+    create_notification(
+        db=db,
+        user_id=story.author_id,
+        type="schedule_missed",
+        title="Trễ hạn đăng chương",
+        message=message,
+        payload={
+            "story_id": str(story.id),
+            "story_title": story.title,
+            "schedule_id": str(schedule.id),
+            "days_late": days_late,
+            "penalty": penalty,
+            "reputation_score": new_score,
+        }
+    )
 
     if author and author.email:
         send_schedule_warning_email(
@@ -294,15 +304,20 @@ def scan_publish_schedules(db: Session, now: Optional[datetime] = None) -> dict:
         if published_chapters_count < required_chapters:
             story = db.query(Story).filter(Story.id == schedule.story_id).first()
             if story:
-                author_payload = {
-                    "type": "schedule_warning",
-                    "story_id": str(story.id),
-                    "story_title": story.title,
-                    "schedule_id": str(schedule.id),
-                    "scheduled_time": schedule.scheduled_time.isoformat(),
-                    "message": f"Tác phẩm '{story.title}' sắp đến hạn cam kết đăng chương tiếp theo vào {schedule.scheduled_time.strftime('%d/%m %H:%M')}. Vui lòng đăng chương đúng hạn để tránh bị phạt uy tín!",
-                }
-                publish_user_notification(str(story.author_id), author_payload)
+                from app.services.notification_service import create_notification
+                create_notification(
+                    db=db,
+                    user_id=story.author_id,
+                    type="schedule_warning",
+                    title="Cảnh báo sắp đến hạn",
+                    message=f"Tác phẩm '{story.title}' sắp đến hạn cam kết đăng chương tiếp theo vào {schedule.scheduled_time.strftime('%d/%m %H:%M')}. Vui lòng đăng chương đúng hạn để tránh bị phạt uy tín!",
+                    payload={
+                        "story_id": str(story.id),
+                        "story_title": story.title,
+                        "schedule_id": str(schedule.id),
+                        "scheduled_time": schedule.scheduled_time.isoformat(),
+                    }
+                )
             schedule.reminded_at = now
 
     # 2. Check due schedules that are missed or published

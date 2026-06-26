@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { type IconName, STORY_CATEGORIES } from "@/data/yag";
 import { Icon, Cover, ErrorGuide, MetricCard, QuickStories, AIRecommendationStories, RankingItem, ReadingCard, StoryBadge, UpdateStoryRow, getStoryAuthorName } from "@/components/ui";
@@ -3075,6 +3075,7 @@ export function SettingsScreen({ modeOverride }: { modeOverride?: "reader" | "au
 }
 
 export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" | "author" | "admin" }) {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -3143,14 +3144,25 @@ export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" 
     }
   };
 
-  const handleRead = async (id: string) => {
-    if (appEnv.useMocks) return;
-    try {
-      await yagApi.notifications.markAsRead(id);
-      void loadNotifications();
-      window.dispatchEvent(new CustomEvent("yag.notifications.refresh"));
-    } catch (err) {
-      console.error(err);
+  const handleRead = async (id: string, payload?: any) => {
+    if (!appEnv.useMocks) {
+      try {
+        await yagApi.notifications.markAsRead(id);
+        void loadNotifications();
+        window.dispatchEvent(new CustomEvent("yag.notifications.refresh"));
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    if (payload) {
+      if (payload.story_id && modeOverride === "author") {
+        router.push(`/author/schedule`);
+      } else if (payload.story_id && payload.chapter_id) {
+        router.push(`/stories/${payload.story_id}/chapters/${payload.chapter_id}`);
+      } else if (payload.story_id) {
+        router.push(`/stories/${payload.story_id}`);
+      }
     }
   };
 
@@ -3177,8 +3189,10 @@ export function NotificationsScreen({ modeOverride }: { modeOverride?: "reader" 
               <div
                 className="list-item"
                 key={item.id}
-                style={{ opacity: item.read_at ? 0.6 : 1, cursor: "pointer" }}
-                onClick={() => handleRead(item.id)}
+                style={{ opacity: item.read_at ? 0.6 : 1, cursor: "pointer", transition: "var(--transition-base)" }}
+                onClick={() => handleRead(item.id, item.payload)}
+                onMouseEnter={(e) => e.currentTarget.style.background = "var(--button-hover-bg)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
               >
                 <div>
                   <h3 className="list-title">{item.title}</h3>

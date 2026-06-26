@@ -3007,6 +3007,11 @@ export function ScheduleScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [allChapters, setAllChapters] = useState<any[]>([]);
   const [selectedStoryId, setSelectedStoryId] = useState<string>("all");
+  const [displayDate, setDisplayDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
   const [frequencyFilter, setFrequencyFilter] = useState<"week" | "month" | "year">("week");
   const [overview, setOverview] = useState<{
     reputation_score: number | null;
@@ -3030,7 +3035,6 @@ export function ScheduleScreen() {
         const now = new Date();
         const month = now.getMonth();
         const year = now.getFullYear();
-        const numDays = new Date(year, month + 1, 0).getDate();
         const fetchedChapters: any[] = [];
         for (const s of storiesList) {
           try {
@@ -3043,32 +3047,6 @@ export function ScheduleScreen() {
           }
         }
         setAllChapters(fetchedChapters);
-        const daysList = Array.from({ length: numDays }, (_, index) => {
-          const dayNum = index + 1;
-          const scheduledChapter = fetchedChapters.find((c: any) => {
-            if (!c.publish_at) return false;
-            const pubDate = new Date(c.publish_at);
-            return (
-              pubDate.getDate() === dayNum &&
-              pubDate.getMonth() === month &&
-              pubDate.getFullYear() === year
-            );
-          });
-
-          let event = null;
-          if (scheduledChapter) {
-            const pubDate = new Date(scheduledChapter.publish_at);
-            const hrs = String(pubDate.getHours()).padStart(2, "0");
-            const mins = String(pubDate.getMinutes()).padStart(2, "0");
-            event = {
-              title: `C${scheduledChapter.chapter_number}: ${scheduledChapter.title.slice(0, 10)}...`,
-              status: scheduledChapter.moderation_status,
-              time: `${hrs}:${mins}`
-            };
-          }
-          return { dayNum, event };
-        });
-        setCalendarDays(daysList);
         setCurrentMonthStr(`Tháng ${String(month + 1).padStart(2, "0")}/${year}`);
         try {
           const overviewRes = await yagApi.author.getScheduleOverview();
@@ -3087,6 +3065,86 @@ export function ScheduleScreen() {
     };
     void loadData();
   }, [refreshUser]);
+
+  // Generate calendar dynamically based on displayDate, works, and published chapters
+  useEffect(() => {
+    if (isLoading) return;
+
+    const year = displayDate.getFullYear();
+    const month = displayDate.getMonth();
+    const numDays = new Date(year, month + 1, 0).getDate();
+    setCurrentMonthStr(`Tháng ${String(month + 1).padStart(2, "0")}/${year}`);
+
+    const allEvents: any[] = [];
+
+    works.forEach((w) => {
+      if (selectedStoryId !== "all" && w.id !== selectedStoryId) return;
+
+      const createdDate = new Date(w.created_at || Date.now());
+      // Thêm event đánh dấu ngày tạo truyện (màu xanh dương)
+      if (createdDate.getMonth() === month && createdDate.getFullYear() === year) {
+        allEvents.push({
+          date: createdDate.getDate(),
+          title: `Tạo: ${w.title.slice(0, 15)}`,
+          status: "info",
+          time: "00:00"
+        });
+      }
+
+      const expected = w.expected_chapters || 0;
+      const freq = w.update_frequency || "1_week_1_chap";
+      
+      let intervalDays = 7;
+      let chapsPerInterval = 1;
+      if (freq === "1_week_1_chap") { intervalDays = 7; chapsPerInterval = 1; }
+      else if (freq === "1_week_2_chap") { intervalDays = 7; chapsPerInterval = 2; }
+      else if (freq === "2_weeks_1_chap") { intervalDays = 14; chapsPerInterval = 1; }
+      else if (freq === "daily") { intervalDays = 1; chapsPerInterval = 1; }
+
+      const step = intervalDays / chapsPerInterval;
+      
+      for (let i = 1; i <= expected; i++) {
+        const deadlineDate = new Date(createdDate.getTime());
+        deadlineDate.setDate(deadlineDate.getDate() + Math.round(step * i));
+        deadlineDate.setHours(23, 59, 59, 999);
+
+        // Kiểm tra xem tác giả đã xuất bản chưa
+        const publishedChap = allChapters.find(c => c.story_id === w.id && c.chapter_number === i && c.publish_at && c.moderation_status === "approved");
+
+        let status = "pending"; // Màu cam (chưa hoàn thành)
+        if (publishedChap) {
+          status = "approved"; // Màu xanh (đã hoàn thành)
+        }
+
+        if (deadlineDate.getMonth() === month && deadlineDate.getFullYear() === year) {
+          allEvents.push({
+            date: deadlineDate.getDate(),
+            title: `C${i}: ${w.title.slice(0, 10)}...`,
+            status: status,
+            time: "23:59"
+          });
+        }
+      }
+    });
+
+    // Gom sự kiện vào các ngày
+    const daysList = Array.from({ length: numDays }, (_, index) => {
+      const dayNum = index + 1;
+      const eventsForDay = allEvents.filter(e => e.date === dayNum);
+      return { dayNum, events: eventsForDay };
+    });
+    
+    // Thêm các ô trống đầu tháng để hiển thị đúng thứ
+    const firstDay = new Date(year, month, 1).getDay();
+    const prefixEmpty = firstDay === 0 ? 6 : firstDay - 1; // 0 = Sunday
+    const calendarGrid = [];
+    for (let i = 0; i < prefixEmpty; i++) {
+      calendarGrid.push({ dayNum: null, events: [] });
+    }
+    calendarGrid.push(...daysList);
+    
+    setCalendarDays(calendarGrid);
+  }, [displayDate, works, allChapters, selectedStoryId, isLoading]);
 
   const getFrequencyLabel = (freq: string) => {
     switch (freq) {
@@ -3235,11 +3293,33 @@ export function ScheduleScreen() {
             {/* Calendar Panel */}
             <section className="panel panel-pad stack">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div>
-                  <h2 className="section-title" style={{ margin: 0, fontSize: 18, color: "var(--jungle-dark)" }}>Bảng lịch đăng chương</h2>
-                  <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>Hẹn giờ phát hành & Trạng thái duyệt tự động của AI</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <button 
+                    style={{ background: "transparent", border: "1px solid var(--line)", borderRadius: 4, padding: "4px 8px", cursor: "pointer", color: "var(--foreground)" }}
+                    onClick={() => {
+                      setDisplayDate(prev => {
+                        const d = new Date(prev);
+                        d.setMonth(d.getMonth() - 1);
+                        return d;
+                      });
+                    }}
+                  >
+                    &lt;
+                  </button>
+                  <strong style={{ fontSize: 16, color: "var(--jungle-dark)", minWidth: 100, textAlign: "center" }}>{currentMonthStr}</strong>
+                  <button 
+                    style={{ background: "transparent", border: "1px solid var(--line)", borderRadius: 4, padding: "4px 8px", cursor: "pointer", color: "var(--foreground)" }}
+                    onClick={() => {
+                      setDisplayDate(prev => {
+                        const d = new Date(prev);
+                        d.setMonth(d.getMonth() + 1);
+                        return d;
+                      });
+                    }}
+                  >
+                    &gt;
+                  </button>
                 </div>
-                <strong style={{ fontSize: 16, color: "var(--jungle-dark)" }}>{currentMonthStr}</strong>
               </div>
 
               {/* Weekdays header */}
@@ -3260,52 +3340,50 @@ export function ScheduleScreen() {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8, marginTop: 8 }}>
-                  {calendarDays.map((day) => (
+                  {calendarDays.map((day, idx) => (
                     <div
-                      key={day.dayNum}
+                      key={day.dayNum ? `day-${day.dayNum}` : `empty-${idx}`}
                       style={{
-                        minHeight: 85,
-                        border: "1px solid var(--line)",
+                        minHeight: 110,
+                        border: day.dayNum ? "1px solid var(--line)" : "none",
                         borderRadius: 6,
                         padding: 6,
-                        background: day.event ? "var(--button-hover-bg)" : "var(--surface)",
+                        background: day.dayNum ? (day.events && day.events.length > 0 ? "var(--surface)" : "var(--surface)") : "transparent",
                         display: "flex",
                         flexDirection: "column",
-                        justifyContent: "space-between"
+                        gap: 4,
+                        overflowY: "auto",
+                        maxHeight: 150
                       }}
                     >
-                      <strong style={{ fontSize: 11, color: "var(--muted)" }}>{day.dayNum}</strong>
-                      {day.event && (
+                      {day.dayNum && <strong style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>{day.dayNum}</strong>}
+                      {day.events && day.events.map((ev: any, evIdx: number) => (
                         <div
+                          key={evIdx}
                           style={{
                             fontSize: 9,
                             padding: "4px",
-                            borderRadius: 4,
+                            borderRadius: "4px",
                             background:
-                              day.event.status === "approved"
-                                ? "rgba(34, 197, 94, 0.08)"
-                                : day.event.status === "pending"
-                                  ? "rgba(59, 130, 246, 0.08)"
-                                  : "rgba(245, 158, 11, 0.08)",
+                              ev.status === "approved" ? "rgba(34, 197, 94, 0.08)" :
+                              ev.status === "pending" ? "rgba(245, 158, 11, 0.08)" :
+                              "rgba(59, 130, 246, 0.08)", // info
                             color:
-                              day.event.status === "approved"
-                                ? "var(--green-ok, #22C55E)"
-                                : day.event.status === "pending"
-                                  ? "var(--blue-info, #3B82F6)"
-                                  : "var(--amber, #F59E0B)",
-                            borderLeft: `2.5px solid ${day.event.status === "approved"
-                              ? "var(--green-ok, #22C55E)"
-                              : day.event.status === "pending"
-                                ? "var(--blue-info, #3B82F6)"
-                                : "var(--amber, #F59E0B)"
-                              }`,
+                              ev.status === "approved" ? "var(--green-ok, #22C55E)" :
+                              ev.status === "pending" ? "var(--amber, #F59E0B)" :
+                              "var(--blue-info, #3B82F6)",
+                            borderLeft: `2.5px solid ${
+                              ev.status === "approved" ? "var(--green-ok, #22C55E)" :
+                              ev.status === "pending" ? "var(--amber, #F59E0B)" :
+                              "var(--blue-info, #3B82F6)"
+                            }`,
                             lineHeight: 1.2
                           }}
                         >
-                          <div style={{ fontWeight: "bold" }}>{day.event.time}</div>
-                          <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={day.event.title}>{day.event.title}</div>
+                          <div style={{ fontWeight: "bold" }}>{ev.time}</div>
+                          <div style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }} title={ev.title}>{ev.title}</div>
                         </div>
-                      )}
+                      ))}
                     </div>
                   ))}
                 </div>

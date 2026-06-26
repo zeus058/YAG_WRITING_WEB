@@ -78,6 +78,11 @@ class FakeDB:
     def close(self):
         return None
 
+    def refresh(self, obj):
+        if not getattr(obj, "id", None):
+            obj.id = uuid.uuid4()
+        return None
+
 
 def _base_objects():
     author_id = uuid.uuid4()
@@ -114,7 +119,7 @@ def _base_objects():
 
 
 @patch("app.services.schedule_service.send_schedule_warning_email")
-@patch("app.services.schedule_service.publish_user_notification", return_value=True)
+@patch("app.services.schedule_service.create_notification", return_value=True)
 def test_scan_marks_schedule_missed_and_penalizes_reputation(mock_notify, mock_email):
     schedule, story, author, profile, admin = _base_objects()
     db = FakeDB(schedule=schedule, story=story, author=author, profile=profile, admins=[admin])
@@ -132,7 +137,7 @@ def test_scan_marks_schedule_missed_and_penalizes_reputation(mock_notify, mock_e
 
 
 @patch("app.services.schedule_service.send_schedule_warning_email")
-@patch("app.services.schedule_service.publish_user_notification")
+@patch("app.services.schedule_service.create_notification")
 def test_scan_marks_schedule_published_when_chapter_exists(mock_notify, mock_email):
     schedule, story, author, profile, admin = _base_objects()
     publication = Chapter(
@@ -166,7 +171,7 @@ def test_scan_marks_schedule_published_when_chapter_exists(mock_notify, mock_ema
 
 
 @patch("app.services.schedule_service.send_schedule_warning_email")
-@patch("app.services.schedule_service.publish_user_notification")
+@patch("app.services.schedule_service.create_notification")
 def test_scan_marks_schedule_published_rewards_reputation(mock_notify, mock_email):
     schedule, story, author, profile, admin = _base_objects()
     profile.reputation_score = 95  # Start below 100
